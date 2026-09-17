@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% load static billing %}
+
+{% block title %}Plans &amp; billing — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/billing.css' %}">{% endblock %}
+
+{% block content %}
+{% with sub=status.subscription %}
+<div class="ui">
+  <section class="ui-hero ui-hero--green">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% if user.role == 'school_admin' %}{% url 'schools:dashboard' %}{% else %}{% url 'accounts:dashboard' %}{% endif %}">Dashboard</a></li>
+        <li>Plans &amp; billing</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128179;</span>
+          <div>
+            <p class="ui-hero__eyebrow">{% if status.school %}{{ status.school.name }}{% else %}Your account{% endif %}</p>
+            <h1 class="ui-hero__title">Plans &amp; billing</h1>
+            <div class="ui-hero__chips">
+              {% if status.exempt %}<span class="ui-chip ui-chip--gold">Staff: full access</span>
+              {% elif not status.paywall %}<span class="ui-chip ui-chip--gold">Everything is free right now</span>
+              {% elif status.state == "active" %}<span class="ui-chip ui-chip--done">Active</span>
+              {% elif status.state == "trial" %}<span class="ui-chip ui-chip--gold">Free trial</span>
+              {% elif status.never_started %}<span class="ui-chip">Not started</span>
+              {% else %}<span class="ui-chip">Access ended</span>{% endif %}
+              {% if not live and user.is_staff %}<span class="ui-chip">Paystack test mode</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body ui-stack">
+
+    {# ---- where things stand ---- #}
+    <section class="ui-panel bl-status bl-status--{% if status.exempt or not status.paywall %}active{% else %}{{ status.state }}{% endif %}">
+      {% if status.exempt %}
+        <p class="ui-panel__label">Staff account</p>
+        <h2 class="bl-status__title">You have full access and are never billed.</h2>
+        <p class="ui-panel__lede">The plans learners and schools see are shown below.</p>
+      {% elif not status %}
+        <h2 class="bl-status__title">Your account isn't linked to a school yet.</h2>
+      {% else %}
+        {% if status.state == "active" %}
+          <p class="ui-panel__label">{% if sub.plan %}{{ sub.plan.name }} plan{% else %}Paid plan{% endif %}</p>
+          <h2 class="bl-status__title">Active until {{ status.access_until|date:"j F Y" }}</h2>
+          <p class="ui-panel__lede">{{ status.days_left }} day{{ status.days_left|pluralize }} left.{% if status.renew_soon and status.can_pay %} Renew now and the new days are added after this date.{% endif %}</p>
+        {% elif status.state == "trial" %}
+          <p class="ui-panel__label">Free trial</p>
+          <h2 class="bl-status__title">{{ status.days_left }} day{{ status.days_left|pluralize }} of your free trial left</h2>
+          <p class="ui-panel__lede">It ends at {{ status.access_until|date:"g:i a" }} on {{ status.access_until|date:"j F Y" }}.{% if status.can_pay %} Pay any time — your plan starts when the trial ends, so you don't lose a day.{% endif %}</p>
+        {% elif status.never_started %}
+          <p class="ui-panel__label">Not started yet</p>
+          <h2 class="bl-status__title">{% if status.can_pay %}Start your free trial or choose a plan{% else %}Your school hasn't started its plan yet{% endif %}</h2>
+          <p class="ui-panel__lede">{% if status.can_pay %}{% if status.trial_available %}Try everything free for {{ status.settings.trial_days }} days with no card, or pay now below.{% else %}Choose a plan below to start learning.{% endif %}{% endif %}</p>
+        {% else %}
+          <p class="ui-panel__label">Access ended</p>
+          <h2 class="bl-status__title">{% if sub.paid_until %}Your plan ended on {{ sub.paid_until|date:"j F Y" }}{% elif sub.trial_ends_at %}Your free trial ended on {{ sub.trial_ends_at|date:"j F Y" }}{% else %}Choose a plan to start learning{% endif %}</h2>
+          <p class="ui-panel__lede">Your progress is safe. {% if status.can_pay %}Choose a plan below to pick up where you left off.{% endif %}</p>
+        {% endif %}
+
+        {% if not status.can_pay %}
+        <div class="ui-callout ui-callout--gold">
+          <p class="ui-callout__title">Your school looks after this</p>
+          <p>Your access comes with {{ status.school.name }}.{% if status.state == "expired" %} Please ask your school admin to renew the school's plan.{% endif %}</p>
+        </div>
+        {% endif %}
+
+        {% if teachers is not None and user.role == "school_admin" %}
+        <p class="bl-status__meta">Teachers joined: <strong>{{ teachers }}</strong>{% if sub.plan.max_units and status.state == "active" %} of the {{ sub.plan.max_units }} your plan allows{% endif %}. Students pay for themselves when they sign up with your school code, <strong>{{ user.school.code }}</strong>.</p>
+        {% endif %}
+        {% if user.role == "student" and status.school %}
+        <p class="bl-status__meta">{{ status.school.name }} has {{ children }} enrolled child{{ children|pluralize:"ren" }}, which sets your price per child.</p>
+        {% endif %}
+
+        {% if status.trial_available %}
+        <form method="post" action="{% url 'billing:trial' %}" class="bl-status__next">
+          {% csrf_token %}
+          <button type="submit" class="ui-btn ui-btn--green">&#127873; Start my {{ status.settings.trial_days }}-day free trial</button>
+        </form>
+        {% endif %}
+      {% endif %}
+
+      {% if next_url %}
+        {% if status.has_access or status.exempt %}
+        <p class="bl-status__next"><a href="{{ next_url }}" class="ui-btn ui-btn--gold">Continue where you left off &rarr;</a></p>
+        {% elif status.can_pay %}
+        <p class="bl-status__meta">Once you've paid, we'll take you straight back to where you were.</p>
+        {% endif %}
+      {% endif %}
+    </section>
+
+    {# ---- plans ---- #}
+    {% if table and table.rows or cards %}
+    {# While a paid plan has plenty of time left, renewing is tucked away; it opens in the last few days. #}
+    <section class="ui-panel" aria-labelledby="bl-plans-title">
+      {% if status.state == "active" and not status.renew_soon %}
+      <details class="bl-renew">
+        <summary class="bl-renew__summary">
+          <span>
+            <span class="ui-section__title" id="bl-plans-title">Renew early</span>
+            <span class="bl-renew__hint">Renewal opens {{ status.settings.reminder_days }} days before your plan ends. You can renew now — the new days start on {{ status.access_until|date:"j F Y" }}, so nothing is lost.</span>
+          </span>
+        </summary>
+      {% else %}
+      <header class="ui-section__head">
+        <h2 class="ui-section__title" id="bl-plans-title">{% if status.state == "active" %}Renew now{% else %}Choose a plan{% endif %}</h2>
+        <p class="ui-section__aside">One payment, no automatic charges</p>
+      </header>
+      {% if status.state == "active" %}<p class="ui-panel__lede">Your plan ends in {{ status.days_left }} day{{ status.days_left|pluralize }}. Renew now and the new days start on {{ status.access_until|date:"j F Y" }}, so they add on to the time you have left.</p>{% endif %}
+      {% endif %}
+
+      {% if not configured %}
+      <div class="ui-callout ui-callout--maroon"><p class="ui-callout__title">Payments aren't switched on yet</p><p>Please check back soon{% if status.settings.support_email %}, or email {{ status.settings.support_email }}{% endif %}.</p></div>
+      {% endif %}
+
+      {% if table %}
+      <p class="ui-panel__lede">School plans are priced by how many teachers you have. Pick the tier that fits, termly or yearly.</p>
+      {% include "billing/_price_table.html" with table=table unit_heading="Teachers" buy=configured %}
+      {% else %}
+      <div class="bl-plans">
+        {% for plan in cards %}
+          {% include "billing/_plan_card.html" with buy=configured|yesno:"1," %}
+        {% endfor %}
+      </div>
+      {% endif %}
+      <p class="bl-secure">&#128274; Payments are processed securely by Paystack. You can pay by card, bank transfer or USSD.</p>
+      {% if status.state == "active" and not status.renew_soon %}</details>{% endif %}
+    </section>
+    {% elif status.can_pay %}
+    <section class="ui-panel"><div class="ui-empty"><p>Plans are being set up. Please check back soon{% if status.settings.support_email %}, or email {{ status.settings.support_email }}{% endif %}.</p></div></section>
+    {% endif %}
+
+    {# ---- history ---- #}
+    {% if payments %}
+    <section class="ui-panel" aria-labelledby="bl-history-title">
+      <h2 class="ui-panel__title" id="bl-history-title">Payment history</h2>
+      <div class="ui-table-wrap">
+        <table class="ui-table bl-history">
+          <thead><tr><th>Date</th><th>Plan</th><th>Amount</th><th>Status</th><th><span class="bl-hidden">Receipt</span></th></tr></thead>
+          <tbody>
+            {% for payment in payments %}
+            <tr>
+              <td>{{ payment.paid_at|default:payment.created_at|date:"j M Y" }}</td>
+              <td>{{ payment.plan_name }}</td>
+              <td>{{ payment.amount_naira|naira }}</td>
+              <td><span class="bl-pill bl-pill--{{ payment.status }}">{{ payment.get_status_display }}</span></td>
+              <td>{% if payment.is_paid %}<a href="{% url 'billing:receipt' payment.reference %}" class="ui-link">Receipt</a>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+  </div>
+</div>
+{% endwith %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // One tap is enough: stop a second payment starting while Paystack loads.
+  document.querySelectorAll("[data-pay-form]").forEach(function (form) {
+    form.addEventListener("submit", function () {
+      var button = form.querySelector("button");
+      setTimeout(function () { button.disabled = true; button.textContent = "Opening secure checkout…"; }, 0);
+    });
+  });
+</script>
+{% endblock %}

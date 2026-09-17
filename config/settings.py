@@ -126,6 +126,7 @@ LOCAL_APPS = [
     "apps.clash",
     "apps.console",
     "apps.manage",
+    "apps.billing",
 ]
 
 THIRD_PARTY_APPS = []
@@ -140,6 +141,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Learning tools need a running free trial or a paid plan (apps/billing).
+    "apps.billing.middleware.SubscriptionRequiredMiddleware",
 ]
 
 # Serves the site's own CSS, JS and images in production, so no separate
@@ -165,6 +168,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.landing.context_processors.branding",
+                "apps.billing.context_processors.billing",
             ],
         },
     },
@@ -399,6 +403,17 @@ AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "landing:home"
 LOGOUT_REDIRECT_URL = "landing:home"
+
+
+# ---------------------------------------------------------------------------
+# Payments — Paystack
+# ---------------------------------------------------------------------------
+
+# Test keys (sk_test_/pk_test_) take pretend payments; swap in live keys to
+# take real ones. Prices, plans and the free trial are set in the control
+# room, not here. Point Paystack's webhook at /billing/webhook/paystack/.
+PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY", "")
+PAYSTACK_PUBLIC_KEY = os.environ.get("PAYSTACK_PUBLIC_KEY", "")
 
 
 # ---------------------------------------------------------------------------

@@ -22,8 +22,9 @@
         <a href="{% url 'learning_tools:hub' %}"{% if '/learning-tools/' in request.path %} aria-current="page"{% endif %}>Learning tools</a>
       {% else %}
         <a href="{% url 'landing:home' %}#how-it-works">How it works</a>
-        <a href="{% url 'landing:home' %}#for-schools">For schools</a>
+        <a href="{% url 'landing:home' %}#who-its-for">Who it's for</a>
         <a href="{% url 'landing:home' %}#book">Book of Conversation</a>
+        <a href="{% url 'billing:pricing' %}"{% if request.resolver_match.url_name == 'pricing' %} aria-current="page"{% endif %}>Pricing</a>
       {% endif %}
     </nav>
 

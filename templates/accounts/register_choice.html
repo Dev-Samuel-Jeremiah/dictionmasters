@@ -32,21 +32,28 @@
       <a href="{% url 'accounts:register_school' %}" class="ui-card ui-lift" style="--tone: #7A2438; --i: 0">
         <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#127979;</span></span>
         <span class="ui-card__name">Register your school</span>
-        <span class="ui-card__desc">Set your school up, get your school code, and add teachers and students yourself.</span>
+        <span class="ui-card__desc">Set your school up and get your school code. Plans are priced by your number of teachers.</span>
         <span class="ui-card__cta">Register your school &rarr;</span>
       </a>
 
-      <a href="{% url 'accounts:join_with_code' %}" class="ui-card ui-lift" style="--tone: #b8863b; --i: 1">
+      <a href="{% url 'accounts:register_student' %}" class="ui-card ui-lift" style="--tone: #2f5d8a; --i: 1">
+        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#127890;</span></span>
+        <span class="ui-card__name">I'm a student at a school</span>
+        <span class="ui-card__desc">Sign up with your school's code, then start a free trial or pay for your own access.</span>
+        <span class="ui-card__cta">Sign up as a student &rarr;</span>
+      </a>
+
+      <a href="{% url 'accounts:join_with_code' %}" class="ui-card ui-lift" style="--tone: #b8863b; --i: 2">
         <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#128273;</span></span>
-        <span class="ui-card__name">I have a code from my school</span>
-        <span class="ui-card__desc">Teachers and pupils: use the code your school admin gave you to join your class.</span>
+        <span class="ui-card__name">I'm a teacher with a code</span>
+        <span class="ui-card__desc">Use the one-time code your school admin gave you to join your class.</span>
         <span class="ui-card__cta">Enter your code &rarr;</span>
       </a>
 
-      <a href="{% url 'accounts:register_individual' %}" class="ui-card ui-lift" style="--tone: #2e7d62; --i: 2">
+      <a href="{% url 'accounts:register_individual' %}" class="ui-card ui-lift" style="--tone: #2e7d62; --i: 3">
         <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#129489;&#8205;&#127891;</span></span>
-        <span class="ui-card__name">Register as an individual</span>
-        <span class="ui-card__desc">Learning outside a school? Create your own account and start straight away, no code needed.</span>
+        <span class="ui-card__name">I'm an adult learner</span>
+        <span class="ui-card__desc">Not a student? Create your own account and learn at your own pace, no code needed.</span>
         <span class="ui-card__cta">Register as an individual &rarr;</span>
       </a>
     </div>

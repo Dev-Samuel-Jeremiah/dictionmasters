@@ -16,7 +16,7 @@
           <div>
             <p class="ui-hero__eyebrow">School dashboard</p>
             <h1 class="ui-hero__title">{{ school.name }}</h1>
-            <p class="ui-hero__lede">Add teachers and students with one-time codes, and see who has joined.</p>
+            <p class="ui-hero__lede">Add teachers with one-time codes. Students sign up with your school code, {{ school.code }}, and pay for their own access.</p>
             <div class="ui-hero__chips">
               <span class="ui-chip ui-chip--gold">School code: {{ school.code }}</span>
               <span class="ui-chip">{{ teachers|length }} teacher{{ teachers|length|pluralize }}</span>
@@ -26,6 +26,7 @@
         </div>
         <div class="ui-hero__side">
           <a href="{% url 'learning_tools:hub' %}" class="ui-btn ui-btn--glass">&#129520; Browse the learning tools</a>
+          <a href="{% url 'billing:account' %}" class="ui-btn ui-btn--gold">&#128179; {% if billing.state == "active" %}School plan{% else %}Plans &amp; billing{% endif %}</a>
         </div>
       </div>
     </div>
@@ -35,9 +36,9 @@
     <div class="ui-cols">
       <div>
         <section class="ui-panel">
-          <p class="ui-panel__label">Add a teacher or student</p>
+          <p class="ui-panel__label">Add a teacher</p>
           <h2 class="ui-panel__title">Generate a joining code</h2>
-          <p class="ui-panel__lede">Pick the level they will study or teach, then hand them the code. They use it on the "join with a code" page to create their own account, already linked to {{ school.name }} and to that level.</p>
+          <p class="ui-panel__lede">Pick the level they teach, then hand them the code. They use it on the "join with a code" page to create their own account, already linked to {{ school.name }} and to that level. Your plan sets how many teachers can join.</p>
 
           <form method="post" novalidate>
             {% csrf_token %}
@@ -128,7 +129,7 @@
             </table>
           </div>
           {% else %}
-          <div class="ui-empty"><p>No students yet. Generate a code to add one.</p></div>
+          <div class="ui-empty"><p>No students yet. Share your school code, <strong>{{ school.code }}</strong>, and the student sign-up link: {{ request.scheme }}://{{ request.get_host }}{% url 'accounts:register_student' %}?school={{ school.code }}</p></div>
           {% endif %}
         </section>
       </div>

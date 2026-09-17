@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static billing %}
+
+{% block title %}Receipt {{ payment.reference }} — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/billing.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <div class="wrap ui-body ui-body--narrow bl-receipt-page">
+    <p class="bl-receipt__back no-print"><a href="{% url 'billing:account' %}" class="ui-link">&larr; Plans &amp; billing</a></p>
+
+    <article class="bl-receipt">
+      <header class="bl-receipt__head">
+        <div class="bl-receipt__brand">
+          {% if branding.logo %}<img src="{{ branding.logo.url }}" alt="Diction Masters" class="bl-receipt__logo">{% else %}<span class="bl-receipt__mark" aria-hidden="true">iː</span><strong>Diction Masters</strong>{% endif %}
+        </div>
+        <div>
+          <p class="bl-receipt__kicker">Receipt</p>
+          <p class="bl-receipt__ref">{{ payment.reference }}</p>
+        </div>
+      </header>
+
+      {% if payment.is_paid %}
+      <p class="bl-receipt__amount">{{ payment.amount_naira|naira }} <span class="bl-pill bl-pill--success">Paid</span></p>
+      {% else %}
+      <p class="bl-receipt__amount">{{ payment.amount_naira|naira }} <span class="bl-pill bl-pill--{{ payment.status }}">{{ payment.get_status_display }}</span></p>
+      {% endif %}
+
+      <dl class="bl-receipt__rows">
+        <div><dt>Date paid</dt><dd>{{ payment.paid_at|default:payment.created_at|date:"j F Y, g:i a" }}</dd></div>
+        <div><dt>Account</dt><dd>{{ payment.account_name }}</dd></div>
+        <div><dt>Email</dt><dd>{{ payment.email }}</dd></div>
+        <div><dt>Plan</dt><dd>{{ payment.plan_name }} &middot; {{ payment.duration_days }} day{{ payment.duration_days|pluralize }}</dd></div>
+        {% if payment.period_start %}<div><dt>Access</dt><dd>{{ payment.period_start|date:"j M Y" }} – {{ payment.period_end|date:"j M Y" }}</dd></div>{% endif %}
+        {% if payment.channel %}<div><dt>Paid by</dt><dd>{{ payment.channel_display }}</dd></div>{% endif %}
+      </dl>
+
+      <footer class="bl-receipt__foot">
+        <p>Processed by Paystack. Thank you for learning with Diction Masters.</p>
+        {% if settings.support_email %}<p>Questions about this payment? <a href="mailto:{{ settings.support_email }}">{{ settings.support_email }}</a> — quote {{ payment.reference }}.</p>{% endif %}
+      </footer>
+    </article>
+
+    <div class="bl-receipt__actions no-print">
+      <button type="button" class="ui-btn ui-btn--ghost" onclick="window.print()">&#128424; Print or save as PDF</button>
+      {% if next_url %}<a href="{{ next_url }}" class="ui-btn ui-btn--gold">Continue where you left off &rarr;</a>
+      {% else %}<a href="{% if user.role == 'school_admin' %}{% url 'schools:dashboard' %}{% else %}{% url 'accounts:dashboard' %}{% endif %}" class="ui-btn ui-btn--gold">Go to my dashboard &rarr;</a>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

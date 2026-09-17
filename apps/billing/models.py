@@ -1,0 +1,323 @@
+"""
+Paying for Diction Masters.
+
+Who pays
+--------
+Three kinds of customer, each with its own price list:
+
+    adults (non-students)  pay for themselves: weekly, monthly, quarterly, yearly
+    schools                pay by how many teachers they have (a tier), termly or
+                           yearly; that covers the school admin and its teachers
+    students               pay for themselves when they register with their
+                           school's code; the price per child depends on how many
+                           children that school has enrolled (a band)
+
+Staff never pay.
+
+How it works
+------------
+Every paying account (an adult, a student, or a school) has one
+Subscription. When registering, people choose between the free trial
+(no card needed) and paying straight away; the trial can only be used
+once. Buying a Plan adds that plan's days of access after any trial or
+paid time still running, so paying early never loses a day.
+
+Payment is once per period through Paystack (card, bank transfer, USSD),
+never an automatic charge. Every attempt is a Payment row, and a Payment
+only ever grants access once, however many times Paystack reports it.
+
+Everything a customer sees — plan names, prices, lengths, what's
+included, the trial length — is set in the control room.
+"""
+
+from datetime import timedelta
+from decimal import Decimal
+
+from django.conf import settings
+from django.core.validators import MinValueValidator
+from django.db import models
+from django.db.models import Q
+from django.utils import timezone
+from django.utils.text import slugify
+
+
+class BillingSettings(models.Model):
+    """The site-wide rules. Only ever one row."""
+
+    paywall_enabled = models.BooleanField(
+        default=True,
+        help_text="Untick to let everyone use every tool for free, e.g. while plans are being set up.",
+    )
+    trial_days = models.PositiveIntegerField(
+        default=7, help_text="Days of free access for a new learner or school. 0 turns the trial off.",
+    )
+    reminder_days = models.PositiveIntegerField(
+        default=5,
+        help_text="Renewal is offered this many days before access ends. People can still renew earlier; the days add on.",
+    )
+    support_email = models.EmailField(blank=True, help_text="Shown on receipts and the plans page for billing questions.")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "billing settings"
+        verbose_name_plural = "billing settings"
+
+    def __str__(self):
+        return "Billing settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        return cls.objects.filter(pk=1).first() or cls(pk=1)
+
+
+class Plan(models.Model):
+    """One price: a period (e.g. Termly) for one kind of customer, and for
+    schools and students one size band (e.g. up to 5 teachers, or 51–100
+    children). The price lists on the site are built from these rows."""
+
+    AUDIENCE_INDIVIDUAL = "individual"
+    AUDIENCE_SCHOOL = "school"
+    AUDIENCE_STUDENT = "student"
+    AUDIENCE_CHOICES = [
+        (AUDIENCE_INDIVIDUAL, "Adults (non-students)"),
+        (AUDIENCE_SCHOOL, "Schools, by number of teachers"),
+        (AUDIENCE_STUDENT, "Students, per child"),
+    ]
+    UNIT_NAMES = {AUDIENCE_SCHOOL: "teachers", AUDIENCE_STUDENT: "children"}
+
+    name = models.CharField(max_length=80, help_text='The period, e.g. "Weekly", "Termly", "Yearly". Plans with the same name share a column in the price tables.')
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
+    audience = models.CharField(max_length=20, choices=AUDIENCE_CHOICES, default=AUDIENCE_INDIVIDUAL)
+    description = models.CharField(max_length=200, blank=True, help_text="One line under the price.")
+    features = models.TextField(blank=True, help_text="What's included, one per line.")
+    price = models.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("100"))],
+        help_text="In naira, e.g. 48000. For students this is the price per child. Paystack's smallest charge is ₦100.",
+    )
+    duration_days = models.PositiveIntegerField(
+        default=30, validators=[MinValueValidator(1)],
+        help_text="Days of access it buys: 7 a week, 30 a month, 91 a quarter, 122 a term, 365 a year.",
+    )
+    period_label = models.CharField(
+        max_length=30, blank=True, help_text='Shown after the price, e.g. "per term". Worked out from the name if left blank.',
+    )
+    min_units = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="from",
+        help_text="Schools: fewest teachers in this tier. Students: fewest enrolled children in this band. Blank for adults.",
+    )
+    max_units = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="up to",
+        help_text="Schools: most teachers this tier allows. Students: most enrolled children in this band — blank for no upper limit (e.g. 500+).",
+    )
+    is_featured = models.BooleanField(default=False, help_text='Highlighted as "Most popular".')
+    is_active = models.BooleanField(default=True, help_text="Only active plans are shown and can be bought.")
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["audience", "min_units", "max_units", "duration_days", "order", "price"]
+
+    def __str__(self):
+        band = f" · {self.band_label}" if self.band_label else ""
+        return f"{self.name}{band} ({self.get_audience_display()})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.audience == self.AUDIENCE_SCHOOL and not self.max_units:
+            raise ValidationError({"max_units": "A school tier needs the most teachers it allows."})
+        if self.min_units and self.max_units and self.min_units > self.max_units:
+            raise ValidationError({"max_units": "“Up to” can't be smaller than “from”."})
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(f"{self.audience}-{self.name}-{self.band_label}") or "plan"
+            slug, n = base, 1
+            while Plan.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                n += 1
+                slug = f"{base}-{n}"
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    @property
+    def amount_kobo(self):
+        return int((self.price * 100).quantize(Decimal("1")))
+
+    @property
+    def unit_name(self):
+        return self.UNIT_NAMES.get(self.audience, "")
+
+    @property
+    def band_label(self):
+        """ "1–5 teachers", "51–100 children", "500+ children", or "" for adults."""
+        if self.audience == self.AUDIENCE_INDIVIDUAL or (self.min_units is None and self.max_units is None):
+            return ""
+        low = self.min_units or 1
+        if self.max_units is None:
+            return f"{max(low - 1, 1)}+ {self.unit_name}" if low > 1 else f"Any number of {self.unit_name}"
+        return f"{low}–{self.max_units} {self.unit_name}"
+
+    def fits(self, count):
+        """Whether `count` teachers or children fall inside this tier or band."""
+        return (self.min_units is None or count >= self.min_units) and (self.max_units is None or count <= self.max_units)
+
+    @property
+    def feature_list(self):
+        return [line.strip(" -•\t") for line in self.features.splitlines() if line.strip(" -•\t")]
+
+    @property
+    def period_text(self):
+        if self.period_label:
+            return self.period_label
+        known = {"weekly": "per week", "monthly": "per month", "quarterly": "per quarter",
+                 "termly": "per term", "yearly": "per year", "annually": "per year"}
+        if self.name.strip().lower() in known:
+            text = known[self.name.strip().lower()]
+        else:
+            text = f"for {self.duration_days} days"
+        return text
+
+
+class Subscription(models.Model):
+    """One learner's or one school's access. Exactly one of `user` and
+    `school` is set."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="subscription",
+    )
+    school = models.OneToOneField(
+        "schools.School", on_delete=models.CASCADE, null=True, blank=True, related_name="subscription",
+    )
+    plan = models.ForeignKey(
+        Plan, on_delete=models.SET_NULL, null=True, blank=True, related_name="subscriptions",
+        help_text="The plan last paid for.",
+    )
+    trial_ends_at = models.DateTimeField(null=True, blank=True)
+    paid_until = models.DateTimeField(null=True, blank=True, help_text="Paid access runs until this moment.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(Q(user__isnull=False, school__isnull=True) | Q(user__isnull=True, school__isnull=False)),
+                name="billing_subscription_one_owner",
+            ),
+        ]
+
+    def __str__(self):
+        return self.school.name if self.school_id else (self.user.email if self.user_id else "Subscription")
+
+    STATE_TRIAL = "trial"
+    STATE_ACTIVE = "active"
+    STATE_EXPIRED = "expired"
+
+    @property
+    def access_until(self):
+        ends = [moment for moment in (self.trial_ends_at, self.paid_until) if moment]
+        return max(ends) if ends else None
+
+    def has_access(self, now=None):
+        until = self.access_until
+        return bool(until and (now or timezone.now()) < until)
+
+    def state(self, now=None):
+        now = now or timezone.now()
+        if self.paid_until and now < self.paid_until:
+            return self.STATE_ACTIVE
+        if self.trial_ends_at and now < self.trial_ends_at:
+            return self.STATE_TRIAL
+        return self.STATE_EXPIRED
+
+    def days_left(self, now=None):
+        """Whole days of access left, counting today; 0 once it has ended."""
+        now = now or timezone.now()
+        until = self.access_until
+        if not until or until <= now:
+            return 0
+        return max(1, (until - now).days + (1 if (until - now).seconds else 0))
+
+    def next_period_start(self, now=None):
+        """Where newly bought days begin: after any trial or paid time still to run."""
+        now = now or timezone.now()
+        return max([moment for moment in (now, self.trial_ends_at, self.paid_until) if moment])
+
+    @property
+    def audience(self):
+        return Plan.AUDIENCE_SCHOOL if self.school_id else Plan.AUDIENCE_INDIVIDUAL
+
+
+class Payment(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_SUCCESS = "success"
+    STATUS_FAILED = "failed"
+    STATUS_ABANDONED = "abandoned"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_SUCCESS, "Paid"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_ABANDONED, "Not completed"),
+    ]
+
+    reference = models.CharField(max_length=64, unique=True)
+    subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True, related_name="payments")
+    plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, related_name="payments")
+    payer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="payments")
+
+    # Copied at checkout, so a receipt never changes when a plan is edited
+    # or an account is deleted.
+    account_name = models.CharField(max_length=255)
+    email = models.EmailField()
+    plan_name = models.CharField(max_length=80)
+    duration_days = models.PositiveIntegerField()
+    amount = models.PositiveBigIntegerField(help_text="In kobo.")
+    currency = models.CharField(max_length=3, default="NGN")
+
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    channel = models.CharField(max_length=30, blank=True)
+    gateway_response = models.CharField(max_length=255, blank=True)
+    authorization_url = models.URLField(max_length=500, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    period_start = models.DateTimeField(null=True, blank=True)
+    period_end = models.DateTimeField(null=True, blank=True)
+    raw = models.JSONField(default=dict, blank=True, help_text="Paystack's last word on this payment.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.reference
+
+    @property
+    def amount_naira(self):
+        return Decimal(self.amount) / 100
+
+    @property
+    def amount_display(self):
+        from .templatetags.billing import naira
+
+        return naira(self.amount_naira)
+
+    CHANNEL_NAMES = {
+        "card": "Card", "bank": "Bank account", "bank_transfer": "Bank transfer", "ussd": "USSD",
+        "qr": "QR code", "mobile_money": "Mobile money", "apple_pay": "Apple Pay", "eft": "EFT",
+    }
+
+    @property
+    def channel_display(self):
+        return self.CHANNEL_NAMES.get(self.channel, self.channel.replace("_", " ").capitalize())
+
+    @property
+    def is_paid(self):
+        return self.status == self.STATUS_SUCCESS
+
+    @property
+    def expires_soon(self):
+        """A checkout link Paystack has probably closed, for display only."""
+        return self.status == self.STATUS_PENDING and timezone.now() - self.created_at > timedelta(hours=1)

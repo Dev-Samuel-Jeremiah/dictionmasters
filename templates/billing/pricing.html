@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static billing %}
+
+{% block title %}Plans &amp; pricing — Diction Masters{% endblock %}
+{% block meta_description %}Diction Masters subscription packages for schools, students and adults.{% if settings.trial_days %} Start with a {{ settings.trial_days }}-day free trial, no card needed.{% endif %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/billing.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--green">
+    <div class="wrap">
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128179;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Subscription packages</p>
+            <h1 class="ui-hero__title">Plans for schools, students and adults</h1>
+            <p class="ui-hero__lede">
+              {% if settings.trial_days and settings.paywall_enabled %}Start with a {{ settings.trial_days }}-day free trial — no card needed — or pay straight away.{% endif %}
+              Pay once for the time you want, by card, bank transfer or USSD. Nothing renews by itself.
+            </p>
+            <div class="ui-hero__chips">
+              {% if settings.trial_days %}<span class="ui-chip ui-chip--gold">{{ settings.trial_days }}-day free trial</span>{% endif %}
+              <span class="ui-chip">No automatic charges</span>
+              <span class="ui-chip">Secured by Paystack</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body ui-stack">
+    <section class="ui-panel" id="schools" aria-labelledby="bl-schools">
+      <header class="ui-section__head">
+        <h2 class="ui-section__title" id="bl-schools">&#127979; Schools</h2>
+        <p class="ui-section__aside">Priced by number of teachers</p>
+      </header>
+      {% if school_table.rows %}
+      {% include "billing/_price_table.html" with table=school_table unit_heading="Teachers" %}
+      <p class="bl-sheet__note">Covers your school admin and teachers. Students subscribe for themselves with your school code.</p>
+      {% else %}
+      <div class="ui-empty"><p>School packages are on their way.</p></div>
+      {% endif %}
+      <p class="bl-sheet__cta">
+        {% if user.is_authenticated %}<a href="{% url 'billing:account' %}" class="ui-btn ui-btn--gold">Choose a plan</a>
+        {% else %}<a href="{% url 'accounts:register_school' %}" class="ui-btn ui-btn--gold">Register your school</a>{% endif %}
+      </p>
+    </section>
+
+    <section class="ui-panel" id="students" aria-labelledby="bl-students">
+      <header class="ui-section__head">
+        <h2 class="ui-section__title" id="bl-students">&#127890; Students at home</h2>
+        <p class="ui-section__aside">Per child, by how many children your school enrols</p>
+      </header>
+      {% if student_table.rows %}
+      {% include "billing/_price_table.html" with table=student_table unit_heading="Children enrolled" %}
+      <p class="bl-sheet__note">Each student signs up with their school's code and pays the rate for their school's band. The more children a school enrols, the less each one pays.</p>
+      {% else %}
+      <div class="ui-empty"><p>Student packages are on their way.</p></div>
+      {% endif %}
+      {% if not user.is_authenticated %}<p class="bl-sheet__cta"><a href="{% url 'accounts:register_student' %}" class="ui-btn ui-btn--gold">Sign up as a student</a></p>{% endif %}
+    </section>
+
+    <section class="ui-panel" id="adults" aria-labelledby="bl-adults">
+      <header class="ui-section__head">
+        <h2 class="ui-section__title" id="bl-adults">&#129489; Adults (non-students)</h2>
+        <p class="ui-section__aside">One learner, every tool</p>
+      </header>
+      {% if adult_plans %}
+      <div class="bl-plans">
+        {% for plan in adult_plans %}
+          {% if user.is_authenticated %}{% url 'billing:account' as cta_url %}{% include "billing/_plan_card.html" with cta_label="Choose this plan" %}
+          {% else %}{% url 'accounts:register_individual' as cta_url %}{% include "billing/_plan_card.html" with cta_label=settings.trial_days|yesno:"Start free trial,Get started" %}{% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ui-empty"><p>Adult plans are on their way.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="ui-panel bl-faq">
+      <h2 class="ui-panel__title">Good to know</h2>
+      <dl>
+        {% if settings.trial_days %}<dt>How does the free trial work?</dt>
+        <dd>Choose it when you register: {{ settings.trial_days }} days of full access, no card. After that, your progress is kept and the learning tools pause until you choose a plan.</dd>{% endif %}
+        <dt>Will I be charged automatically?</dt>
+        <dd>No. You pay once for the time you choose, and we remind you before it ends.</dd>
+        <dt>What if I pay before my time runs out?</dt>
+        <dd>The new days are added on after the time you already have, so you never lose a day.</dd>
+        <dt>How can I pay?</dt>
+        <dd>Card, bank transfer or USSD, through Paystack's secure checkout.</dd>
+        {% if settings.support_email %}<dt>Questions?</dt><dd>Email <a href="mailto:{{ settings.support_email }}">{{ settings.support_email }}</a>.</dd>{% endif %}
+      </dl>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -6,7 +6,11 @@ from .models import AccessCode
 
 
 class GenerateAccessCodeForm(forms.Form):
-    role = forms.ChoiceField(choices=AccessCode.Role.choices, widget=forms.RadioSelect)
+    # Codes are for teachers only. Students sign up with the school code and
+    # pay for their own access.
+    role = forms.ChoiceField(
+        choices=[(AccessCode.Role.TEACHER, "Teacher")], initial=AccessCode.Role.TEACHER, widget=forms.HiddenInput,
+    )
     level = forms.ChoiceField(
         choices=[("", "Choose a level")] + LEVEL_NAME_CHOICES,
         label="Level",

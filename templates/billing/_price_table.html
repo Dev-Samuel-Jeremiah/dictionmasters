@@ -1,0 +1,36 @@
+{% load billing %}
+{% comment %}
+  A price sheet: a row per tier or band, a column per period.
+  `buy` shows a pay button in each cell (signed-in school admin);
+  otherwise the prices are for reading.
+{% endcomment %}
+<div class="bl-table-wrap">
+  <table class="bl-table">
+    <thead>
+      <tr>
+        <th scope="col">{{ unit_heading }}</th>
+        {% for period in table.periods %}<th scope="col">{{ period }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in table.rows %}
+      <tr class="{% if buy and not row.can_buy %}is-too-small{% endif %}">
+        <th scope="row">{{ row.label }}{% if buy and not row.can_buy %}<span class="bl-table__why">{{ row.reason }}</span>{% endif %}</th>
+        {% for period, plan in row.cells %}
+        <td data-label="{{ period }}">
+          {% if plan %}
+            <span class="bl-table__price">{{ plan.price|naira }}</span>
+            {% if buy and row.can_buy %}
+            <form method="post" action="{% url 'billing:checkout' plan.slug %}" data-pay-form>
+              {% csrf_token %}
+              <button type="submit" class="ui-btn ui-btn--green ui-btn--small">Pay</button>
+            </form>
+            {% endif %}
+          {% else %}<span class="bl-table__none">—</span>{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

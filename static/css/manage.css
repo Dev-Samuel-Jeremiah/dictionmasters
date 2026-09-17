@@ -246,6 +246,7 @@
 select[multiple].cr-input { background-image: none; padding-right: 14px; min-height: 140px; }
 .cr-check { width: 20px; height: 20px; accent-color: var(--cr-gold); }
 .cr-file { display: block; width: 100%; padding: 12px; border: 1.5px dashed var(--cr-line); border-radius: 12px; background: rgba(20, 33, 61, .02); font-size: .9rem; }
+.cr-code { display: inline-block; max-width: 100%; padding: 6px 10px; border-radius: 8px; background: rgba(20, 33, 61, .06); font-family: ui-monospace, Menlo, monospace; font-size: .86rem; overflow-wrap: anywhere; }
 .cr-help { margin: 6px 0 0; font-size: .82rem; color: var(--cr-dim); }
 .cr-errors { margin: 6px 0 0; padding: 10px 14px; list-style: none; border-radius: 10px; color: #9b3550; background: #fdf3f5; font-size: .86rem; }
 .cr-field.has-error .cr-input { border-color: var(--cr-bad); }

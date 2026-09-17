@@ -212,6 +212,7 @@ def console_context(request):
                 {"name": "Cloudflare R2 media storage", "ok": settings.R2_CONFIGURED, "ok_text": "Connected: uploads go to R2", "bad_text": "Not configured: uploads stay on this server"},
                 {"name": "ElevenLabs pronunciation", "ok": speech_configured(), "ok_text": "Ready", "bad_text": "Add ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID"},
                 {"name": "Groq word look-up", "ok": bool(getattr(settings, "GROQ_API_KEY", "")), "ok_text": "Ready", "bad_text": "Add GROQ_API_KEY"},
+                {"name": "Paystack payments", "ok": bool(getattr(settings, "PAYSTACK_SECRET_KEY", "")), "ok_text": "Live: taking real payments" if getattr(settings, "PAYSTACK_SECRET_KEY", "").startswith("sk_live_") else "Test mode: no real money moves", "bad_text": "Add PAYSTACK_SECRET_KEY"},
             ],
         }
     }

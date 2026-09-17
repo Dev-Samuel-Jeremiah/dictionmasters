@@ -1,0 +1,21 @@
+{% load billing %}
+{# One plan. `buy` shows a pay button (signed in, allowed to pay); otherwise `cta_url`/`cta_label` link on. #}
+<article class="bl-plan{% if plan.is_featured %} bl-plan--featured{% endif %}">
+  {% if plan.is_featured %}<p class="bl-plan__flag">Most popular</p>{% endif %}
+  <h3 class="bl-plan__name">{{ plan.name }}</h3>
+  <p class="bl-plan__price">{{ plan.price|naira }}<span class="bl-plan__period"> {{ plan.period_text }}</span></p>
+  {% if plan.description %}<p class="bl-plan__desc">{{ plan.description }}</p>{% endif %}
+  <ul class="bl-plan__features">
+    <li>{{ plan.duration_days }} day{{ plan.duration_days|pluralize }} of full access</li>
+    {% if plan.band_label %}<li>{% if plan.audience == "student" %}Price for schools with {{ plan.band_label }} enrolled{% else %}For {{ plan.band_label }}{% endif %}</li>{% endif %}
+    {% for feature in plan.feature_list %}<li>{{ feature }}</li>{% endfor %}
+  </ul>
+  {% if buy %}
+  <form method="post" action="{% url 'billing:checkout' plan.slug %}" class="bl-plan__form" data-pay-form>
+    {% csrf_token %}
+    <button type="submit" class="ui-btn {% if plan.is_featured %}ui-btn--gold{% else %}ui-btn--green{% endif %} ui-btn--full">Pay {{ plan.price|naira }}</button>
+  </form>
+  {% elif cta_url %}
+  <a href="{{ cta_url }}" class="ui-btn {% if plan.is_featured %}ui-btn--gold{% else %}ui-btn--ghost{% endif %} ui-btn--full">{{ cta_label }}</a>
+  {% endif %}
+</article>

@@ -30,7 +30,13 @@ class ControlFormMixin:
                 css = "cr-input cr-textarea"
                 widget.attrs.setdefault("rows", 6)
             widget.attrs["class"] = f"{widget.attrs.get('class', '')} {css}".strip()
-            if isinstance(widget, forms.DateInput):
+            if isinstance(widget, forms.DateTimeInput):
+                # A real date-and-time picker, e.g. to extend someone's access by hand.
+                widget.input_type = "datetime-local"
+                widget.format = "%Y-%m-%dT%H:%M"
+                if hasattr(field, "input_formats"):
+                    field.input_formats = ["%Y-%m-%dT%H:%M", *field.input_formats]
+            elif isinstance(widget, forms.DateInput):
                 widget.input_type = "date"
 
 

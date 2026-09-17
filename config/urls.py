@@ -28,6 +28,7 @@ urlpatterns = [
     path("quick-words/", include("apps.quick_words.urls")),
     path("assessments/", include("apps.assessments.urls")),
     path("clash/", include("apps.clash.urls")),
+    path("billing/", include("apps.billing.urls")),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,176 @@
+/* =========================================================
+   Plans, billing and receipts (apps/billing).
+   ========================================================= */
+
+.bl-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+/* ---------- plan cards ---------- */
+
+.bl-plans {
+  display: grid;
+  /* Cards keep a readable width however many plans there are. */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 340px));
+  justify-content: center;
+  gap: 18px;
+  margin-top: 18px;
+  align-items: stretch;
+}
+.bl-plan {
+  position: relative;
+  display: flex; flex-direction: column;
+  padding: 24px 22px 22px;
+  border: 1.5px solid var(--rule);
+  border-radius: 20px;
+  background: var(--paper-white);
+  box-shadow: 0 1px 1px rgba(20, 33, 61, 0.04), 0 10px 24px -16px rgba(20, 33, 61, 0.3);
+}
+.bl-plan--featured {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(224, 177, 92, 0.25), 0 18px 34px -18px rgba(140, 101, 38, 0.45);
+}
+.bl-plan__flag {
+  position: absolute; top: -12px; left: 22px;
+  margin: 0; padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #14213D; background: linear-gradient(135deg, #f0c878, #c98f3a);
+}
+.bl-plan__name { margin: 0; font-family: var(--font-serif); font-size: 1.25rem; font-weight: 600; color: var(--ink); }
+.bl-plan__price { margin: 10px 0 2px; font-family: var(--font-serif); font-size: 2.2rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
+.bl-plan__period { font-family: var(--font-sans); font-size: 0.9rem; font-weight: 500; color: var(--ink-40); }
+.bl-plan__desc { margin: 4px 0 0; font-size: 0.9rem; color: var(--ink-70); }
+.bl-plan__features { flex: 1; margin: 16px 0 20px; padding: 0; list-style: none; display: grid; gap: 8px; }
+.bl-plan__features li { position: relative; padding-left: 26px; font-size: 0.92rem; color: var(--ink-70); }
+.bl-plan__features li::before {
+  content: "✓";
+  position: absolute; left: 0; top: 1px;
+  display: grid; place-items: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  font-size: 0.7rem; font-weight: 700;
+  color: #fff; background: #2e7d62;
+}
+.bl-plan__form { margin: 0; }
+.bl-plan .ui-btn[disabled] { opacity: 0.7; cursor: progress; }
+.bl-secure { margin: 16px 0 0; font-size: 0.84rem; color: var(--ink-40); }
+
+/* ---------- status ---------- */
+
+.bl-status { border-left: 5px solid var(--gold); }
+.bl-status--active { border-left-color: #2e7d62; }
+.bl-status--expired { border-left-color: var(--maroon); }
+.bl-status__title { margin: 4px 0 6px; font-family: var(--font-serif); font-size: 1.5rem; font-weight: 600; color: var(--ink); }
+.bl-status__meta { margin: 12px 0 0; font-size: 0.9rem; color: var(--ink-70); }
+.bl-status__next { margin: 16px 0 0; }
+.bl-status .ui-callout { margin-top: 14px; }
+
+.bl-pill {
+  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  font-size: 0.76rem; font-weight: 700; white-space: nowrap;
+  color: var(--ink-70); background: rgba(20, 33, 61, 0.07);
+}
+.bl-pill--success { color: #1f6a52; background: rgba(46, 125, 98, 0.14); }
+.bl-pill--failed { color: var(--maroon); background: rgba(122, 36, 56, 0.1); }
+.bl-pill--pending { color: var(--gold-deep); background: var(--gold-tint); }
+
+.bl-faq dl { margin: 12px 0 0; display: grid; gap: 14px; }
+.bl-faq dt { font-weight: 700; color: var(--ink); }
+.bl-faq dd { margin: 2px 0 0; color: var(--ink-70); }
+
+/* ---------- receipt ---------- */
+
+/* No hero above a receipt, so it sits below the header rather than tucking up under it. */
+.bl-receipt-page { margin-top: 0; padding-top: 32px; padding-bottom: 56px; }
+.bl-receipt__back { margin: 0 0 14px; }
+.bl-receipt {
+  padding: 32px;
+  border: 1px solid var(--rule);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 18px 40px -26px rgba(20, 33, 61, 0.4);
+}
+.bl-receipt__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px dashed var(--rule); }
+.bl-receipt__brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-serif); font-size: 1.15rem; color: var(--ink); }
+.bl-receipt__logo { height: 44px; width: auto; max-width: 200px; object-fit: contain; }
+.bl-receipt__mark {
+  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px;
+  font-family: var(--font-serif); font-style: italic; font-weight: 700;
+  color: #14213D; background: linear-gradient(135deg, #f0c878, #c98f3a);
+}
+.bl-receipt__kicker { margin: 0; text-align: right; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-40); }
+.bl-receipt__ref { margin: 2px 0 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem; color: var(--ink); }
+.bl-receipt__amount { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 22px 0 8px; font-family: var(--font-serif); font-size: 2.4rem; font-weight: 600; color: var(--ink); }
+.bl-receipt__rows { margin: 0; }
+.bl-receipt__rows div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.bl-receipt__rows dt { color: var(--ink-40); }
+.bl-receipt__rows dd { margin: 0; text-align: right; color: var(--ink); font-weight: 500; overflow-wrap: anywhere; }
+.bl-receipt__foot { margin-top: 18px; font-size: 0.86rem; color: var(--ink-70); }
+.bl-receipt__foot p { margin: 4px 0; }
+.bl-receipt__actions { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+
+@media (max-width: 560px) {
+  .bl-plans { grid-template-columns: minmax(0, 1fr); }
+  .bl-receipt { padding: 22px 18px; }
+  .bl-receipt__amount { font-size: 2rem; }
+  .bl-plan__price { font-size: 1.9rem; }
+}
+
+@media print {
+  .site-header, .site-footer, .bl-banner, .messages, .no-print { display: none !important; }
+  body, .ui { background: #fff !important; }
+  .bl-receipt { border: 0; box-shadow: none; padding: 0; }
+}
+
+/* ---------- price sheets ---------- */
+
+.bl-table-wrap { margin-top: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.bl-table { width: 100%; min-width: 420px; border-collapse: separate; border-spacing: 0 8px; }
+.bl-table thead th { padding: 0 16px 4px; text-align: left; font-family: var(--font-serif); font-size: 1.05rem; font-weight: 600; color: var(--gold-deep); }
+.bl-table thead th:not(:first-child), .bl-table td { text-align: right; }
+.bl-table tbody th, .bl-table td { padding: 12px 16px; background: #231a5f; color: #fff; }
+.bl-table tbody th { border-radius: 12px 0 0 12px; text-align: left; font-weight: 700; white-space: nowrap; }
+.bl-table td:last-child { border-radius: 0 12px 12px 0; }
+.bl-table td { white-space: nowrap; }
+.bl-table td form { display: inline-block; margin: 0 0 0 10px; vertical-align: middle; }
+.bl-table__price { font-weight: 700; font-size: 1.02rem; }
+.bl-table__none { opacity: 0.5; }
+.bl-table__why { display: block; margin-top: 2px; font-size: 0.74rem; font-weight: 500; opacity: 0.75; }
+.bl-table tr.is-too-small th, .bl-table tr.is-too-small td { background: rgba(35, 26, 95, 0.45); }
+.bl-table .ui-btn--small { padding: 5px 14px; }
+.bl-sheet__note { margin: 10px 0 0; font-size: 0.86rem; color: var(--ink-40); }
+.bl-sheet__cta { margin: 16px 0 0; display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* On a phone each tier becomes a card: its size, then a line per period. */
+@media (max-width: 560px) {
+  .bl-table-wrap { overflow: visible; }
+  .bl-table, .bl-table tbody, .bl-table tr, .bl-table th, .bl-table td { display: block; min-width: 0; }
+  .bl-table { border-spacing: 0; }
+  .bl-table thead { display: none; }
+  .bl-table tr { margin-bottom: 10px; border-radius: 14px; overflow: hidden; background: #231a5f; }
+  .bl-table tbody th, .bl-table td { background: transparent; border-radius: 0; }
+  .bl-table tbody th { padding: 12px 16px 6px; white-space: normal; }
+  .bl-table td {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px; text-align: left;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .bl-table td::before { content: attr(data-label); flex: 1; font-size: 0.86rem; opacity: 0.8; }
+  .bl-table td:last-child { border-radius: 0; padding-bottom: 12px; }
+  .bl-table td form { margin: 0; }
+  .bl-table tr.is-too-small { background: rgba(35, 26, 95, 0.45); }
+  .bl-table tr.is-too-small th, .bl-table tr.is-too-small td { background: transparent; }
+}
+
+/* ---------- renewing early, tucked away until it's due ---------- */
+
+.bl-renew__summary { display: flex; align-items: center; gap: 14px; cursor: pointer; list-style: none; }
+.bl-renew__summary::-webkit-details-marker { display: none; }
+.bl-renew__summary > span { display: grid; gap: 4px; flex: 1; }
+.bl-renew__summary::after {
+  content: "+"; flex: 0 0 auto;
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+  font-size: 1.2rem; font-weight: 700; color: var(--ink); background: rgba(20, 33, 61, 0.07);
+}
+.bl-renew[open] .bl-renew__summary::after { content: "−"; }
+.bl-renew__hint { font-size: 0.9rem; color: var(--ink-70); }
+.bl-renew[open] .bl-renew__summary { margin-bottom: 8px; }
+.bl-renew__summary .ui-section__title { font-family: var(--font-serif); font-size: 1.3rem; font-weight: 600; color: var(--ink); }

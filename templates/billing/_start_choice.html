@@ -1,0 +1,47 @@
+{% comment %}
+  How to begin, at the end of a registration form: the free trial, or pay
+  now for a plan. Needs a form using accounts.forms.StartChoiceMixin.
+{% endcomment %}
+{% if form.start.field.choices %}
+<fieldset class="bl-start" data-start-choice>
+  <legend class="bl-start__legend">How would you like to start?</legend>
+  <div class="bl-start__options">
+    {% for radio in form.start %}
+    <label class="bl-start__option">
+      {{ radio.tag }}
+      <span class="bl-start__card">
+        {% if radio.data.value == "trial" %}
+        <span class="bl-start__title">&#127873; {{ radio.choice_label }}</span>
+        <span class="bl-start__note">{% if form.trial_days %}Full access, no card needed. Choose a plan any time.{% else %}Everything is free right now.{% endif %}</span>
+        {% else %}
+        <span class="bl-start__title">&#128179; {{ radio.choice_label }}</span>
+        <span class="bl-start__note">Pay securely with Paystack: card, bank transfer or USSD.</span>
+        {% endif %}
+      </span>
+    </label>
+    {% endfor %}
+  </div>
+  {% if form.start.errors %}<ul class="field-errors">{% for error in form.start.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+
+  <div class="field bl-start__plan" data-plan-field>
+    <label for="{{ form.plan.id_for_label }}">{{ form.plan.label }}</label>
+    {{ form.plan }}
+    {% if plan_help %}<p class="field-help" data-plan-help>{{ plan_help }}</p>{% endif %}
+    {% if form.plan.errors %}<ul class="field-errors">{% for error in form.plan.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    <p class="field-help"><a href="{% url 'billing:pricing' %}" target="_blank" rel="noopener">See all prices</a></p>
+  </div>
+</fieldset>
+<script>
+  // The plan list only matters when paying now.
+  (function () {
+    var box = document.currentScript.previousElementSibling;
+    var plan = box.querySelector("[data-plan-field]");
+    function sync() {
+      var chosen = box.querySelector('input[name="start"]:checked');
+      plan.hidden = !chosen || chosen.value !== "pay";
+    }
+    box.addEventListener("change", sync);
+    sync();
+  })();
+</script>
+{% endif %}

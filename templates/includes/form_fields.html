@@ -1,4 +1,6 @@
-{% for field in form %}
+{# Pass `fields` to lay out only some of a form's fields. #}
+{% for field in fields|default:form %}
+{% if field.is_hidden %}{{ field }}{% else %}
 <div class="field">
   {% if field.field.widget.input_type == "radio" %}
     <label>{{ field.label }}</label>
@@ -18,4 +20,5 @@
   </ul>
   {% endif %}
 </div>
+{% endif %}
 {% endfor %}

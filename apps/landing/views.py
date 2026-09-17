@@ -57,7 +57,46 @@ def home(request):
     schools/lessons apps exist, the numbers in `stats` can be swapped
     for real querysets without touching the template.
     """
+    from apps.billing.models import BillingSettings, Plan
+
+    def lowest(audience):
+        plan = Plan.objects.filter(is_active=True, audience=audience).order_by("price").first()
+        return plan
+
+    billing = BillingSettings.load()
     context = {
+        "trial_days": billing.trial_days if billing.paywall_enabled else 0,
+        # One card per kind of learner, so nobody reads the page as
+        # "schools only". Starting prices come from the plans in the database.
+        "audiences": [
+            {
+                "key": "adults", "icon": "🧑", "tone": "#2e7d62",
+                "title": "Adults & individual learners",
+                "body": "Sharpen your pronunciation for work, study or confidence — "
+                        "at your own pace, on your own schedule. No school needed.",
+                "points": ["Every learning tool, just for you", "Practise speaking in private", "Weekly to yearly plans"],
+                "plan": lowest(Plan.AUDIENCE_INDIVIDUAL),
+                "cta": "Start learning", "url": "accounts:register_individual",
+            },
+            {
+                "key": "students", "icon": "🎒", "tone": "#2f5d8a",
+                "title": "Students learning at home",
+                "body": "Keep practising after school with the lessons your school uses. "
+                        "Sign up with your school's code — a parent can do it for you.",
+                "points": ["Joins your school with its code", "The right work for your level", "Termly or yearly, per child"],
+                "plan": lowest(Plan.AUDIENCE_STUDENT),
+                "cta": "Sign up as a student", "url": "accounts:register_student",
+            },
+            {
+                "key": "schools", "icon": "🏫", "tone": "#7A2438",
+                "title": "Schools",
+                "body": "Give every teacher the tools to teach British English sounds, "
+                        "and see each class's progress in one place.",
+                "points": ["Priced by number of teachers", "Codes put teachers in the right class", "Termly or yearly"],
+                "plan": lowest(Plan.AUDIENCE_SCHOOL),
+                "cta": "Register your school", "url": "accounts:register_school",
+            },
+        ],
         "hero_words": HERO_WORDS,
         "phonemes": _phoneme_symbols(),
         "drift": _drift_layer(),
@@ -68,31 +107,31 @@ def home(request):
         ],
         "steps": [
             {
-                "title": "The school gets an access code",
-                "body": "We set your school up and hand your admin a "
-                        "code that switches Diction Masters on.",
+                "title": "Choose how you join",
+                "body": "On your own as an adult learner, as a student "
+                        "with your school's code, or as a whole school.",
             },
             {
-                "title": "Teachers enrol their class",
-                "body": "Each class gets its own code. Pupils join the "
-                        "right class and nowhere else.",
+                "title": "Start free or pay",
+                "body": "Try everything with the free trial, no card "
+                        "needed, or pick a plan straight away.",
             },
             {
-                "title": "Pupils watch, listen and speak",
+                "title": "Watch, listen and speak",
                 "body": "Short videos, audio drills and speaking "
                         "tasks, paced like a private lesson.",
             },
             {
-                "title": "Teachers see everything",
-                "body": "Every recording, score and streak lands on "
-                        "the teacher's dashboard, automatically.",
+                "title": "See yourself improve",
+                "body": "Scores, streaks and recordings build up on your "
+                        "dashboard, and on your teacher's if you're in a school.",
             },
         ],
         "features": [
             {
                 "eyebrow": "Watch",
                 "icon": "🎬",
-                "title": "Lessons a child actually wants to finish",
+                "title": "Lessons you actually want to finish",
                 "body": "Short British-English videos on pronunciation, "
                         "spelling and vocabulary, built for a term at a "
                         "time so nothing feels overwhelming.",
@@ -103,15 +142,15 @@ def home(request):
                 "icon": "🎧",
                 "title": "An ear trained on the real sound of English",
                 "body": "Audio drills built around the 44 sounds of the "
-                        "phonemic chart, so pupils hear the difference "
+                        "phonemic chart, so you hear the difference "
                         "between how a word is spelled and how it's said.",
                 "align": "right",
             },
             {
                 "eyebrow": "Speak",
                 "icon": "🎤",
-                "title": "Practice out loud, without the fear of a class watching",
-                "body": "Pupils record themselves reading, repeating "
+                "title": "Practise out loud, without anyone watching",
+                "body": "Record yourself reading, repeating "
                         "and presenting, as many times as they need, "
                         "before anyone else hears it.",
                 "align": "left",
@@ -119,10 +158,10 @@ def home(request):
             {
                 "eyebrow": "Get feedback",
                 "icon": "📊",
-                "title": "A teacher who sees the whole journey",
+                "title": "Progress you can see",
                 "body": "Every video watched, every drill scored, "
-                        "every recording made — laid out for the "
-                        "teacher, class by class, pupil by pupil.",
+                        "every recording made — on your own dashboard, "
+                        "and for schools, laid out class by class for teachers.",
                 "align": "right",
             },
         ],

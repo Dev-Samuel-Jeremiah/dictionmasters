@@ -32,6 +32,7 @@
             <span aria-hidden="true">&rarr;</span>
           </a>
           <a href="{% url 'clash:hub' %}" class="dash-btn dash-btn--glass">&#9876;&#65039; Play Diction Clash</a>
+          {% if billing.can_pay %}<a href="{% url 'billing:account' %}" class="dash-btn dash-btn--glass">&#128179; {% if billing.state == "active" %}My plan{% else %}Plans &amp; billing{% endif %}</a>{% endif %}
         </div>
       </div>
 

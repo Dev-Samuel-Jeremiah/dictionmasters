@@ -10,7 +10,7 @@
       <aside class="ui-auth__aside">
         <span class="ui-auth__mark" aria-hidden="true">iː</span>
         <div>
-          <p class="ui-auth__eyebrow">Individual learner</p>
+          <p class="ui-auth__eyebrow">Adult learner</p>
           <h1 class="ui-auth__title">Learn on your own, at your own pace</h1>
           <p class="ui-auth__lede">No school and no code needed. Create an account and start with the first lesson today.</p>
         </div>
@@ -32,7 +32,8 @@
               {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
             </ul>
             {% endif %}
-            {% include "includes/form_fields.html" %}
+            {% include "includes/form_fields.html" with fields=form.account_fields %}
+            {% include "billing/_start_choice.html" %}
             <button type="submit" class="ui-btn ui-btn--gold ui-btn--large ui-btn--full">Create my account</button>
             <p class="ui-auth__foot">Already have an account? <a href="{% url 'accounts:login' %}">Log in</a>.</p>
           </form>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static billing %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/landing.css' %}">
@@ -30,19 +30,19 @@
     <div class="wrap hero__book">
 
       <div class="hero__page hero__page--left">
-        <p class="ld-eyebrow">British English for Nigerian schools</p>
+        <p class="ld-eyebrow">British English for learners, students and schools</p>
         <h1 class="hero__headline">
           A private English tutor,
-          <span class="hero__headline-line">sitting right beside every child.</span>
+          <span class="hero__headline-line">sitting right beside every learner.</span>
         </h1>
         <p class="hero__sub">
-          Diction Masters teaches Nigerian school children to speak, spell
-          and pronounce British English the way a patient tutor would:
-          one child, one class, one school at a time. They watch, they
-          listen, they speak, and their teacher sees every bit of it.
+          Diction Masters teaches you to speak, spell and pronounce British
+          English the way a patient tutor would. Learn on your own as an
+          adult, keep practising at home as a student, or bring it to your
+          whole school — watch, listen, speak, and see yourself improve.
         </p>
         <div class="hero__actions">
-          <a href="{% url 'accounts:register_school' %}" class="ld-btn ld-btn--gold">Get an access code for your school &rarr;</a>
+          <a href="{% url 'accounts:register_choice' %}" class="ld-btn ld-btn--gold">Get started &rarr;</a>
           <a href="#how-it-works" class="ld-btn ld-btn--glass">See how it works</a>
         </div>
 
@@ -123,15 +123,44 @@
     </div>
   </section>
 
+  <!-- ===================== WHO IT'S FOR ===================== -->
+  <section class="ld-section audience" id="who-its-for">
+    <div class="wrap">
+      <header class="ld-section__head">
+        <p class="ld-section__kicker reveal">Who it's for</p>
+        <h2 class="section-title reveal">Made for everyone who wants to speak English well</h2>
+        <p class="section-lede reveal">You don't need a school to use Diction Masters. Pick the way that fits you.</p>
+      </header>
+
+      <div class="audience__grid">
+        {% for item in audiences %}
+        <article class="audience__card ld-lift reveal" style="--d: {{ forloop.counter0 }}; --tone: {{ item.tone }};">
+          <span class="audience__icon" aria-hidden="true">{{ item.icon }}</span>
+          <h3 class="audience__title">{{ item.title }}</h3>
+          <p class="audience__body">{{ item.body }}</p>
+          <ul class="audience__points">
+            {% for point in item.points %}<li>{{ point }}</li>{% endfor %}
+          </ul>
+          {% if item.plan %}
+          <p class="audience__price">From <strong>{{ item.plan.price|naira }}</strong> {{ item.plan.period_text }}</p>
+          {% endif %}
+          <a href="{% url item.url %}" class="ld-btn {% if forloop.first %}ld-btn--gold{% else %}ld-btn--outline{% endif %}">{{ item.cta }} &rarr;</a>
+        </article>
+        {% endfor %}
+      </div>
+      {% if trial_days %}<p class="audience__trial reveal">&#127873; Every account can start with a {{ trial_days }}-day free trial. <a href="{% url 'billing:pricing' %}">See all plans &amp; prices</a></p>{% endif %}
+    </div>
+  </section>
+
   <!-- ===================== HOW IT WORKS ===================== -->
   <section class="steps ld-section" id="how-it-works">
     <div class="wrap">
       <header class="ld-section__head">
         <p class="ld-section__kicker reveal">How it works</p>
-        <h2 class="section-title reveal">From a school code to a confident reader</h2>
+        <h2 class="section-title reveal">From sign-up to a confident speaker</h2>
         <p class="section-lede reveal">
-          Access is controlled by the school from the very first step, so
-          every child ends up in exactly the right class, and nowhere else.
+          Whether you're learning alone or with your school, getting going
+          takes a couple of minutes{% if trial_days %}, and the first {{ trial_days }} days are free{% endif %}.
         </p>
       </header>
 
@@ -151,7 +180,7 @@
   <section class="features ld-section" id="book">
     <div class="wrap">
       <header class="ld-section__head">
-        <p class="ld-section__kicker reveal">What pupils get</p>
+        <p class="ld-section__kicker reveal">What every learner gets</p>
         <h2 class="section-title reveal">Everything a good tutor does, built into one app</h2>
       </header>
 
@@ -176,7 +205,7 @@
   <section class="chalkboard">
     <div class="wrap">
       <div class="chalkboard__inner">
-        <p class="chalkboard__line reveal">Built so a class of forty still feels like one-on-one attention.</p>
+        <p class="chalkboard__line reveal">One-on-one attention, whether you're learning alone or in a class of forty.</p>
         <div class="chalkboard__figures">
           <div class="chalkboard__figure">
             <span class="chalkboard__number" data-count-to="44">44</span>
@@ -186,10 +215,10 @@
             <span class="chalkboard__number" data-count-to="350">350</span>
             <span class="chalkboard__label">videos planned for the Book of Conversation</span>
           </div>
-          <div class="chalkboard__figure">
-            <span class="chalkboard__number" data-count-to="1">1</span>
-            <span class="chalkboard__label">class code per pupil, so never the wrong classroom</span>
-          </div>
+          {% if trial_days %}<div class="chalkboard__figure">
+            <span class="chalkboard__number" data-count-to="{{ trial_days }}">{{ trial_days }}</span>
+            <span class="chalkboard__label">days free to try everything, no card needed</span>
+          </div>{% endif %}
         </div>
       </div>
     </div>
@@ -209,20 +238,20 @@
     </div>
   </section>
 
-  <!-- ===================== CTA FOR SCHOOLS ===================== -->
-  <section class="cta-band" id="for-schools">
+  <!-- ===================== GET STARTED ===================== -->
+  <section class="cta-band" id="get-started">
     <div class="wrap">
       <div class="cta-band__inner">
         <div class="cta-band__copy">
-          <h2 class="section-title section-title--on-parchment reveal">Bring Diction Masters to your school</h2>
+          <h2 class="section-title section-title--on-parchment reveal">Start speaking with confidence today</h2>
           <p class="section-lede">
-            We set your school up, hand your admin an access code, and
-            your teachers take it from there, class by class.
+            Learn on your own, practise at home with your school's code, or
+            bring Diction Masters to every class in your school.{% if trial_days %} Your first {{ trial_days }} days are free.{% endif %}
           </p>
         </div>
         <div class="cta-band__actions">
-          <a href="{% url 'accounts:register_school' %}" class="ld-btn ld-btn--gold ld-btn--large">Request an access code &rarr;</a>
-          <p class="cta-band__note">Already have one? <a href="{% url 'accounts:login' %}">Sign in here</a>.</p>
+          <a href="{% url 'accounts:register_choice' %}" class="ld-btn ld-btn--gold ld-btn--large">Get started &rarr;</a>
+          <p class="cta-band__note">Registering a school? <a href="{% url 'accounts:register_school' %}">Start here</a>. Already have an account? <a href="{% url 'accounts:login' %}">Sign in</a>.</p>
           <a href="{% url 'manage:login' %}" class="ld-btn ld-btn--staff">&#128274; Staff area &rarr;</a>
         </div>
       </div>

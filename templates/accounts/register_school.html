@@ -83,6 +83,11 @@
               </div>
             </div>
 
+            <div class="ui-auth__section">
+              <p class="ui-auth__section-title">3 &middot; Your plan</p>
+              {% include "billing/_start_choice.html" with plan_help="School plans are priced by how many teachers you have. Students pay for their own access when they sign up with your school code." %}
+            </div>
+
             <button type="submit" class="ui-btn ui-btn--gold ui-btn--large ui-btn--full">Create the school &amp; my admin account</button>
             <p class="ui-auth__foot">Already registered? <a href="{% url 'accounts:login' %}">Log in</a>.</p>
           </form>

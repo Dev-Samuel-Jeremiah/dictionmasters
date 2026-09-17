@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Student sign up — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <div class="wrap">
+    <div class="ui-auth">
+      <aside class="ui-auth__aside">
+        <span class="ui-auth__mark" aria-hidden="true">iː</span>
+        <div>
+          <p class="ui-auth__eyebrow">Students</p>
+          <h1 class="ui-auth__title">Learn at home with your school</h1>
+          <p class="ui-auth__lede">Use your school's code to join, then practise every day with the lessons your school uses.</p>
+        </div>
+        <ul class="ui-auth__points">
+          <li>Your school's code links you to your school</li>
+          <li>Start with a free trial, or pay for a term or a year</li>
+          <li>The more children your school enrols, the less each one pays</li>
+        </ul>
+      </aside>
+
+      <div class="ui-auth__panel">
+        <h2 class="ui-auth__heading">Create your student account</h2>
+        <p class="ui-auth__note">A parent or guardian can fill this in.</p>
+        <div class="form-card">
+          <form method="post" novalidate data-student-form data-prices-url="{% url 'billing:student_prices' %}">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <ul class="non-field-errors">
+              {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% include "includes/form_fields.html" with fields=form.account_fields %}
+            <p class="bl-school-found" data-school-found hidden></p>
+            {% include "billing/_start_choice.html" with plan_help="Enter your school code above to see your price." %}
+            <button type="submit" class="ui-btn ui-btn--gold ui-btn--large ui-btn--full">Create my account</button>
+            <p class="ui-auth__foot">Already have an account? <a href="{% url 'accounts:login' %}">Log in</a>. Teachers: <a href="{% url 'accounts:join_with_code' %}">join with your code</a>.</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Show which school the code belongs to, and its price per child for
+  // each period, as soon as the code is typed.
+  (function () {
+    var form = document.querySelector("[data-student-form]");
+    var input = form.querySelector('[name="school_code"]');
+    var found = form.querySelector("[data-school-found]");
+    var select = form.querySelector('[name="plan"]');
+    var help = form.querySelector("[data-plan-help]");
+    input.closest(".field").appendChild(found);   // right under the code it describes
+    found.style.margin = "8px 0 0";
+    var base = {};
+    Array.prototype.forEach.call(select.options, function (option) { base[option.value] = option.textContent; });
+    var timer = null, last = "";
+
+    function reset(message) {
+      Array.prototype.forEach.call(select.options, function (option) { option.textContent = base[option.value]; });
+      if (help) help.textContent = message;
+    }
+
+    function look() {
+      var code = input.value.trim().toUpperCase();
+      if (code.length < 4 || code === last) return;
+      last = code;
+      fetch(form.dataset.pricesUrl + "?code=" + encodeURIComponent(code), { headers: { Accept: "application/json" } })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+          if (!data.found) {
+            found.hidden = false;
+            found.className = "bl-school-found bl-school-found--missing";
+            found.textContent = "We can't find a school with that code yet.";
+            reset("Enter your school code above to see your price.");
+            return;
+          }
+          found.hidden = false;
+          found.className = "bl-school-found";
+          found.textContent = "✓ " + data.school;
+          var prices = {};
+          data.options.forEach(function (option) { prices[option.period] = option.price + " " + option.text; });
+          Array.prototype.forEach.call(select.options, function (option) {
+            if (option.value && prices[option.value]) option.textContent = option.value + " — " + prices[option.value];
+          });
+          if (help) help.textContent = "Your price for " + data.school + ".";
+        })
+        .catch(function () {});
+    }
+
+    input.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(look, 400); });
+    if (input.value) look();
+  })();
+</script>
+{% endblock %}

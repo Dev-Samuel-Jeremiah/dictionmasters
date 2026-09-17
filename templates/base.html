@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Diction Masters — a private English tutor for every child{% endblock %}</title>
-  <meta name="description" content="{% block meta_description %}Diction Masters gives every Nigerian school child a private British English tutor: video lessons, audio drills, speaking practice, and a teacher who sees it all.{% endblock %}">
+  <meta name="description" content="{% block meta_description %}Diction Masters is a private British English tutor for adults, students and schools: video lessons, audio drills, speaking practice and progress you can see. Start with a free trial.{% endblock %}">
 
   {% if branding.favicon %}<link rel="icon" href="{{ branding.favicon.url }}">{% endif %}
 
@@ -21,6 +21,7 @@
 </head>
 <body>
   {% include "includes/header.html" %}
+  {% if user.is_authenticated %}{% include "billing/_banner.html" %}{% endif %}
   {% include "includes/messages.html" %}
   <main>
     {% block content %}{% endblock %}

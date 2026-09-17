@@ -39,6 +39,19 @@
       if (!tool) link.target = "_top";
     }, true);
 
+    // The same for forms, e.g. paying for a plan: Paystack's checkout
+    // can't open inside the panel.
+    document.addEventListener("submit", function (event) {
+      var form = event.target;
+      if (!form || form.target) return;
+      var url;
+      try { url = new URL(form.action || location.href, location.href); } catch (error) { return; }
+      var tool = url.origin === location.origin && TOOL_PATHS.some(function (path) {
+        return url.pathname.indexOf(path) === 0;
+      });
+      if (!tool) form.target = "_top";
+    }, true);
+
     // Escape closes the panel even while the tool has the focus.
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape") {

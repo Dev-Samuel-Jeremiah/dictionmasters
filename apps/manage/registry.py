@@ -216,6 +216,24 @@ SECTIONS = [
              "search": ["user__email"], "readonly": True},
         ],
     },
+    {
+        "slug": "billing", "name": "Billing", "icon": "💳", "tone": "#2e7d62",
+        "blurb": "Plans and prices, who has access until when, and every payment.",
+        "screens": [
+            {"key": "plans", "model": "billing.Plan",
+             "columns": ["name", "audience", "band_label", "price", "duration_days", "is_active"],
+             "search": ["name", "description"], "order": ["audience", "min_units", "duration_days", "order"],
+             "form": ["audience", "name", "min_units", "max_units", "price", "duration_days", "period_label",
+                      "description", "features", "is_featured", "is_active", "order"]},
+            {"key": "subscriptions", "model": "billing.Subscription",
+             "columns": ["__str__", "plan", "trial_ends_at", "paid_until"],
+             "search": ["user__email", "school__name"], "order": ["-updated_at"],
+             "form": ["plan", "trial_ends_at", "paid_until"]},
+            {"key": "payments", "model": "billing.Payment",
+             "columns": ["reference", "account_name", "plan_name", "amount_display", "status", "channel", "paid_at"],
+             "search": ["reference", "email", "account_name"], "order": ["-created_at"], "readonly": True},
+        ],
+    },
 ]
 
 # Quick "add" buttons on the control room home page.
@@ -230,6 +248,7 @@ QUICK_ADDS = [
     ("articles", "Library article", "📄"),
     ("schools", "School", "🏫"),
     ("users", "User", "👤"),
+    ("plans", "Billing plan", "💳"),
 ]
 
 

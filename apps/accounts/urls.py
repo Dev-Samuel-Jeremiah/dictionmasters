@@ -8,6 +8,7 @@ urlpatterns = [
     path("register/", views.register_choice, name="register_choice"),
     path("register/school/", views.register_school, name="register_school"),
     path("register/individual/", views.register_individual, name="register_individual"),
+    path("register/student/", views.register_student, name="register_student"),
     path("join/", views.join_with_code, name="join_with_code"),
     path("login/", views.EmailLoginView.as_view(), name="login"),
     path("logout/", views.EmailLogoutView.as_view(), name="logout"),

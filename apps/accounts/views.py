@@ -5,12 +5,16 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 
+from apps.billing.models import Plan
+from apps.billing.services import begin_access
+
 from .dashboard_data import learner_dashboard
 from .forms import (
     EmailAuthenticationForm,
     IndividualRegistrationForm,
     JoinWithCodeForm,
     SchoolRegistrationForm,
+    StudentRegistrationForm,
 )
 from .models import User
 
@@ -32,6 +36,11 @@ def register_choice(request):
     return render(request, "accounts/register_choice.html")
 
 
+def _chosen_plan(form, audience):
+    slug = form.cleaned_data.get("plan")
+    return Plan.objects.filter(slug=slug, audience=audience, is_active=True).first() if slug else None
+
+
 def register_school(request):
     if request.method == "POST":
         form = SchoolRegistrationForm(request.POST)
@@ -40,10 +49,10 @@ def register_school(request):
             auth_login(request, user)
             messages.success(
                 request,
-                f"{user.school.name} is set up. Your school code is "
-                f"{user.school.code} — you can now add teachers and students.",
+                f"{user.school.name} is set up. Your school code is {user.school.code} — "
+                "teachers join with codes you make, and students sign up with this school code.",
             )
-            return redirect(_post_login_redirect(user))
+            return redirect(begin_access(request, user, form.cleaned_data.get("start"), _chosen_plan(form, Plan.AUDIENCE_SCHOOL)))
     else:
         form = SchoolRegistrationForm()
     return render(request, "accounts/register_school.html", {"form": form})
@@ -56,10 +65,23 @@ def register_individual(request):
             user = form.save()
             auth_login(request, user)
             messages.success(request, "Welcome to Diction Masters!")
-            return redirect(_post_login_redirect(user))
+            return redirect(begin_access(request, user, form.cleaned_data.get("start"), _chosen_plan(form, Plan.AUDIENCE_INDIVIDUAL)))
     else:
         form = IndividualRegistrationForm()
     return render(request, "accounts/register_individual.html", {"form": form})
+
+
+def register_student(request):
+    if request.method == "POST":
+        form = StudentRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            auth_login(request, user)
+            messages.success(request, f"Welcome, {user.first_name}! You're now part of {user.school.name}.")
+            return redirect(begin_access(request, user, form.cleaned_data.get("start"), form.chosen_plan(user)))
+    else:
+        form = StudentRegistrationForm(initial={"school_code": request.GET.get("school", "")})
+    return render(request, "accounts/register_student.html", {"form": form})
 
 
 def join_with_code(request):

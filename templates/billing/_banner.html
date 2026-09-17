@@ -1,0 +1,37 @@
+{% load billing %}
+{% comment %}
+  The trial and renewal reminder under the header. Quiet while there's
+  plenty of time; clear when time is short or up. Not shown on the billing
+  pages themselves, to staff, or while the paywall is switched off.
+{% endcomment %}
+{% if billing and not billing.exempt and billing.paywall and request.resolver_match.app_name != "billing" %}
+  {% if billing.never_started %}
+  <div class="bl-banner bl-banner--soon" role="status">
+    <div class="wrap bl-banner__inner">
+      <p>{% if billing.can_pay %}{% if billing.trial_available %}&#127873; Start your free {{ billing.settings.trial_days }}-day trial, or choose a plan, to open the learning tools.{% else %}Choose a plan to open the learning tools.{% endif %}{% else %}{{ billing.school.name }} hasn't started its plan yet. Please ask your school admin.{% endif %}</p>
+      {% if billing.can_pay %}<a href="{% url 'billing:account' %}" class="bl-banner__cta">Get started &rarr;</a>{% endif %}
+    </div>
+  </div>
+  {% elif billing.state == "expired" %}
+  <div class="bl-banner bl-banner--ended" role="status">
+    <div class="wrap bl-banner__inner">
+      <p>{% if billing.can_pay %}Your {% if billing.subscription.paid_until %}plan{% else %}free trial{% endif %} has ended. Your progress is saved — choose a plan to carry on learning.{% else %}{{ billing.school.name }}'s access has ended. Please ask your school admin to renew.{% endif %}</p>
+      <a href="{% url 'billing:account' %}" class="bl-banner__cta">{% if billing.can_pay %}Choose a plan{% else %}Details{% endif %} &rarr;</a>
+    </div>
+  </div>
+  {% elif billing.state == "trial" %}
+  <div class="bl-banner bl-banner--trial{% if billing.renew_soon %} bl-banner--soon{% endif %}" role="status">
+    <div class="wrap bl-banner__inner">
+      <p>&#127873; {% if billing.can_pay %}Free trial: <strong>{{ billing.days_left }} day{{ billing.days_left|pluralize }} left</strong>.{% else %}{{ billing.school.name }}'s free trial: <strong>{{ billing.days_left }} day{{ billing.days_left|pluralize }} left</strong>.{% endif %}</p>
+      {% if billing.can_pay %}<a href="{% url 'billing:account' %}" class="bl-banner__cta">See plans &rarr;</a>{% endif %}
+    </div>
+  </div>
+  {% elif billing.renew_soon and billing.can_pay %}
+  <div class="bl-banner bl-banner--soon" role="status">
+    <div class="wrap bl-banner__inner">
+      <p>Your plan ends in <strong>{{ billing.days_left }} day{{ billing.days_left|pluralize }}</strong> ({{ billing.access_until|date:"j M" }}).</p>
+      <a href="{% url 'billing:account' %}" class="bl-banner__cta">Renew &rarr;</a>
+    </div>
+  </div>
+  {% endif %}
+{% endif %}

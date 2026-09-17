@@ -1082,3 +1082,49 @@ html.tool-sheet-open { overflow: hidden; }
   .tool-sheet.is-in { animation: none; }
   .tool-sheet__frame { transition: none; }
 }
+
+/* ---------- trial and renewal banner (templates/billing/_banner.html) ---------- */
+
+.bl-banner { font-size: 0.9rem; border-bottom: 1px solid rgba(20, 33, 61, 0.08); }
+.bl-banner__inner { display: flex; align-items: center; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; padding-top: 9px; padding-bottom: 9px; }
+.bl-banner p { margin: 0; }
+.bl-banner__cta { font-weight: 700; text-decoration: none; white-space: nowrap; color: inherit; border-bottom: 1.5px solid currentColor; }
+.bl-banner--trial { color: #1f4f40; background: rgba(46, 125, 98, 0.1); }
+.bl-banner--soon { color: #6b4a14; background: rgba(224, 177, 92, 0.22); }
+.bl-banner--ended { color: #fff; background: linear-gradient(90deg, #7A2438, #611C2C); }
+.is-embedded .bl-banner { display: none; }
+
+.ui-auth__trial { margin: -4px 0 16px; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; color: #1f4f40; background: rgba(46, 125, 98, 0.1); }
+.ui-auth__trial a { color: inherit; font-weight: 700; }
+.ui-hero__side { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+
+/* ---------- registration: free trial or pay now (templates/billing/_start_choice.html) ---------- */
+
+.bl-start { margin: 6px 0 18px; padding: 0; border: 0; min-width: 0; }
+.bl-start__legend { margin-bottom: 10px; font-weight: 700; color: var(--ink); }
+.bl-start__options { display: grid; gap: 10px; }
+.bl-start__option { position: relative; display: block; cursor: pointer; }
+.bl-start__option input { position: absolute; opacity: 0; pointer-events: none; }
+.bl-start__card {
+  display: grid; gap: 3px;
+  padding: 14px 16px 14px 46px;
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.bl-start__card::before {
+  content: "";
+  position: absolute; left: 16px; top: 17px;
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--ink-40); background: #fff;
+}
+.bl-start__option input:checked + .bl-start__card { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(224, 177, 92, 0.25); }
+.bl-start__option input:checked + .bl-start__card::before { border-color: var(--gold-deep); background: radial-gradient(circle, var(--gold-deep) 45%, #fff 50%); }
+.bl-start__option input:focus-visible + .bl-start__card { outline: 3px solid var(--gold); outline-offset: 2px; }
+.bl-start__title { font-weight: 700; color: var(--ink); }
+.bl-start__note { font-size: 0.86rem; color: var(--ink-70); }
+.bl-start__plan { margin-top: 14px; }
+.bl-start__plan[hidden] { display: none; }
+.bl-school-found { margin: -6px 0 14px; padding: 8px 12px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1f4f40; background: rgba(46, 125, 98, 0.1); }
+.bl-school-found--missing { color: var(--maroon); background: rgba(122, 36, 56, 0.08); }

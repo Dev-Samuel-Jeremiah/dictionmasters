@@ -11,6 +11,7 @@ urlpatterns = [
     path("search/", views.search, name="search"),
     path("jobs/<str:job>/", views.run_job, name="job"),
     path("branding/", views.branding, name="branding"),
+    path("billing-settings/", views.billing_settings, name="billing_settings"),
     path("<slug:key>/", views.record_list, name="list"),
     path("<slug:key>/new/", views.record_form, name="add"),
     path("<slug:key>/<int:pk>/", views.record_form, name="edit"),

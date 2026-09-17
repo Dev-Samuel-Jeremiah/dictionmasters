@@ -29,6 +29,8 @@ from django.views.decorators.http import require_POST
 from apps.book import phoneme_audio, video_poster
 from apps.console import jobs
 from apps.console.dashboard import console_context
+from apps.billing import paystack
+from apps.billing.models import BillingSettings
 from apps.landing.models import SiteBranding
 
 from .forms import ControlLoginForm, build_form
@@ -400,6 +402,25 @@ def branding(request):
     # The preview comes from the saved row (the `branding` context
     # processor), not the form, so a rejected upload never shows as current.
     return render(request, "manage/branding.html", _base_context(request, "branding", form=form))
+
+
+@staff_only
+def billing_settings(request):
+    obj = BillingSettings.load()
+    FormClass = build_form(BillingSettings, ["paywall_enabled", "trial_days", "reminder_days", "support_email"])
+    form = FormClass(request.POST or None, instance=obj)
+
+    if request.method == "POST" and form.is_valid():
+        saved = form.save()
+        _record(request, saved, CHANGE, "Changed in the control room")
+        messages.success(request, "Billing settings saved.")
+        return redirect("manage:billing_settings")
+
+    return render(request, "manage/billing_settings.html", _base_context(
+        request, "billing-settings", form=form,
+        paystack_ready=paystack.is_configured(), paystack_live=paystack.is_live(),
+        webhook_url=request.build_absolute_uri(reverse("billing:webhook")),
+    ))
 
 
 # ---------------------------------------------------------------------------

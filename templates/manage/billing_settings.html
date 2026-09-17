@@ -1,0 +1,41 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Billing settings — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#128179; Billing</p>
+    <h1 class="cr-pagehead__title">Billing settings</h1>
+  </div>
+  <a href="{% url 'manage:list' 'plans' %}" class="cr-btn cr-btn--gold">Plans &amp; prices</a>
+</header>
+
+<section class="cr-card">
+  <h2 class="cr-card__title">Paystack</h2>
+  {% if paystack_ready %}
+  <p>&#10003; Connected in <strong>{% if paystack_live %}live mode — real payments{% else %}test mode — no real money moves{% endif %}</strong>.</p>
+  {% else %}
+  <p>&#9888;&#65039; Not connected. Add <code>PAYSTACK_SECRET_KEY</code> and <code>PAYSTACK_PUBLIC_KEY</code> to the server's environment.</p>
+  {% endif %}
+  <p class="cr-help">In your Paystack dashboard, under Settings &rarr; API Keys &amp; Webhooks, set the webhook URL to:</p>
+  <p><code class="cr-code">{{ webhook_url }}</code></p>
+  <p class="cr-help">It confirms payments even when a customer closes the page before returning to the site.</p>
+</section>
+
+<form method="post" class="cr-card cr-form">
+  {% csrf_token %}
+  {% for field in form %}
+  <div class="cr-field {% if field.errors %}has-error{% endif %}">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<p class="cr-help">{{ field.help_text }}</p>{% endif %}
+    {% if field.errors %}<ul class="cr-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endfor %}
+  <div class="cr-formactions">
+    <button type="submit" class="cr-btn cr-btn--gold">Save changes</button>
+    <a href="{% url 'manage:home' %}" class="cr-link">Cancel</a>
+  </div>
+</form>
+{% endblock %}

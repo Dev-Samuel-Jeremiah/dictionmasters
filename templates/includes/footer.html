@@ -2,12 +2,13 @@
   <div class="wrap site-footer__inner">
     <div class="site-footer__brand">
       <span class="brand__name brand__name--light">{% if branding.logo %}<img src="{{ branding.logo.url }}" alt="{% if not branding.show_name_with_logo %}Diction Masters{% endif %}" class="site-footer__logo">{% else %}<span class="site-footer__mark" aria-hidden="true">iː</span>{% endif %}{% if not branding.logo or branding.show_name_with_logo %}Diction Masters{% endif %}</span>
-      <p>A private English tutor for every Nigerian school child.</p>
+      <p>A private British English tutor for every learner, at school or at home.</p>
     </div>
     <nav class="site-footer__links" aria-label="Footer">
       <a href="{% url 'landing:home' %}#how-it-works">How it works</a>
       <a href="{% url 'landing:home' %}#book">Book of Conversation</a>
-      <a href="{% url 'landing:home' %}#for-schools">For schools</a>
+      <a href="{% url 'landing:home' %}#who-its-for">Who it's for</a>
+      <a href="{% url 'billing:pricing' %}">Pricing</a>
       <a href="{% url 'accounts:login' %}">Log in</a>
       <a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Staff area</a>
     </nav>

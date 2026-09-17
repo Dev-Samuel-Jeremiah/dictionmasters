@@ -39,6 +39,7 @@
       <button type="button" class="cr-side__close" aria-label="Close menu">&times;</button>
       <a href="{% url 'manage:home' %}" class="cr-side__home {% if not current_key %}is-on{% endif %}">&#127968; Control room home</a>
       <a href="{% url 'manage:branding' %}" class="cr-side__home {% if current_key == 'branding' %}is-on{% endif %}">&#127912; Logo &amp; favicon</a>
+      <a href="{% url 'manage:billing_settings' %}" class="cr-side__home {% if current_key == 'billing-settings' %}is-on{% endif %}">&#128179; Billing settings</a>
       {% for section in nav %}
       <details class="cr-group" {% if section.open %}open{% endif %}>
         <summary><span aria-hidden="true">{{ section.icon }}</span> {{ section.name }}</summary>
