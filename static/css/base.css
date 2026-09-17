@@ -1,0 +1,259 @@
+/* =========================================================
+   Diction Masters — shared chrome
+   Design idea: an open exercise book meets a chalkboard.
+   Tokens, reset, buttons, header and footer live here so every
+   page (landing, auth, dashboards) shares one visual language.
+   ========================================================= */
+
+:root {
+  --ink: #14213D;
+  --ink-70: rgba(20, 33, 61, 0.72);
+  --ink-40: rgba(20, 33, 61, 0.4);
+  --rule: rgba(20, 33, 61, 0.12);
+
+  --parchment: #F6F1E4;
+  --parchment-deep: #EFE7D3;
+
+  --gold: #B8863B;
+  --gold-deep: #8C6526;
+  --gold-tint: rgba(184, 134, 59, 0.14);
+
+  --green: #24473E;
+  --green-deep: #172F29;
+
+  --maroon: #7A2438;
+  --maroon-deep: #611C2C;
+
+  --charcoal: #24242A;
+  --paper-white: #FFFDF8;
+
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-sans: "Work Sans", -apple-system, "Segoe UI", sans-serif;
+
+  --wrap: 1160px;
+  --radius: 6px;
+}
+
+/* ---------- reset ---------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--charcoal);
+  background: var(--paper-white);
+  line-height: 1.55;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; }
+
+h1, h2, h3 {
+  font-family: var(--font-serif);
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+p { margin: 0; }
+
+:focus-visible {
+  outline: 2px solid var(--gold-deep);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+.wrap {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+/* ---------- messages (django.contrib.messages) ---------- */
+
+.messages {
+  list-style: none;
+  margin: 0;
+  padding: 14px 0;
+}
+.messages .wrap { display: flex; flex-direction: column; gap: 10px; }
+.message {
+  padding: 13px 18px;
+  border-radius: var(--radius);
+  font-size: 0.92rem;
+  border: 1px solid var(--rule);
+}
+.message--success { background: #EEF4EC; border-color: #BFD8B8; color: #295C22; }
+.message--error { background: #FBECEC; border-color: #E3B4B4; color: var(--maroon-deep); }
+.message--info, .message--warning { background: var(--gold-tint); border-color: var(--gold); color: var(--gold-deep); }
+
+/* ---------- buttons & links ---------- */
+
+.btn {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.96rem;
+  text-decoration: none;
+  padding: 13px 24px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+.btn:hover { transform: translateY(-1px); }
+
+.btn--maroon {
+  background: var(--maroon);
+  color: var(--paper-white);
+}
+.btn--maroon:hover { background: var(--maroon-deep); }
+
+.btn--gold {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.btn--gold:hover { background: var(--ink); color: var(--parchment); }
+
+.btn--green {
+  background: var(--green);
+  color: var(--paper-white);
+}
+.btn--green:hover { background: var(--green-deep); }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ink);
+  padding-left: 4px;
+  padding-right: 4px;
+  border-bottom: 1px solid var(--ink-40);
+  border-radius: 0;
+}
+.btn--ghost:hover { border-color: var(--ink); }
+
+.btn--large { padding: 16px 30px; font-size: 1.02rem; }
+.btn--full { width: 100%; text-align: center; }
+.btn--small { padding: 9px 16px; font-size: 0.86rem; }
+
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.link-quiet {
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  opacity: 0.85;
+}
+.link-quiet:hover { opacity: 1; }
+
+/* ---------- header ---------- */
+
+.site-header {
+  background: var(--parchment);
+  border-bottom: 1px solid var(--rule);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  height: 76px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+  margin-right: auto;
+}
+.brand__mark { color: var(--gold-deep); display: flex; }
+.brand__name {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 1.18rem;
+  letter-spacing: 0.01em;
+}
+.brand__name--light { color: var(--parchment); }
+
+.main-nav {
+  display: flex;
+  gap: 28px;
+  font-size: 0.95rem;
+}
+.main-nav a { text-decoration: none; color: var(--ink-70); }
+.main-nav a:hover { color: var(--ink); }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 0.95rem;
+}
+
+.phonemic-icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 7px;
+  border-radius: 8px;
+  border: 1.4px solid var(--rule);
+  background: var(--paper-white);
+  text-decoration: none;
+  line-height: 1;
+  transition: border-color 0.15s ease;
+}
+.phonemic-icon-btn:hover { border-color: var(--gold); }
+.phonemic-icon-btn__row { display: flex; gap: 3px; }
+.phonemic-icon-btn__sym {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 10px;
+}
+.phonemic-icon-btn__sym--accent { color: var(--gold-deep); }
+.phonemic-icon-btn__sym--muted { color: var(--ink-40); }
+
+@media (max-width: 860px) {
+  .main-nav { display: none; }
+}
+
+@media (max-width: 560px) {
+  .site-header__inner { height: auto; padding: 14px 0; flex-wrap: wrap; row-gap: 12px; }
+  .brand { width: 100%; }
+  .header-actions { width: 100%; justify-content: space-between; }
+}
+
+/* ---------- footer ---------- */
+
+.site-footer { background: var(--ink); color: rgba(246, 241, 228, 0.85); padding: 56px 0 28px; }
+.site-footer__inner {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid rgba(246, 241, 228, 0.15);
+}
+.site-footer__brand p { margin-top: 8px; font-size: 0.9rem; color: rgba(246, 241, 228, 0.6); max-width: 32ch; }
+.site-footer__links { display: flex; gap: 24px; flex-wrap: wrap; align-self: center; font-size: 0.92rem; }
+.site-footer__links a { text-decoration: none; color: rgba(246, 241, 228, 0.8); }
+.site-footer__links a:hover { color: var(--parchment); }
+.site-footer__copyright {
+  max-width: var(--wrap);
+  margin: 20px auto 0;
+  padding: 0 28px;
+  font-size: 0.8rem;
+  color: rgba(246, 241, 228, 0.45);
+}

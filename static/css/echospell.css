@@ -1,0 +1,322 @@
+/* =========================================================
+   EchoSpell — Level > Group > Card
+   Most cards share one look (word-card) and differ mainly in
+   what's shown up front vs behind a <details> reveal — no JS,
+   just native disclosure widgets.
+   ========================================================= */
+
+.echospell-instructions {
+  margin-bottom: 20px;
+  color: var(--ink-70);
+  font-size: 0.92rem;
+}
+
+.word-card { text-align: center; }
+
+.word-card__note-title {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin-bottom: 10px;
+}
+.word-card__note-body {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+  text-align: left;
+  font-size: 0.86rem;
+  color: var(--ink-70);
+  white-space: pre-line;
+}
+
+/* One word shows centred with no number; several share this card's
+   audio and are numbered — :has() lets one rule cover both without
+   the template needing to branch on word count. */
+.word-card__list {
+  display: inline-block;
+  margin: 0 auto;
+  padding-left: 1.4em;
+  text-align: left;
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.word-card__list li { margin: 2px 0; }
+.word-card__list:has(li:only-child) {
+  list-style: none;
+  padding-left: 0;
+  text-align: center;
+}
+.word-card__list--puzzle { font-size: 1.5rem; letter-spacing: 0.1em; }
+
+.word-card__ipa {
+  margin-top: 4px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--ink-40);
+  font-size: 1rem;
+}
+.word-card__ipa--big { font-size: 1.6rem; color: var(--ink); margin-bottom: 10px; }
+.word-card__definition { margin-top: 10px; color: var(--ink-70); font-size: 0.96rem; text-align: left; }
+.word-card__example { margin-top: 8px; color: var(--ink-40); font-style: italic; font-size: 0.9rem; text-align: left; }
+.word-card__image {
+  max-width: 160px;
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+
+.reveal {
+  margin-top: 14px;
+  border-top: 1px dashed var(--rule);
+  padding-top: 12px;
+}
+.reveal summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--maroon);
+  text-align: left;
+}
+.reveal summary:hover { color: var(--maroon-deep); }
+.reveal[open] summary { margin-bottom: 4px; }
+
+.circle-options {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  justify-content: center;
+}
+.circle-option {
+  position: relative;
+  appearance: none;
+  padding: 8px 18px;
+  border: 1.4px solid var(--rule);
+  border-radius: 24px;
+  background: var(--paper-white);
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--ink-70);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.circle-option:hover { border-color: var(--gold); }
+.circle-option:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 2px; }
+.circle-option--circled { color: var(--maroon-deep); font-weight: 700; }
+.circle-option__label { position: relative; }
+.circle-option__mark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  transform: scale(1.28);
+}
+.circle-option__mark path {
+  fill: none;
+  stroke: var(--maroon);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 340;
+  stroke-dashoffset: 340;
+}
+.circle-option--circled .circle-option__mark path {
+  animation: circle-option-draw 0.45s ease-out forwards;
+}
+@keyframes circle-option-draw {
+  to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .circle-option--circled .circle-option__mark path { animation-duration: 0.01s; }
+}
+
+.circle-replay {
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--maroon);
+  cursor: pointer;
+}
+.circle-replay:hover { color: var(--maroon-deep); }
+.circle-replay__icon { font-size: 1.05rem; line-height: 1; }
+
+.number-options {
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+  gap: 10px;
+  margin: 14px auto 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.number-option__label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.number-option__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.number-option__badge {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.6px solid var(--rule);
+  background: var(--paper-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--maroon-deep);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.number-option__input:checked ~ .number-option__badge {
+  border-color: var(--maroon);
+  background: rgba(122, 36, 56, 0.08);
+}
+.number-option__input:focus-visible ~ .number-option__badge {
+  outline: 2px solid var(--gold-deep);
+  outline-offset: 2px;
+}
+.number-option__word {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.vocab-list {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.vocab-item {
+  padding-bottom: 16px;
+  border-bottom: 1px dashed var(--rule);
+}
+.vocab-item:last-child { border-bottom: none; padding-bottom: 0; }
+.vocab-item__word {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.vocab-item__meaning {
+  margin: 4px 0 0;
+  color: var(--ink-70);
+  font-size: 0.94rem;
+}
+.vocab-item__prompt {
+  display: block;
+  margin-top: 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+.vocab-item__input {
+  margin-top: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.4px solid var(--rule);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 0.94rem;
+  color: var(--ink);
+  background: var(--paper-white);
+}
+.vocab-item__input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.vocab-item--correct .vocab-item__input { border-color: var(--green); background: rgba(36, 71, 62, 0.06); }
+.vocab-item--incorrect .vocab-item__input { border-color: var(--maroon); background: rgba(122, 36, 56, 0.05); }
+
+.vocab-item__feedback {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.vocab-item__feedback:empty { display: none; }
+.vocab-item__feedback--correct { color: var(--green); }
+.vocab-item__feedback--incorrect { color: var(--maroon); }
+
+.vocab-check {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.vocab-check__status {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink-70);
+}
+.vocab-check__status--correct { color: var(--green); }
+.vocab-check__status--incorrect { color: var(--maroon); }
+
+.dialogue-lines { display: flex; flex-direction: column; gap: 10px; }
+.dialogue-line {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  align-items: flex-start;
+}
+.dialogue-line--a { background: rgba(20, 33, 61, 0.05); }
+.dialogue-line--b { background: rgba(122, 36, 56, 0.05); }
+.dialogue-line__speaker {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper-white);
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dialogue-line--b .dialogue-line__speaker { background: var(--maroon); }
+.dialogue-line__body { flex: 1 1 auto; min-width: 0; }
+.dialogue-line__name {
+  margin: 0 0 2px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-40);
+}
+.dialogue-line--b .dialogue-line__name { color: var(--maroon); }
+.dialogue-line__text { margin: 0; color: var(--ink); font-size: 0.96rem; }

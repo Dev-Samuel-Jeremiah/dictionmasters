@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Register — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <div class="wrap">
+    <div class="ui-auth">
+      <aside class="ui-auth__aside">
+        <span class="ui-auth__mark" aria-hidden="true">iː</span>
+        <div>
+          <p class="ui-auth__eyebrow">Individual learner</p>
+          <h1 class="ui-auth__title">Learn on your own, at your own pace</h1>
+          <p class="ui-auth__lede">No school and no code needed. Create an account and start with the first lesson today.</p>
+        </div>
+        <ul class="ui-auth__points">
+          <li>Every sound of English, explained and practised</li>
+          <li>EchoSpell levels, Quick Words and Diction Clash</li>
+          <li>Your progress is saved as you go</li>
+        </ul>
+      </aside>
+
+      <div class="ui-auth__panel">
+        <h2 class="ui-auth__heading">Create your account</h2>
+        <p class="ui-auth__note">Just your name, your email and a password.</p>
+        <div class="form-card">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <ul class="non-field-errors">
+              {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% include "includes/form_fields.html" %}
+            <button type="submit" class="ui-btn ui-btn--gold ui-btn--large ui-btn--full">Create my account</button>
+            <p class="ui-auth__foot">Already have an account? <a href="{% url 'accounts:login' %}">Log in</a>.</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

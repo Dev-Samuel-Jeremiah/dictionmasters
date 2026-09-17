@@ -1,0 +1,16 @@
+<footer class="site-footer">
+  <div class="wrap site-footer__inner">
+    <div class="site-footer__brand">
+      <span class="brand__name brand__name--light"><span class="site-footer__mark" aria-hidden="true">iː</span>Diction Masters</span>
+      <p>A private English tutor for every Nigerian school child.</p>
+    </div>
+    <nav class="site-footer__links" aria-label="Footer">
+      <a href="{% url 'landing:home' %}#how-it-works">How it works</a>
+      <a href="{% url 'landing:home' %}#book">Book of Conversation</a>
+      <a href="{% url 'landing:home' %}#for-schools">For schools</a>
+      <a href="{% url 'accounts:login' %}">Log in</a>
+      <a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Staff area</a>
+    </nav>
+  </div>
+  <p class="site-footer__copyright">&copy; {% now "Y" %} Diction Masters. All rights reserved.</p>
+</footer>

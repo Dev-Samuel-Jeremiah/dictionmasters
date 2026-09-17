@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ level.name }} — EchoSpell{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="es">
+  <section class="es-hero">
+    <div class="wrap">
+      <ol class="es-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url 'echospell:hub' %}">EchoSpell</a></li>
+        <li>{{ level.name }}</li>
+      </ol>
+      <div class="es-hero__inner">
+        <div class="es-hero__main">
+          <span class="es-hero__icon" aria-hidden="true">&#127919;</span>
+          <div>
+            <p class="es-hero__eyebrow">EchoSpell level</p>
+            <h1 class="es-hero__title">{{ level.name }}</h1>
+            {% if level.description %}<p class="es-hero__lede">{{ level.description }}</p>{% endif %}
+            <div class="es-hero__chips">
+              {% if level.age_range %}<span class="es-chip es-chip--gold">{{ level.age_range }}</span>{% endif %}
+              <span class="es-chip">{{ group_rows|length }} group{{ group_rows|length|pluralize }}</span>
+              {% if progress.total and progress.done == progress.total %}<span class="es-chip es-chip--done">&#10003; Level complete</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% if progress.total %}
+        <div class="es-hero__side">
+          <div class="es-ring" style="--p: {{ progress.percent }}">
+            <div><strong>{{ progress.done }}/{{ progress.total }}</strong><span>groups done</span></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap es-body">
+    {% if current_row %}
+    <section class="es-panel es-continue">
+      <span class="es-ring es-ring--light" style="--p: {{ progress.percent }}"><strong>{{ progress.percent }}%</strong></span>
+      <div class="es-continue__text">
+        <p class="es-continue__kicker">Up next</p>
+        <p class="es-continue__title">Group {{ current_row.group.number }}{% if current_row.group.title and "Group" not in current_row.group.title %} &middot; {{ current_row.group.title }}{% endif %}</p>
+      </div>
+      <a href="{% url 'echospell:group_detail' level.slug current_row.group.slug %}" class="es-btn es-btn--green">Start group &rarr;</a>
+    </section>
+    {% endif %}
+
+    <section class="es-section">
+      <header class="es-section__head">
+        <h2 class="es-section__title">Groups</h2>
+        <p class="es-section__aside">Tap a group to see its cards and activities.</p>
+      </header>
+      {% if group_rows %}
+      <div class="es-groups">
+        {% for row in group_rows %}
+        <a href="{% url 'echospell:group_detail' level.slug row.group.slug %}"
+           class="es-group es-lift{% if row.is_complete %} es-group--done{% elif row.is_current %} es-group--current{% endif %}"
+           style="--i: {{ forloop.counter0 }}">
+          {% if row.is_current %}<span class="es-status es-status--current">Now</span>{% elif row.is_complete %}<span class="es-status es-status--done">Done</span>{% endif %}
+          <span class="es-group__node">{% if row.is_complete %}&#10003;{% else %}{{ row.group.number }}{% endif %}</span>
+          <span class="es-group__name">Group {{ row.group.number }}</span>
+          {% if row.group.title and "Group" not in row.group.title %}<span class="es-group__title">{{ row.group.title }}</span>{% endif %}
+          <span class="es-group__meta">{{ row.card_count }} card{{ row.card_count|pluralize }}{% if row.activity_count %} &middot; {{ row.activity_count }} activit{{ row.activity_count|pluralize:"y,ies" }}{% endif %}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="es-empty"><p>Groups are being added to this level. Check back soon.</p></div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

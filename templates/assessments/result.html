@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Result — {{ assessment.title }}{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/assessments.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs"><li><a href="{% url 'assessments:hub' %}">Assessments</a></li><li><a href="{% url 'assessments:my_results' %}">My results</a></li><li>Result</li></ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#127942;</span>
+          <div>
+            <p class="ui-hero__eyebrow">{{ assessment.get_kind_display }}</p>
+            <h1 class="ui-hero__title">{{ assessment.title }}</h1>
+            <p class="ui-hero__lede">Submitted {{ attempt.submitted_at|date:"j M Y, H:i" }}{% if attempt.user_id != request.user.pk %} &middot; {{ attempt.user.get_full_name|default:attempt.user.email }}{% endif %}</p>
+            
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+
+<section>
+  <div class="wrap ui-body ui-body--narrow">
+
+    {% if attempt.status == "awaiting" %}
+    <div class="as-score as-score--waiting">
+      <span class="as-score__icon" aria-hidden="true">&#127908;</span>
+      <div>
+        <p class="as-score__headline">Sent for marking</p>
+        <p class="as-score__note">A teacher will listen to your recordings and score them. Anything a computer could mark is marked already{% if attempt.max_score %} — {{ attempt.score|floatformat:"-2" }} marks so far{% endif %}.</p>
+      </div>
+    </div>
+    {% else %}
+    <div class="as-score {% if attempt.passed %}as-score--pass{% else %}as-score--fail{% endif %}">
+      <div class="as-score__ring" style="--pct: {{ attempt.percent }};"><span>{{ attempt.percent }}%</span></div>
+      <div>
+        <p class="as-score__headline">{{ attempt.grade }}{% if attempt.passed %} — passed{% endif %}</p>
+        <p class="as-score__note">
+          {{ attempt.score|floatformat:"-2" }} of {{ attempt.max_score|floatformat:"-2" }} marks &middot; pass mark {{ assessment.pass_mark }}%
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if attempt.recommended_level %}
+    <div class="as-placement">
+      <p class="as-placement__label">Where to start</p>
+      <p class="as-placement__level">{{ attempt.recommended_level }}</p>
+      <p class="as-placement__why">This is the first level where you didn't yet get most of the questions right — the best place to begin.</p>
+      {% if placement_level %}<a href="{% url 'echospell:level_detail' placement_level.slug %}" class="btn btn--maroon">Open {{ placement_level.name }} in EchoSpell</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if attempt.feedback %}
+    <div class="as-teacher">
+      <p class="as-teacher__label">Feedback{% if attempt.marked_by %} from {{ attempt.marked_by.get_full_name|default:"your teacher" }}{% endif %}</p>
+      <p class="as-teacher__body">{{ attempt.feedback|linebreaksbr }}</p>
+    </div>
+    {% endif %}
+
+    <h2 class="as-section-title">Your answers</h2>
+    <ol class="as-review">
+      {% for row in rows %}
+      {% with q=row.question a=row.answer %}
+      <li class="as-review__item {% if a.is_correct %}as-review__item--right{% elif a.is_correct is False %}as-review__item--wrong{% else %}as-review__item--pending{% endif %}">
+        <div class="as-review__head">
+          <span class="as-review__mark" aria-hidden="true">{% if a.is_correct %}&#10003;{% elif a.is_correct is False %}&#10007;{% elif a.points_awarded is not None %}&#9733;{% else %}&#8943;{% endif %}</span>
+          <span class="as-review__number">Question {{ row.number }}</span>
+          <span class="as-review__points">
+            {% if a.points_awarded is not None %}{{ a.points_awarded|floatformat:"-2" }} / {{ q.points }}{% else %}— / {{ q.points }}{% endif %}
+          </span>
+        </div>
+        <p class="as-review__prompt">{{ q.prompt|linebreaksbr }}{% if q.word %} <strong>{{ q.word }}</strong>{% endif %}</p>
+
+        {% if q.type == "speak" %}
+          {% if a.recording %}<audio controls preload="none" src="{{ a.recording.url }}" class="as-review__audio"></audio>
+          {% else %}<p class="as-review__given">No recording was sent.</p>{% endif %}
+          {% if a.points_awarded is not None %}
+          <table class="as-rubric">
+            {% for label, value in a.rubric_rows %}
+            <tr><th>{{ label }}</th><td><span class="as-rubric__bar"><span style="width: {% widthratio value 5 100 %}%;"></span></span></td><td>{{ value }}/5</td></tr>
+            {% endfor %}
+          </table>
+          {% if a.comment %}<p class="as-review__comment">&ldquo;{{ a.comment }}&rdquo;</p>{% endif %}
+          {% else %}<p class="as-review__given">Waiting for your teacher to mark this.</p>{% endif %}
+        {% else %}
+          <p class="as-review__given">Your answer: <strong>{{ a.given|default:"(blank)" }}</strong></p>
+          {% if not a.is_correct %}<p class="as-review__correct">Correct answer: <strong>{{ q.first_answer }}</strong></p>{% endif %}
+          {% if q.explanation %}<p class="as-review__why">{{ q.explanation }}</p>{% endif %}
+        {% endif %}
+      </li>
+      {% endwith %}
+      {% endfor %}
+    </ol>
+
+    <div class="as-submit">
+      {% if attempt.user_id == request.user.pk %}
+        {% if left is None or left > 0 %}
+        <form method="post" action="{% url 'assessments:start' assessment.slug %}">{% csrf_token %}
+          <button class="btn btn--maroon">Try again</button>
+        </form>
+        {% endif %}
+        <a href="{% url 'assessments:hub' %}" class="link-quiet">Back to assessments</a>
+      {% else %}
+        <a href="{% url 'assessments:marking_queue' %}" class="link-quiet">Back to marking</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+</div>
+{% endblock %}

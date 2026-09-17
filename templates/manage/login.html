@@ -1,0 +1,39 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en-gb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin sign in — Diction Masters</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/manage.css' %}">
+</head>
+<body class="cr-login">
+  <main class="cr-login__card">
+    <span class="cr-brand__mark cr-login__mark" aria-hidden="true">iː</span>
+    <p class="cr-login__eyebrow">Diction Masters</p>
+    <h1 class="cr-login__title">Control room</h1>
+    <p class="cr-login__note">For the team who run the platform. Learners and teachers sign in on the main site.</p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <ul class="cr-errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% for field in form %}
+      <div class="cr-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<ul class="cr-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="cr-btn cr-btn--gold cr-btn--full">Sign in</button>
+    </form>
+
+    <p class="cr-login__foot"><a href="/">&larr; Back to the site</a></p>
+  </main>
+</body>
+</html>

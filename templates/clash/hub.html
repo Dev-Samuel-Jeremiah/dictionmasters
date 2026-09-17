@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Diction Clash — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/clash.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero" style="--tint: #e0b15c">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li>Diction Clash</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#9876;&#65039;</span>
+          <div>
+            <p class="ui-hero__eyebrow">The word game</p>
+            <h1 class="ui-hero__title">Diction Clash</h1>
+            <p class="ui-hero__lede">Hear it. Spell it. Master it, against the clock.</p>
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ modes|length }} game modes</span>
+              <span class="ui-chip">{{ tier_list|length }} difficulties</span>
+              {% if active %}<span class="ui-chip ui-chip--done">Game in play</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+  <section class="clash clash--hub clash--panel">
+
+    {% if active %}
+    <div class="clash-resume">
+      <span>You have a <strong>{{ active.mode_spec.label }}</strong> game in play.</span>
+      <a class="clash-btn clash-btn--gold" href="{% url 'clash:play' active.pk %}">Carry on</a>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'clash:start' %}" class="clash-setup" id="clash-setup">
+      {% csrf_token %}
+      <fieldset class="clash-setup__group">
+        <legend class="clash-setup__legend"><span>1</span> Choose a game</legend>
+        <div class="clash-modes">
+          {% for mode in modes %}
+          <label class="clash-pick">
+            <input type="radio" name="mode" value="{{ mode.slug }}" {% if forloop.first %}checked{% endif %}>
+            <span class="clash-pick__card">
+              <span class="clash-pick__icon" aria-hidden="true">{{ mode.icon }}</span>
+              <span class="clash-pick__name">{{ mode.label }}</span>
+              <span class="clash-pick__blurb">{{ mode.blurb }}</span>
+              <span class="clash-pick__rules">{% for rule in mode.rules %}<span>{{ rule }}</span>{% endfor %}</span>
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <fieldset class="clash-setup__group">
+        <legend class="clash-setup__legend"><span>2</span> Choose a difficulty</legend>
+        <div class="clash-tiers">
+          {% for row in tiers %}
+          <label class="clash-pick clash-pick--tier">
+            <input type="radio" name="difficulty" value="{{ row.tier.slug }}" {% if forloop.first %}checked{% endif %}>
+            <span class="clash-pick__card clash-pick__card--{{ row.tier.slug }}">
+              <span class="clash-pick__name">{{ row.tier.label }}</span>
+              <span class="clash-pick__blurb">{{ row.tier.blurb }}</span>
+              <span class="clash-pick__rules">
+                <span>{{ row.tier.seconds }}s a question</span>
+                <span>&times;{{ row.tier.multiplier }} points</span>
+              </span>
+              <span class="clash-pick__pool">
+                {{ row.words }} words{% if row.with_audio %} &middot; {{ row.with_audio }} with audio{% endif %}
+                {% if row.borrowed %}<em>&middot; topped up from other levels</em>{% endif %}
+              </span>
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+    </form>
+
+    {# Outside the setup form: forms can't nest, so the sound toggle is its own form and Start points back at the setup form. #}
+    <div class="clash-setup__go">
+      <button type="submit" form="clash-setup" class="clash-btn clash-btn--play">&#9654; Start the clash</button>
+      {% include "clash/_sound_toggle.html" %}
+    </div>
+
+    <div class="clash-boards">
+      <div class="clash-panel">
+        <h2 class="clash-panel__title">Your personal bests</h2>
+        <table class="clash-table">
+          <thead><tr><th scope="col">Game</th>{% for tier in tier_list %}<th scope="col">{{ tier.label }}</th>{% endfor %}</tr></thead>
+          <tbody>
+            {% for row in best_rows %}
+            <tr><th scope="row">{{ row.mode.icon }} {{ row.mode.label }}</th>{% for score in row.scores %}<td>{% if score is not None %}{{ score }}{% else %}<span class="clash-dim">&mdash;</span>{% endif %}</td>{% endfor %}</tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="clash-panel">
+        <h2 class="clash-panel__title">Recent games</h2>
+        {% if recent %}
+        <ul class="clash-recent">
+          {% for game in recent %}
+          <li><a href="{% url 'clash:result' game.pk %}">
+            <span>{{ game.mode_spec.icon }} {{ game.mode_spec.label }} <span class="clash-dim">&middot; {{ game.tier.label }}</span></span>
+            <strong>{{ game.score }}</strong>
+          </a></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="clash-dim">No games yet — your first one is waiting.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+  </div>
+</div>
+{% endblock %}

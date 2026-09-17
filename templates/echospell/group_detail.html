@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Group {{ group.number }} — {{ level.name }} — EchoSpell{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/activity.css' %}">
+  <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="es">
+  <section class="es-hero">
+    <div class="wrap">
+      <ol class="es-crumbs">
+        <li><a href="{% url 'echospell:hub' %}">EchoSpell</a></li>
+        <li><a href="{% url 'echospell:level_detail' level.slug %}">{{ level.name }}</a></li>
+        <li>Group {{ group.number }}</li>
+      </ol>
+      <div class="es-hero__inner">
+        <div class="es-hero__main">
+          <span class="es-hero__icon" aria-hidden="true">{{ group.number }}</span>
+          <div>
+            <p class="es-hero__eyebrow">{{ level.name }} &middot; group {{ group_position }} of {{ group_total }}</p>
+            <h1 class="es-hero__title">Group {{ group.number }}</h1>
+            {% if group.title and "Group" not in group.title %}<p class="es-hero__lede">{{ group.title }}</p>{% endif %}
+            <div class="es-hero__chips">
+              <span class="es-chip">{{ card_count }} card{{ card_count|pluralize }}</span>
+              {% if activity_rows %}<span class="es-chip">{{ activity_rows|length }} activit{{ activity_rows|length|pluralize:"y,ies" }}</span>{% endif %}
+              {% if is_complete %}<span class="es-chip es-chip--done">&#10003; Completed</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap es-body">
+    <section class="es-panel">
+      <header class="es-section__head">
+        <h2 class="es-section__title"><span class="es-section__num">1</span> Learn</h2>
+        <p class="es-section__aside">Study the cards first.</p>
+      </header>
+      {% if categories %}
+      <div class="es-cards">
+        {% for category in categories %}
+        <a href="{% url 'echospell:card_detail' level.slug group.slug category.slug %}" class="es-card es-lift" style="--tone: {{ category.color }}; --i: {{ forloop.counter0 }}">
+          <span class="es-card__icon" aria-hidden="true">{{ category.icon }}</span>
+          <span class="es-card__name">{{ category.name }}</span>
+          {% if category.description %}<span class="es-card__desc">{{ category.description }}</span>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="es-empty"><p>No cards have been assigned to {{ level.name }} yet. Add some from the admin.</p></div>
+      {% endif %}
+    </section>
+
+    {% if activity_rows %}
+    <section class="es-section">
+      <header class="es-section__head">
+        <h2 class="es-section__title"><span class="es-section__num">2</span> Practise</h2>
+        <p class="es-section__aside">Scored activities. Your best score is kept.</p>
+      </header>
+      <div class="es-activities">
+        {% for row in activity_rows %}
+        <a href="{% url 'echospell:activity_detail' level.slug group.slug row.activity.slug %}" class="es-activity es-lift" style="--i: {{ forloop.counter0 }}">
+          <span class="es-activity__icon" aria-hidden="true">{{ row.activity.icon }}</span>
+          <span class="es-activity__body">
+            <span class="es-activity__name">{{ row.activity.title }}</span>
+            <span class="es-activity__meta">{{ row.activity.kind_label }} &middot; {{ row.item_count }} question{{ row.item_count|pluralize }}</span>
+          </span>
+          {% if row.best %}
+          <span class="score-pill {% if row.best.passed %}score-pill--pass{% elif row.best.status == 'awaiting' %}score-pill--waiting{% else %}score-pill--fail{% endif %}">
+            {% if row.best.status == 'awaiting' %}Sent{% else %}{{ row.best.percent }}%{% endif %}
+          </span>
+          {% else %}
+          <span class="score-pill score-pill--new">New</span>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="es-section">
+      <div class="es-complete{% if is_complete %} es-complete--done{% endif %}">
+        <span class="es-complete__mark" aria-hidden="true">{% if is_complete %}&#10003;{% else %}&#9733;{% endif %}</span>
+        <div class="es-complete__text">
+          {% if is_complete %}
+          <strong>Group {{ group.number }} is complete</strong>
+          <span>Nicely done. Move on to the next group, or mark it as not done to come back to it.</span>
+          {% else %}
+          <strong>Finished this group?</strong>
+          <span>Mark it complete to track your progress through {{ level.name }}.</span>
+          {% endif %}
+        </div>
+        <form method="post" action="{% url 'echospell:toggle_complete' level.slug group.slug %}">
+          {% csrf_token %}
+          {% if is_complete %}
+          <button type="submit" class="es-btn es-btn--ghost">Mark as not done</button>
+          {% else %}
+          <button type="submit" class="es-btn es-btn--green">&#10003; Mark group complete</button>
+          {% endif %}
+        </form>
+      </div>
+    </section>
+
+    {% if prev_group or next_group %}
+    <nav class="es-pager" aria-label="Other groups">
+      {% if prev_group %}
+      <a href="{% url 'echospell:group_detail' level.slug prev_group.slug %}" class="es-lift">
+        <small>&larr; Previous</small>
+        <strong>Group {{ prev_group.number }}</strong>
+      </a>
+      {% endif %}
+      {% if next_group %}
+      <a href="{% url 'echospell:group_detail' level.slug next_group.slug %}" class="es-pager__next es-lift">
+        <small>Next &rarr;</small>
+        <strong>Group {{ next_group.number }}</strong>
+      </a>
+      {% endif %}
+    </nav>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ hud.mode.label }} — Diction Clash{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/clash.css' %}">{% endblock %}
+
+{% block extra_head %}
+{% if seconds_left is not None %}
+{# When the clock runs out the page reloads itself and the server records the result — no JavaScript involved. #}
+<meta http-equiv="refresh" content="{{ seconds_left|add:2 }}">
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="clash clash--play">
+  <div class="wrap clash-stage">
+    {% include "clash/_hud.html" %}
+
+    {% if seconds_left is not None %}
+    <div class="clash-timer" style="--left: {{ seconds_left }}; --start-pct: {{ start_pct }}%; --warn: {{ warn_after }};"
+         role="timer" aria-label="{{ seconds_left }} seconds left">
+      <span class="clash-timer__num"></span>
+      <span class="clash-timer__track"><span class="clash-timer__fill"></span></span>
+    </div>
+    {% endif %}
+
+    {% if previous %}
+    <p class="clash-flash {% if previous.is_correct %}clash-flash--right{% else %}clash-flash--wrong{% endif %}">
+      {% if previous.is_correct %}&#10003; {{ previous.word.word }} &middot; +{{ previous.points }}{% else %}&#10007; {{ previous.answer }}{% if previous.points %} &middot; {{ previous.points }}{% endif %}{% endif %}
+    </p>
+    {% if not muted %}<audio autoplay src="{% if previous.is_correct %}{% static 'clash/sounds/correct.wav' %}{% else %}{% static 'clash/sounds/wrong.wav' %}{% endif %}"></audio>{% endif %}
+    {% endif %}
+
+    <article class="clash-card">
+      <p class="clash-card__label">{{ round.label }}</p>
+      {% if audio %}<audio class="clash-card__audio" controls autoplay src="{{ audio }}"></audio>{% endif %}
+      {% if round.prompt %}
+      <p class="clash-card__prompt {% if round.kind == 'unscramble' %}clash-card__prompt--scramble{% elif round.kind == 'ipa_to_word' %}clash-card__prompt--ipa{% elif round.kind == 'word_to_ipa' or round.kind == 'word_to_meaning' %}clash-card__prompt--word{% endif %}">{{ round.prompt }}</p>
+      {% endif %}
+      {% if round.prompt_detail %}<p class="clash-card__detail">{{ round.prompt_detail }}</p>{% endif %}
+    </article>
+
+    <form method="post" class="clash-answer">
+      {% csrf_token %}
+      <input type="hidden" name="round" value="{{ round.number }}">
+      {% if round.is_typed %}
+      <div class="clash-typed">
+        <label class="clash-visually-hidden" for="clash-typed">Your answer</label>
+        <input id="clash-typed" name="answer" class="clash-typed__input" autocomplete="off" autocapitalize="off"
+               spellcheck="false" autofocus required maxlength="60" placeholder="Type your answer">
+        <button type="submit" class="clash-btn clash-btn--play">Submit</button>
+        <button type="submit" name="answer" value="" formnovalidate class="clash-btn clash-btn--ghost">Skip</button>
+      </div>
+      {% else %}
+      <div class="clash-options {% if round.kind == 'word_to_meaning' %}clash-options--long{% endif %}">
+        {% for letter, option in options %}
+        <button type="submit" name="answer" value="{{ option }}" class="clash-option" accesskey="{{ letter|lower }}">
+          <span class="clash-option__letter">{{ letter }}</span>
+          <span class="clash-option__text {% if round.kind == 'word_to_ipa' %}clash-option__text--ipa{% endif %}">{{ option }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </form>
+    <p class="clash-hint">Tip: most browsers answer A&ndash;D with Alt + the letter.</p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ term.name }} — {{ module.name }}{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/learning_modules.css' %}">
+  <link rel="stylesheet" href="{% static 'css/learning_modules_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="lm">
+  <section class="lm-hero" style="--tint: {{ module.color }}">
+    <div class="wrap">
+      <ol class="lm-crumbs">
+        <li><a href="{% url 'learning_modules:hub' %}">Learning Modules</a></li>
+        <li><a href="{% url 'learning_modules:module_detail' module.slug %}">{{ module.name }}</a></li>
+        <li>{{ term.name }}</li>
+      </ol>
+      <div class="lm-hero__inner">
+        <div class="lm-hero__main">
+          <span class="lm-hero__icon" aria-hidden="true">{{ module.icon }}</span>
+          <div>
+            <p class="lm-hero__eyebrow">{{ module.name }}</p>
+            <h1 class="lm-hero__title">{{ term.name }}</h1>
+            <p class="lm-hero__lede">Tap a week to see Monday to Friday. Each week unlocks when you finish the one before.</p>
+            <div class="lm-hero__chips">
+              <span class="lm-chip">{{ week_cards|length }} week{{ week_cards|length|pluralize }}</span>
+              <span class="lm-chip">{{ progress.total }} day{{ progress.total|pluralize }}</span>
+              {% if progress.total and progress.done == progress.total %}<span class="lm-chip lm-chip--done">&#10003; Term complete</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% if progress.total %}
+        <div class="lm-hero__side">
+          <div class="lm-ring" style="--p: {{ progress.percent }}">
+            <div><strong>{{ progress.done }}/{{ progress.total }}</strong><span>days done</span></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap lm-body">
+    {% if current_week %}
+    <section class="lm-panel lm-continue">
+      <span class="lm-ring lm-ring--light" style="--p: {{ current_week.percent }}; --ring: {{ module.color }}"><strong>{{ current_week.done }}/{{ current_week.total }}</strong></span>
+      <div class="lm-continue__text">
+        <p class="lm-continue__kicker">This week</p>
+        <p class="lm-continue__title">{{ current_week.week.display_name }}</p>
+        <p class="lm-continue__meta">{{ current_week.done }} of {{ current_week.total }} day{{ current_week.total|pluralize }} complete</p>
+      </div>
+      <a href="{% url 'learning_modules:week_detail' module.slug term.slug current_week.week.slug %}" class="lm-btn lm-btn--gold">Open week &rarr;</a>
+    </section>
+    {% endif %}
+
+    <section class="lm-section">
+      <header class="lm-section__head">
+        <h2 class="lm-section__title">Weeks</h2>
+      </header>
+      {% if week_cards %}
+      <div class="lm-weeks">
+        {% for card in week_cards %}
+          {% if card.status == "locked" %}
+          <div class="lm-week lm-week--locked" style="--i: {{ forloop.counter0 }}">
+            <span class="lm-status lm-status--locked">Locked</span>
+            <span class="lm-step__node" aria-hidden="true">&#128274;</span>
+            <span class="lm-week__name">Week {{ card.week.number }}</span>
+            {% if card.week.title %}<span class="lm-week__title">{{ card.week.title }}</span>{% endif %}
+          </div>
+          {% else %}
+          <a href="{% url 'learning_modules:week_detail' module.slug term.slug card.week.slug %}"
+             class="lm-week lm-lift lm-week--{{ card.status }}" style="--tone: {{ module.color }}; --i: {{ forloop.counter0 }}">
+            {% if card.status == "active" %}<span class="lm-status lm-status--current">Now</span>{% elif card.status == "done" %}<span class="lm-status lm-status--done">Done</span>{% endif %}
+            <span class="lm-step__node" aria-hidden="true">{% if card.status == "done" %}&#10003;{% else %}{{ card.week.number }}{% endif %}</span>
+            <span class="lm-week__name">Week {{ card.week.number }}</span>
+            {% if card.week.title %}<span class="lm-week__title">{{ card.week.title }}</span>{% endif %}
+            {% if card.total %}
+            <span class="lm-week__foot">
+              <span class="lm-bar" style="--tone: {{ module.color }}"><span class="lm-bar__fill" style="--p: {{ card.percent }}"></span></span>
+              <small>{{ card.done }}/{{ card.total }} days</small>
+            </span>
+            {% endif %}
+          </a>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="lm-empty"><p>Weeks are being added to this term. Check back soon.</p></div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

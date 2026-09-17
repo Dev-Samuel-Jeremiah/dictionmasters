@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My word lists — Quick Words — Diction Masters{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/quick_words.css' %}">
+  <link rel="stylesheet" href="{% static 'css/quick_words_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="qk">
+<section class="qk-hero">
+  <div class="wrap">
+    <ol class="qk-crumbs">
+      <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+      <li><a href="{% url 'quick_words:hub' %}">Quick Words</a></li>
+      <li>My lists</li>
+    </ol>
+    <div class="qk-hero__inner">
+      <div class="qk-hero__main">
+        <span class="qk-hero__icon" aria-hidden="true">&#128278;</span>
+        <div>
+          <p class="qk-hero__eyebrow">Quick Words</p>
+          <h1 class="qk-hero__title">My word lists</h1>
+          <p class="qk-hero__lede">Group words for a class, a week or a test, then work through them together.</p>
+          <div class="qk-hero__chips">
+            <span class="qk-chip qk-chip--gold">{{ rows|length }} list{{ rows|length|pluralize }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="qk-hero__side">
+        <a href="{% url 'quick_words:hub' %}" class="qk-btn qk-btn--glass">&#128269; Browse the library</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap qk-body">
+
+    <div class="qk-panel qw-block">
+      <p class="qk-panel__label qw-block__label">Make a new list</p>
+      <form method="post" action="{% url 'quick_words:create_list' %}" class="qw-newlist">
+        {% csrf_token %}
+        <label class="qw-search__label" for="qw-name">List name</label>
+        <input type="text" id="qw-name" name="name" class="qw-search__input" maxlength="120"
+               placeholder="e.g. Class 6A — Week 3 words" required>
+        <button type="submit" class="btn btn--maroon btn--small">Create</button>
+      </form>
+    </div>
+
+    <div class="qk-section qk-lists">
+    {% for row in rows %}
+    <div class="qw-listcard">
+      <div class="qw-listcard__head">
+        <div>
+          <p class="qw-listcard__name">{{ row.list.name }}</p>
+          <p class="qw-listcard__meta">{{ row.words|length }} word{{ row.words|length|pluralize }}</p>
+        </div>
+        <form method="post" action="{% url 'quick_words:delete_list' row.list.id %}"
+              onsubmit="return confirm('Delete the list &quot;{{ row.list.name|escapejs }}&quot;? The words stay in the library.');">
+          {% csrf_token %}
+          <button type="submit" class="qw-listcard__delete">Delete list</button>
+        </form>
+      </div>
+
+      {% if row.words %}
+      <ul class="qw-listcard__words">
+        {% for word in row.words %}
+        <li class="qw-listcard__word">
+          {% if word.audio_source %}
+          <audio controls preload="none" src="{{ word.audio_source }}" class="qw-item__audio"
+                 aria-label="Hear {{ word.word }}"></audio>
+          {% endif %}
+          <div class="qw-listcard__wordbody">
+            <span class="qw-listcard__wordname">{{ word.word }}</span>
+            {% if word.ipa %}<span class="qw-listcard__wordipa">{{ word.ipa }}</span>{% endif %}
+          </div>
+          <a href="{% url 'quick_words:word_detail' word.slug %}" class="link-quiet">Details</a>
+          <form method="post" action="{% url 'quick_words:toggle_word' row.list.id word.slug %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="qw-listcard__remove" aria-label="Remove {{ word.word }} from {{ row.list.name }}">&times;</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="qw-listcard__empty">
+        No words yet — <a href="{% url 'quick_words:hub' %}" class="link-quiet">browse the library</a> and add some.
+      </p>
+      {% endif %}
+    </div>
+    {% empty %}
+    <p class="qk-empty">You have no lists yet. Make one above, then add words as you browse.</p>
+    {% endfor %}
+    </div>
+  </div>
+</section>
+</div>
+{% endblock %}

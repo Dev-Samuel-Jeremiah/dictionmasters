@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ term.name }} — {{ book.title }}{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--teal" style="--tint: {{ book.color }}">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'reading_club:hub' %}">Reading Club</a></li>
+        <li><a href="{% url 'reading_club:book_detail' book.slug %}">{{ book.title }}</a></li>
+        <li>{{ term.name }}</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">{{ book.icon }}</span>
+          <div>
+            <p class="ui-hero__eyebrow">{{ book.title }}</p>
+            <h1 class="ui-hero__title">{{ term.name }}</h1>
+            <p class="ui-hero__lede">Tap a chapter to read it.</p>
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ chapter_rows|length }} chapter{{ chapter_rows|length|pluralize }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+    {% if chapter_rows %}
+    <div class="ui-tiles">
+      {% for row in chapter_rows %}
+      <a href="{% url 'reading_club:chapter_detail' book.slug term.slug row.chapter.slug %}"
+         class="ui-tile ui-lift{% if row.is_complete %} ui-tile--done{% elif row.is_current %} ui-tile--active{% endif %}"
+         style="--tone: {{ book.color }}; --i: {{ forloop.counter0 }}">
+        {% if row.is_current %}<span class="ui-status ui-status--current">Now</span>{% elif row.is_complete %}<span class="ui-status ui-status--done">Done</span>{% endif %}
+        <span class="ui-node" aria-hidden="true">{% if row.is_complete %}&#10003;{% else %}{{ row.chapter.number }}{% endif %}</span>
+        <span class="ui-tile__name">Chapter {{ row.chapter.number }}</span>
+        <span class="ui-tile__title">{{ row.chapter.title }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="ui-empty"><p>Chapters are being added to this term. Check back soon.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

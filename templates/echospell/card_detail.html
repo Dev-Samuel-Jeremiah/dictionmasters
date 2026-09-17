@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ category.name }} — {{ group.display_name }} — {{ level.name }}{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/library.css' %}">
+  <link rel="stylesheet" href="{% static 'css/echospell.css' %}">
+  <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="es">
+<section class="es-hero es-hero--accent" style="--accent: {{ category.color }}">
+  <div class="wrap">
+    <ol class="es-crumbs">
+      <li><a href="{% url 'echospell:hub' %}">EchoSpell</a></li>
+      <li><a href="{% url 'echospell:level_detail' level.slug %}">{{ level.name }}</a></li>
+      <li><a href="{% url 'echospell:group_detail' level.slug group.slug %}">Group {{ group.number }}</a></li>
+      <li>{{ category.name }}</li>
+    </ol>
+    <div class="es-hero__inner">
+      <div class="es-hero__main">
+        <span class="es-hero__icon" aria-hidden="true" style="background: linear-gradient(145deg, {{ category.color }}, rgba(255,255,255,0.08));">{{ category.icon }}</span>
+        <div>
+          <p class="es-hero__eyebrow">{{ level.name }} &middot; Group {{ group.number }}</p>
+          <h1 class="es-hero__title">{{ category.name }}</h1>
+          {% if category.description %}<p class="es-hero__lede">{{ category.description }}</p>{% endif %}
+        </div>
+      </div>
+      <div class="es-hero__side">
+        <a href="{% url 'echospell:group_detail' level.slug group.slug %}" class="es-btn es-btn--glass">&larr; All cards in Group {{ group.number }}</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap es-body es-body--narrow">
+
+    {% if category.kind == "passage" %}
+      {% if passage and passage.body or passage.audio_source %}
+      <div class="content-card"{% if passage.audio_source and passage.body %} data-read-along{% endif %}>
+        {% if passage.title %}<p class="passage-card__title">{{ passage.title }}</p>{% endif %}
+        {% if passage.audio_source %}<audio controls src="{{ passage.audio_source }}" style="width: 100%; margin: 8px 0 14px;" data-ra-media></audio>{% endif %}
+        {% if passage.body %}<div class="lesson-body" data-ra-text>{{ passage.body|linebreaksbr }}</div>{% endif %}
+      </div>
+      {% else %}
+      <p class="es-empty">This group's passage is being put together — check back soon.</p>
+      {% endif %}
+
+    {% elif category.kind == "dialogue" %}
+      {% if dialogue and lines %}
+        <div{% if dialogue.audio_source %} data-read-along{% endif %}>
+        {% if dialogue.audio_source %}
+        <div class="content-card" style="margin-bottom: 16px;">
+          <p class="callout__title" style="color: var(--gold-deep);">LISTEN TO THE DIALOGUE</p>
+          <audio controls src="{{ dialogue.audio_source }}" style="width: 100%; margin: 8px 0 14px;" data-ra-media></audio>
+          <div data-ra-bar></div>
+        </div>
+        {% endif %}
+        <div class="dialogue-lines" data-ra-text>
+          {% for line in lines %}
+          <div class="dialogue-line {% cycle 'dialogue-line--a' 'dialogue-line--b' %}">
+            <span class="dialogue-line__speaker" aria-hidden="true" data-ra-skip>{{ line.speaker|slice:":1"|upper }}</span>
+            <div class="dialogue-line__body">
+              <p class="dialogue-line__name" data-ra-skip>{{ line.speaker }}</p>
+              <p class="dialogue-line__text">{{ line.text }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        </div>
+      {% else %}
+      <p class="es-empty">This group's dialogue is being put together — check back soon.</p>
+      {% endif %}
+
+    {% elif category.slug == "listen-and-number" %}
+      {% if entries %}
+      <p class="echospell-instructions">Listen to the audio, then check each word in the order you hear it — the first one you check becomes 1, and so on.</p>
+      <div class="entry-list">
+        {% for entry in entries %}
+        <div class="content-card word-card">
+          {% if entry.title %}<p class="word-card__note-title">{{ entry.title }}</p>{% endif %}
+          {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
+          <ol class="number-options">
+            {% for w in entry.word_list %}
+            <li class="number-option">
+              <label class="number-option__label">
+                <input type="checkbox" class="number-option__input">
+                <span class="number-option__badge" aria-hidden="true"></span>
+                <span class="number-option__word">{{ w }}</span>
+              </label>
+            </li>
+            {% endfor %}
+          </ol>
+          <button type="button" class="circle-replay">
+            <span class="circle-replay__icon" aria-hidden="true">&#8635;</span> Replay
+          </button>
+          {% if entry.body %}<p class="word-card__note-body">{{ entry.body }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="es-empty">No cards for this group yet — check back soon.</p>
+      {% endif %}
+
+    {% elif category.slug == "listen-and-circle" %}
+      {% if cards %}
+      <div class="entry-list">
+        {% for card in cards %}
+        <div class="content-card word-card">
+          {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
+          {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
+          <div class="circle-options">
+            {% for option in card.options %}
+            <button type="button" class="circle-option">
+              <svg class="circle-option__mark" viewBox="0 0 100 50" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M8,27 C5,11 28,3 50,4 C75,5 97,12 94,27 C91,45 64,48 47,47 C24,46 3,38 9,23" />
+              </svg>
+              <span class="circle-option__label">{{ option }}</span>
+            </button>
+            {% endfor %}
+          </div>
+          <button type="button" class="circle-replay">
+            <span class="circle-replay__icon" aria-hidden="true">&#8635;</span> Replay
+          </button>
+          <details class="reveal">
+            <summary>Show word</summary>
+            <ol class="word-card__list" style="margin-top: 10px;">
+              {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
+            </ol>
+          </details>
+          {% if card.entry.body %}<p class="word-card__note-body">{{ card.entry.body }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="es-empty">No cards for this group yet — check back soon.</p>
+      {% endif %}
+
+    {% elif category.slug == "vocabulary" %}
+      {% if cards %}
+      {% csrf_token %}
+      <div class="entry-list">
+        {% for card in cards %}
+        <div class="content-card word-card">
+          {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
+          {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
+          {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%; margin: 6px 0 4px;"></audio>{% endif %}
+          {% if card.entry.image %}<img src="{{ card.entry.image.url }}" alt="" class="word-card__image">{% endif %}
+          <ul class="vocab-list">
+            {% for word, meaning in card.entry.word_meaning_pairs %}
+            <li class="vocab-item">
+              <p class="vocab-item__word">{{ word }}</p>
+              {% if meaning %}<p class="vocab-item__meaning">{{ meaning|cut:"**" }}</p>{% endif %}
+              <label class="vocab-item__prompt" for="vocab-sentence-{{ card.entry.id }}-{{ forloop.counter }}">
+                Use &ldquo;{{ word }}&rdquo; in a sentence
+              </label>
+              <input type="text" id="vocab-sentence-{{ card.entry.id }}-{{ forloop.counter }}" class="vocab-item__input" placeholder="Write your sentence here&hellip;">
+              <p class="vocab-item__feedback" aria-live="polite"></p>
+            </li>
+            {% endfor %}
+          </ul>
+          <div class="vocab-check">
+            <button type="button" class="btn btn--maroon btn--small vocab-check__submit">Submit my sentences</button>
+            <p class="vocab-check__status" aria-live="polite"></p>
+          </div>
+          {% if card.entry.body %}<p class="word-card__note-body">{{ card.entry.body }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="es-empty">No cards for this group yet — check back soon.</p>
+      {% endif %}
+
+    {% elif category.slug == "look-listen-echo" %}
+      {% if cards %}
+      <div class="entry-list">
+        {% for card in cards %}
+        <div class="content-card word-card word-card--center">
+          {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
+          {% if card.entry.image %}<img src="{{ card.entry.image.url }}" alt="{{ card.entry.word }}" class="word-card__image">{% endif %}
+          <ol class="word-card__list">
+            {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
+          </ol>
+          {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%; margin-top: 10px;"></audio>{% endif %}
+          {% if card.entry.video_source %}
+          <div class="video-card" style="margin-top: 14px; text-align: left;">
+            <div class="video-card__stage"><video controls preload="{% if card.entry.poster_source %}none{% else %}metadata{% endif %}" style="width:100%;"{% if card.entry.poster_source %} poster="{{ card.entry.poster_source }}"{% endif %}><source src="{{ card.entry.video_source }}"></video></div>
+          </div>
+          {% endif %}
+          {% if card.entry.body %}<p class="word-card__note-body">{{ card.entry.body }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="es-empty">No cards for this group yet — check back soon.</p>
+      {% endif %}
+
+    {% elif category.slug == "transcription" %}
+      {% if cards %}
+      <div class="entry-list">
+        {% for card in cards %}
+        <div class="content-card word-card">
+          {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
+          {% if card.entry.ipa %}<p class="word-card__ipa word-card__ipa--big">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
+          {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
+          {% if card.entry.video_source %}
+          <div class="video-card" style="margin-top: 14px;">
+            <div class="video-card__bar"><div class="video-card__title">Transcription video</div></div>
+            <div class="video-card__stage"><video controls preload="{% if card.entry.poster_source %}none{% else %}metadata{% endif %}" style="width:100%;"{% if card.entry.poster_source %} poster="{{ card.entry.poster_source }}"{% endif %}><source src="{{ card.entry.video_source }}"></video></div>
+          </div>
+          {% endif %}
+          <details class="reveal">
+            <summary>Reveal spelling</summary>
+            <ol class="word-card__list" style="margin-top: 10px;">
+              {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
+            </ol>
+          </details>
+          {% if card.entry.body %}<p class="word-card__note-body">{{ card.entry.body }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="es-empty">No cards for this group yet — check back soon.</p>
+      {% endif %}
+
+    {% elif category.slug == "missing-letter" or category.slug == "puzzle" %}
+      {% if cards %}
+      <div class="entry-list">
+        {% for card in cards %}
+        <div class="content-card word-card">
+          {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
+          <ol class="word-card__list word-card__list--puzzle">
+            {% for w in card.display_list %}<li>{{ w|upper }}</li>{% endfor %}
+          </ol>
+          {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
+          <details class="reveal">
+            <summary>Reveal the word</summary>
+            <ol class="word-card__list" style="margin-top: 10px;">
+              {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
+            </ol>
+            {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
+          </details>
+          {% if card.entry.body %}<p class="word-card__note-body">{{ card.entry.body }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="es-empty">No cards for this group yet — check back soon.</p>
+      {% endif %}
+
+    {% else %}
+      {% if cards %}
+      <div class="entry-list">
+        {% for card in cards %}
+        <div class="content-card word-card">
+          {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
+          {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
+          {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
+          <details class="reveal">
+            <summary>Reveal the spelling</summary>
+            <ol class="word-card__list" style="margin-top: 10px;">
+              {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
+            </ol>
+            {% if card.entry.example_sentence %}<p class="word-card__example">&ldquo;{{ card.entry.example_sentence }}&rdquo;</p>{% endif %}
+          </details>
+          {% if card.entry.body %}<p class="word-card__note-body">{{ card.entry.body }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="es-empty">No cards for this group yet — check back soon.</p>
+      {% endif %}
+    {% endif %}
+
+  </div>
+</section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/read_along.js' %}" defer></script>
+{% if category.slug == "listen-and-circle" or category.slug == "listen-and-number" or category.slug == "vocabulary" %}
+<script>
+{% if category.slug == "listen-and-circle" %}
+  document.querySelectorAll(".word-card").forEach(function (card) {
+    card.querySelectorAll(".circle-option").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        btn.classList.add("circle-option--circled");
+      });
+    });
+    var replay = card.querySelector(".circle-replay");
+    if (replay) {
+      replay.addEventListener("click", function () {
+        card.querySelectorAll(".circle-option--circled").forEach(function (btn) {
+          btn.classList.remove("circle-option--circled");
+        });
+      });
+    }
+  });
+{% elif category.slug == "listen-and-number" %}
+  document.querySelectorAll(".word-card").forEach(function (card) {
+    var boxes = Array.prototype.slice.call(card.querySelectorAll(".number-option__input"));
+    var order = [];
+
+    boxes.forEach(function (box) {
+      box.addEventListener("change", function () {
+        if (box.checked) {
+          order.push(box);
+          box.closest(".number-option").querySelector(".number-option__badge").textContent = order.length;
+          box.disabled = true;
+        }
+      });
+    });
+
+    var replay = card.querySelector(".circle-replay");
+    if (replay) {
+      replay.addEventListener("click", function () {
+        order = [];
+        boxes.forEach(function (box) {
+          box.checked = false;
+          box.disabled = false;
+          box.closest(".number-option").querySelector(".number-option__badge").textContent = "";
+        });
+      });
+    }
+  });
+{% elif category.slug == "vocabulary" %}
+  var csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+  var csrfToken = csrfInput ? csrfInput.value : "";
+
+  document.querySelectorAll(".word-card").forEach(function (card) {
+    var submitBtn = card.querySelector(".vocab-check__submit");
+    var status = card.querySelector(".vocab-check__status");
+    if (!submitBtn) return;
+
+    submitBtn.addEventListener("click", function () {
+      var items = Array.prototype.slice.call(card.querySelectorAll(".vocab-item"));
+      var payload = items.map(function (item) {
+        return {
+          word: item.querySelector(".vocab-item__word").textContent.trim(),
+          sentence: item.querySelector(".vocab-item__input").value,
+        };
+      });
+
+      submitBtn.disabled = true;
+      status.textContent = "Checking…";
+      status.className = "vocab-check__status";
+
+      fetch("{% url 'echospell:check_vocabulary_sentences' %}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+        body: JSON.stringify({ items: payload }),
+      })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+          var results = data.results || [];
+          var allCorrect = results.length > 0;
+          items.forEach(function (item, i) {
+            var result = results[i];
+            var feedback = item.querySelector(".vocab-item__feedback");
+            if (!result) return;
+            feedback.textContent = result.feedback;
+            feedback.classList.toggle("vocab-item__feedback--correct", result.correct);
+            feedback.classList.toggle("vocab-item__feedback--incorrect", !result.correct);
+            item.classList.toggle("vocab-item--correct", result.correct);
+            item.classList.toggle("vocab-item--incorrect", !result.correct);
+            if (!result.correct) allCorrect = false;
+          });
+          status.textContent = allCorrect ? "All correct — nice work!" : "Check the sentences marked below.";
+          status.classList.add(allCorrect ? "vocab-check__status--correct" : "vocab-check__status--incorrect");
+        })
+        .catch(function () {
+          status.textContent = "Couldn't check your sentences — please try again.";
+        })
+        .finally(function () {
+          submitBtn.disabled = false;
+        });
+    });
+  });
+{% endif %}
+</script>
+{% endif %}
+{% endblock %}

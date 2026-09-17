@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ assessment.title }} — Assessments{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/assessments.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs"><li><a href="{% url 'assessments:hub' %}">Assessments</a></li><li><a href="{% url 'assessments:kind_list' assessment.kind %}">{{ assessment.get_kind_display }}</a></li><li>{{ assessment.title }}</li></ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128221;</span>
+          <div>
+            <p class="ui-hero__eyebrow">{{ assessment.get_kind_display }}</p>
+            <h1 class="ui-hero__title">{{ assessment.title }}</h1>
+            {% if assessment.summary %}<p class="ui-hero__lede">{{ assessment.summary }}</p>{% endif %}
+            <div class="ui-hero__chips"><span class="ui-chip">{{ question_count }} question{{ question_count|pluralize }}</span>{% if assessment.is_timed %}<span class="ui-chip ui-chip--gold">&#9201; {{ assessment.time_limit_minutes }} min</span>{% endif %}<span class="ui-chip">Pass mark {{ assessment.pass_mark }}%</span></div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+
+<section>
+  <div class="wrap ui-body ui-body--narrow">
+    <div class="as-brief">
+      <dl class="as-facts">
+        <div><dt>Questions</dt><dd>{{ question_count }}</dd></div>
+        <div><dt>Time</dt><dd>{% if assessment.is_timed %}{{ assessment.time_limit_minutes }} minutes{% else %}No limit{% endif %}</dd></div>
+        <div><dt>Pass mark</dt><dd>{{ assessment.pass_mark }}%</dd></div>
+        <div><dt>Attempts</dt><dd>{% if left is None %}Unlimited{% else %}{{ left }} of {{ assessment.max_attempts }} left{% endif %}</dd></div>
+      </dl>
+
+      <h2 class="as-brief__heading">Before you start</h2>
+      <ul class="as-brief__rules">
+        {% if assessment.kind == "practice" %}
+        <li>Check each answer as you go — you'll see straight away if it's right, and why.</li>
+        <li>Once you check an answer it's locked, so think first.</li>
+        {% elif assessment.kind == "speaking" %}
+        <li>You'll record yourself for each spoken question. Find a quiet place and allow your microphone.</li>
+        <li>Listen back before you submit — your teacher marks exactly what you send.</li>
+        {% else %}
+        {% if assessment.is_timed %}<li>The timer starts the moment you begin and <strong>keeps running if you leave the page</strong>.</li>{% endif %}
+        <li>Your answers are saved as you go. When time runs out, whatever you've answered is submitted.</li>
+        {% endif %}
+        {% if assessment.kind == "placement" %}<li>Answer what you can — it's fine to find the later questions hard. That's how we find your level.</li>{% endif %}
+      </ul>
+      {% if assessment.instructions %}<div class="as-brief__notes">{{ assessment.instructions|linebreaksbr }}</div>{% endif %}
+
+      {% if question_count %}
+        {% if resumable %}
+        <form method="post" action="{% url 'assessments:start' assessment.slug %}">{% csrf_token %}
+          <button class="btn btn--maroon btn--large">Continue where you left off</button>
+        </form>
+        {% elif left == 0 %}
+        <p class="as-brief__stop">You've used all your attempts at this assessment.</p>
+        <a href="{% url 'assessments:my_results' %}" class="btn btn--gold">See my results</a>
+        {% else %}
+        <form method="post" action="{% url 'assessments:start' assessment.slug %}">{% csrf_token %}
+          <button class="btn btn--maroon btn--large">{% if used %}Start another attempt{% else %}Start{% endif %}</button>
+        </form>
+        {% endif %}
+      {% else %}
+      <div class="ui-empty"><p>This assessment has no questions yet.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+</div>
+{% endblock %}

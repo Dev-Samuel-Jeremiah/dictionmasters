@@ -1,0 +1,546 @@
+/* =========================================================
+   Diction Masters — landing page (page-specific sections)
+   Shared tokens, reset, buttons, header and footer live in
+   base.css, loaded before this file.
+   ========================================================= */
+
+/* ---------- hero: the open notebook ---------- */
+
+.hero {
+  background: var(--parchment);
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px);
+  background-size: 100% 42px;
+  background-position: 0 96px;
+  padding: 72px 0 88px;
+}
+
+.hero__book {
+  display: grid;
+  grid-template-columns: 1.15fr 40px 1fr;
+  align-items: start;
+  gap: 0 8px;
+}
+
+.hero__spine {
+  align-self: stretch;
+  border-left: 2px dashed var(--gold);
+  opacity: 0.55;
+}
+
+.hero__page--left { padding-right: 20px; }
+.hero__page--right { padding-left: 12px; padding-top: 6px; }
+
+.hero__headline {
+  font-size: clamp(2.1rem, 4.3vw, 3.05rem);
+  letter-spacing: -0.01em;
+}
+.hero__headline-line { display: block; color: var(--gold-deep); font-style: italic; font-weight: 500; }
+
+.hero__sub {
+  margin-top: 22px;
+  font-size: 1.08rem;
+  color: var(--ink-70);
+  max-width: 46ch;
+}
+
+.hero__actions {
+  margin-top: 32px;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+
+.hero__stats {
+  margin: 48px 0 0;
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+.hero__stat dt {
+  font-family: var(--font-serif);
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.hero__stat dd {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-70);
+  max-width: 16ch;
+}
+
+/* the lesson card mock, like a flashcard clipped to the right page */
+
+.lesson-card {
+  background: var(--paper-white);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 40px -22px rgba(20, 33, 61, 0.35);
+  padding: 30px 30px 26px;
+  max-width: 400px;
+}
+
+.lesson-card__label {
+  font-size: 0.82rem;
+  color: var(--ink-40);
+}
+.lesson-card__word {
+  font-size: 2.1rem;
+  margin-top: 6px;
+}
+.lesson-card__ipa {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--gold-deep);
+  margin-top: 4px;
+  font-size: 1.05rem;
+}
+
+.lesson-card__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+}
+.lesson-card__control {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ink-40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  flex: none;
+}
+.lesson-card__control--mic { color: var(--maroon); border-color: var(--maroon); }
+.lesson-card__row-label { font-weight: 600; font-size: 0.92rem; }
+.lesson-card__wave { color: var(--gold); margin-left: auto; width: 110px; height: 22px; }
+
+.lesson-card__note {
+  margin-top: 20px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--ink);
+  font-size: 1rem;
+  border-bottom: 2px solid var(--gold-tint);
+  padding-bottom: 14px;
+}
+.lesson-card__signature {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--ink-40);
+}
+
+@media (max-width: 900px) {
+  .hero__book { grid-template-columns: 1fr; }
+  .hero__spine { display: none; }
+  .hero__page--right { padding: 40px 0 0; }
+  .lesson-card { max-width: 420px; }
+}
+
+/* ---------- how it works ---------- */
+
+.steps { padding: 96px 0; background: var(--paper-white); }
+
+.section-title {
+  font-size: clamp(1.6rem, 2.8vw, 2.1rem);
+  max-width: 20ch;
+}
+.section-title--on-parchment { color: var(--ink); }
+
+.section-lede {
+  margin-top: 14px;
+  color: var(--ink-70);
+  font-size: 1.05rem;
+  max-width: 56ch;
+}
+
+.steps__list {
+  list-style: none;
+  margin: 56px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+.steps__item {
+  padding: 0 24px 0 0;
+  border-top: 1px solid var(--rule);
+  padding-top: 22px;
+}
+.steps__item + .steps__item { border-left: 1px solid var(--rule); padding-left: 24px; }
+
+.steps__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.4px solid var(--gold);
+  color: var(--gold-deep);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.05rem;
+}
+.steps__title {
+  margin-top: 18px;
+  font-size: 1.08rem;
+}
+.steps__body {
+  margin-top: 10px;
+  color: var(--ink-70);
+  font-size: 0.96rem;
+}
+
+@media (max-width: 860px) {
+  .steps__list { grid-template-columns: 1fr; gap: 28px; }
+  .steps__item, .steps__item + .steps__item { border-left: none; padding-left: 0; }
+}
+
+/* ---------- features: alternating margin notes on a thread ---------- */
+
+.features { padding: 20px 0 100px; background: var(--paper-white); position: relative; }
+
+.features__thread {
+  display: none;
+}
+
+.features__list {
+  margin-top: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feature-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  padding: 34px 0;
+  border-top: 1px dashed var(--rule);
+  position: relative;
+}
+.feature-row:last-child { border-bottom: 1px dashed var(--rule); }
+
+.feature-row__content { max-width: 560px; }
+.feature-row--right .feature-row__content { margin-left: auto; text-align: right; }
+
+.feature-row__eyebrow {
+  color: var(--gold-deep);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.05rem;
+}
+.feature-row__title {
+  margin-top: 8px;
+  font-size: 1.5rem;
+  max-width: 26ch;
+}
+.feature-row--right .feature-row__title { margin-left: auto; }
+
+.feature-row__body {
+  margin-top: 12px;
+  color: var(--ink-70);
+  max-width: 46ch;
+}
+.feature-row--right .feature-row__body { margin-left: auto; }
+
+.feature-row__mark { display: none; }
+
+@media (max-width: 700px) {
+  .feature-row--right .feature-row__content,
+  .feature-row--right .feature-row__title,
+  .feature-row--right .feature-row__body {
+    margin-left: 0;
+    text-align: left;
+  }
+}
+
+/* ---------- chalkboard stats band ---------- */
+
+.chalkboard {
+  background: var(--green);
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 5px 5px;
+  color: var(--parchment);
+  padding: 76px 0;
+}
+
+.chalkboard__inner { text-align: center; }
+
+.chalkboard__line {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+  max-width: 42ch;
+  margin: 0 auto;
+  color: var(--parchment);
+}
+
+.chalkboard__figures {
+  margin-top: 56px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 36px;
+}
+
+.chalkboard__figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.chalkboard__number {
+  font-family: var(--font-serif);
+  font-size: 3rem;
+  font-weight: 600;
+  color: var(--gold);
+}
+.chalkboard__label {
+  font-size: 0.9rem;
+  color: rgba(246, 241, 228, 0.72);
+  max-width: 22ch;
+}
+
+@media (max-width: 700px) {
+  .chalkboard__figures { grid-template-columns: 1fr; gap: 32px; }
+}
+
+/* ---------- testimonial ---------- */
+
+.testimonial {
+  padding: 96px 0;
+  background: var(--parchment-deep);
+  text-align: center;
+}
+.testimonial__quote {
+  margin: 0 auto;
+  max-width: 58ch;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-style: italic;
+  font-size: clamp(1.3rem, 2.6vw, 1.7rem);
+  color: var(--ink);
+}
+.testimonial__attribution {
+  margin-top: 22px;
+  display: inline-block;
+  font-size: 0.9rem;
+  color: var(--ink-70);
+  border-bottom: 2px solid var(--gold);
+  padding-bottom: 4px;
+}
+
+/* ---------- CTA for schools ---------- */
+
+.cta-band { background: var(--paper-white); padding: 100px 0; }
+.cta-band__inner {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+  align-items: center;
+  background: var(--parchment);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 56px;
+}
+.cta-band__actions { text-align: left; }
+.cta-band__note { margin-top: 16px; font-size: 0.9rem; color: var(--ink-70); }
+
+@media (max-width: 780px) {
+  .cta-band__inner { grid-template-columns: 1fr; padding: 40px 28px; }
+}
+
+
+/* =========================================================
+   Motion — everything below is driven by the phonemic chart.
+   Two rules hold throughout: only transform and opacity are
+   animated (so nothing forces layout while scrolling), and
+   every effect is switched off under prefers-reduced-motion.
+   ========================================================= */
+
+/* ---------- the 44 symbols drifting behind the hero ---------- */
+
+.hero { position: relative; overflow: hidden; }
+.hero__book { position: relative; z-index: 1; }
+
+.phoneme-drift {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+/* Position, size and timing all come from the view — see
+   _drift_layer() for why they are not computed in CSS. */
+.phoneme-drift__glyph {
+  position: absolute;
+  top: 100%;
+  font-family: var(--font-serif);
+  color: var(--ink);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation-name: phoneme-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes phoneme-rise {
+  0%   { transform: translate3d(0, 0, 0) rotate(-4deg); opacity: 0; }
+  12%  { opacity: 0.1; }
+  80%  { opacity: 0.1; }
+  100% { transform: translate3d(var(--sway, 20px), -118vh, 0) rotate(5deg); opacity: 0; }
+}
+/* Half as many glyphs on a phone — these are cheap to animate but
+   there is no sense running 44 of them on a low-end handset. */
+@media (max-width: 720px) {
+  .phoneme-drift__glyph:nth-child(even) { display: none; }
+}
+
+/* ---------- the hero card: word and transcription cycling ---------- */
+
+.lesson-card__stack {
+  position: relative;
+  /* Reserve the tallest slide's height so the card never jumps. */
+  min-height: 92px;
+}
+.lesson-card__notes { position: relative; min-height: 64px; }
+
+.word-slide {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.lesson-card__stack .word-slide,
+.lesson-card__notes .word-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+.lesson-card__stack .word-slide--on,
+.lesson-card__notes .word-slide--on {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* Each symbol of the transcription is wrapped by the script and
+   written on in turn, like a teacher filling it in on the board. */
+.ipa-glyph {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(6px);
+}
+.word-slide--on .ipa-glyph {
+  animation: ipa-write 0.42s ease-out forwards;
+  animation-delay: calc(var(--g) * 45ms);
+}
+@keyframes ipa-write {
+  from { opacity: 0; transform: translateY(6px) scale(0.9); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* A caret that runs along under the transcription as it is written. */
+.lesson-card__ipa { position: relative; }
+.word-slide--on .lesson-card__ipa::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  transform-origin: left center;
+  animation: ipa-underline 1.1s ease-out forwards;
+}
+@keyframes ipa-underline {
+  from { transform: scaleX(0); opacity: 0.9; }
+  to   { transform: scaleX(1); opacity: 0; }
+}
+
+/* Level meter beside the waveform, so "Listen" looks live. */
+.lesson-card__bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+  margin-left: 8px;
+}
+.lesson-card__bars i {
+  display: block;
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--gold);
+  transform-origin: bottom center;
+  transform: scaleY(0.25);
+  animation: bar-pulse 1.1s ease-in-out infinite;
+  animation-delay: calc(var(--b) * 120ms);
+}
+@keyframes bar-pulse {
+  0%, 100% { transform: scaleY(0.25); }
+  50%      { transform: scaleY(1); }
+}
+
+/* ---------- the ribbon of all 44 sounds ---------- */
+
+.ribbon {
+  background: var(--ink);
+  padding: 16px 0;
+  overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ribbon__track {
+  display: flex;
+  width: max-content;
+  animation: ribbon-scroll 70s linear infinite;
+}
+.ribbon:hover .ribbon__track { animation-play-state: paused; }
+.ribbon__run { display: flex; }
+.ribbon__glyph {
+  flex: 0 0 auto;
+  padding: 4px 20px;
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  color: var(--parchment);
+  opacity: 0.55;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+.ribbon__glyph:hover { opacity: 1; color: var(--gold); }
+@keyframes ribbon-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+/* ---------- reveal on scroll ---------- */
+
+/* Only hide things once the script has confirmed it is running, so a
+   browser with JS off still shows the whole page. */
+.js-motion .reveal {
+  opacity: 0;
+  transform: translateY(18px);
+}
+.js-motion .reveal--in {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--d, 0) * 90ms);
+}
+
+/* ---------- respect a reduced-motion preference ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .phoneme-drift { display: none; }
+  .ribbon__track { animation: none; }
+  .lesson-card__bars i { animation: none; transform: scaleY(0.6); }
+  .word-slide { transition: none; }
+  .word-slide--on .ipa-glyph { animation: none; opacity: 1; transform: none; }
+  .word-slide--on .lesson-card__ipa::after { animation: none; opacity: 0; }
+  .js-motion .reveal { opacity: 1; transform: none; }
+  .js-motion .reveal--in { transition: none; }
+}

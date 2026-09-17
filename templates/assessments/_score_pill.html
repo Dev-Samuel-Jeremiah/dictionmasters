@@ -1,0 +1,3 @@
+{% if attempt.status == "awaiting" %}<span class="as-pill as-pill--waiting">Awaiting marking</span>
+{% elif attempt.passed %}<span class="as-pill as-pill--pass">{{ attempt.percent }}% &middot; {{ attempt.grade }}</span>
+{% else %}<span class="as-pill as-pill--fail">{{ attempt.percent }}% &middot; {{ attempt.grade }}</span>{% endif %}

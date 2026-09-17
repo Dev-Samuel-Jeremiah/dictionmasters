@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Learning Modules — Diction Masters{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/learning_modules.css' %}">
+  <link rel="stylesheet" href="{% static 'css/learning_modules_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="lm">
+  <section class="lm-hero">
+    <div class="wrap">
+      <ol class="lm-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
+        <li>Learning Modules</li>
+      </ol>
+      <div class="lm-hero__inner">
+        <div class="lm-hero__main">
+          <span class="lm-hero__icon" aria-hidden="true">&#127891;</span>
+          <div>
+            <p class="lm-hero__eyebrow">Term-by-term courses</p>
+            <h1 class="lm-hero__title">Learning Modules</h1>
+            <p class="lm-hero__lede">Pick a module, then work through First, Second and Third term, week by week, Monday to Friday. Each week unlocks when you finish the one before.</p>
+          </div>
+        </div>
+        {% if overall.total %}
+        <div class="lm-hero__side">
+          <div class="lm-ring" style="--p: {{ overall.percent }}">
+            <div><strong>{{ overall.percent }}%</strong><span>overall</span></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap lm-body">
+    {% if module_cards %}
+    <section class="lm-panel lm-overview" aria-label="Your module progress">
+      <div>
+        <p class="lm-overview__label">Modules</p>
+        <p class="lm-overview__value">{{ overall.modules }}</p>
+      </div>
+      <div>
+        <p class="lm-overview__label">Terms</p>
+        <p class="lm-overview__value">{{ overall.terms }}</p>
+      </div>
+      <div>
+        <p class="lm-overview__label">Days complete</p>
+        <p class="lm-overview__value">{{ overall.done }}<small> / {{ overall.total }}</small></p>
+      </div>
+      {% if current_card %}
+      <a href="{% url 'learning_modules:module_detail' current_card.module.slug %}" class="lm-btn lm-btn--gold">Continue {{ current_card.module.name }} &rarr;</a>
+      {% endif %}
+    </section>
+
+    <section class="lm-section">
+      <header class="lm-section__head">
+        <h2 class="lm-section__title">Choose a module</h2>
+        <p class="lm-section__aside">Your progress in each is saved as you go.</p>
+      </header>
+      <div class="lm-modules">
+        {% for card in module_cards %}
+        <a href="{% url 'learning_modules:module_detail' card.module.slug %}"
+           class="lm-module lm-lift{% if card.is_current %} lm-module--current{% endif %}"
+           style="--tone: {{ card.module.color }}; --i: {{ forloop.counter0 }}">
+          <span class="lm-module__top">
+            <span class="lm-module__badge" aria-hidden="true">{{ card.module.icon }}</span>
+            {% if card.is_current %}<span class="lm-status lm-status--current">Continue here</span>
+            {% elif card.is_done %}<span class="lm-status lm-status--done">Complete</span>
+            {% elif card.progress.done %}<span class="lm-status">In progress</span>{% endif %}
+          </span>
+          <span class="lm-module__name">{{ card.module.name }}</span>
+          {% if card.module.description %}<span class="lm-module__desc">{{ card.module.description }}</span>{% endif %}
+          <span class="lm-module__foot">
+            <span class="lm-module__meta">
+              <span>{{ card.term_count }} term{{ card.term_count|pluralize }} &middot; {{ card.progress.total }} day{{ card.progress.total|pluralize }}</span>
+              {% if card.progress.total %}<span>{{ card.progress.percent }}%</span>{% endif %}
+            </span>
+            <span class="lm-bar"><span class="lm-bar__fill" style="--p: {{ card.progress.percent }}"></span></span>
+          </span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% else %}
+    <div class="lm-empty"><p>Modules are being put together. Check back soon.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

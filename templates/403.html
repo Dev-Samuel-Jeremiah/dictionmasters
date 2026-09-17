@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Not your level — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero">
+    <div class="wrap">
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128274;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Not available to you</p>
+            <h1 class="ui-hero__title">That belongs to another level</h1>
+            <p class="ui-hero__lede">
+              {% if user.level %}You are in <strong>{{ user.level }}</strong>, and this page belongs to a different level.
+              {% else %}This page isn't open to your account.{% endif %}
+              If you think that's wrong, ask your school admin.
+            </p>
+            <div class="ui-hero__actions">
+              <a href="{% url 'accounts:dashboard' %}" class="ui-btn ui-btn--gold">Back to my dashboard</a>
+              <a href="{% url 'echospell:hub' %}" class="ui-btn ui-btn--glass">Open EchoSpell</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

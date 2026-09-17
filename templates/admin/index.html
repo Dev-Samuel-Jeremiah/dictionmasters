@@ -1,0 +1,162 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block bodyclass %}{{ block.super }} dashboard dm-console-page{% endblock %}
+{% block nav-breadcrumbs %}{% endblock %}
+{% block nav-sidebar %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block sidebar %}{% endblock %}
+
+{% block content %}
+<div class="dm-console">
+
+  {# ============ Welcome ============ #}
+  <section class="dm-hero">
+    <div class="dm-hero__text">
+      <p class="dm-hero__eyebrow">Admin console &middot; {% now "l j F Y" %}</p>
+      <h1 class="dm-hero__title">{{ console.greeting }}, {{ user.first_name|default:user.email }}</h1>
+      <p class="dm-hero__lede">Add, change and upload everything learners see. Pick a feature below, or start with one of the quick adds.</p>
+    </div>
+    <div class="dm-hero__actions">
+      <a href="/" class="dm-btn dm-btn--glass" target="_blank" rel="noopener">View the site &#8599;</a>
+      <a href="{% url 'assessments:marking_queue' %}" class="dm-btn dm-btn--gold">&#9998; Marking</a>
+    </div>
+  </section>
+
+  {# ============ Numbers ============ #}
+  <section class="dm-stats" aria-label="Platform at a glance">
+    {% for stat in console.stats %}
+    <a class="dm-stat" href="{{ stat.link|default:'#' }}">
+      <span class="dm-stat__icon" aria-hidden="true">{{ stat.icon }}</span>
+      <span class="dm-stat__label">{{ stat.label }}</span>
+      <strong class="dm-stat__value">{{ stat.value }}</strong>
+      <span class="dm-stat__note">{{ stat.note }}</span>
+    </a>
+    {% endfor %}
+  </section>
+
+  {# ============ Quick adds ============ #}
+  {% if console.quick_adds %}
+  <section class="dm-panel">
+    <header class="dm-panel__head">
+      <h2 class="dm-panel__title">Add something new</h2>
+      <p class="dm-panel__aside">Opens a blank form. Files you upload go straight to media storage.</p>
+    </header>
+    <div class="dm-quick">
+      {% for button in console.quick_adds %}
+      <a href="{{ button.url }}" class="dm-quick__btn">
+        <span class="dm-quick__icon" aria-hidden="true">{{ button.icon }}</span>
+        <span><small>Add</small>{{ button.name }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="dm-split">
+    {# ============ Needs attention ============ #}
+    <section class="dm-panel">
+      <header class="dm-panel__head">
+        <h2 class="dm-panel__title">Needs attention</h2>
+      </header>
+      {% if console.attention %}
+      <ul class="dm-attention">
+        {% for item in console.attention %}
+        <li class="dm-attention__item dm-attention__item--{{ item.tone }}">
+          <span class="dm-attention__icon" aria-hidden="true">{{ item.icon }}</span>
+          <span class="dm-attention__text">
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.text }}</span>
+          </span>
+          <span class="dm-attention__actions">
+            {% if item.action %}
+            <form method="post" action="{% url item.action %}">{% csrf_token %}
+              <button type="submit" class="dm-btn dm-btn--small dm-btn--gold">{{ item.action_label }}</button>
+            </form>
+            {% endif %}
+            {% if item.link %}<a href="{{ item.link }}" class="dm-btn dm-btn--small dm-btn--ghost">{{ item.link_label }}</a>{% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="dm-empty">&#10003; All clear. Nothing is waiting on you.</p>
+      {% endif %}
+    </section>
+
+    {# ============ Services ============ #}
+    <section class="dm-panel">
+      <header class="dm-panel__head">
+        <h2 class="dm-panel__title">Connected services</h2>
+      </header>
+      <ul class="dm-services">
+        {% for service in console.services %}
+        <li class="dm-service {% if service.ok %}dm-service--ok{% else %}dm-service--off{% endif %}">
+          <span class="dm-service__dot" aria-hidden="true"></span>
+          <span><strong>{{ service.name }}</strong><small>{% if service.ok %}{{ service.ok_text }}{% else %}{{ service.bad_text }}{% endif %}</small></span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+
+  {# ============ Content library ============ #}
+  <section>
+    <header class="dm-section-head">
+      <h2 class="dm-section-head__title">Manage content</h2>
+      <p class="dm-panel__aside">Every part of Diction Masters. Use <strong>+ Add</strong> for a new item, or open a list to edit, upload or delete.</p>
+    </header>
+    <div class="dm-features">
+      {% for feature in console.features %}
+      <article class="dm-feature" id="feature-{{ feature.slug }}" style="--tone: {{ feature.tone }}">
+        <header class="dm-feature__head">
+          <span class="dm-feature__icon" aria-hidden="true">{{ feature.icon }}</span>
+          <span class="dm-feature__titles">
+            <h3 class="dm-feature__name">{{ feature.name }}</h3>
+            <span class="dm-feature__blurb">{{ feature.blurb }}</span>
+          </span>
+          {% if feature.site %}<a href="{{ feature.site }}" class="dm-feature__site" target="_blank" rel="noopener" title="Open on the site">&#8599;</a>{% endif %}
+        </header>
+        <ul class="dm-screens">
+          {% for screen in feature.screens %}
+          <li class="dm-screen">
+            <a href="{{ screen.changelist }}" class="dm-screen__name">{{ screen.name }}</a>
+            <span class="dm-screen__count">{{ screen.count }}</span>
+            {% if screen.add %}<a href="{{ screen.add }}" class="dm-screen__add" title="Add {{ screen.singular }}">+ Add</a>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ============ Recent changes ============ #}
+  <section class="dm-panel">
+    <header class="dm-panel__head">
+      <h2 class="dm-panel__title">Recent changes</h2>
+      <p class="dm-panel__aside">The latest edits made in the admin.</p>
+    </header>
+    {% if console.recent %}
+    <div class="dm-table-wrap">
+      <table class="dm-table">
+        <thead><tr><th>What</th><th>Type</th><th>Change</th><th>By</th><th>When</th></tr></thead>
+        <tbody>
+          {% for row in console.recent %}
+          <tr>
+            <td>{% if row.url %}<a href="{{ row.url }}">{{ row.what|truncatechars:60 }}</a>{% else %}{{ row.what|truncatechars:60 }}{% endif %}</td>
+            <td>{{ row.type|capfirst }}</td>
+            <td><span class="dm-flag dm-flag--{{ row.flag }}">{{ row.action }}</span></td>
+            <td>{{ row.who }}</td>
+            <td title="{{ row.when }}">{{ row.when|timesince }} ago</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="dm-empty">No changes recorded yet.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

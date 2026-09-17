@@ -1,0 +1,49 @@
+/* =========================================================
+   Learning Modules — the term-by-term course pathway
+   Module > Term > Week > Day, where a Day is a short list of
+   lesson items (video / audio / both). Terms and weeks unlock
+   in order, so the UI carries three states throughout: locked,
+   active ("current"), and done.
+
+   Generic pieces (progress bars, locked/active/done rows, the
+   numbered tile grid, badges) live in app.css so Reading Club and
+   future pathway tools can reuse them — only what's specific to a
+   day being a short playlist of items lives here.
+   ========================================================= */
+
+/* ---------- day switcher (day_detail) ---------- */
+
+.day-switcher {
+  margin-top: 20px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.day-switcher__tab {
+  flex: 1 1 0;
+  min-width: 52px;
+  text-align: center;
+  padding: 9px 6px;
+  border-radius: var(--radius);
+  border: 1.4px solid var(--rule);
+  background: var(--paper-white);
+  color: var(--ink-70);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.day-switcher__tab:hover { border-color: var(--gold); }
+.day-switcher__tab--active { background: var(--paper-white); font-weight: 800; }
+.day-switcher__tab--empty { opacity: 0.35; }
+
+/* ---------- lesson items (day_detail) ---------- */
+
+.lesson-item__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lesson-item__title { font-size: 1.02rem; font-weight: 700; color: var(--ink); }
+.lesson-item__desc { margin-top: 4px; font-size: 0.86rem; color: var(--ink-70); }
+.lesson-item__badges { flex: 0 0 auto; display: flex; gap: 6px; }

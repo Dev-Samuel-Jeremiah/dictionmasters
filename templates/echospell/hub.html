@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}EchoSpell — Diction Masters{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="es">
+  <section class="es-hero">
+    <div class="wrap">
+      <ol class="es-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li>EchoSpell</li>
+      </ol>
+      <div class="es-hero__inner">
+        <div class="es-hero__main">
+          <span class="es-hero__icon" aria-hidden="true">&#128266;</span>
+          <div>
+            <p class="es-hero__eyebrow">Spelling &amp; phonics</p>
+            <h1 class="es-hero__title">EchoSpell</h1>
+            {% if user.level %}
+            <p class="es-hero__lede">Your level is <strong>{{ user.level }}</strong>. Work through its groups, and practise each one with Spelling, Vocabulary, Transcription and scored activities.</p>
+            {% else %}
+            <p class="es-hero__lede">Level by level: pick a level, work through its groups, and practise each one with Spelling, Vocabulary, Transcription and scored activities.</p>
+            {% endif %}
+          </div>
+        </div>
+        {% if overall.groups %}
+        <div class="es-hero__side">
+          <div class="es-ring" style="--p: {{ overall.percent }}">
+            <div><strong>{{ overall.percent }}%</strong><span>overall</span></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap es-body">
+    {% if level_cards %}
+    <section class="es-panel es-overview" aria-label="Your EchoSpell progress">
+      <div class="es-overview__stat">
+        <p class="es-overview__label">Levels</p>
+        <p class="es-overview__value">{{ overall.levels }}</p>
+      </div>
+      <div class="es-overview__stat">
+        <p class="es-overview__label">Groups complete</p>
+        <p class="es-overview__value">{{ overall.done }}<small> / {{ overall.groups }}</small></p>
+      </div>
+      <div class="es-overview__stat">
+        <p class="es-overview__label">Cards to learn</p>
+        <p class="es-overview__value">{{ overall.cards }}</p>
+      </div>
+      {% if current_card %}
+      <a href="{% url 'echospell:level_detail' current_card.level.slug %}" class="es-btn es-btn--gold">Continue {{ current_card.level.name }} &rarr;</a>
+      {% endif %}
+    </section>
+
+    <section class="es-section">
+      <header class="es-section__head">
+        <h2 class="es-section__title">{% if user.level %}Your level{% else %}Choose a level{% endif %}</h2>
+        <p class="es-section__aside">{% if user.level %}Set by your school when you joined.{% else %}Work through them in order, or jump to your level.{% endif %}</p>
+      </header>
+      <div class="es-levels">
+        {% for card in level_cards %}
+        <a href="{% url 'echospell:level_detail' card.level.slug %}"
+           class="es-level es-lift{% if card.is_current %} es-level--current{% elif card.is_done %} es-level--done{% endif %}"
+           data-num="{{ forloop.counter }}" style="--i: {{ forloop.counter0 }}">
+          <span class="es-level__top">
+            <span class="es-level__badge">{% if card.is_done %}&#10003;{% else %}{{ forloop.counter }}{% endif %}</span>
+            {% if card.is_current %}<span class="es-status es-status--current">Continue here</span>
+            {% elif card.is_done %}<span class="es-status es-status--done">Complete</span>
+            {% elif card.progress.done %}<span class="es-status">In progress</span>{% endif %}
+          </span>
+          <span class="es-level__name">{{ card.level.name }}</span>
+          {% if card.level.age_range %}<span class="es-level__age">{{ card.level.age_range }}</span>{% endif %}
+          {% if card.level.description %}<span class="es-level__desc">{{ card.level.description }}</span>{% endif %}
+          <span class="es-level__foot">
+            <span class="es-level__meta">
+              <span>{{ card.group_count }} group{{ card.group_count|pluralize }} &middot; {{ card.card_count }} card{{ card.card_count|pluralize }}</span>
+              {% if card.group_count %}<span>{{ card.progress.done }}/{{ card.group_count }}</span>{% endif %}
+            </span>
+            <span class="es-bar"><span class="es-bar__fill" style="--p: {{ card.progress.percent }}"></span></span>
+          </span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% else %}
+    <div class="es-empty"><p>Levels are being put together. Check back soon.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

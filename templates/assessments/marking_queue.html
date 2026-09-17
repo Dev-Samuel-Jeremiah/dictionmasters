@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Marking — Assessments{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/assessments.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs"><li><a href="{% url 'assessments:hub' %}">Assessments</a></li><li>Marking</li></ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#9998;</span>
+          <div>
+            <p class="ui-hero__eyebrow">For teachers</p>
+            <h1 class="ui-hero__title">Marking</h1>
+            <p class="ui-hero__lede">{% if request.user.is_staff %}Spoken answers waiting across every school and individual learner.{% else %}Spoken answers from students at {{ request.user.school.name }}, oldest first.{% endif %}</p>
+            <div class="ui-hero__chips"><span class="ui-chip ui-chip--gold">{{ waiting|length }} waiting</span></div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+
+<section>
+  <div class="wrap ui-body ui-body--narrow">
+    <h2 class="as-section-title">Waiting ({{ waiting|length }})</h2>
+    {% if waiting %}
+    <ul class="as-result-list">
+      {% for attempt in waiting %}
+      <li><a href="{% url 'assessments:mark' attempt.pk %}" class="as-result-row">
+        <span class="as-result-row__title">{{ attempt.user.get_full_name|default:attempt.user.email }}</span>
+        <span class="as-result-row__meta">{{ attempt.assessment.title }} &middot; sent {{ attempt.submitted_at|timesince }} ago</span>
+        <span class="as-pill as-pill--waiting">Mark &rarr;</span>
+      </a></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="ui-empty"><p>Nothing waiting. You're all caught up.</p></div>
+    {% endif %}
+
+    {% if recent %}
+    <h2 class="as-section-title">Recently marked by you</h2>
+    <ul class="as-result-list">
+      {% for attempt in recent %}
+      <li><a href="{% url 'assessments:result' attempt.pk %}" class="as-result-row">
+        <span class="as-result-row__title">{{ attempt.user.get_full_name|default:attempt.user.email }}</span>
+        <span class="as-result-row__meta">{{ attempt.assessment.title }} &middot; marked {{ attempt.marked_at|date:"j M, H:i" }}</span>
+        {% include "assessments/_score_pill.html" %}
+      </a></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</section>
+</div>
+{% endblock %}

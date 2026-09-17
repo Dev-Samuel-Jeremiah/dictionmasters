@@ -1,0 +1,56 @@
+/* What's already stored behind an admin file input, so nobody replaces
+   audio, video or an image without realising one is there. Uses the
+   admin's own colour variables so it follows light and dark themes. */
+
+.stored-media {
+  display: inline-block;
+  max-width: 460px;
+  margin: 2px 0 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline-color);
+  border-left-width: 4px;
+  border-radius: 4px;
+  background: var(--darkened-bg);
+}
+.stored-media--r2 { border-left-color: #2f855a; }
+.stored-media--local { border-left-color: #b7791f; }
+
+.stored-media__badge {
+  margin: 0 0 8px;
+  padding: 0;
+  font-weight: 600;
+  color: var(--body-fg);
+}
+.stored-media--r2 .stored-media__badge { color: #2f855a; }
+.stored-media--local .stored-media__badge { color: #b7791f; }
+.stored-media__name {
+  display: block;
+  margin-top: 2px;
+  font-weight: 400;
+  font-family: var(--font-family-monospace);
+  font-size: 11px;
+  color: var(--body-quiet-color);
+  word-break: break-all;
+}
+
+.stored-media__preview { display: block; width: 100%; margin-bottom: 8px; }
+video.stored-media__preview { max-height: 220px; background: #000; }
+.stored-media__preview--image { width: auto; max-width: 100%; max-height: 160px; }
+
+.stored-media__warning { margin: 0 0 8px; padding: 0; font-size: 12px; color: var(--body-quiet-color); }
+.stored-media__replace { margin: 8px 0 0; padding: 0; }
+
+/* The list column on changelists. */
+.media-pill {
+  display: inline-block;
+  margin: 0 4px 2px 0;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.media-pill--r2 { background: rgba(47, 133, 90, 0.15); color: #2f855a; }
+.media-pill--link { background: rgba(66, 153, 225, 0.15); color: #2b6cb0; }
+.media-pill--local { background: rgba(183, 121, 31, 0.15); color: #b7791f; }
+.media-pill--none { color: var(--body-quiet-color); }

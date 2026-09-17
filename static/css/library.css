@@ -1,0 +1,107 @@
+/* =========================================================
+   Reference Library — browse-by-topic and search
+   Same notebook language as the rest of the site; content here
+   reads more like an index card catalogue than a lesson page.
+   ========================================================= */
+
+.library-search {
+  margin-top: 28px;
+  display: flex;
+  gap: 10px;
+  max-width: 560px;
+}
+.library-search .field-input { flex-grow: 1; }
+
+.library-search-meta {
+  margin-top: 32px;
+  color: var(--ink-70);
+  font-size: 0.92rem;
+}
+
+.category-grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.category-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 22px;
+  background: var(--paper-white);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.category-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--gold);
+  box-shadow: 0 14px 30px -18px rgba(20, 33, 61, 0.35);
+}
+.category-card__name { font-size: 1.1rem; }
+.category-card__desc { margin-top: 6px; color: var(--ink-70); font-size: 0.88rem; }
+.category-card__count { margin-top: 12px; color: var(--gold-deep); font-size: 0.8rem; font-weight: 600; }
+
+.article-list { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+.article-row {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  background: var(--paper-white);
+  transition: border-color 0.15s ease;
+}
+.article-row:hover { border-color: var(--gold); }
+.article-row__category { font-size: 0.78rem; color: var(--gold-deep); font-weight: 600; }
+.article-row__title { margin-top: 4px; font-size: 1.08rem; }
+.article-row__summary { margin-top: 6px; color: var(--ink-70); font-size: 0.9rem; }
+
+.tag-pill-row { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-pill {
+  display: inline-block;
+  font-size: 0.76rem;
+  color: var(--green);
+  background: rgba(36, 71, 62, 0.1);
+  border-radius: 20px;
+  padding: 3px 11px;
+}
+.tag-pill--video { color: var(--maroon); background: rgba(122, 36, 56, 0.1); }
+.tag-pill--audio { color: var(--gold-deep); background: var(--gold-tint); }
+
+/* article detail */
+.article-body {
+  margin-top: 24px;
+  color: var(--ink);
+  font-size: 1.02rem;
+  line-height: 1.75;
+  white-space: pre-line;
+  max-width: 72ch;
+}
+.article-credit {
+  margin-top: 24px;
+  font-size: 0.86rem;
+  color: var(--ink-40);
+  font-style: italic;
+}
+.article-external {
+  margin-top: 12px;
+}
+
+.attachment-list { margin-top: 32px; }
+.attachment-list__title { font-size: 0.85rem; font-weight: 700; color: var(--ink-70); margin-bottom: 12px; }
+.attachment-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+  margin-bottom: 8px;
+}
+.attachment-row:hover { border-color: var(--gold); }
+.attachment-row__title { font-weight: 600; font-size: 0.92rem; }

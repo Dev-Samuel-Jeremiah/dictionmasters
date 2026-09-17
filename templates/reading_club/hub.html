@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Reading Club — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--teal">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
+        <li>Reading Club</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128218;</span>
+          <div>
+            <p class="ui-hero__eyebrow">This term's reading</p>
+            <h1 class="ui-hero__title">Reading Club</h1>
+            <p class="ui-hero__lede">This term's reading book, chapter by chapter. Listen to the model reading, follow the text, and work through First, Second and Third term in order.</p>
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ book_cards|length }} book{{ book_cards|length|pluralize }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+    {% if book_cards %}
+    <div class="ui-grid">
+      {% for card in book_cards %}
+      <a href="{% url 'reading_club:book_detail' card.book.slug %}" class="ui-card ui-lift" style="--tone: {{ card.book.color }}; --i: {{ forloop.counter0 }}">
+        <span class="ui-card__top">
+          <span class="ui-card__icon" aria-hidden="true">{{ card.book.icon }}</span>
+          {% if card.progress.total and card.progress.done == card.progress.total %}<span class="ui-status ui-status--done">Complete</span>
+          {% elif card.progress.done %}<span class="ui-status ui-status--current">Reading</span>{% endif %}
+        </span>
+        <span class="ui-card__name">{{ card.book.title }}</span>
+        {% if card.book.author %}<span class="ui-card__sub">by {{ card.book.author }}</span>{% endif %}
+        {% if card.book.description %}<span class="ui-card__desc">{{ card.book.description }}</span>{% endif %}
+        <span class="ui-card__foot">
+          <span class="ui-card__meta">
+            <span>{{ card.term_count }} term{{ card.term_count|pluralize }} &middot; {{ card.progress.total }} chapter{{ card.progress.total|pluralize }}</span>
+            {% if card.progress.total %}<span>{{ card.progress.percent }}%</span>{% endif %}
+          </span>
+          <span class="ui-bar"><span class="ui-bar__fill" style="--p: {{ card.progress.percent }}"></span></span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="ui-empty"><p>Books are being chosen for this term. Check back soon.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

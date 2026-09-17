@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Phonemic Chart — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--blue">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
+        <li><a href="{% url 'book:home' %}">Book of Conversation</a></li>
+        <li>Phonemic Chart</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">iː</span>
+          <div>
+            <p class="ui-hero__eyebrow">British English sounds</p>
+            <h1 class="ui-hero__title">Phonemic Chart</h1>
+            <p class="ui-hero__lede">Tap any sound to see how the mouth makes it.</p>
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ total_sounds }} sounds</span>
+              {% for group in groups %}<span class="ui-chip">{{ group.label }} &middot; {{ group.sounds|length }}</span>{% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="top" class="wrap ui-body ui-stack">
+
+    {% if selected %}
+    <section class="ui-panel" aria-label="Selected sound">
+      <div class="ui-continue" style="padding: 0 0 16px;">
+        <span class="ui-sound__symbol" style="--tone: #2f5d8a; margin: 0;">/{{ selected.symbol }}/</span>
+        <div class="ui-continue__text">
+          <p class="ui-continue__kicker">{{ selected.group }}</p>
+          <p class="ui-continue__title">{{ selected.name }}</p>
+        </div>
+        <a href="{% url 'book:phonemic_chart' %}" class="ui-btn ui-btn--ghost ui-btn--small" aria-label="Close">&times; Close</a>
+      </div>
+
+      {% if selected.audio %}
+      <div class="ui-listen">
+        <span class="ui-listen__icon" aria-hidden="true">&#128266;</span>
+        <div class="ui-listen__body">
+          <p class="ui-callout__title" style="color: var(--gold-deep);">Hear it</p>
+          <audio controls autoplay src="{{ selected.audio.audio_source }}"></audio>
+          {% if selected.audio.spoken_text %}<p class="ui-listen__text">&ldquo;{{ selected.audio.spoken_text }}&rdquo;</p>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if selected.sound %}
+        {% if articulation.trap_text %}
+        <div class="ui-callout ui-callout--maroon">
+          <p class="ui-callout__title">{{ articulation.trap_heading }}</p>
+          <p>{{ articulation.trap_text }}</p>
+        </div>
+        {% endif %}
+        {% if articulation.mouth_position_text %}
+        <div class="ui-callout ui-callout--green">
+          <p class="ui-callout__title">Mouth position</p>
+          <p>{{ articulation.mouth_position_text }}</p>
+        </div>
+        {% endif %}
+        {% if articulation.practice_words %}
+        <div class="ui-callout ui-callout--gold">
+          <p class="ui-callout__title">Practice words</p>
+          <p>{{ articulation.practice_words }}</p>
+        </div>
+        {% endif %}
+        {% if not articulation %}
+        <div class="ui-empty"><p>Articulation notes are being put together for this sound.</p></div>
+        {% endif %}
+        <p style="margin-top: 16px;"><a href="{% url 'book:sound_detail' selected.sound.slug %}" class="ui-btn ui-btn--gold">Open full lesson &rarr;</a></p>
+      {% else %}
+      <div class="ui-empty"><p>This sound hasn't been added to the 44 Academy yet. Check back soon.</p></div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% for group in groups %}
+    {% cycle "#2f5d8a" "#7A2438" "#2e7d62" as tone silent %}
+    <section class="ui-panel">
+      <header class="ui-section__head">
+        <h2 class="ui-section__title"><span class="ui-section__num" style="background: {{ tone }}">{{ forloop.counter }}</span> {{ group.label }}</h2>
+        <p class="ui-section__aside">{{ group.sounds|length }} sound{{ group.sounds|length|pluralize }}</p>
+      </header>
+      <div class="ui-sounds">
+        {% for entry in group.sounds %}
+        <a href="{% url 'book:phonemic_chart' %}?symbol={{ entry.key }}#top"
+           class="ui-sound ui-lift{% if selected.key == entry.key %} ui-sound--active{% endif %}"
+           style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}"{% if selected.key == entry.key %} aria-current="true"{% endif %}>
+          <span class="ui-sound__symbol">/{{ entry.symbol }}/</span>
+          <span class="ui-sound__name">{{ entry.name }}</span>
+          {% if entry.audio %}<span class="ui-sound__audio" title="Has audio" aria-label="Has audio">&#128266;</span>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

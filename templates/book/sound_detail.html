@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ sound.symbol }} {{ sound.name }} — The 44 Academy{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+<section class="ui-hero ui-hero--maroon">
+  <div class="wrap">
+    <ol class="ui-crumbs">
+      <li><a href="{% url 'book:home' %}">Book of Conversation</a></li>
+      <li><a href="{% url 'book:academy' %}">The 44 Academy</a></li>
+      <li>{{ sound.name }}</li>
+    </ol>
+    <div class="ui-hero__inner">
+      <div class="ui-hero__main">
+        <span class="ui-hero__icon ui-hero__icon--big" aria-hidden="true"><span class="ui-hero__symbol">{{ sound.symbol }}</span></span>
+        <div>
+          <p class="ui-hero__eyebrow">{{ sound.category.name }}</p>
+          <h1 class="ui-hero__title">{{ sound.name }}</h1>
+          {% if sound.example_words %}<p class="ui-hero__lede">{{ sound.example_words }}</p>{% endif %}
+        </div>
+      </div>
+      <div class="ui-hero__side">
+        <a href="{% url 'book:phonemic_chart' %}" class="ui-btn ui-btn--glass">iː Phonemic chart</a>
+      </div>
+    </div>
+    <nav class="ui-hero__tabs" aria-label="Lesson sections">
+      {% for tab_slug, tab_label in tabs %}
+      <a href="{% url 'book:sound_detail_tab' sound.slug tab_slug %}"
+         class="ui-tab{% if active_tab == tab_slug %} ui-tab--active{% endif %}"{% if active_tab == tab_slug %} aria-current="page"{% endif %}>{{ tab_label }}</a>
+      {% endfor %}
+    </nav>
+  </div>
+</section>
+
+<section>
+  <div class="wrap ui-body ui-body--narrow">
+
+    {% if active_tab == "lens" %}
+      {% if articulation %}
+      <div class="video-card">
+        <div class="video-card__bar">
+          <div>
+            <div class="video-card__title">{{ articulation.video_caption|default:"Sound demonstration video" }}</div>
+            {% if articulation.video_duration_label %}<div class="video-card__meta">{{ articulation.video_duration_label }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="video-card__stage">
+          {% if articulation.video_source %}
+          <video controls preload="{% if articulation.poster_source %}none{% else %}metadata{% endif %}" style="width:100%;"{% if articulation.poster_source %} poster="{{ articulation.poster_source }}"{% endif %}>
+            <source src="{{ articulation.video_source }}">
+          </video>
+          {% else %}
+          <div class="video-card__placeholder">
+            <span class="video-card__play" aria-hidden="true">
+              <svg viewBox="0 0 20 20" width="20" height="20"><polygon points="7,4 16,10 7,16" fill="currentColor"/></svg>
+            </span>
+            <span>Video coming soon</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if articulation.trap_text %}
+      <div class="ui-callout ui-callout--maroon" style="margin-top: 16px;">
+        <p class="ui-callout__title">{{ articulation.trap_heading }}</p>
+        <p>{{ articulation.trap_text }}</p>
+      </div>
+      {% endif %}
+
+      {% if articulation.mouth_position_text %}
+      <div class="ui-callout ui-callout--green" style="margin-top: 12px;">
+        <p class="ui-callout__title">Mouth position</p>
+        <p>{{ articulation.mouth_position_text }}</p>
+      </div>
+      {% endif %}
+
+      {% if articulation.practice_words %}
+      <div class="ui-callout ui-callout--gold" style="margin-top: 12px;">
+        <p class="ui-callout__title">Practice words</p>
+        <p>{{ articulation.practice_words }}</p>
+      </div>
+      {% endif %}
+
+      {% if articulation.qr_code %}
+      <div class="qr-note">
+        <span aria-hidden="true">
+          <svg viewBox="0 0 20 20" width="20" height="20"><rect x="2" y="2" width="6" height="6" fill="none" stroke="currentColor"/><rect x="12" y="2" width="6" height="6" fill="none" stroke="currentColor"/><rect x="2" y="12" width="6" height="6" fill="none" stroke="currentColor"/><rect x="12" y="12" width="2" height="2" fill="currentColor"/><rect x="16" y="12" width="2" height="2" fill="currentColor"/><rect x="12" y="16" width="2" height="2" fill="currentColor"/><rect x="16" y="16" width="2" height="2" fill="currentColor"/></svg>
+        </span>
+        <span><strong>{{ articulation.qr_label }}</strong>{{ articulation.qr_code }}</span>
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="ui-empty"><p>This sound's lens content is being put together. Check back soon.</p></div>
+      {% endif %}
+
+    {% elif active_tab == "word-bank" %}
+      {% if entries %}
+      <div class="entry-list">
+        {% for entry in entries %}
+        <div class="content-card entry-card">
+          <div class="entry-card__head">
+            <span class="entry-card__word">{{ entry.word }}</span>
+          </div>
+          {% if entry.spelling_pattern %}<p class="entry-card__body">{{ entry.spelling_pattern }}</p>{% endif %}
+          {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}"></audio>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ui-empty"><p>No word bank entries yet.</p></div>
+      {% endif %}
+
+    {% elif active_tab == "sentence-practice" %}
+      {% if entries %}
+      <div class="entry-list">
+        {% for entry in entries %}
+        <div class="content-card entry-card">
+          <p class="entry-card__text">{{ entry.sentence }}</p>
+          {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}"></audio>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ui-empty"><p>No practice sentences yet.</p></div>
+      {% endif %}
+
+    {% elif active_tab == "passage" %}
+      {% if entries %}
+      <div class="entry-list">
+        {% for entry in entries %}
+        <div class="content-card"{% if entry.audio_source %} data-read-along{% endif %}>
+          <h2 class="passage-card__title">{{ entry.title }}</h2>
+          {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}" data-ra-media></audio>{% endif %}
+          <p class="passage-card__body" data-ra-text>{{ entry.body }}</p>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ui-empty"><p>No passages yet.</p></div>
+      {% endif %}
+
+    {% elif active_tab == "conversations" %}
+      {% if entries %}
+      <div class="entry-list">
+        {% for entry in entries %}
+        <div class="content-card"{% if entry.audio_source %} data-read-along{% endif %}>
+          <h2 class="conversation-card__title">{{ entry.title }}</h2>
+          {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}" data-ra-media></audio>{% endif %}
+          <p class="conversation-card__script" data-ra-text>{{ entry.script }}</p>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ui-empty"><p>No conversations yet.</p></div>
+      {% endif %}
+
+    {% elif active_tab == "twisters" %}
+      {% if entries %}
+      <div class="entry-list">
+        {% for entry in entries %}
+        <div class="content-card entry-card">
+          <p class="twister-card__text">{{ entry.text }}</p>
+          {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}"></audio>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ui-empty"><p>No tongue twisters yet.</p></div>
+      {% endif %}
+
+    {% elif active_tab == "minimal-pairs" %}
+      {% if minimal_pairs_audio and minimal_pairs_audio.audio_source %}
+      <div class="content-card" style="margin-bottom: 18px;">
+        <p class="entry-card__word" style="margin-bottom: 10px;">Minimal pairs audio</p>
+        <audio controls src="{{ minimal_pairs_audio.audio_source }}"></audio>
+      </div>
+      {% endif %}
+      {% if entries %}
+      <div class="entry-list">
+        {% for entry in entries %}
+        <div class="content-card">
+          <div class="pair-card__row">
+            <p class="pair-card__word">{{ entry.word_a }}</p>
+            <p class="pair-card__word">{{ entry.word_b }}</p>
+          </div>
+          {% if entry.notes %}<p class="pair-card__notes">{{ entry.notes }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ui-empty"><p>No minimal pairs yet.</p></div>
+      {% endif %}
+
+    {% elif active_tab == "external-links" %}
+      {% if entries %}
+      <ul class="link-list">
+        {% for entry in entries %}
+        <li>
+          <a href="{{ entry.url }}" class="link-card" target="_blank" rel="noopener">
+            <div class="link-card__title">{{ entry.title }}</div>
+            {% if entry.description %}<div class="link-card__desc">{{ entry.description }}</div>{% endif %}
+            <div class="link-card__url">{{ entry.url }}</div>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="ui-empty"><p>No external links yet.</p></div>
+      {% endif %}
+    {% endif %}
+
+  </div>
+</section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/read_along.js' %}" defer></script>
+{% endblock %}

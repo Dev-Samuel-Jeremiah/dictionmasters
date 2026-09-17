@@ -1,0 +1,497 @@
+/* =========================================================
+   Book of Conversation — the 44 Academy
+   The sound-lesson header keeps the "chalkboard" navy from the rest
+   of the site; the tab content cards borrow the same three tints
+   (maroon / green / gold) used for callouts elsewhere on the site.
+   ========================================================= */
+
+/* ---------- 44 Academy: category grid ---------- */
+
+.academy-group { margin-top: 48px; }
+.academy-group:first-child { margin-top: 0; }
+.academy-group__title {
+  font-size: 1.2rem;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.sound-grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.sound-tile {
+  display: block;
+  text-decoration: none;
+  background: var(--ink);
+  color: var(--parchment);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  transition: transform 0.15s ease;
+}
+.sound-tile:hover { transform: translateY(-2px); }
+.sound-tile__symbol {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--gold);
+  font-size: 1.4rem;
+}
+.sound-tile__name {
+  margin-top: 4px;
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+.sound-tile__words {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: rgba(246, 241, 228, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- sound lesson header ---------- */
+
+.sound-header {
+  background: var(--ink);
+  color: var(--parchment);
+  padding: 36px 0;
+}
+.sound-header__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(246, 241, 228, 0.75);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.sound-header__eyebrow {
+  margin-top: 22px;
+  font-size: 0.78rem;
+  color: rgba(246, 241, 228, 0.55);
+  letter-spacing: 0.03em;
+}
+.sound-header__symbol {
+  margin-top: 6px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 2.4rem;
+  color: var(--gold);
+}
+.sound-header__name { margin-top: 2px; font-size: 1.3rem; color: var(--parchment); }
+.sound-header__words {
+  margin-top: 8px;
+  font-size: 0.92rem;
+  color: rgba(246, 241, 228, 0.65);
+}
+
+/* ---------- tab nav ---------- */
+
+.tab-nav {
+  background: var(--paper-white);
+  border-bottom: 1px solid var(--rule);
+  overflow-x: auto;
+}
+.tab-nav__list {
+  display: flex;
+  gap: 28px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+}
+.tab-nav__link {
+  display: inline-block;
+  padding: 16px 2px;
+  text-decoration: none;
+  color: var(--ink-40);
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+.tab-nav__link:hover { color: var(--ink-70); }
+.tab-nav__link--active { color: var(--maroon); border-bottom-color: var(--maroon); }
+
+/* ---------- tab content shell ---------- */
+
+.tab-content { padding: 40px 0 96px; }
+
+.content-card {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-white);
+  padding: 24px 26px;
+}
+.content-card + .content-card { margin-top: 18px; }
+
+.callout {
+  border-radius: var(--radius);
+  padding: 20px 22px;
+}
+.callout + .callout { margin-top: 16px; }
+.callout__title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+}
+.callout--maroon { background: rgba(122, 36, 56, 0.08); }
+.callout--maroon .callout__title { color: var(--maroon); }
+.callout--green { background: rgba(36, 71, 62, 0.08); }
+.callout--green .callout__title { color: var(--green); }
+.callout--gold { background: var(--gold-tint); }
+.callout--gold .callout__title { color: var(--gold-deep); }
+
+/* ---------- video (Lens tab) ---------- */
+
+.video-card {
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--rule);
+}
+.video-card__bar {
+  background: var(--maroon);
+  color: var(--paper-white);
+  padding: 16px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.video-card__title { font-weight: 700; font-size: 0.98rem; }
+.video-card__meta { font-size: 0.82rem; color: rgba(255, 253, 248, 0.75); margin-top: 2px; }
+.video-card__stage {
+  background: var(--ink);
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.video-card__stage video { width: 100%; max-height: 420px; }
+.video-card__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: rgba(246, 241, 228, 0.7);
+}
+.video-card__play {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid rgba(246, 241, 228, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+}
+
+.qr-note {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  font-size: 0.86rem;
+  color: var(--ink-70);
+}
+.qr-note strong { color: var(--ink); display: block; font-size: 0.9rem; }
+
+/* ---------- word bank / sentence / twister entries ---------- */
+
+.entry-list { display: flex; flex-direction: column; gap: 16px; }
+
+.entry-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.entry-card__word {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+}
+.entry-card__text {
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+.entry-card__body { margin-top: 10px; color: var(--ink-70); font-size: 0.92rem; }
+.entry-card audio { width: 100%; margin-top: 12px; }
+
+.twister-card__text {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.2rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+/* passages & conversations */
+.passage-card__title, .conversation-card__title { font-size: 1.15rem; }
+.passage-card__body {
+  margin-top: 14px;
+  color: var(--ink-70);
+  white-space: pre-line;
+  line-height: 1.7;
+}
+.conversation-card__script {
+  margin-top: 14px;
+  color: var(--ink-70);
+  white-space: pre-line;
+  line-height: 1.9;
+  font-family: var(--font-serif);
+}
+
+/* minimal pairs */
+.pair-card__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.pair-card__word { font-family: var(--font-serif); font-size: 1.2rem; }
+.pair-card__notes { margin-top: 14px; color: var(--ink-70); font-size: 0.9rem; border-top: 1px dashed var(--rule); padding-top: 12px; }
+
+@media (max-width: 600px) {
+  .pair-card__row { grid-template-columns: 1fr; gap: 18px; }
+}
+
+/* external links */
+.link-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.link-card {
+  display: block;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  text-decoration: none;
+  color: inherit;
+}
+.link-card__title { color: var(--maroon); font-weight: 600; font-size: 1rem; }
+.link-card__desc { margin-top: 6px; color: var(--ink-70); font-size: 0.9rem; }
+.link-card__url { margin-top: 6px; color: var(--ink-40); font-size: 0.8rem; }
+
+.tab-empty {
+  padding: 48px 0;
+  text-align: center;
+  color: var(--ink-40);
+  font-size: 0.95rem;
+}
+
+/* ---------- learning tools hub ---------- */
+
+.tools-hub { padding: 8px 0 56px; }
+.tools-hub__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.tool-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  background: var(--paper-white);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+a.tool-card {
+  cursor: pointer;
+}
+a.tool-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+  box-shadow: 0 10px 22px -16px rgba(20, 33, 61, 0.35);
+}
+a.tool-card:hover .tool-card__cta {
+  color: var(--maroon-deep);
+}
+.tool-card__icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.4px solid var(--gold);
+  color: var(--gold-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tool-card__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tool-card__title {
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+.tool-card__body {
+  margin-top: 2px;
+  color: var(--ink-70);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tool-card__cta {
+  flex: 0 0 auto;
+  color: var(--maroon);
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+.tool-card__cta--soon { color: var(--ink-40); }
+.tool-card--soon { opacity: 0.55; }
+
+@media (max-width: 600px) {
+  .tool-card__cta { display: none; }
+}
+
+/* ---------- phonemic chart ---------- */
+
+#top { scroll-margin-top: 96px; }
+
+.phonemic-hero {
+  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  padding: 32px 0;
+}
+.phonemic-hero__eyebrow { margin-bottom: 10px; }
+.phonemic-hero__eyebrow a {
+  color: rgba(255, 253, 248, 0.8);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+.phonemic-hero__eyebrow a:hover { color: var(--paper-white); }
+.phonemic-hero__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--paper-white);
+}
+.phonemic-hero__icon { font-size: 1.5rem; }
+.phonemic-hero__lede {
+  margin-top: 6px;
+  color: rgba(255, 253, 248, 0.85);
+  font-size: 0.92rem;
+}
+
+.phonemic-section { margin-top: 32px; }
+.phonemic-section:first-child { margin-top: 0; }
+.phonemic-section__title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-40);
+  margin-bottom: 12px;
+}
+
+.phonemic-detail {
+  position: relative;
+  border: 2px solid var(--gold);
+  border-radius: var(--radius);
+  background: var(--paper-white);
+  padding: 28px 52px 26px 28px;
+  margin-bottom: 40px;
+}
+.phonemic-detail__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-70);
+  text-decoration: none;
+  font-size: 18px;
+  line-height: 1;
+}
+.phonemic-detail__close:hover { color: var(--ink); }
+.phonemic-detail__head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.phonemic-detail__badge {
+  flex: 0 0 auto;
+  min-width: 64px;
+  height: 64px;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: var(--ink);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 1.4rem;
+  white-space: nowrap;
+}
+.phonemic-detail__name { font-size: 1.3rem; font-weight: 700; color: var(--ink); }
+.phonemic-detail__cat { margin-top: 2px; font-size: 0.85rem; color: var(--ink-40); }
+
+.phonemic-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.phonemic-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 22px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--paper-white);
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(20, 33, 61, 0.06);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.phonemic-btn:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px -8px rgba(20, 33, 61, 0.25);
+}
+.phonemic-btn--active { border-color: var(--ink); background: var(--ink); }
+.phonemic-btn__sym {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--ink);
+}
+.phonemic-btn--active .phonemic-btn__sym { color: var(--gold); }
+.phonemic-btn__name {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--ink-40);
+  text-align: center;
+  line-height: 1.2;
+}
+.phonemic-btn--active .phonemic-btn__name { color: rgba(246, 241, 228, 0.7); }
+
+@media (max-width: 700px) {
+  .phonemic-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 460px) {
+  .phonemic-grid { grid-template-columns: repeat(2, 1fr); }
+}

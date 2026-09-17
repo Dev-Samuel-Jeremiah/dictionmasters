@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ hud.mode.label }} — Diction Clash{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/clash.css' %}">{% endblock %}
+
+{% block content %}
+<section class="clash clash--play">
+  <div class="wrap clash-stage">
+    {% include "clash/_hud.html" %}
+
+    <div class="clash-verdict {% if round.is_correct %}clash-verdict--right{% else %}clash-verdict--wrong{% endif %}" role="status">
+      {% if round.is_correct %}
+        <p class="clash-verdict__big">&#10003; Correct!</p>
+        <p class="clash-verdict__points">+{{ round.points }} points{% if hud.streak >= 3 %} &middot; {{ hud.streak }} in a row{% endif %}</p>
+      {% elif round.timed_out %}
+        <p class="clash-verdict__big">&#8987; Time's up</p>
+        <p class="clash-verdict__points">{% if hud.lives or hud.lives_lost %}You lost a life{% else %}No points this time{% endif %}</p>
+      {% else %}
+        <p class="clash-verdict__big">&#10007; Not quite</p>
+        <p class="clash-verdict__points">{% if hud.lives or hud.lives_lost %}You lost a life{% else %}No points this time{% endif %}</p>
+      {% endif %}
+    </div>
+    {% if not muted %}<audio autoplay src="{% if round.is_correct %}{% static 'clash/sounds/correct.wav' %}{% else %}{% static 'clash/sounds/wrong.wav' %}{% endif %}"></audio>{% endif %}
+
+    <article class="clash-card clash-card--learn">
+      {% if not round.is_correct %}
+      <p class="clash-learn__row">{% if round.given %}You answered <strong class="clash-bad">{{ round.given }}</strong> &middot; {% endif %}The answer is <strong class="clash-good">{{ round.answer }}</strong></p>
+      {% endif %}
+      {% if word %}
+      <p class="clash-learn__word">{{ word.word }}</p>
+      <p class="clash-learn__ipa">{{ word.ipa }}</p>
+      {% if word.audio_source %}<audio controls src="{{ word.audio_source }}" class="clash-card__audio"></audio>{% endif %}
+      <p class="clash-learn__meaning">{{ word.definition }}</p>
+      {% if word.example_sentence %}<p class="clash-learn__example">&ldquo;{{ word.example_sentence }}&rdquo;</p>{% endif %}
+      {% endif %}
+    </article>
+
+    <form method="get" class="clash-next">
+      <input type="hidden" name="next" value="1">
+      <button type="submit" class="clash-btn clash-btn--play" autofocus>
+        {% if game_over %}See my results &rarr;{% else %}Next question &rarr;{% endif %}
+      </button>
+    </form>
+  </div>
+</section>
+{% endblock %}

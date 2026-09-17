@@ -1,0 +1,9 @@
+{% if messages %}
+<div class="messages" role="status">
+  <ul class="wrap">
+    {% for message in messages %}
+    <li class="message message--{{ message.tags }}">{{ message }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}

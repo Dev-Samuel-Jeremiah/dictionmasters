@@ -1,0 +1,18 @@
+<div class="clash-hud">
+  <div class="clash-hud__mode">
+    <span class="clash-hud__label">{{ hud.mode.icon }} {{ hud.mode.label }}</span>
+    <span class="clash-chip clash-chip--{{ hud.tier.slug }}">{{ hud.tier.label }}</span>
+  </div>
+  {% if hud.progress %}<div class="clash-hud__progress">{{ hud.progress }}</div>{% endif %}
+  {% if hud.lives or hud.lives_lost %}
+  <div class="clash-hud__lives" aria-label="{{ hud.lives|length }} lives left">
+    {% for _ in hud.lives %}<span class="clash-heart">&#10084;</span>{% endfor %}{% for _ in hud.lives_lost %}<span class="clash-heart clash-heart--lost">&#10084;</span>{% endfor %}
+  </div>
+  {% endif %}
+  <div class="clash-hud__streak {% if hud.streak >= 3 %}clash-hud__streak--hot{% endif %}">
+    <span class="clash-hud__small">Streak</span>
+    <strong>{{ hud.streak }}</strong>{% if hud.streak_bonus > 1 %}<span class="clash-hud__bonus">&times;{{ hud.streak_bonus }}</span>{% endif %}
+  </div>
+  <div class="clash-hud__score"><span class="clash-hud__small">Score</span><strong>{{ hud.score }}</strong></div>
+  {% include "clash/_sound_toggle.html" %}
+</div>

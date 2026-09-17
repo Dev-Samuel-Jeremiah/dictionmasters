@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Results — Diction Clash{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/clash.css' %}">{% endblock %}
+
+{% block content %}
+<section class="clash clash--result">
+  <div class="wrap clash-stage">
+    {% if not muted %}<audio autoplay src="{% static 'clash/sounds/finish.wav' %}"></audio>{% endif %}
+
+    <header class="clash-final">
+      <p class="clash-final__over{% if match.mode == 'classic' %} clash-final__over--done{% endif %}">{% if match.mode == "blitz" %}&#9200; Time up!{% elif match.mode == "survival" %}&#10084; Game over{% else %}&#127942; Clash complete{% endif %}</p>
+      <p class="clash-final__mode">{{ match.mode_spec.label }} &middot; {{ match.tier.label }}</p>
+      <p class="clash-final__score">{{ match.score }}</p>
+      <p class="clash-final__label">points</p>
+      {% if new_best %}<p class="clash-final__best">&#11088; New personal best!{% if best_before is not None %} Beat {{ best_before }}{% endif %}</p>
+      {% elif best_before is not None %}<p class="clash-final__prev">Your best: {{ best_before }}</p>{% endif %}
+    </header>
+
+    <dl class="clash-stats">
+      <div><dt>Correct</dt><dd class="clash-good">{{ match.correct }}</dd></div>
+      <div><dt>Wrong</dt><dd class="clash-bad">{{ match.wrong }}</dd></div>
+      <div><dt>Accuracy</dt><dd>{{ match.accuracy }}%</dd></div>
+      <div><dt>Best streak</dt><dd>{{ match.best_streak }}</dd></div>
+    </dl>
+
+    <div class="clash-again">
+      <form method="post" action="{% url 'clash:start' %}">
+        {% csrf_token %}
+        <input type="hidden" name="mode" value="{{ match.mode }}">
+        <input type="hidden" name="difficulty" value="{{ match.difficulty }}">
+        <button type="submit" class="clash-btn clash-btn--play" autofocus>&#9654; Play again</button>
+      </form>
+      <a href="{% url 'clash:hub' %}" class="clash-btn clash-btn--ghost">Change game</a>
+    </div>
+
+    <h2 class="clash-review__title">Review your answers</h2>
+    <ol class="clash-review">
+      {% for r in rounds %}
+      <li class="clash-review__item {% if r.is_correct %}clash-review__item--right{% else %}clash-review__item--wrong{% endif %}">
+        <span class="clash-review__mark" aria-hidden="true">{% if r.is_correct %}&#10003;{% elif r.timed_out %}&#8987;{% else %}&#10007;{% endif %}</span>
+        <div class="clash-review__body">
+          <p class="clash-review__q">{{ r.label }}{% if r.prompt %} &middot; <span class="clash-dim">{{ r.prompt|truncatechars:90 }}</span>{% endif %}</p>
+          {% if r.word %}
+          <p class="clash-review__word">
+            <strong>{{ r.word.word }}</strong> <span class="clash-review__ipa">{{ r.word.ipa }}</span>
+            <a href="{% url 'quick_words:word_detail' r.word.slug %}" class="clash-review__study">Study this word &rarr;</a>
+          </p>
+          {% endif %}
+          <p class="clash-review__answers">
+            {% if r.is_correct %}{{ r.given }}{% elif r.timed_out %}Ran out of time &middot; answer: <strong>{{ r.answer }}</strong>{% else %}You: <span class="clash-bad">{{ r.given|default:"(skipped)" }}</span> &middot; answer: <strong class="clash-good">{{ r.answer }}</strong>{% endif %}
+            {% if r.response_seconds is not None and not r.timed_out %}<span class="clash-dim"> &middot; {{ r.response_seconds }}s</span>{% endif %}
+          </p>
+        </div>
+        <span class="clash-review__pts {% if r.points < 0 %}clash-bad{% endif %}">{% if r.points > 0 %}+{% endif %}{{ r.points }}</span>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+</section>
+{% endblock %}

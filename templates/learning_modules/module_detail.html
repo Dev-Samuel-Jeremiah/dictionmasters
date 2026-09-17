@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ module.name }} — Learning Modules{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/learning_modules.css' %}">
+  <link rel="stylesheet" href="{% static 'css/learning_modules_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="lm">
+  <section class="lm-hero" style="--tint: {{ module.color }}">
+    <div class="wrap">
+      <ol class="lm-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url 'learning_modules:hub' %}">Learning Modules</a></li>
+        <li>{{ module.name }}</li>
+      </ol>
+      <div class="lm-hero__inner">
+        <div class="lm-hero__main">
+          <span class="lm-hero__icon" aria-hidden="true">{{ module.icon }}</span>
+          <div>
+            <p class="lm-hero__eyebrow">Learning module</p>
+            <h1 class="lm-hero__title">{{ module.name }}</h1>
+            {% if module.overview %}<p class="lm-hero__lede">{{ module.overview|linebreaksbr }}</p>
+            {% elif module.description %}<p class="lm-hero__lede">{{ module.description }}</p>{% endif %}
+            <div class="lm-hero__chips">
+              <span class="lm-chip">{{ term_cards|length }} term{{ term_cards|length|pluralize }}</span>
+              <span class="lm-chip">{{ progress.total }} day{{ progress.total|pluralize }}</span>
+              {% if progress.total and progress.done == progress.total %}<span class="lm-chip lm-chip--done">&#10003; Module complete</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% if progress.total %}
+        <div class="lm-hero__side">
+          <div class="lm-ring" style="--p: {{ progress.percent }}">
+            <div><strong>{{ progress.done }}/{{ progress.total }}</strong><span>days done</span></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap lm-body">
+    {% if continue_entry %}
+    <section class="lm-panel lm-continue">
+      <span class="lm-ring lm-ring--light" style="--p: {{ progress.percent }}; --ring: {{ module.color }}"><strong>{{ progress.percent }}%</strong></span>
+      <div class="lm-continue__text">
+        <p class="lm-continue__kicker">{% if progress.done %}Up next{% else %}Start here{% endif %}</p>
+        <p class="lm-continue__title">{{ continue_entry.day.get_day_name_display }}, {{ continue_entry.week.display_name }}</p>
+        <p class="lm-continue__meta">{{ continue_entry.term.name }}</p>
+      </div>
+      <a href="{% url 'learning_modules:day_detail' module.slug continue_entry.term.slug continue_entry.week.slug continue_entry.day.day_name %}" class="lm-btn lm-btn--gold">
+        {% if progress.done %}Continue learning{% else %}Start learning{% endif %} &rarr;
+      </a>
+    </section>
+    {% endif %}
+
+    <section class="lm-section">
+      <header class="lm-section__head">
+        <h2 class="lm-section__title">Terms</h2>
+        <p class="lm-section__aside">Each term unlocks when you finish the one before.</p>
+      </header>
+      {% if term_cards %}
+      <ol class="lm-path">
+        {% for card in term_cards %}
+        <li>
+          {% if card.status == "locked" %}
+          <div class="lm-step lm-step--locked" style="--i: {{ forloop.counter0 }}">
+            <span class="lm-step__node" aria-hidden="true">&#128274;</span>
+            <span class="lm-step__main">
+              <span class="lm-step__title">{{ card.term.name }}</span>
+              <span class="lm-step__meta">Finish the term before this one to unlock it</span>
+            </span>
+            <span class="lm-status lm-status--locked">Locked</span>
+          </div>
+          {% else %}
+          <a href="{% url 'learning_modules:term_detail' module.slug card.term.slug %}"
+             class="lm-step lm-lift lm-step--{{ card.status }}" style="--tone: {{ module.color }}; --i: {{ forloop.counter0 }}">
+            <span class="lm-step__node" aria-hidden="true">{% if card.status == "done" %}&#10003;{% else %}{{ forloop.counter }}{% endif %}</span>
+            <span class="lm-step__main">
+              <span class="lm-step__title">{{ card.term.name }}</span>
+              <span class="lm-step__meta">
+                {{ card.term.weeks.all|length }} week{{ card.term.weeks.all|length|pluralize }} &middot; {{ card.total }} day{{ card.total|pluralize }}
+                {% if card.status == "active" %}<span class="lm-status lm-status--current">Current</span>{% elif card.status == "done" %}<span class="lm-status lm-status--done">Complete</span>{% endif %}
+              </span>
+            </span>
+            {% if card.total %}
+            <span class="lm-step__progress">
+              <span class="lm-bar" style="--tone: {{ module.color }}"><span class="lm-bar__fill" style="--p: {{ card.percent }}"></span></span>
+              <small><span>{{ card.done }}/{{ card.total }} days</span><span>{{ card.percent }}%</span></small>
+            </span>
+            {% endif %}
+            <span class="lm-step__go" aria-hidden="true">&rarr;</span>
+          </a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <div class="lm-empty"><p>Terms are being added to this module. Check back soon.</p></div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

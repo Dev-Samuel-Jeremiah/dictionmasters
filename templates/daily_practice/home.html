@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Daily Practice — Diction Masters{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--green">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
+        <li>Daily Practice</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">{% if sound %}{{ sound.symbol }}{% else %}&#128197;{% endif %}</span>
+          <div>
+            <p class="ui-hero__eyebrow">{% if is_daily %}Today's set{% else %}A fresh set{% endif %}</p>
+            <h1 class="ui-hero__title">Daily Practice</h1>
+            {% if sound %}
+            <p class="ui-hero__lede">
+              {% if is_daily %}Today's set is built around{% else %}This set is built around{% endif %}
+              <a href="{% url 'book:sound_detail' sound.slug %}">{{ sound.symbol }} {{ sound.name }}</a>,
+              pulled at random from the 44 Academy.
+            </p>
+            {% else %}
+            <p class="ui-hero__lede">Pulled at random from the 44 Academy each day.</p>
+            {% endif %}
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ activities|length }} activit{{ activities|length|pluralize:"y,ies" }}</span>
+              {% if not is_daily %}<span class="ui-chip">Shuffled set</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body ui-body--narrow">
+    {% if activities %}
+    <div class="entry-list">
+      {% for activity in activities %}
+      <article class="content-card entry-card" style="animation: ui-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: {{ forloop.counter0 }}00ms;">
+        <p class="ui-panel__label">{{ forloop.counter }} &middot; {{ activity.label }}</p>
+
+        {% if activity.kind == "word-bank" %}
+          <div class="entry-card__head">
+            <span class="entry-card__word">{{ activity.heading }}</span>
+          </div>
+          {% if activity.body %}<p class="entry-card__body">{{ activity.body }}</p>{% endif %}
+        {% elif activity.kind == "minimal-pairs" %}
+          <div class="pair-card__row">
+            <p class="pair-card__word">{{ activity.word_a }}</p>
+            <p class="pair-card__word">{{ activity.word_b }}</p>
+          </div>
+          {% if activity.body %}<p class="pair-card__notes">{{ activity.body }}</p>{% endif %}
+        {% elif activity.kind == "twisters" %}
+          <p class="twister-card__text">{{ activity.body }}</p>
+        {% else %}
+          <p class="entry-card__text">{{ activity.body }}</p>
+        {% endif %}
+
+        {% if activity.audio %}<audio controls src="{{ activity.audio }}" style="margin-top: 12px;"></audio>{% endif %}
+
+        <p style="margin-top: 14px;">
+          <a href="{% url 'book:sound_detail_tab' sound.slug activity.tab_slug %}" class="ui-link">See it in the full lesson &rarr;</a>
+        </p>
+      </article>
+      {% endfor %}
+    </div>
+
+    <div class="ui-complete" style="margin-top: 26px;">
+      <span class="ui-complete__mark" aria-hidden="true">&#8635;</span>
+      <div class="ui-complete__text">
+        <strong>Want something different?</strong>
+        <span>Get a new random set from another sound.</span>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        {% if not is_daily %}<a href="{% url 'daily_practice:home' %}" class="ui-link">Back to today's set</a>{% endif %}
+        <a href="?shuffle={{ next_shuffle_token }}" class="ui-btn ui-btn--gold">Give me a new set</a>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="ui-empty"><p>The 44 Academy doesn't have enough content yet for a practice set. Check back once some sounds have word bank entries or twisters.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

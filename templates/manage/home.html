@@ -1,0 +1,120 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Control room — Diction Masters{% endblock %}
+
+{% block content %}
+<header class="cr-hero">
+  <div>
+    <p class="cr-hero__eyebrow">Control room</p>
+    <h1 class="cr-hero__title">{{ greeting }}, {{ request.user.first_name|default:"there" }}</h1>
+    <p class="cr-hero__lede">Add, change and upload everything learners see. Pick something to add, or open a section from the menu.</p>
+  </div>
+</header>
+
+<section class="cr-stats" aria-label="At a glance">
+  {% for stat in stats %}
+  <div class="cr-stat">
+    <span class="cr-stat__icon" aria-hidden="true">{{ stat.icon }}</span>
+    <span class="cr-stat__label">{{ stat.label }}</span>
+    <strong class="cr-stat__value">{{ stat.value }}</strong>
+    <span class="cr-stat__note">{{ stat.note }}</span>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="cr-card">
+  <h2 class="cr-card__title">Add something new</h2>
+  <div class="cr-quick">
+    {% for button in quick %}
+    <a href="{{ button.url }}" class="cr-quick__btn">
+      <span class="cr-quick__icon" aria-hidden="true">{{ button.icon }}</span>
+      <span><small>Add</small>{{ button.name }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="cr-split">
+  <section class="cr-card">
+    <h2 class="cr-card__title">Needs attention</h2>
+    {% if attention %}
+    <ul class="cr-attention">
+      {% for item in attention %}
+      <li class="cr-attention__item cr-attention__item--{{ item.tone }}">
+        <span aria-hidden="true">{{ item.icon }}</span>
+        <span class="cr-attention__text"><strong>{{ item.title }}</strong><span>{{ item.text }}</span></span>
+        {% if item.action %}
+        <form method="post" action="{% if 'word' in item.action %}{% url 'manage:job' 'word-audio' %}{% elif 'chart' in item.action %}{% url 'manage:job' 'chart-audio' %}{% else %}{% url 'manage:job' 'video-posters' %}{% endif %}">
+          {% csrf_token %}
+          <button type="submit" class="cr-btn cr-btn--gold cr-btn--small">{{ item.action_label }}</button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="cr-empty">&#10003; All clear. Nothing is waiting on you.</p>
+    {% endif %}
+  </section>
+
+  <section class="cr-card">
+    <h2 class="cr-card__title">Services</h2>
+    <ul class="cr-services">
+      {% for service in services %}
+      <li class="{% if service.ok %}is-ok{% else %}is-off{% endif %}">
+        <span class="cr-dot" aria-hidden="true"></span>
+        <span><strong>{{ service.name }}</strong><small>{% if service.ok %}{{ service.ok_text }}{% else %}{{ service.bad_text }}{% endif %}</small></span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<section>
+  <h2 class="cr-section-title">Everything you can manage</h2>
+  <div class="cr-features">
+    {% for section in sections %}
+    <article class="cr-feature" style="--tone: {{ section.tone }}">
+      <header>
+        <span class="cr-feature__icon" aria-hidden="true">{{ section.icon }}</span>
+        <div>
+          <h3>{{ section.name }}</h3>
+          <p>{{ section.blurb }}</p>
+        </div>
+      </header>
+      <ul>
+        {% for row in section.rows %}
+        <li>
+          <a href="{% url 'manage:list' row.key %}">{{ row.name }}</a>
+          <span class="cr-count">{{ row.count }}</span>
+          {% if not row.readonly %}<a href="{% url 'manage:add' row.key %}" class="cr-add">+ Add</a>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+{% if recent %}
+<section class="cr-card">
+  <h2 class="cr-card__title">Recent changes</h2>
+  <div class="cr-tablewrap">
+    <table class="cr-table">
+      <thead><tr><th>What</th><th>Type</th><th>Change</th><th>By</th><th>When</th></tr></thead>
+      <tbody>
+        {% for row in recent %}
+        <tr>
+          <td>{{ row.what|truncatechars:60 }}</td>
+          <td>{{ row.type|capfirst }}</td>
+          <td><span class="cr-flag cr-flag--{{ row.flag }}">{{ row.action }}</span></td>
+          <td>{{ row.who }}</td>
+          <td>{{ row.when|timesince }} ago</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

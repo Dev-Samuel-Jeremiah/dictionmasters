@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ school.name }} — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--blue">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li>School dashboard</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#127979;</span>
+          <div>
+            <p class="ui-hero__eyebrow">School dashboard</p>
+            <h1 class="ui-hero__title">{{ school.name }}</h1>
+            <p class="ui-hero__lede">Add teachers and students with one-time codes, and see who has joined.</p>
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">School code: {{ school.code }}</span>
+              <span class="ui-chip">{{ teachers|length }} teacher{{ teachers|length|pluralize }}</span>
+              <span class="ui-chip">{{ students|length }} student{{ students|length|pluralize }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="ui-hero__side">
+          <a href="{% url 'learning_tools:hub' %}" class="ui-btn ui-btn--glass">&#129520; Browse the learning tools</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+    <div class="ui-cols">
+      <div>
+        <section class="ui-panel">
+          <p class="ui-panel__label">Add a teacher or student</p>
+          <h2 class="ui-panel__title">Generate a joining code</h2>
+          <p class="ui-panel__lede">Pick the level they will study or teach, then hand them the code. They use it on the "join with a code" page to create their own account, already linked to {{ school.name }} and to that level.</p>
+
+          <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <ul class="non-field-errors">
+              {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% include "includes/form_fields.html" %}
+            <button type="submit" class="ui-btn ui-btn--gold ui-btn--full">Generate code</button>
+          </form>
+        </section>
+
+        <section class="ui-panel">
+          <p class="ui-panel__label">Codes waiting to be used</p>
+          <p class="ui-panel__lede">Not redeemed yet, so they're safe to hand out.</p>
+          {% if pending_codes %}
+          <div class="ui-table-wrap">
+            <table class="ui-table">
+              <thead><tr><th>Code</th><th>For</th><th>Level</th><th>Note</th></tr></thead>
+              <tbody>
+                {% for code in pending_codes %}
+                <tr>
+                  <td><span class="ui-code">{{ code.code }}</span></td>
+                  <td><span class="ui-status {% if code.role == 'teacher' %}ui-status--current{% else %}ui-status--done{% endif %}">{{ code.get_role_display }}</span></td>
+                  <td>{{ code.level|default:"Every level" }}</td>
+                  <td>{{ code.label|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="ui-empty"><p>No unused codes right now.</p></div>
+          {% endif %}
+        </section>
+      </div>
+
+      <div>
+        <section class="ui-panel">
+          <p class="ui-panel__label">Your school at a glance</p>
+          <dl class="ui-facts">
+            <div><dt>Teachers</dt><dd>{{ teachers|length }}</dd></div>
+            <div><dt>Students</dt><dd>{{ students|length }}</dd></div>
+            <div><dt>Unused codes</dt><dd>{{ pending_codes|length }}</dd></div>
+          </dl>
+          <div class="ui-table-wrap" style="margin-top: 16px;">
+            <table class="ui-table">
+              <tbody>
+                <tr><th scope="row">School email</th><td>{{ school.email }}</td></tr>
+                {% if school.phone %}<tr><th scope="row">Phone</th><td>{{ school.phone }}</td></tr>{% endif %}
+                {% if school.address %}<tr><th scope="row">Address</th><td>{{ school.address }}</td></tr>{% endif %}
+              </tbody>
+            </table>
+          </div>
+          <p class="ui-panel__lede" style="margin: 14px 0 0;">Diction Masters is where your teachers and students watch, listen and practise. Your school only ever views what they've done; content is published by Diction Masters, not uploaded by schools.</p>
+        </section>
+
+        <section class="ui-panel">
+          <p class="ui-panel__label">Teachers</p>
+          {% if teachers %}
+          <div class="ui-table-wrap">
+            <table class="ui-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Joined</th></tr></thead>
+              <tbody>
+                {% for teacher in teachers %}
+                <tr><td>{{ teacher.get_full_name }}</td><td>{{ teacher.email }}</td><td>{{ teacher.date_joined|date:"d M Y" }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="ui-empty"><p>No teachers yet. Generate a code to add one.</p></div>
+          {% endif %}
+        </section>
+
+        <section class="ui-panel">
+          <p class="ui-panel__label">Students</p>
+          {% if students %}
+          <div class="ui-table-wrap">
+            <table class="ui-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Joined</th></tr></thead>
+              <tbody>
+                {% for student in students %}
+                <tr><td>{{ student.get_full_name }}</td><td>{{ student.email }}</td><td>{{ student.date_joined|date:"d M Y" }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="ui-empty"><p>No students yet. Generate a code to add one.</p></div>
+          {% endif %}
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

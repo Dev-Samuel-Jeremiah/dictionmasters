@@ -1,0 +1,5 @@
+<form method="post" action="{% url 'clash:toggle_sound' %}" class="clash-sound">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <button type="submit" aria-label="{% if muted %}Turn sound on{% else %}Turn sound off{% endif %}">{% if muted %}&#128263; Sound off{% else %}&#128266; Sound on{% endif %}</button>
+</form>

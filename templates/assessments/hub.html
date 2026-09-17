@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Assessments — Diction Masters{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/assessments.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs"><li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li><li>Assessments</li></ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128203;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Check your progress</p>
+            <h1 class="ui-hero__title">Assessments</h1>
+            <p class="ui-hero__lede">Choose the kind of assessment you want to take: a practice quiz, a timed test, a speaking assessment or a placement test.</p>
+            <div class="ui-hero__actions">
+              <a href="{% url 'assessments:my_results' %}" class="ui-btn ui-btn--gold ui-btn--small">&#128202; My results</a>
+              {% if can_mark %}<a href="{% url 'assessments:marking_queue' %}" class="ui-btn ui-btn--glass ui-btn--small">&#9998; Marking{% if to_mark %} <span class="ui-count">{{ to_mark }}</span>{% endif %}</a>{% endif %}
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+
+<section>
+  <div class="wrap ui-body">
+
+    {% for attempt in in_progress %}
+    <div class="as-resume">
+      <span>You have <strong>{{ attempt.assessment.title }}</strong> in progress.</span>
+      <a href="{% url 'assessments:take' attempt.pk %}" class="btn btn--maroon btn--small">Continue</a>
+    </div>
+    {% endfor %}
+
+    <div class="as-kinds">
+      {% for kind in kinds %}
+      <a href="{% url 'assessments:kind_list' kind.value %}" class="as-kind as-kind--{{ kind.value }}">
+        <span class="as-kind__icon" aria-hidden="true">{{ kind.icon }}</span>
+        <span class="as-kind__title">{{ kind.label }}</span>
+        <span class="as-kind__blurb">{{ kind.blurb }}</span>
+        <ul class="as-kind__points">
+          {% for point in kind.points %}<li>{{ point }}</li>{% endfor %}
+        </ul>
+        <span class="as-kind__foot">
+          {% if kind.count %}{{ kind.count }} available{% else %}None available yet{% endif %}
+          <span aria-hidden="true">&rarr;</span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+
+    {% if recent %}
+    <h2 class="as-section-title">Your latest results</h2>
+    <ul class="as-result-list">
+      {% for attempt in recent %}
+      <li>
+        <a href="{% url 'assessments:result' attempt.pk %}" class="as-result-row">
+          <span class="as-result-row__title">{{ attempt.assessment.title }}</span>
+          <span class="as-result-row__meta">{{ attempt.assessment.get_kind_display }} &middot; {{ attempt.submitted_at|date:"j M Y" }}</span>
+          {% include "assessments/_score_pill.html" %}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</section>
+</div>
+{% endblock %}

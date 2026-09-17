@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ week.display_name }} — {{ term.name }} — {{ module.name }}{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/library.css' %}">
+  <link rel="stylesheet" href="{% static 'css/learning_modules.css' %}">
+  <link rel="stylesheet" href="{% static 'css/learning_modules_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="lm">
+  <section class="lm-hero" style="--tint: {{ module.color }}">
+    <div class="wrap">
+      <ol class="lm-crumbs">
+        <li><a href="{% url 'learning_modules:hub' %}">Learning Modules</a></li>
+        <li><a href="{% url 'learning_modules:module_detail' module.slug %}">{{ module.name }}</a></li>
+        <li><a href="{% url 'learning_modules:term_detail' module.slug term.slug %}">{{ term.name }}</a></li>
+        <li>Week {{ week.number }}</li>
+      </ol>
+      <div class="lm-hero__inner">
+        <div class="lm-hero__main">
+          <span class="lm-hero__icon" aria-hidden="true">{{ week.number }}</span>
+          <div>
+            <p class="lm-hero__eyebrow">{{ module.name }} &middot; {{ term.name }}</p>
+            <h1 class="lm-hero__title">Week {{ week.number }}</h1>
+            {% if week.title %}<p class="lm-hero__lede">{{ week.title }}</p>{% endif %}
+            <div class="lm-hero__chips">
+              <span class="lm-chip">{{ day_rows|length }} day{{ day_rows|length|pluralize }}</span>
+              {% if progress.total and progress.done == progress.total %}<span class="lm-chip lm-chip--done">&#10003; Week complete</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% if progress.total %}
+        <div class="lm-hero__side">
+          <div class="lm-ring" style="--p: {{ progress.percent }}">
+            <div><strong>{{ progress.done }}/{{ progress.total }}</strong><span>days done</span></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap lm-body">
+    {% if next_row %}
+    <section class="lm-panel lm-continue">
+      <span class="lm-ring lm-ring--light" style="--p: {{ progress.percent }}; --ring: {{ module.color }}"><strong>{{ progress.percent }}%</strong></span>
+      <div class="lm-continue__text">
+        <p class="lm-continue__kicker">Up next</p>
+        <p class="lm-continue__title">{{ next_row.day.get_day_name_display }}</p>
+        <p class="lm-continue__meta">{{ next_row.item_count }} lesson item{{ next_row.item_count|pluralize }}</p>
+      </div>
+      <a href="{% url 'learning_modules:day_detail' module.slug term.slug week.slug next_row.day.day_name %}" class="lm-btn lm-btn--gold">Start {{ next_row.day.get_day_name_display }} &rarr;</a>
+    </section>
+    {% endif %}
+
+    <section class="lm-section">
+      <header class="lm-section__head">
+        <h2 class="lm-section__title">Days</h2>
+        <p class="lm-section__aside">Select a day to open its lessons.</p>
+      </header>
+      {% if day_rows %}
+      <div class="lm-days">
+        {% for row in day_rows %}
+        <a href="{% url 'learning_modules:day_detail' module.slug term.slug week.slug row.day.day_name %}"
+           class="lm-day lm-lift{% if row.is_complete %} lm-day--done{% elif row == next_row %} lm-day--next{% endif %}"
+           style="--tone: {{ module.color }}; --i: {{ forloop.counter0 }}">
+          {% if row.is_complete %}<span class="lm-status lm-status--done">&#10003; Done</span>{% elif row == next_row %}<span class="lm-status lm-status--current">Next</span>{% endif %}
+          <span class="lm-day__abbr" aria-hidden="true">{{ row.day.get_day_name_display|slice:":3" }}</span>
+          <span class="lm-day__name">{{ row.day.get_day_name_display }}</span>
+          <span class="lm-day__meta">
+            <span>{{ row.item_count }} item{{ row.item_count|pluralize }}</span>
+            {% if row.has_video %}<span class="lm-tag lm-tag--video">Video</span>{% endif %}
+            {% if row.has_audio %}<span class="lm-tag lm-tag--audio">Audio</span>{% endif %}
+          </span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="lm-empty"><p>Lessons are being added to this week. Check back soon.</p></div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

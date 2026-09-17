@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Reference Library — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--gold">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
+        <li>Reference Library</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128270;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Look things up</p>
+            <h1 class="ui-hero__title">The Reference Library</h1>
+            <p class="ui-hero__lede">Grammar points, spelling rules, word origins and anything else worth researching.</p>
+            <form method="get" class="ui-search" role="search">
+              <label for="lib-q" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);">Search the library</label>
+              <input type="search" id="lib-q" name="q" placeholder="Search the library&hellip;" value="{{ query }}">
+              <button type="submit" class="ui-btn ui-btn--gold">Search</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body ui-stack">
+    {% if query %}
+    <section class="ui-panel">
+      <header class="ui-section__head">
+        <h2 class="ui-section__title">{% if results %}{{ results|length }} result{{ results|length|pluralize }} for &ldquo;{{ query }}&rdquo;{% else %}No results for &ldquo;{{ query }}&rdquo;{% endif %}</h2>
+        <a href="{% url 'reference_library:home' %}" class="ui-link">Clear search</a>
+      </header>
+      {% if results %}
+      <ul class="ui-rows">
+        {% for article in results %}
+        <li><a href="{% url 'reference_library:article' article.slug %}" class="ui-row ui-lift" style="--i: {{ forloop.counter0 }}">
+          <span class="ui-row__icon" aria-hidden="true">&#128196;</span>
+          <span class="ui-row__main">
+            <span class="ui-row__kicker">{{ article.category.name }}</span>
+            <span class="ui-row__title ui-row__title--serif">{{ article.title }}</span>
+            {% if article.summary %}<span class="ui-row__meta">{{ article.summary }}</span>{% endif %}
+          </span>
+          <span class="ui-row__go" aria-hidden="true">&rarr;</span>
+        </a></li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="ui-empty"><p>Try a different word, or browse by topic below.</p></div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section>
+      <header class="ui-section__head">
+        <h2 class="ui-section__title">Browse by topic</h2>
+        <p class="ui-section__aside">{{ categories|length }} topic{{ categories|length|pluralize }}</p>
+      </header>
+      {% if categories %}
+      <div class="ui-grid">
+        {% for category in categories %}
+        {% cycle "#b8863b" "#2f5d8a" "#7A2438" "#2e7d62" as tone silent %}
+        <a href="{% url 'reference_library:category' category.slug %}" class="ui-card ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}; min-height: 170px;">
+          <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ category.name|slice:":1"|upper }}</span></span>
+          <span class="ui-card__name">{{ category.name }}</span>
+          {% if category.description %}<span class="ui-card__desc">{{ category.description }}</span>{% endif %}
+          <span class="ui-card__cta">{{ category.published_article_count }} article{{ category.published_article_count|pluralize }} &rarr;</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ui-empty"><p>Topics are being added. Check back soon.</p></div>
+      {% endif %}
+    </section>
+
+    {% if recent_articles %}
+    <section>
+      <header class="ui-section__head">
+        <h2 class="ui-section__title">Recently added</h2>
+      </header>
+      <ul class="ui-rows">
+        {% for article in recent_articles %}
+        <li><a href="{% url 'reference_library:article' article.slug %}" class="ui-row ui-lift" style="--i: {{ forloop.counter0 }}">
+          <span class="ui-row__icon" aria-hidden="true">&#128196;</span>
+          <span class="ui-row__main">
+            <span class="ui-row__kicker">{{ article.category.name }}</span>
+            <span class="ui-row__title ui-row__title--serif">{{ article.title }}</span>
+            {% if article.summary %}<span class="ui-row__meta">{{ article.summary }}</span>{% endif %}
+          </span>
+          <span class="ui-row__go" aria-hidden="true">&rarr;</span>
+        </a></li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

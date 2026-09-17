@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ category.name }} — Reference Library{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--gold">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
+        <li><a href="{% url 'reference_library:home' %}">Reference Library</a></li>
+        <li>{{ category.name }}</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">{{ category.name|slice:":1"|upper }}</span>
+          <div>
+            <p class="ui-hero__eyebrow">Topic</p>
+            <h1 class="ui-hero__title">{{ category.name }}</h1>
+            {% if category.description %}<p class="ui-hero__lede">{{ category.description }}</p>{% endif %}
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ articles|length }} article{{ articles|length|pluralize }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body ui-body--narrow">
+    {% if articles %}
+    <ul class="ui-rows">
+      {% for article in articles %}
+      <li><a href="{% url 'reference_library:article' article.slug %}" class="ui-row ui-lift" style="--i: {{ forloop.counter0 }}">
+        <span class="ui-row__icon" aria-hidden="true">&#128196;</span>
+        <span class="ui-row__main">
+          <span class="ui-row__title ui-row__title--serif">{{ article.title }}</span>
+          {% if article.summary %}<span class="ui-row__meta">{{ article.summary }}</span>{% endif %}
+        </span>
+        <span class="ui-row__go" aria-hidden="true">&rarr;</span>
+      </a></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="ui-empty"><p>No articles in this topic yet. Check back soon.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

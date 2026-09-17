@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Quick Words — Diction Masters{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/quick_words.css' %}">
+  <link rel="stylesheet" href="{% static 'css/quick_words_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="qk">
+<section class="qk-hero">
+  <div class="wrap">
+    <ol class="qk-crumbs">
+      <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+      <li>Quick Words</li>
+    </ol>
+    <div class="qk-hero__inner">
+      <div class="qk-hero__main">
+        <span class="qk-hero__icon" aria-hidden="true">&#128269;</span>
+        <div>
+          <p class="qk-hero__eyebrow">The word library</p>
+          <h1 class="qk-hero__title">Quick Words</h1>
+          <p class="qk-hero__lede">Look up any word: hear it, read what it means and see it used in a sentence. If it isn't here yet, we'll look it up and add it.</p>
+          <div class="qk-hero__chips">
+            <span class="qk-chip qk-chip--gold">{{ total }} word{{ total|pluralize }}</span>
+            <span class="qk-chip">{{ lists|length }} list{{ lists|length|pluralize }} of yours</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap qk-body">
+  <section class="qk-panel qk-searchpanel" aria-label="Search the library">
+    <div class="qk-searchpanel__row qw-toolbar__inner">
+    <form method="get" class="qw-search" role="search" data-live-search
+          data-suggest-url="{% url 'quick_words:suggest' %}"
+          data-lookup-url="{% url 'quick_words:lookup' %}">
+      {% csrf_token %}
+      <label class="qw-search__label" for="qw-q">Search words</label>
+      <div class="qw-search__field">
+        <input type="search" id="qw-q" name="q" value="{{ query }}" class="qw-search__input"
+               placeholder="Type any word — we'll find it or look it up&hellip;" autocomplete="off"
+               spellcheck="false" autocapitalize="off"
+               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="qw-suggest">
+        <ul class="qw-suggest" id="qw-suggest" role="listbox" hidden></ul>
+      </div>
+      <button type="submit" class="btn btn--maroon btn--small">Search</button>
+      {% if query %}<a href="{% url 'quick_words:hub' %}" class="link-quiet qw-search__clear">Clear</a>{% endif %}
+    </form>
+    <p class="qw-count">
+      <span><strong>{{ rows|length }}</strong> of {{ total }} word{{ total|pluralize }}</span>
+      <a href="{% url 'quick_words:my_lists' %}" class="btn btn--gold btn--small qw-count__lists">&#128278; My lists</a>
+    </p>
+    </div>
+  </section>
+
+<section class="qk-section">
+  <div>
+    {% if rows %}
+    <ul class="qw-list">
+      {% for row in rows %}
+      <li class="qw-item" id="word-{{ row.word.slug }}">
+        {% if row.word.audio_source %}
+        <audio controls preload="none" src="{{ row.word.audio_source }}" class="qw-item__audio"
+               aria-label="Hear {{ row.word.word }}"></audio>
+        {% endif %}
+
+        <div class="qw-item__body">
+          <p class="qw-item__word">
+            {{ row.word.word }}
+            {% if row.word.level %}<span class="qw-chip">{{ row.word.level }}</span>{% endif %}
+          </p>
+          {% if row.word.ipa %}<p class="qw-item__ipa">{{ row.word.ipa }}</p>{% endif %}
+          <p class="qw-item__def">{{ row.word.definition }}</p>
+          {% if row.in_lists %}
+          <p class="qw-item__saved">
+            Saved in
+            {% for wl in row.in_lists %}<strong>{{ wl.name }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}
+          </p>
+          {% endif %}
+        </div>
+
+        <div class="qw-item__actions">
+          <a href="{% url 'quick_words:word_detail' row.word.slug %}" class="btn btn--gold btn--small">View</a>
+          {% if lists %}
+          <details class="qw-picker">
+            <summary class="qw-picker__summary">Add to list</summary>
+            <div class="qw-picker__panel">
+              {% for wl in lists %}
+              <form method="post" action="{% url 'quick_words:toggle_word' wl.id row.word.slug %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}#word-{{ row.word.slug }}">
+                <button type="submit" class="qw-picker__option {% if wl in row.in_lists %}qw-picker__option--on{% endif %}">
+                  <span class="qw-picker__tick" aria-hidden="true">{% if wl in row.in_lists %}&#10003;{% else %}+{% endif %}</span>
+                  {{ wl.name }}
+                </button>
+              </form>
+              {% endfor %}
+            </div>
+          </details>
+          {% else %}
+          <a href="{% url 'quick_words:my_lists' %}" class="link-quiet qw-item__makelist">Make a list</a>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% elif can_lookup %}
+    <div class="qw-lookup-card">
+      <p class="qw-lookup-card__lead">&ldquo;{{ query }}&rdquo; isn't in the library yet.</p>
+      <p class="qw-lookup-card__body">Look it up and it will be added — with its sound, meaning and an example — for everyone.</p>
+      <form method="post" action="{% url 'quick_words:lookup' %}">
+        {% csrf_token %}
+        <input type="hidden" name="word" value="{{ query }}">
+        <button type="submit" class="btn btn--maroon">Look up &ldquo;{{ query }}&rdquo;</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="qk-empty">
+      {% if query %}Search for a single word to look it up, or part of a meaning to find it in the library.
+      {% else %}No words in the library yet — add some from the admin.{% endif %}
+    </p>
+    {% endif %}
+  </div>
+</section>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/quick_words.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/admin_media.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin_console.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}" class="dm-brand">
+    <span class="dm-brand__mark" aria-hidden="true">iː</span>
+    <span class="dm-brand__text">Diction Masters <small>Admin</small></span>
+  </a>
+</div>
+{% if user.is_active and user.is_staff %}
+<form class="dm-search" role="search" action="{% url 'console:search' %}" method="get">
+  <label for="dm-search-q" class="dm-visually-hidden">Search all content</label>
+  <input type="search" id="dm-search-q" name="q" value="{{ query|default:'' }}" placeholder="Search words, sounds, activities, users, schools&hellip;">
+</form>
+{% endif %}
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+
+{% block bodyclass %}{{ block.super }} dm-console-page{% endblock %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Admin console</a> &rsaquo; Search
+</div>
+{% endblock %}
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="dm-console">
+  <section class="dm-hero dm-hero--compact">
+    <div class="dm-hero__text">
+      <p class="dm-hero__eyebrow">Search all content</p>
+      <h1 class="dm-hero__title">{% if query %}{{ total }} result{{ total|pluralize }} for &ldquo;{{ query }}&rdquo;{% else %}Search{% endif %}</h1>
+      <form method="get" class="dm-search dm-search--big" role="search">
+        <label for="dm-search-page" class="dm-visually-hidden">Search</label>
+        <input type="search" id="dm-search-page" name="q" value="{{ query }}" placeholder="A word, sound, activity, user, school&hellip;" autofocus>
+        <button type="submit" class="dm-btn dm-btn--gold">Search</button>
+      </form>
+    </div>
+  </section>
+
+  {% if query %}
+    {% if groups %}
+    <div class="dm-features">
+      {% for group in groups %}
+      <section class="dm-feature" style="--tone: #14213D">
+        <header class="dm-feature__head">
+          <span class="dm-feature__titles"><h2 class="dm-feature__name">{{ group.name }}</h2></span>
+          <span class="dm-screen__count">{{ group.results|length }}</span>
+        </header>
+        <ul class="dm-results">
+          {% for result in group.results %}
+          <li>
+            {% if result.url %}<a href="{{ result.url }}">{{ result.label }}</a>{% else %}{{ result.label }}{% endif %}
+            {% if result.detail %}<small>{{ result.detail }}</small>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="dm-empty dm-panel">Nothing matched &ldquo;{{ query }}&rdquo;. Try part of the word or name.</p>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

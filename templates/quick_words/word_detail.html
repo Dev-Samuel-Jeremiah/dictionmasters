@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ word.word }} — Quick Words — Diction Masters{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/quick_words.css' %}">
+  <link rel="stylesheet" href="{% static 'css/quick_words_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="qk">
+<section class="qk-hero">
+  <div class="wrap">
+    <ol class="qk-crumbs">
+      <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+      <li><a href="{% url 'quick_words:hub' %}">Quick Words</a></li>
+      <li>{{ word.word }}</li>
+    </ol>
+    <div class="qk-hero__inner">
+      <div class="qk-hero__main">
+        <span class="qk-hero__icon" aria-hidden="true">{{ word.word|slice:":1"|upper }}</span>
+        <div>
+          <p class="qk-hero__eyebrow">Word {{ position }} of {{ total }}</p>
+          <h1 class="qk-hero__title qk-hero__title--word">{{ word.word }}</h1>
+          {% if word.ipa %}<p class="qk-hero__ipa">{{ word.ipa }}</p>{% endif %}
+          <div class="qk-hero__chips">
+            {% if word.level %}<span class="qk-chip qk-chip--gold">{{ word.level }}</span>{% endif %}
+            {% if word.audio_source %}<span class="qk-chip">&#127911; Audio</span>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap qk-body">
+  <div class="qk-word">
+    <div class="qk-word__main">
+      {% if word.audio_source %}
+      <section class="qk-panel qw-block">
+        <p class="qk-panel__label qw-block__label">Hear it</p>
+        <div class="qk-listen">
+          <span class="qk-listen__icon" aria-hidden="true">&#128266;</span>
+          <audio controls src="{{ word.audio_source }}"></audio>
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="qk-panel qw-block">
+        <p class="qk-panel__label qw-block__label">What it means</p>
+        <p class="qw-block__body">{{ word.definition }}</p>
+      </section>
+
+      {% if word.example_sentence %}
+      <section class="qk-panel qw-block">
+        <p class="qk-panel__label qw-block__label">Used in a sentence</p>
+        <p class="qw-block__example">&ldquo;{{ word.example_sentence }}&rdquo;</p>
+      </section>
+      {% endif %}
+    </div>
+
+    <aside class="qk-word__side">
+      <section class="qk-panel qw-block">
+        <p class="qk-panel__label qw-block__label">Save to a list</p>
+        {% if list_rows %}
+        <div class="qw-savelist">
+          {% for row in list_rows %}
+          <form method="post" action="{% url 'quick_words:toggle_word' row.list.id word.slug %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="qw-savelist__item {% if row.has_word %}qw-savelist__item--on{% endif %}">
+              <span class="qw-savelist__tick" aria-hidden="true">{% if row.has_word %}&#10003;{% else %}+{% endif %}</span>
+              <span class="qw-savelist__name">{{ row.list.name }}</span>
+              <span class="qw-savelist__count">{{ row.list.words.count }} word{{ row.list.words.count|pluralize }}</span>
+            </button>
+          </form>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="qw-block__body">You have no lists yet.</p>
+        {% endif %}
+        <a href="{% url 'quick_words:my_lists' %}" class="qk-link">Manage my lists &rarr;</a>
+      </section>
+    </aside>
+  </div>
+
+  {% if previous or next %}
+  <nav class="qk-pager" aria-label="Other words">
+    {% if previous %}
+    <a class="qk-lift" href="{% url 'quick_words:word_detail' previous.slug %}">
+      <small>&larr; Previous</small>
+      <strong>{{ previous.word }}</strong>
+    </a>
+    {% endif %}
+    {% if next %}
+    <a class="qk-pager__next qk-lift" href="{% url 'quick_words:word_detail' next.slug %}">
+      <small>Next &rarr;</small>
+      <strong>{{ next.word }}</strong>
+    </a>
+    {% endif %}
+  </nav>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

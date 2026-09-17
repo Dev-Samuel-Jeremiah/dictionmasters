@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Learning Tools — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--plum">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li>Learning tools</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#129520;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Learning tools</p>
+            <h1 class="ui-hero__title">Everything you can practise with</h1>
+            <p class="ui-hero__lede">Drills, lessons for every sound, this term's reading book and a library to look things up. More will land here as they're built.</p>
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ tools|length }} tool{{ tools|length|pluralize }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+    <div class="ui-grid">
+      {% for tool in tools %}
+        {% if tool.icon == "daily-practice" %}{% firstof "#2e7d62" as tone %}{% firstof "📅" as icon %}
+        {% elif tool.icon == "book" %}{% firstof "#7A2438" as tone %}{% firstof "📖" as icon %}
+        {% elif tool.icon == "reading-club" %}{% firstof "#2f5d8a" as tone %}{% firstof "📚" as icon %}
+        {% else %}{% firstof "#b8863b" as tone %}{% firstof "🔎" as icon %}{% endif %}
+        {% if tool.available %}
+        <a href="{% url tool.url_name %}" class="ui-card ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
+          <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ icon }}</span></span>
+          <span class="ui-card__name">{{ tool.name }}</span>
+          <span class="ui-card__desc">{{ tool.blurb }}</span>
+          <span class="ui-card__cta">Open &rarr;</span>
+        </a>
+        {% else %}
+        <div class="ui-card ui-card--soon" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
+          <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ icon }}</span><span class="ui-status">Coming soon</span></span>
+          <span class="ui-card__name">{{ tool.name }}</span>
+          <span class="ui-card__desc">{{ tool.blurb }}</span>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

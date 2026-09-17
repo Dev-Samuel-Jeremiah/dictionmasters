@@ -1,0 +1,73 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en-gb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Control room — Diction Masters{% endblock %}</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/manage.css' %}">
+</head>
+<body class="cr-body">
+  <a href="#cr-main" class="cr-skip">Skip to content</a>
+
+  <header class="cr-top">
+    <button type="button" class="cr-burger" aria-label="Menu" aria-expanded="false" aria-controls="cr-side">&#9776;</button>
+    <a href="{% url 'manage:home' %}" class="cr-brand">
+      <span class="cr-brand__mark" aria-hidden="true">iː</span>
+      <span class="cr-brand__text">Diction Masters<small>Control room</small></span>
+    </a>
+
+    <form class="cr-search" role="search" action="{% url 'manage:search' %}" method="get">
+      <label for="cr-q" class="cr-hidden">Search everything</label>
+      <input type="search" id="cr-q" name="q" value="{{ query|default:'' }}" placeholder="Search words, sounds, activities, people…">
+    </form>
+
+    <div class="cr-top__right">
+      <a href="/" class="cr-btn cr-btn--ghost cr-hide-sm" target="_blank" rel="noopener">View site &#8599;</a>
+      <span class="cr-who cr-hide-sm">{{ request.user.first_name|default:request.user.email }}</span>
+      <a href="{% url 'manage:logout' %}" class="cr-btn cr-btn--ghost">Log out</a>
+    </div>
+  </header>
+
+  <div class="cr-shell">
+    <nav class="cr-side" id="cr-side" aria-label="Sections">
+      <a href="{% url 'manage:home' %}" class="cr-side__home {% if not current_key %}is-on{% endif %}">&#127968; Control room home</a>
+      {% for section in nav %}
+      <details class="cr-group" {% if section.open %}open{% endif %}>
+        <summary><span aria-hidden="true">{{ section.icon }}</span> {{ section.name }}</summary>
+        <ul>
+          {% for item in section.items %}
+          <li>
+            <a href="{% url 'manage:list' item.key %}" class="{% if item.current %}is-on{% endif %}">
+              {{ item.name }}<span class="cr-side__count">{{ item.count }}</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% endfor %}
+    </nav>
+
+    <main class="cr-main" id="cr-main">
+      {% if messages %}
+      <ul class="cr-messages">
+        {% for message in messages %}<li class="cr-message cr-message--{{ message.tags }}">{{ message }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script>
+    // The only script here: the menu button on a phone.
+    document.querySelector(".cr-burger").addEventListener("click", function () {
+      var open = document.body.classList.toggle("cr-side-open");
+      this.setAttribute("aria-expanded", String(open));
+    });
+  </script>
+</body>
+</html>

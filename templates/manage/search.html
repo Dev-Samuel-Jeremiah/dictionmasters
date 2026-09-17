@@ -1,0 +1,39 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Search — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">Search</p>
+    <h1 class="cr-pagehead__title">{% if query %}{{ total }} result{{ total|pluralize }} for “{{ query }}”{% else %}Search everything{% endif %}</h1>
+  </div>
+</header>
+
+<form method="get" class="cr-filter">
+  <input type="search" name="q" value="{{ query }}" placeholder="A word, sound, activity, person…" class="cr-input" autofocus>
+  <button type="submit" class="cr-btn cr-btn--gold">Search</button>
+</form>
+
+{% if query %}
+  {% if groups %}
+  <div class="cr-features">
+    {% for group in groups %}
+    <section class="cr-feature" style="--tone: #14213D">
+      <header>
+        <span class="cr-feature__icon" aria-hidden="true">{{ group.icon }}</span>
+        <div><h3>{{ group.name }}</h3></div>
+      </header>
+      <ul>
+        {% for row in group.rows %}
+        <li><a href="{% if group.readonly %}{% url 'manage:list' group.key %}{% else %}{% url 'manage:edit' group.key row.pk %}{% endif %}">{{ row.label }}</a></li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="cr-empty cr-empty--big">Nothing matched “{{ query }}”. Try part of a word or name.</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

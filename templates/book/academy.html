@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}The 44 Academy — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
+        <li><a href="{% url 'book:home' %}">Book of Conversation</a></li>
+        <li>The 44 Academy</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#127891;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Book of Conversation</p>
+            <h1 class="ui-hero__title">The 44 Academy</h1>
+            <p class="ui-hero__lede">Tap a sound to open its lesson: articulation, word bank, sentence practice and more.</p>
+            <div class="ui-hero__chips">
+              {% for group in groups %}<span class="ui-chip">{{ group.category.name }} &middot; {{ group.sounds|length }}</span>{% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="ui-hero__side">
+          <a href="{% url 'book:phonemic_chart' %}" class="ui-btn ui-btn--glass">iː Phonemic chart</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body ui-stack">
+    {% for group in groups %}
+    {% cycle "#7A2438" "#2f5d8a" "#2e7d62" "#b8863b" as tone silent %}
+    <section class="ui-panel">
+      <header class="ui-section__head">
+        <h2 class="ui-section__title"><span class="ui-section__num" style="background: {{ tone }}">{{ forloop.counter }}</span> {{ group.category.name }}</h2>
+        <p class="ui-section__aside">{{ group.sounds|length }} sound{{ group.sounds|length|pluralize }}</p>
+      </header>
+      <div class="ui-sounds">
+        {% for sound in group.sounds %}
+        <a href="{% url 'book:sound_detail' sound.slug %}" class="ui-sound ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
+          <span class="ui-sound__symbol">{{ sound.symbol }}</span>
+          <span class="ui-sound__name">{{ sound.name }}</span>
+          {% if sound.example_words %}<span class="ui-sound__words">{{ sound.example_words }}</span>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% empty %}
+    <div class="ui-empty"><p>Sounds are being added. Check back soon.</p></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

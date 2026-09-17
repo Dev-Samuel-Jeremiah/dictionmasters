@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Your score — {{ activity.title }} — EchoSpell{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/activity.css' %}">
+  <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="es">
+  <section class="es-hero">
+    <div class="wrap">
+      <ol class="es-crumbs">
+        <li><a href="{% url 'echospell:hub' %}">EchoSpell</a></li>
+        <li><a href="{% url 'echospell:level_detail' level.slug %}">{{ level.name }}</a></li>
+        <li><a href="{% url 'echospell:group_detail' level.slug group.slug %}">Group {{ group.number }}</a></li>
+        <li>Your result</li>
+      </ol>
+      <div class="es-hero__inner">
+        <div class="es-hero__main">
+          <span class="es-hero__icon" aria-hidden="true">{{ activity.icon }}</span>
+          <div>
+            <p class="es-hero__eyebrow">Result &middot; {{ activity.kind_label }}</p>
+            <h1 class="es-hero__title">{{ activity.title }}</h1>
+            <p class="es-hero__lede">Submitted {{ attempt.created_at|date:"j M Y, H:i" }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap es-body es-body--narrow">
+
+    {% if attempt.status == "awaiting" %}
+    <section class="es-panel es-score es-score--wait">
+      <div class="es-score__ring" style="--p: 100; --tone: var(--es-wait)">&#127908;</div>
+      <div class="es-score__text">
+        <p class="es-score__headline">Sent to your teacher</p>
+        <p class="es-score__note">Your recording is in. Your teacher will listen and give you a score and feedback.</p>
+      </div>
+    </section>
+    {% else %}
+    <section class="es-panel es-score {% if not attempt.passed %}es-score--fail{% endif %}">
+      <div class="es-score__ring" style="--p: {{ attempt.percent }}"><strong>{{ attempt.percent }}%</strong></div>
+      <div class="es-score__text">
+        <p class="es-score__headline">{% if attempt.passed %}Well done, you passed!{% else %}Not quite yet. Have another go.{% endif %}</p>
+        <p class="es-score__note">You need {{ activity.pass_mark }}% to pass.</p>
+        <div class="es-score__stats">
+          <span class="{% if attempt.passed %}is-good{% else %}is-bad{% endif %}">{{ attempt.score }} of {{ attempt.max_score }} correct</span>
+          <span>Pass mark {{ activity.pass_mark }}%</span>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if attempt.teacher_feedback or attempt.teacher_score is not None %}
+    <section class="es-panel content-card teacher-note">
+      <p class="teacher-note__label">Your teacher says</p>
+      {% if attempt.teacher_score is not None %}<p class="teacher-note__score">{{ attempt.teacher_score }}/100</p>{% endif %}
+      {% if attempt.teacher_feedback %}<p class="teacher-note__body">{{ attempt.teacher_feedback }}</p>{% endif %}
+    </section>
+    {% endif %}
+
+    <section class="es-section">
+      <header class="es-section__head">
+        <h2 class="es-section__title">Review your answers</h2>
+      </header>
+      <ol class="result-list">
+        {% for row in rows %}
+        <li class="result-item {% if row.response.is_correct %}result-item--correct{% elif row.response.is_correct is False %}result-item--wrong{% else %}result-item--pending{% endif %}">
+          <span class="result-item__mark" aria-hidden="true">
+            {% if row.response.is_correct %}&#10003;{% elif row.response.is_correct is False %}&#10007;{% else %}&#8943;{% endif %}
+          </span>
+          <div class="result-item__body">
+            {% if row.item.prompt %}<p class="result-item__prompt">{{ row.item.prompt }}</p>{% endif %}
+            {% if row.response.recording %}
+            <audio controls src="{{ row.response.recording.url }}" class="result-item__audio"></audio>
+            {% elif row.response.given %}
+            <p class="result-item__given">You wrote: <strong>{{ row.response.given }}</strong></p>
+            {% endif %}
+            <p class="result-item__feedback">{{ row.feedback }}</p>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    <div class="es-submitbar es-submitbar--static">
+      <a href="{% url 'echospell:group_detail' level.slug group.slug %}" class="es-link">&larr; Back to Group {{ group.number }}</a>
+      <a href="{% url 'echospell:activity_detail' level.slug group.slug activity.slug %}" class="es-btn es-btn--gold">&#8635; Try again</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

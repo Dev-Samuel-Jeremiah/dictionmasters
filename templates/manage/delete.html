@@ -1,0 +1,31 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Delete {{ obj }} — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">{{ screen.section.icon }} <a href="{% url 'manage:list' screen.key %}">{{ title }}</a></p>
+    <h1 class="cr-pagehead__title">Delete this {{ singular }}?</h1>
+  </div>
+</header>
+
+<section class="cr-card cr-danger">
+  <p class="cr-danger__what">{{ obj }}</p>
+  {% if also %}
+  <p class="cr-danger__note">Deleting it also removes:</p>
+  <ul class="cr-danger__list">
+    {% for row in also %}<li>{{ row.count }} {{ row.name }}</li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="cr-danger__note">Nothing else depends on it.</p>
+  {% endif %}
+  <p class="cr-danger__note">This cannot be undone.</p>
+
+  <form method="post" class="cr-formactions">
+    {% csrf_token %}
+    <button type="submit" class="cr-btn cr-btn--danger">Yes, delete it</button>
+    <a href="{% if obj.pk %}{% url 'manage:edit' screen.key obj.pk %}{% else %}{% url 'manage:list' screen.key %}{% endif %}" class="cr-btn cr-btn--ghost">Keep it</a>
+  </form>
+</section>
+{% endblock %}

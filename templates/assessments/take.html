@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ assessment.title }} — Assessments{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/activity.css' %}">
+  <link rel="stylesheet" href="{% static 'css/assessments.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon" style="padding-bottom: 44px;">
+    <div class="wrap">
+      <ol class="ui-crumbs"><li><a href="{% url 'assessments:hub' %}">Assessments</a></li><li><a href="{% url 'assessments:kind_list' assessment.kind %}">{{ assessment.get_kind_display }}</a></li><li>{{ assessment.title }}</li></ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128221;</span>
+          <div>
+            <p class="ui-hero__eyebrow">{{ assessment.get_kind_display }}</p>
+            <h1 class="ui-hero__title">{{ assessment.title }}</h1>
+            
+            <div class="ui-hero__chips"><span class="ui-chip">{{ rows|length }} question{{ rows|length|pluralize }}</span>{% if seconds_left is not None %}<span class="ui-chip ui-chip--gold">&#9201; Timed</span>{% endif %}</div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+<form method="post" class="as-paper" id="as-paper"
+      {% if has_speaking %}enctype="multipart/form-data"{% endif %}
+      data-mode="{{ assessment.kind }}"
+      data-save-url="{% url 'assessments:save_answer' attempt.pk %}"
+      data-check-url="{% url 'assessments:check_answer' attempt.pk %}"
+      data-total="{{ rows|length }}"
+      {% if seconds_left is not None %}data-seconds-left="{{ seconds_left }}"{% endif %}>
+  {% csrf_token %}
+
+  <div class="as-bar">
+    <div class="wrap as-bar__inner">
+      <div class="as-bar__title">
+        <span class="as-bar__kind">{{ assessment.get_kind_display }}</span>
+        <span class="as-bar__name">{{ assessment.title }}</span>
+      </div>
+      <div class="as-bar__progress" aria-live="polite">
+        <span class="as-bar__count"><span data-answered>0</span> of {{ rows|length }} answered</span>
+        <span class="as-bar__track"><span class="as-bar__fill" data-progress-fill></span></span>
+      </div>
+      <span class="as-bar__saved" data-save-status aria-live="polite"></span>
+      {% if seconds_left is not None %}
+      <div class="as-timer" data-timer role="timer" aria-live="off">
+        <span class="as-timer__label">Time left</span>
+        <span class="as-timer__clock" data-clock>--:--</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="wrap as-paper__body">
+    <ol class="as-questions">
+      {% for row in rows %}
+      {% with q=row.question %}
+      <li class="as-q {% if row.checked %}as-q--checked {% if row.is_correct %}as-q--right{% else %}as-q--wrong{% endif %}{% endif %}"
+          id="q{{ row.number }}" data-question="{{ q.pk }}" data-type="{{ q.type }}">
+        <div class="as-q__head">
+          <span class="as-q__number">Question {{ row.number }}</span>
+          <span class="as-q__meta">{{ q.get_type_display }}{% if q.points != 1 %} &middot; {{ q.points }} marks{% endif %}</span>
+        </div>
+
+        <p class="as-q__prompt">{{ q.prompt|linebreaksbr }}</p>
+        {% if q.word %}<p class="as-q__word">{{ q.word }}</p>{% endif %}
+        {% if q.image %}<img src="{{ q.image.url }}" alt="" class="as-q__image">{% endif %}
+        {% if q.audio_source %}<audio controls preload="none" src="{{ q.audio_source }}" class="as-q__audio"></audio>{% endif %}
+
+        {% if q.type == "choice" or q.type == "listen" %}
+        <div class="as-options" role="radiogroup">
+          {% for option in row.options %}
+          <label class="as-option">
+            <input type="radio" name="q-{{ q.pk }}" value="{{ option }}"
+                   {% if row.given == option %}checked{% endif %} {% if row.checked %}disabled{% endif %}>
+            <span class="as-option__box"><span class="as-option__letter"></span>{{ option }}</span>
+          </label>
+          {% endfor %}
+        </div>
+
+        {% elif q.type == "transcribe" %}
+        <input type="text" name="q-{{ q.pk }}" value="{{ row.given }}" class="as-input as-input--ipa"
+               placeholder="/  /" autocomplete="off" autocapitalize="off" spellcheck="false"
+               {% if row.checked %}readonly{% endif %} data-ipa-input>
+        {% if not row.checked %}
+        <details class="as-ipa">
+          <summary>Phonemic keyboard</summary>
+          <div class="as-ipa__keys">
+            {% for key in ipa_keys %}<button type="button" class="as-ipa__key" data-ipa-key="{{ key }}">{{ key }}</button>{% endfor %}
+            <button type="button" class="as-ipa__key as-ipa__key--wide" data-ipa-backspace>&#9003; Delete</button>
+          </div>
+        </details>
+        {% endif %}
+
+        {% elif q.type == "spell" %}
+        <input type="text" name="q-{{ q.pk }}" value="{{ row.given }}" class="as-input"
+               placeholder="Type your answer" autocomplete="off" autocapitalize="off" spellcheck="false"
+               {% if row.checked %}readonly{% endif %}>
+
+        {% elif q.type == "speak" %}
+        <div class="recorder">
+          <div class="recorder__controls">
+            <button type="button" class="btn btn--maroon btn--small recorder__start">&#9679; Record</button>
+            <button type="button" class="btn btn--gold btn--small recorder__stop" hidden>&#9632; Stop</button>
+            <span class="recorder__status" aria-live="polite"></span>
+          </div>
+          <audio controls class="recorder__playback" hidden></audio>
+          <label class="recorder__upload">
+            Or choose an audio file
+            <input type="file" name="recording-{{ q.pk }}" accept="audio/*" class="recorder__file" data-recording>
+          </label>
+        </div>
+        {% endif %}
+
+        {% if assessment.kind == "practice" and q.is_objective %}
+        <div class="as-check">
+          {% if not row.checked %}<button type="button" class="btn btn--gold btn--small" data-check>Check answer</button>{% endif %}
+          <div class="as-feedback" data-feedback {% if not row.checked %}hidden{% endif %}>
+            {% if row.checked %}
+            <p class="as-feedback__verdict">{% if row.is_correct %}&#10003; Correct{% else %}&#10007; Not quite — the answer is {{ row.correct_answer }}{% endif %}</p>
+            {% if row.explanation %}<p class="as-feedback__why">{{ row.explanation }}</p>{% endif %}
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </li>
+      {% endwith %}
+      {% endfor %}
+    </ol>
+
+    <div class="as-submit">
+      <button type="submit" class="btn btn--green btn--large" data-submit>
+        {% if assessment.kind == "practice" %}Finish quiz{% elif assessment.kind == "speaking" %}Send for marking{% else %}Submit answers{% endif %}
+      </button>
+      <p class="as-submit__note" data-unanswered hidden></p>
+    </div>
+  </div>
+</form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if has_speaking %}<script src="{% static 'js/echospell_activity.js' %}"></script>{% endif %}
+<script src="{% static 'js/assessments.js' %}"></script>
+{% endblock %}

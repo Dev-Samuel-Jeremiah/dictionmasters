@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My results — Assessments{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/assessments.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs"><li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li><li><a href="{% url 'assessments:hub' %}">Assessments</a></li><li>My results</li></ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128202;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Assessments</p>
+            <h1 class="ui-hero__title">My results</h1>
+            
+            <div class="ui-hero__chips"><span class="ui-chip ui-chip--gold">{{ finished|length }} finished</span>{% if in_progress %}<span class="ui-chip">{{ in_progress|length }} in progress</span>{% endif %}</div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+
+<section>
+  <div class="wrap ui-body ui-body--narrow">
+    {% if in_progress %}
+    <h2 class="as-section-title">In progress</h2>
+    <ul class="as-result-list">
+      {% for attempt in in_progress %}
+      <li><a href="{% url 'assessments:take' attempt.pk %}" class="as-result-row">
+        <span class="as-result-row__title">{{ attempt.assessment.title }}</span>
+        <span class="as-result-row__meta">{{ attempt.assessment.get_kind_display }} &middot; started {{ attempt.started_at|date:"j M, H:i" }}</span>
+        <span class="as-pill as-pill--waiting">Continue &rarr;</span>
+      </a></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <h2 class="as-section-title">Finished</h2>
+    {% if finished %}
+    <ul class="as-result-list">
+      {% for attempt in finished %}
+      <li><a href="{% url 'assessments:result' attempt.pk %}" class="as-result-row">
+        <span class="as-result-row__title">{{ attempt.assessment.title }}</span>
+        <span class="as-result-row__meta">
+          {{ attempt.assessment.get_kind_display }} &middot; {{ attempt.submitted_at|date:"j M Y" }}
+          {% if attempt.recommended_level %}&middot; start at {{ attempt.recommended_level }}{% endif %}
+        </span>
+        {% include "assessments/_score_pill.html" %}
+      </a></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="ui-empty"><p>You haven't finished an assessment yet. <a href="{% url 'assessments:hub' %}" class="link-quiet">Choose one</a>.</p></div>
+    {% endif %}
+  </div>
+</section>
+</div>
+{% endblock %}

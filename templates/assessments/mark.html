@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Mark — {{ assessment.title }}{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/assessments.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs"><li><a href="{% url 'assessments:hub' %}">Assessments</a></li><li><a href="{% url 'assessments:marking_queue' %}">Marking</a></li><li>{{ attempt.user.get_full_name|default:attempt.user.email }}</li></ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#127908;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Marking &middot; {{ assessment.title }}</p>
+            <h1 class="ui-hero__title">{{ attempt.user.get_full_name|default:attempt.user.email }}</h1>
+            <p class="ui-hero__lede">Sent {{ attempt.submitted_at|date:"j M Y, H:i" }}</p>
+            
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+
+<section>
+  <div class="wrap ui-body ui-body--narrow">
+
+    {% if errors %}
+    <div class="as-errors" role="alert">
+      <p><strong>Every spoken answer needs a score from 1 to 5 on each point.</strong></p>
+      <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    {% if objective %}
+    <p class="as-auto">
+      Marked automatically: {{ objective|length }} question{{ objective|length|pluralize }} —
+      {% for a in objective %}{% if a.is_correct %}&#10003;{% else %}&#10007;{% endif %}{% endfor %}
+    </p>
+    {% endif %}
+
+    <form method="post" class="as-mark">
+      {% csrf_token %}
+      <p class="as-mark__scale">Score each point from <strong>1</strong> (needs a lot of work) to <strong>5</strong> (excellent).</p>
+
+      {% for row in spoken_rows %}
+      {% with a=row.answer %}
+      <fieldset class="as-mark__item">
+        <legend class="as-mark__prompt">{{ a.question.prompt|linebreaksbr }}{% if a.question.word %} — <strong>{{ a.question.word }}</strong>{% endif %}</legend>
+        {% if a.recording %}<audio controls preload="metadata" src="{{ a.recording.url }}" class="as-mark__audio"></audio>
+        {% else %}<p class="as-mark__missing">No recording was sent for this question — score it as heard (nothing).</p>{% endif %}
+
+        <table class="as-mark__grid">
+          {% for score in row.scores %}
+          <tr>
+            <th scope="row">{{ score.label }}</th>
+            <td>
+              <span class="as-scale" role="radiogroup" aria-label="{{ score.label }}">
+                {% for n in scale %}
+                <label class="as-scale__step">
+                  <input type="radio" name="{{ a.pk }}-{{ score.field }}" value="{{ n }}" {% if score.value == n %}checked{% endif %}>
+                  <span>{{ n }}</span>
+                </label>
+                {% endfor %}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+        <label class="as-mark__label" for="c{{ a.pk }}">Comment for the student</label>
+        <textarea id="c{{ a.pk }}" name="{{ a.pk }}-comment" rows="2" class="as-textarea"
+                  placeholder="e.g. Good TH — watch the final sound in MONTH.">{{ row.comment }}</textarea>
+      </fieldset>
+      {% endwith %}
+      {% endfor %}
+
+      <label class="as-mark__label" for="feedback">Overall feedback</label>
+      <textarea id="feedback" name="feedback" rows="3" class="as-textarea"
+                placeholder="What they did well, and the one thing to practise next.">{{ feedback }}</textarea>
+
+      <div class="as-submit">
+        <button type="submit" class="btn btn--green btn--large">Save marks &amp; release result</button>
+        <a href="{% url 'assessments:marking_queue' %}" class="link-quiet">Back to marking</a>
+      </div>
+    </form>
+  </div>
+</section>
+</div>
+{% endblock %}

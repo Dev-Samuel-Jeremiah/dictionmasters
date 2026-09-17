@@ -1,0 +1,64 @@
+{% extends "manage/base.html" %}
+
+{% block title %}{% if obj %}{{ obj }}{% else %}New {{ singular }}{% endif %} — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">
+      {{ screen.section.icon }} <a href="{% url 'manage:list' screen.key %}">{{ title }}</a>
+      {% if parent_obj %}&middot; inside {{ parent_obj }}{% endif %}
+    </p>
+    <h1 class="cr-pagehead__title">{% if obj %}{{ obj }}{% else %}New {{ singular }}{% endif %}</h1>
+  </div>
+  {% if obj %}<a href="{% url 'manage:delete' screen.key obj.pk %}" class="cr-btn cr-btn--danger">Delete</a>{% endif %}
+</header>
+
+<form method="post" enctype="multipart/form-data" class="cr-card cr-form">
+  {% csrf_token %}
+  {% if parent_obj %}<input type="hidden" name="_in" value="{{ parent_obj.pk }}">{% endif %}
+
+  {% if form.non_field_errors %}
+  <ul class="cr-errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% for field in form %}
+  <div class="cr-field {% if field.errors %}has-error{% endif %}">
+    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="cr-req">required</span>{% endif %}</label>
+    {{ field }}
+    {% if field.help_text %}<p class="cr-help">{{ field.help_text|safe }}</p>{% endif %}
+    {% if field.errors %}<ul class="cr-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endfor %}
+
+  <div class="cr-formactions">
+    <button type="submit" class="cr-btn cr-btn--gold">{% if obj %}Save changes{% else %}Save {{ singular }}{% endif %}</button>
+    {% if not obj %}<button type="submit" name="_again" value="1" class="cr-btn cr-btn--ghost">Save and add another</button>{% endif %}
+    <a href="{% url 'manage:list' screen.key %}" class="cr-link">Cancel</a>
+  </div>
+</form>
+
+{% for child in children %}
+<section class="cr-card">
+  <header class="cr-child__head">
+    <h2 class="cr-card__title">{{ child.name }} <span class="cr-count">{{ child.count }}</span></h2>
+    <div>
+      <a href="{{ child.add_url }}" class="cr-btn cr-btn--gold cr-btn--small">+ Add {{ child.singular }}</a>
+      {% if child.count > 50 %}<a href="{{ child.list_url }}" class="cr-link">See all</a>{% endif %}
+    </div>
+  </header>
+  {% if child.rows %}
+  <ul class="cr-childlist">
+    {% for row in child.rows %}
+    <li>
+      <a href="{% url 'manage:edit' child.key row.pk %}">{{ row.label }}</a>
+      <a href="{% url 'manage:delete' child.key row.pk %}" class="cr-link cr-link--danger">Delete</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="cr-empty">Nothing here yet.</p>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,18 @@
+{% load media_storage %}{% if widget.is_initial %}<div class="stored-media {% if widget.value|on_r2 %}stored-media--r2{% else %}stored-media--local{% endif %}">
+  <p class="stored-media__badge">
+    {% if widget.value|on_r2 %}&#10003; Already stored on Cloudflare R2{% else %}Stored on this server{% endif %}
+    <span class="stored-media__name">{{ widget.value|file_basename }}</span>
+  </p>
+  {% with kind=widget.value|media_kind %}
+  {% if kind == "audio" %}<audio class="stored-media__preview" controls preload="none" src="{{ widget.value.url }}"></audio>
+  {% elif kind == "video" %}<video class="stored-media__preview" controls preload="none" src="{{ widget.value.url }}"></video>
+  {% elif kind == "image" %}<img class="stored-media__preview stored-media__preview--image" src="{{ widget.value.url }}" alt="">
+  {% else %}<a href="{{ widget.value.url }}" target="_blank" rel="noopener">Open file</a>{% endif %}
+  {% endwith %}
+  <p class="stored-media__warning">Choosing a new file below will <strong>replace</strong> this one.</p>
+  {% if not widget.required %}<span class="clearable-file-input">
+    <input type="checkbox" name="{{ widget.checkbox_name }}" id="{{ widget.checkbox_id }}"{% if widget.attrs.disabled %} disabled{% endif %}{% if widget.attrs.checked %} checked{% endif %}>
+    <label for="{{ widget.checkbox_id }}">{{ widget.clear_checkbox_label }}</label></span>{% endif %}
+  <p class="stored-media__replace">{{ widget.input_text }}:
+{% endif %}<input type="{{ widget.type }}" name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>{% if widget.is_initial %}</p>
+</div>{% endif %}

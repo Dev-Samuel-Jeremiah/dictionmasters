@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ activity.title }} — {{ level.name }} — EchoSpell{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/activity.css' %}">
+  <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="es">
+<section class="es-hero">
+  <div class="wrap">
+    <ol class="es-crumbs">
+      <li><a href="{% url 'echospell:hub' %}">EchoSpell</a></li>
+      <li><a href="{% url 'echospell:level_detail' level.slug %}">{{ level.name }}</a></li>
+      <li><a href="{% url 'echospell:group_detail' level.slug group.slug %}">Group {{ group.number }}</a></li>
+      <li>{{ activity.title }}</li>
+    </ol>
+    <div class="es-hero__inner">
+      <div class="es-hero__main">
+        <span class="es-hero__icon" aria-hidden="true">{{ activity.icon }}</span>
+        <div>
+          <p class="es-hero__eyebrow">Activity &middot; {{ activity.kind_label }}</p>
+          <h1 class="es-hero__title">{{ activity.title }}</h1>
+          <p class="es-hero__lede">{{ activity.display_instructions }}</p>
+          <div class="es-hero__chips">
+            <span class="es-chip">{{ item_rows|length }} question{{ item_rows|length|pluralize }}</span>
+            <span class="es-chip">Pass mark {{ activity.pass_mark }}%</span>
+            {% if previous %}<span class="es-chip {% if previous.passed %}es-chip--done{% else %}es-chip--gold{% endif %}">Your best: {% if previous.status == 'awaiting' %}sent to teacher{% else %}{{ previous.percent }}%{% endif %}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap es-body es-body--narrow">
+    {% if item_rows %}
+    <form method="post" enctype="multipart/form-data" class="activity-form" data-mode="{{ activity.mode }}">
+      {% csrf_token %}
+
+      {% if activity.audio_source %}
+      <div class="content-card" style="margin-bottom: 18px;">
+        <p class="activity-audio__label">Listen first</p>
+        <audio controls src="{{ activity.audio_source }}" style="width: 100%;"></audio>
+      </div>
+      {% endif %}
+
+      {% if activity.mode == "sort" %}
+      {# ---- drag words into the box for their sound ---- #}
+      {% for row in item_rows %}<input type="hidden" name="item-{{ row.item.id }}" value="" data-answer-for="{{ row.item.id }}">{% endfor %}
+      <div class="content-card">
+        <div class="chip-bank dropzone" data-bucket="">
+          <p class="chip-bank__label">Drag a word into a box &mdash; or tap the word, then tap the box.</p>
+          <div class="chip-bank__chips">
+            {% for row in item_rows %}
+            <button type="button" class="chip" draggable="true" data-item-id="{{ row.item.id }}">{{ row.item.prompt }}</button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="bucket-grid">
+        {% for bucket in buckets %}
+        <div class="bucket dropzone" data-bucket="{{ bucket }}">
+          <p class="bucket__label">{{ bucket }}</p>
+          <div class="bucket__chips"></div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <ol class="activity-items">
+        {% for row in item_rows %}
+        <li class="activity-item" data-item-id="{{ row.item.id }}">
+
+          {% if row.item.image %}<img src="{{ row.item.image.url }}" alt="" class="activity-item__image">{% endif %}
+          {% if row.item.audio_source %}
+          <audio controls src="{{ row.item.audio_source }}" class="activity-item__audio"></audio>
+          {% endif %}
+          {% if row.item.prompt %}
+          <p class="activity-item__prompt {% if activity.mode == 'record' %}activity-item__prompt--passage{% endif %}">{{ row.item.prompt }}</p>
+          {% endif %}
+          {% if row.item.hint %}<p class="activity-item__hint">{{ row.item.hint }}</p>{% endif %}
+
+          {% if activity.mode == "typed" %}
+          <input type="text" name="item-{{ row.item.id }}" class="activity-input"
+                 placeholder="{{ activity.kind_spec.placeholder }}" autocomplete="off" autocapitalize="off" spellcheck="false">
+
+          {% elif activity.mode == "choice" %}
+          <div class="option-grid">
+            {% for option in row.options %}
+            <label class="option">
+              <input type="radio" name="item-{{ row.item.id }}" value="{{ option }}">
+              <span class="option__box">{{ option }}</span>
+            </label>
+            {% endfor %}
+          </div>
+
+          {% elif activity.mode == "order" %}
+          <input type="hidden" name="item-{{ row.item.id }}" value="" data-answer-for="{{ row.item.id }}">
+          <div class="order-line dropzone" data-role="line" aria-label="Your sentence"></div>
+          <div class="order-bank dropzone" data-role="bank">
+            {% for token in row.tokens %}
+            <button type="button" class="chip" draggable="true">{{ token }}</button>
+            {% endfor %}
+          </div>
+
+          {% elif activity.mode == "record" %}
+          <div class="recorder">
+            <div class="recorder__controls">
+              <button type="button" class="btn btn--maroon btn--small recorder__start">&#9679; Record</button>
+              <button type="button" class="btn btn--gold btn--small recorder__stop" hidden>&#9632; Stop</button>
+              <span class="recorder__status" aria-live="polite"></span>
+            </div>
+            <audio controls class="recorder__playback" hidden></audio>
+            <label class="recorder__upload">
+              Or choose an audio file
+              <input type="file" name="recording-{{ row.item.id }}" accept="audio/*" class="recorder__file">
+            </label>
+          </div>
+          {% endif %}
+
+        </li>
+        {% endfor %}
+      </ol>
+      {% endif %}
+
+      <div class="es-submitbar">
+        <p class="es-submitbar__note">
+          {% if activity.mode == "record" %}Your teacher will listen and send a score.{% else %}Answered them all? You'll see your score straight away.{% endif %}
+        </p>
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+          <a href="{% url 'echospell:group_detail' level.slug group.slug %}" class="es-link">Back to Group {{ group.number }}</a>
+          <button type="submit" class="es-btn es-btn--green">
+            {% if activity.mode == "record" %}Send to my teacher{% else %}Submit &amp; see my score{% endif %} &rarr;
+          </button>
+        </div>
+      </div>
+    </form>
+    {% else %}
+    <p class="es-empty">This activity has no questions yet — check back soon.</p>
+    {% endif %}
+  </div>
+</section>
+</div>
+{% endblock %}
+
+{% if activity.mode == "sort" or activity.mode == "order" or activity.mode == "record" %}
+{% block extra_js %}
+<script src="{% static 'js/echospell_activity.js' %}"></script>
+{% endblock %}
+{% endif %}

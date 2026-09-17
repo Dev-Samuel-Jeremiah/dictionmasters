@@ -1,0 +1,49 @@
+{% load static %}
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a href="{% url 'landing:home' %}" class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" width="34" height="34">
+          <circle cx="20" cy="20" r="19" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M12 26 L12 13 Q12 11 14 11 L26 11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M12 19.5 L22 19.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="27.5" cy="11" r="1.6" fill="currentColor"/>
+        </svg>
+      </span>
+      <span class="brand__name">Diction Masters</span>
+    </a>
+
+    <nav class="main-nav" aria-label="Primary">
+      {% if user.is_authenticated %}
+        <a href="{% url 'learning_tools:hub' %}"{% if '/learning-tools/' in request.path %} aria-current="page"{% endif %}>Learning tools</a>
+      {% else %}
+        <a href="{% url 'landing:home' %}#how-it-works">How it works</a>
+        <a href="{% url 'landing:home' %}#for-schools">For schools</a>
+        <a href="{% url 'landing:home' %}#book">Book of Conversation</a>
+      {% endif %}
+    </nav>
+
+    <div class="header-actions">
+      {% if user.is_authenticated %}
+        <a href="{% url 'book:phonemic_chart' %}" class="phonemic-icon-btn" title="Phonemic Chart" aria-label="Phonemic Chart">
+          <span class="phonemic-icon-btn__row">
+            <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--accent">iː</span>
+            <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--muted">ə</span>
+          </span>
+          <span class="phonemic-icon-btn__row">
+            <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--muted">θ</span>
+            <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--accent">ɑː</span>
+          </span>
+        </a>
+        <a href="{% if user.role == 'school_admin' %}{% url 'schools:dashboard' %}{% else %}{% url 'accounts:dashboard' %}{% endif %}" class="link-quiet"{% if request.path == '/accounts/dashboard/' or request.path == '/school/dashboard/' %} aria-current="page"{% endif %}>My dashboard</a>
+        <form method="post" action="{% url 'accounts:logout' %}" class="logout-form">
+          {% csrf_token %}
+          <button type="submit" class="btn btn--gold btn--small">Log out</button>
+        </form>
+      {% else %}
+        <a href="{% url 'accounts:login' %}" class="link-quiet">Log in</a>
+        <a href="{% url 'accounts:register_choice' %}" class="btn btn--gold">Get started</a>
+      {% endif %}
+    </div>
+  </div>
+</header>

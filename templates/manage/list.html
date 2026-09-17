@@ -1,0 +1,77 @@
+{% extends "manage/base.html" %}
+
+{% block title %}{{ title }} — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">
+      {{ screen.section.icon }} {{ screen.section.name }}
+      {% if parent_obj %}&middot; inside <a href="{% url 'manage:edit' parent_key parent_obj.pk %}">{{ parent_obj }}</a>{% endif %}
+    </p>
+    <h1 class="cr-pagehead__title">{{ title }}</h1>
+    <p class="cr-pagehead__note">{{ total }} item{{ total|pluralize }}{% if query %} matching “{{ query }}”{% endif %}</p>
+  </div>
+  {% if not readonly %}
+  <a href="{% url 'manage:add' screen.key %}{% if parent_obj %}?in={{ parent_obj.pk }}{% endif %}" class="cr-btn cr-btn--gold">+ Add {{ singular }}</a>
+  {% endif %}
+</header>
+
+{% if screen.search %}
+<form method="get" class="cr-filter">
+  {% if parent_obj %}<input type="hidden" name="in" value="{{ parent_obj.pk }}">{% endif %}
+  <input type="search" name="q" value="{{ query }}" placeholder="Search {{ title|lower }}…" class="cr-input">
+  <button type="submit" class="cr-btn cr-btn--ghost">Search</button>
+  {% if query %}<a href="{% url 'manage:list' screen.key %}" class="cr-link">Clear</a>{% endif %}
+</form>
+{% endif %}
+
+{% if rows %}
+<div class="cr-card cr-card--flush">
+  <div class="cr-tablewrap">
+    <table class="cr-table cr-table--rows">
+      <thead>
+        <tr>{% for heading in headings %}<th>{{ heading }}</th>{% endfor %}<th class="cr-table__end">{% if not readonly %}Actions{% endif %}</th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          {% for cell in row.cells %}
+          <td>
+            {% if cell.kind == "bool" %}<span class="cr-bool {% if cell.on %}is-yes{% else %}is-no{% endif %}">{% if cell.on %}Yes{% else %}No{% endif %}</span>
+            {% elif cell.kind == "file" %}<a href="{{ cell.url }}" target="_blank" rel="noopener" class="cr-fileline">{{ cell.text }}</a>
+            {% elif cell.kind == "when" %}{{ cell.text|date:"j M Y, H:i" }}
+            {% elif cell.kind == "blank" %}<span class="cr-blank">—</span>
+            {% else %}{{ cell.text }}{% endif %}
+          </td>
+          {% endfor %}
+          <td class="cr-table__end">
+            {% if readonly %}
+            <span class="cr-blank">view only</span>
+            {% else %}
+            <a href="{% url 'manage:edit' screen.key row.pk %}" class="cr-btn cr-btn--ghost cr-btn--small">Edit</a>
+            <a href="{% url 'manage:delete' screen.key row.pk %}" class="cr-btn cr-btn--danger cr-btn--small">Delete</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if page.has_other_pages %}
+<nav class="cr-pages" aria-label="Pages">
+  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if parent_obj %}&in={{ parent_obj.pk }}{% endif %}" class="cr-btn cr-btn--ghost cr-btn--small">&larr; Back</a>{% endif %}
+  <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if parent_obj %}&in={{ parent_obj.pk }}{% endif %}" class="cr-btn cr-btn--ghost cr-btn--small">Next &rarr;</a>{% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="cr-empty cr-empty--big">
+  <p>Nothing here yet{% if query %} for “{{ query }}”{% endif %}.</p>
+  {% if not readonly %}<a href="{% url 'manage:add' screen.key %}{% if parent_obj %}?in={{ parent_obj.pk }}{% endif %}" class="cr-btn cr-btn--gold">+ Add the first {{ singular }}</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

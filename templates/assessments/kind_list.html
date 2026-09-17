@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ kind_label }} — Assessments{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/assessments.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs"><li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li><li><a href="{% url 'assessments:hub' %}">Assessments</a></li><li>{{ kind_label }}</li></ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">{{ info.icon }}</span>
+          <div>
+            <p class="ui-hero__eyebrow">Assessments</p>
+            <h1 class="ui-hero__title">{{ kind_label }}</h1>
+            <p class="ui-hero__lede">{{ info.blurb }}</p>
+            <div class="ui-hero__chips"><span class="ui-chip ui-chip--gold">{{ rows|length }} available</span></div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+
+<section>
+  <div class="wrap ui-body">
+    {% if rows %}
+    <div class="as-cards">
+      {% for row in rows %}
+      <a href="{% url 'assessments:detail' row.assessment.slug %}" class="as-card">
+        <span class="as-card__title">{{ row.assessment.title }}</span>
+        {% if row.assessment.summary %}<span class="as-card__summary">{{ row.assessment.summary }}</span>{% endif %}
+        <span class="as-card__facts">
+          {{ row.assessment.question_count }} question{{ row.assessment.question_count|pluralize }}
+          {% if row.assessment.time_limit_minutes %}&middot; {{ row.assessment.time_limit_minutes }} min{% endif %}
+          {% if row.assessment.level %}&middot; {{ row.assessment.level }}{% endif %}
+        </span>
+        <span class="as-card__status">
+          {% if row.in_progress %}<span class="as-pill as-pill--waiting">In progress</span>
+          {% elif row.best is not None %}<span class="as-pill {% if row.best >= row.assessment.pass_mark %}as-pill--pass{% else %}as-pill--fail{% endif %}">Best {{ row.best }}%</span>
+          {% else %}<span class="as-pill">Not taken</span>{% endif %}
+          {% if row.left is not None %}<span class="as-card__left">{{ row.left }} attempt{{ row.left|pluralize }} left</span>{% endif %}
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="ui-empty"><p>No {{ kind_label|lower }}s are available yet. Check back soon.</p></div>
+    {% endif %}
+  </div>
+</section>
+</div>
+{% endblock %}
