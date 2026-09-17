@@ -12,7 +12,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from . import paystack
 from .access import (
-    is_exempt, plans_for, price_table, start_trial, status_for, student_count, student_plans_for_count, teacher_count,
+    is_exempt, plans_for, price_table, status_for, student_count, student_plans_for_count, subscription_for, teacher_count,
 )
 from .models import BillingSettings, Payment, Plan
 from .services import CheckoutError, confirm, fulfil, start_checkout
@@ -75,19 +75,6 @@ def account(request):
     return render(request, "billing/account.html", context)
 
 
-@login_required
-@require_POST
-def trial(request):
-    """Start the free trial from the billing page, for someone who chose to
-    pay at registration and then didn't."""
-    if start_trial(request.user):
-        messages.success(request, f"Your {BillingSettings.load().trial_days}-day free trial has started.")
-        next_url = request.session.pop(NEXT_KEY, "")
-        return redirect(next_url or "accounts:dashboard")
-    messages.info(request, "The free trial has already been used on this account.")
-    return redirect("billing:account")
-
-
 @require_GET
 def student_prices(request):
     """The per-child prices for one school, for the student sign-up form."""
@@ -121,12 +108,27 @@ def checkout(request, slug):
     return redirect(payment.authorization_url)
 
 
+def _not_paid_message(user, opening):
+    """What to say when a payment didn't complete: the trial, which started
+    at registration, is still what they're on."""
+    subscription = subscription_for(user)
+    if subscription and subscription.state() == subscription.STATE_TRIAL:
+        days = subscription.days_left()
+        return f"{opening} Your free trial is active with {days} day{'s' if days != 1 else ''} left — you can pay any time."
+    return f"{opening} You can try again below."
+
+
 @login_required
 @require_GET
 def callback(request):
     """Where Paystack sends the customer back. The payment is checked with
     Paystack before anything is granted."""
     reference = request.GET.get("reference") or request.GET.get("trxref") or ""
+    home = "schools:dashboard" if request.user.role == request.user.Role.SCHOOL_ADMIN else "accounts:dashboard"
+    if not reference and request.GET.get("cancelled"):
+        # Paystack's "Cancel payment" straight after registering.
+        messages.info(request, _not_paid_message(request.user, "You cancelled the payment, so you haven't been charged."))
+        return redirect(home)
     payment = Payment.objects.filter(reference=reference).first()
     if payment is None:
         raise Http404("We don't recognise that payment.")
@@ -145,9 +147,9 @@ def callback(request):
         messages.success(request, f"Payment received — thank you! Your {payment.plan_name} plan is active.")
         return redirect("billing:receipt", reference=payment.reference)
     if payment.status == Payment.STATUS_PENDING:
-        messages.info(request, "Your payment is still being processed. This page will show it as soon as it clears.")
+        messages.info(request, _not_paid_message(request.user, "Your payment is still being processed."))
     else:
-        messages.error(request, "That payment didn't go through, so you haven't been charged. You can try again below.")
+        messages.error(request, _not_paid_message(request.user, "That payment didn't go through, so you haven't been charged."))
     return redirect("billing:account")
 
 

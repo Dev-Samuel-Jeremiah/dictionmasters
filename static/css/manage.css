@@ -322,3 +322,8 @@ select[multiple].cr-input { background-image: none; padding-right: 14px; min-hei
 @media (prefers-reduced-motion: reduce) {
   .cr-btn, .cr-quick__btn, .cr-side, .cr-group summary::after { transition: none; }
 }
+
+/* Show / hide a password on the control room sign-in. */
+.cr-login .pw-wrap input { padding-right: 48px; }
+.cr-login .pw-toggle { color: var(--cr-dim); }
+.cr-login .pw-toggle:hover { color: var(--ink); background: rgba(20, 33, 61, .06); }

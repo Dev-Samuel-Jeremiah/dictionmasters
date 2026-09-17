@@ -258,3 +258,23 @@ p { margin: 0; }
   font-size: 0.8rem;
   color: rgba(246, 241, 228, 0.45);
 }
+
+/* ---------- show / hide a password (static/js/password_toggle.js) ---------- */
+
+.pw-wrap { position: relative; display: block; }
+.pw-wrap input { width: 100%; padding-right: 48px; }
+.pw-toggle {
+  position: absolute; right: 6px; top: 50%;
+  transform: translateY(-50%);
+  display: grid; place-items: center;
+  width: 38px; height: 38px;
+  padding: 0;
+  border: 0; border-radius: 10px;
+  color: var(--ink-40);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.pw-toggle:hover { color: var(--ink); background: rgba(20, 33, 61, 0.06); }
+.pw-toggle:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.pw-toggle[aria-pressed="true"] { color: var(--gold-deep); }

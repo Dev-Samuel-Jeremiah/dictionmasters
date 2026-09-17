@@ -15,7 +15,7 @@
         <span class="bl-start__note">{% if form.trial_days %}Full access, no card needed. Choose a plan any time.{% else %}Everything is free right now.{% endif %}</span>
         {% else %}
         <span class="bl-start__title">&#128179; {{ radio.choice_label }}</span>
-        <span class="bl-start__note">Pay securely with Paystack: card, bank transfer or USSD.</span>
+        <span class="bl-start__note">Pay securely with Paystack: card, bank transfer or USSD.{% if form.trial_days %} If the payment doesn't go through, your free trial starts instead.{% endif %}</span>
         {% endif %}
       </span>
     </label>

@@ -4,7 +4,13 @@ from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 
-from .access import GATED_PREFIXES, has_access
+from .access import GATED_PREFIXES, has_access, is_exempt, subscription_for
+from .models import BillingSettings
+
+# Pages someone with no trial and no plan may still open: paying, and
+# getting in and out of their account.
+ALWAYS_OPEN = ("/billing/", "/accounts/logout/", "/accounts/login/", "/static/", "/media/", "/manage/", "/admin/")
+DASHBOARDS = ("/accounts/dashboard/", "/school/dashboard/")
 
 
 class SubscriptionRequiredMiddleware:
@@ -19,6 +25,18 @@ class SubscriptionRequiredMiddleware:
 
     def __call__(self, request):
         user = getattr(request, "user", None)
+        if user is not None and user.is_authenticated and not is_exempt(user) and not request.path.startswith(ALWAYS_OPEN):
+            # Every account is on its trial or a plan before it sees anything:
+            # this starts the trial for an account that hasn't had one.
+            subscription = subscription_for(user)
+            if (
+                subscription is not None
+                and request.path.startswith(DASHBOARDS)
+                and subscription.trial_ends_at is None and subscription.paid_until is None
+                and BillingSettings.load().paywall_enabled
+            ):
+                return redirect(reverse("billing:account"))
+
         if (
             user is not None
             and user.is_authenticated

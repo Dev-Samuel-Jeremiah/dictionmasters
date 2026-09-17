@@ -17,10 +17,11 @@ Staff never pay.
 How it works
 ------------
 Every paying account (an adult, a student, or a school) has one
-Subscription. When registering, people choose between the free trial
-(no card needed) and paying straight away; the trial can only be used
-once. Buying a Plan adds that plan's days of access after any trial or
-paid time still running, so paying early never loses a day.
+Subscription, and it is always either on its free trial or paid for —
+never neither. The trial starts the moment the account exists, so someone
+who chooses "Pay now" and doesn't finish paying is still covered. A
+successful payment ends the trial and starts the plan at once; renewing a
+paid plan early adds the new days after the time still left.
 
 Payment is once per period through Paystack (card, bank transfer, USSD),
 never an automatic charge. Every attempt is a Payment row, and a Payment
@@ -242,9 +243,10 @@ class Subscription(models.Model):
         return max(1, (until - now).days + (1 if (until - now).seconds else 0))
 
     def next_period_start(self, now=None):
-        """Where newly bought days begin: after any trial or paid time still to run."""
+        """Where newly bought days begin: now, or after paid time still to
+        run. A free trial doesn't push it back — paying ends the trial."""
         now = now or timezone.now()
-        return max([moment for moment in (now, self.trial_ends_at, self.paid_until) if moment])
+        return max(now, self.paid_until) if self.paid_until else now
 
     @property
     def audience(self):

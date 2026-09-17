@@ -81,28 +81,36 @@ def start_checkout(user, plan, *, callback_url, cancel_url):
 
 
 def begin_access(request, user, start, plan):
-    """Straight after registering: start the free trial, or send them to
-    pay for the plan they picked. Returns the address to go to next."""
+    """Straight after registering. The free trial is already running (see
+    access.subscription_for), so "Pay now" can never leave someone with no
+    access: they go to Paystack, and if the payment doesn't go through the
+    trial simply carries on. Returns the address to go to next."""
     from django.contrib import messages
     from django.urls import reverse
 
+    from .access import subscription_for
     from .models import BillingSettings
 
+    subscription_for(user)                       # starts the trial
+    days = BillingSettings.load().trial_days
     home = "schools:dashboard" if user.role == user.Role.SCHOOL_ADMIN else "accounts:dashboard"
     if start == "pay" and plan is not None:
         try:
             payment = start_checkout(
                 user, plan,
                 callback_url=request.build_absolute_uri(reverse("billing:callback")),
-                cancel_url=request.build_absolute_uri(reverse("billing:account")),
+                cancel_url=request.build_absolute_uri(reverse("billing:callback") + "?cancelled=1"),
             )
         except CheckoutError as error:
-            messages.error(request, f"Your account is ready, but we couldn't open the payment page: {error}")
-            return reverse("billing:account")
+            messages.error(
+                request,
+                f"We couldn't open the payment page ({error}), so your {days}-day free trial has started instead. "
+                "You can pay any time from Plans & billing.",
+            )
+            return reverse(home)
         return payment.authorization_url
 
-    if start_trial(user):
-        days = BillingSettings.load().trial_days
+    if days:
         messages.success(request, f"Your {days}-day free trial has started. Enjoy exploring!")
     return reverse(home)
 
@@ -164,12 +172,16 @@ def fulfil(reference, data):
         return payment
 
     subscription = Subscription.objects.select_for_update().get(pk=payment.subscription_id)
-    start = subscription.next_period_start()
+    now = timezone.now()
+    start = subscription.next_period_start(now)
     end = start + timedelta(days=payment.duration_days)
     subscription.paid_until = end
+    # It's the trial or a paid plan, never both: paying ends a running trial.
+    if subscription.trial_ends_at and subscription.trial_ends_at > now:
+        subscription.trial_ends_at = now
     if payment.plan_id:
         subscription.plan_id = payment.plan_id
-    subscription.save(update_fields=["paid_until", "plan", "updated_at"])
+    subscription.save(update_fields=["paid_until", "trial_ends_at", "plan", "updated_at"])
 
     payment.status = Payment.STATUS_SUCCESS
     payment.paid_at = _paid_at(data)

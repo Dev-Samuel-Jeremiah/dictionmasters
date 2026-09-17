@@ -55,16 +55,29 @@ class BillingTests(TestCase):
 
     # ---- trial -------------------------------------------------------------
 
-    def test_trial_only_starts_when_chosen_and_only_once(self):
-        sub = subscription_for(self.adult)
-        self.assertIsNone(sub.trial_ends_at)
-        self.assertFalse(has_access(self.adult))
-        self.assertTrue(start_trial(self.adult))
-        self.assertTrue(has_access(self.adult))
-        self.assertEqual(subscription_for(self.adult).days_left(), 7)
-        self.assertFalse(start_trial(self.adult))
+    def expire(self, user):
+        sub = subscription_for(user)
+        sub.trial_ends_at = timezone.now() - timedelta(minutes=1)
+        sub.save()
+        return sub
 
-    def test_tools_lock_without_access_but_dashboard_stays_open(self):
+    def test_every_account_starts_on_its_trial_and_gets_it_once(self):
+        sub = subscription_for(self.adult)
+        self.assertEqual(sub.state(), Subscription.STATE_TRIAL)
+        self.assertEqual(sub.days_left(), 7)
+        self.assertTrue(has_access(self.adult))
+        self.expire(self.adult)
+        self.assertFalse(start_trial(self.adult))
+        self.assertFalse(has_access(self.adult))
+
+    def test_no_account_reaches_the_dashboard_on_neither(self):
+        BillingSettings.objects.filter(pk=1).update(trial_days=0)
+        fresh = make_user("fresh@example.com", User.Role.INDIVIDUAL)
+        self.client.force_login(fresh)
+        self.assertRedirects(self.client.get(reverse("accounts:dashboard")), reverse("billing:account"), fetch_redirect_response=False)
+
+    def test_tools_lock_after_the_trial_but_dashboard_stays_open(self):
+        self.expire(self.adult)
         self.client.force_login(self.adult)
         locked = self.client.get("/echospell/")
         self.assertRedirects(locked, f"{reverse('billing:account')}?next=%2Fechospell%2F", fetch_redirect_response=False)
@@ -72,6 +85,7 @@ class BillingTests(TestCase):
         self.assertEqual(self.client.post("/echospell/card-position/", {"lesson": 1}).status_code, 402)
 
     def test_paywall_switch_opens_everything(self):
+        self.expire(self.adult)
         BillingSettings.objects.filter(pk=1).update(paywall_enabled=False)
         self.assertTrue(has_access(self.adult))
 
@@ -90,19 +104,33 @@ class BillingTests(TestCase):
         self.assertRedirects(response, reverse("accounts:dashboard"), fetch_redirect_response=False)
         self.assertEqual(User.objects.get(email="new@example.com").subscription.state(), Subscription.STATE_TRIAL)
 
-    def test_register_and_pay_now_goes_to_paystack_without_a_trial(self):
+    def test_pay_now_that_fails_leaves_the_trial_running(self):
         with mock.patch("apps.billing.paystack.initialize", return_value=PAYSTACK_PAGE) as init:
             response = self.client.post(reverse("accounts:register_individual"),
                                         self.adult_form(start="pay", plan=self.monthly.slug))
         self.assertRedirects(response, PAYSTACK_PAGE["authorization_url"], fetch_redirect_response=False)
         self.assertEqual(init.call_args.kwargs["amount_kobo"], 250000)
         user = User.objects.get(email="new@example.com")
-        self.assertIsNone(user.subscription.trial_ends_at)
-        # Didn't finish paying? The trial is still there to start later.
-        self.client.force_login(user)
-        self.client.post(reverse("billing:trial"))
-        user.subscription.refresh_from_db()
-        self.assertIsNotNone(user.subscription.trial_ends_at)
+        self.assertEqual(user.subscription.state(), Subscription.STATE_TRIAL)   # counting already
+        payment = Payment.objects.get(payer=user)
+        with mock.patch("apps.billing.paystack.verify", return_value=verified(payment, status="failed")):
+            response = self.client.get(reverse("billing:callback"), {"reference": payment.reference}, follow=True)
+        self.assertContains(response, "Your free trial is active with 7 days left")
+        # Cancelling on Paystack's page says the same.
+        response = self.client.get(reverse("billing:callback"), {"cancelled": "1"}, follow=True)
+        self.assertContains(response, "You cancelled the payment")
+
+    def test_pay_now_that_succeeds_replaces_the_trial(self):
+        with mock.patch("apps.billing.paystack.initialize", return_value=PAYSTACK_PAGE):
+            self.client.post(reverse("accounts:register_individual"), self.adult_form(start="pay", plan=self.monthly.slug))
+        user = User.objects.get(email="new@example.com")
+        payment = Payment.objects.get(payer=user)
+        before = timezone.now()
+        services.fulfil(payment.reference, verified(payment))
+        sub = Subscription.objects.get(user=user)
+        self.assertEqual(sub.state(), Subscription.STATE_ACTIVE)
+        self.assertLessEqual(sub.trial_ends_at, timezone.now())                  # trial over
+        self.assertAlmostEqual(sub.paid_until, before + timedelta(days=30), delta=timedelta(minutes=1))
 
     def test_pay_now_needs_a_plan(self):
         response = self.client.post(reverse("accounts:register_individual"), self.adult_form(start="pay"))
@@ -144,16 +172,18 @@ class BillingTests(TestCase):
             "code": code.code, "first_name": "Kid", "email": "sneaky@bright.test", "password1": PASSWORD, "password2": PASSWORD,
         })
         self.assertContains(response, "Students now join with their school")
-        # A paid school plan doesn't cover students.
-        start_trial(self.admin)
+        # A paid school plan doesn't cover students: they have their own.
         self.pay(self.admin, self.tier5)
         student = make_user("kid@bright.test", User.Role.STUDENT, school=self.school)
+        self.assertEqual(subscription_for(student).user, student)
+        self.expire(student)
         self.assertFalse(has_access(student))
 
     # ---- schools -----------------------------------------------------------
 
     def test_school_plan_covers_admin_and_teachers(self):
         teacher = make_user("t@bright.test", User.Role.TEACHER, school=self.school)
+        self.expire(self.admin)                                  # the school's trial is over
         self.assertFalse(has_access(teacher))
         with self.assertRaises(services.CheckoutError):
             services.start_checkout(teacher, self.tier5, callback_url="x", cancel_url="y")
@@ -181,17 +211,16 @@ class BillingTests(TestCase):
 
     # ---- paying ------------------------------------------------------------
 
-    def test_payment_during_trial_starts_after_the_trial_and_counts_once(self):
-        start_trial(self.adult)
-        sub = subscription_for(self.adult)
+    def test_a_payment_counts_once(self):
         with mock.patch("apps.billing.paystack.initialize", return_value=PAYSTACK_PAGE):
             payment = services.start_checkout(self.adult, self.monthly, callback_url="x", cancel_url="y")
         services.fulfil(payment.reference, verified(payment))
+        first = subscription_for(self.adult).paid_until
         services.fulfil(payment.reference, verified(payment))
-        sub.refresh_from_db()
-        self.assertEqual(sub.paid_until, sub.trial_ends_at + timedelta(days=30))
+        self.assertEqual(subscription_for(self.adult).paid_until, first)
 
     def test_wrong_amount_never_grants_access(self):
+        self.expire(self.adult)
         with mock.patch("apps.billing.paystack.initialize", return_value=PAYSTACK_PAGE):
             payment = services.start_checkout(self.adult, self.monthly, callback_url="x", cancel_url="y")
         services.fulfil(payment.reference, verified(payment, amount=100))
@@ -231,10 +260,14 @@ class BillingTests(TestCase):
     def test_no_free_trial_after_paying(self):
         self.pay(self.adult, self.monthly)
         self.client.force_login(self.adult)
-        page = self.client.get(reverse("billing:account"))
-        self.assertNotContains(page, "Start my 7-day free trial")
-        self.client.post(reverse("billing:trial"))
-        self.assertIsNone(subscription_for(self.adult).trial_ends_at)
+        sub = subscription_for(self.adult)
+        sub.trial_ends_at = None                                  # even if the trial were somehow cleared
+        sub.save()
+        self.assertEqual(subscription_for(self.adult).trial_ends_at, None)
+        self.assertEqual(subscription_for(self.adult).state(), Subscription.STATE_ACTIVE)
+        page = self.client.get(reverse("billing:account")).content.decode()
+        self.assertNotIn("Start my 7-day free trial", page)      # no trial button once paid
+        self.assertIn("Active until", page)
 
     def test_renewal_opens_in_the_last_five_days_and_early_renewal_adds_on(self):
         self.pay(self.adult, self.monthly)                      # 30 days

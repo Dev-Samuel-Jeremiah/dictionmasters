@@ -9,8 +9,9 @@ may use the tools.
     teacher             → the school's subscription (the admin pays)
     staff               → always allowed, never billed
 
-Nobody's trial starts by itself: people choose it when they register (or
-later on the billing page), and each account can only have it once.
+Every account is always on its free trial or a paid plan. The trial starts
+the first time the account is seen — at registration — and each account
+only ever has it once. Staff are never billed.
 """
 
 from datetime import timedelta
@@ -75,12 +76,29 @@ def subscription_for(user):
     if owner is None:
         return None
     found = Subscription.objects.select_related("plan").filter(**owner).first()
-    if found:
-        return found
-    try:
-        return Subscription.objects.create(**owner)
-    except IntegrityError:       # two requests at once: the other one made it
-        return Subscription.objects.select_related("plan").get(**owner)
+    if found is None:
+        try:
+            found = Subscription.objects.create(**owner)
+        except IntegrityError:       # two requests at once: the other one made it
+            found = Subscription.objects.select_related("plan").get(**owner)
+    # Never on neither: an account that hasn't had its trial and hasn't
+    # paid gets the trial now, and it starts counting straight away.
+    if found.trial_ends_at is None and found.paid_until is None:
+        _begin_trial(found)
+    return found
+
+
+def _begin_trial(subscription):
+    settings_ = BillingSettings.load()
+    if not trial_available(subscription, settings_):
+        return False
+    ends = timezone.now() + timedelta(days=settings_.trial_days)
+    started = Subscription.objects.filter(pk=subscription.pk, trial_ends_at__isnull=True).update(
+        trial_ends_at=ends, updated_at=timezone.now(),
+    )
+    if started:
+        subscription.trial_ends_at = ends
+    return bool(started)
 
 
 def trial_available(subscription, settings_=None):
@@ -97,18 +115,13 @@ def trial_available(subscription, settings_=None):
 
 
 def start_trial(user):
-    """Start the free trial for whoever covers `user`, if it hasn't been used.
-    Returns True if a trial started."""
+    """Make sure whoever covers `user` has had their free trial. It starts by
+    itself the first time the account is seen; this is for being explicit.
+    Returns True if the account is on its trial now."""
     if not can_pay(user):
         return False
     subscription = subscription_for(user)
-    settings_ = BillingSettings.load()
-    if not trial_available(subscription, settings_):
-        return False
-    updated = Subscription.objects.filter(pk=subscription.pk, trial_ends_at__isnull=True).update(
-        trial_ends_at=timezone.now() + timedelta(days=settings_.trial_days), updated_at=timezone.now(),
-    )
-    return bool(updated)
+    return bool(subscription and subscription.state() == Subscription.STATE_TRIAL)
 
 
 def has_access(user):
