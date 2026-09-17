@@ -25,7 +25,14 @@
 
     <div class="header-actions">
       {% if user.is_authenticated %}
-        <a href="{% url 'book:phonemic_chart' %}" class="phonemic-icon-btn" title="Phonemic Chart" aria-label="Phonemic Chart">
+        {% url 'book:phonemic_chart' as chart_url %}
+        {% if user.role == 'school_admin' %}{% url 'schools:dashboard' as dashboard_url %}{% else %}{% url 'accounts:dashboard' as dashboard_url %}{% endif %}
+        {# On the chart already, the chart button takes you back to the dashboard. #}
+        {% if request.path == chart_url %}
+        <a href="{{ dashboard_url }}" class="phonemic-icon-btn" aria-current="page" title="Back to my dashboard" aria-label="Close Phonemic Chart, back to my dashboard">
+        {% else %}
+        <a href="{{ chart_url }}" class="phonemic-icon-btn" title="Phonemic Chart" aria-label="Phonemic Chart">
+        {% endif %}
           <span class="phonemic-icon-btn__row">
             <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--accent">iː</span>
             <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--muted">ə</span>
@@ -35,7 +42,7 @@
             <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--accent">ɑː</span>
           </span>
         </a>
-        <a href="{% if user.role == 'school_admin' %}{% url 'schools:dashboard' %}{% else %}{% url 'accounts:dashboard' %}{% endif %}" class="link-quiet"{% if request.path == '/accounts/dashboard/' or request.path == '/school/dashboard/' %} aria-current="page"{% endif %}>My dashboard</a>
+        <a href="{{ dashboard_url }}" class="link-quiet"{% if request.path == '/accounts/dashboard/' or request.path == '/school/dashboard/' %} aria-current="page"{% endif %}>My dashboard</a>
         <form method="post" action="{% url 'accounts:logout' %}" class="logout-form">
           {% csrf_token %}
           <button type="submit" class="btn btn--gold btn--small">Log out</button>
