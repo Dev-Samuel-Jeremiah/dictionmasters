@@ -188,7 +188,8 @@ ASGI_APPLICATION = "config.asgi.application"
 #   * DJANGO_DB=postgres or sqlite decides the rest outright;
 #   * otherwise PostgreSQL.
 
-"""SQLITE = {
+# Used only by the test suite, and by DJANGO_DB=sqlite.
+SQLITE = {
     "ENGINE": "django.db.backends.sqlite3",
     "NAME": BASE_DIR / "db.sqlite3",
     "OPTIONS": {
@@ -198,7 +199,7 @@ ASGI_APPLICATION = "config.asgi.application"
         "transaction_mode": "IMMEDIATE",
         "init_command": "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;",
     },
-}"""
+}
 
 POSTGRES = {
     "ENGINE": "django.db.backends.postgresql",

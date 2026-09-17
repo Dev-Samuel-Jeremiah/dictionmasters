@@ -35,6 +35,7 @@
 
   <div class="cr-shell">
     <nav class="cr-side" id="cr-side" aria-label="Sections">
+      <button type="button" class="cr-side__close" aria-label="Close menu">&times;</button>
       <a href="{% url 'manage:home' %}" class="cr-side__home {% if not current_key %}is-on{% endif %}">&#127968; Control room home</a>
       {% for section in nav %}
       <details class="cr-group" {% if section.open %}open{% endif %}>
@@ -52,6 +53,8 @@
       {% endfor %}
     </nav>
 
+    <div class="cr-scrim" hidden></div>
+
     <main class="cr-main" id="cr-main">
       {% if messages %}
       <ul class="cr-messages">
@@ -63,11 +66,25 @@
   </div>
 
   <script>
-    // The only script here: the menu button on a phone.
-    document.querySelector(".cr-burger").addEventListener("click", function () {
-      var open = document.body.classList.toggle("cr-side-open");
-      this.setAttribute("aria-expanded", String(open));
-    });
+    // The only script here: the menu drawer on a phone.
+    (function () {
+      var burger = document.querySelector(".cr-burger");
+      var scrim = document.querySelector(".cr-scrim");
+      function setOpen(open) {
+        document.body.classList.toggle("cr-side-open", open);
+        burger.setAttribute("aria-expanded", String(open));
+        scrim.hidden = !open;
+        if (!open) burger.focus({ preventScroll: true });
+      }
+      burger.addEventListener("click", function () {
+        setOpen(!document.body.classList.contains("cr-side-open"));
+      });
+      document.querySelector(".cr-side__close").addEventListener("click", function () { setOpen(false); });
+      scrim.addEventListener("click", function () { setOpen(false); });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && document.body.classList.contains("cr-side-open")) setOpen(false);
+      });
+    })();
   </script>
 </body>
 </html>

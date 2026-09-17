@@ -3,7 +3,10 @@ __pycache__/
 db.sqlite3
 /staticfiles/
 /media/
+# Every real env file stays out of the repo; only the example is shared.
 .env
+.env*
+!.env.example
 venv/
 .venv/
 *.egg-info/
