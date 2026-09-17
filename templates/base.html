@@ -12,6 +12,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+  {# Shown inside the header's quick-look panel: drop the page's own header and footer before it paints. #}
+  <script>if (window.self !== window.top) document.documentElement.classList.add("is-embedded");</script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'css/ui.css' %}">
   {% block extra_css %}{% endblock %}
@@ -24,6 +26,7 @@
     {% block content %}{% endblock %}
   </main>
   {% include "includes/footer.html" %}
+  {% if user.is_authenticated %}<script src="{% static 'js/quick_tools.js' %}" defer></script>{% endif %}
   {% block extra_js %}{% endblock %}
 </body>
 </html>

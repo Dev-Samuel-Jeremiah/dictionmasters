@@ -1012,3 +1012,73 @@ a.ui-tab:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-2
   .ui-auth__points { margin-top: 6px; }
   .ui-auth__panel { padding: 28px 22px; }
 }
+
+/* =========================================================
+   Quick look — the Phonemic Chart and Quick Words in a panel over the
+   page you're on (static/js/quick_tools.js).
+   ========================================================= */
+
+.tool-btn--words { justify-content: center; gap: 1px; min-width: 34px; color: var(--ink); }
+.tool-btn__words { font-family: var(--font-serif); font-size: 13px; font-weight: 700; line-height: 1; color: var(--maroon); }
+.tool-btn__glass { color: var(--gold-deep); }
+.tool-btn.is-open,
+.tool-btn[aria-current="page"] {
+  box-shadow: 0 0 0 2px var(--gold), 0 6px 14px rgba(184, 134, 59, 0.3);
+}
+
+.tool-sheet {
+  position: fixed;
+  top: var(--tool-top, 0px); left: 0; right: 0; bottom: 0;
+  z-index: 19;                 /* under the sticky header, over everything else */
+  display: flex; flex-direction: column;
+  background: var(--parchment);
+  box-shadow: 0 -10px 30px -18px rgba(20, 33, 61, 0.45);
+}
+.tool-sheet[hidden] { display: none; }
+.tool-sheet.is-in { animation: tool-sheet-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1); }
+@keyframes tool-sheet-in { from { opacity: 0; transform: translateY(-10px); } }
+
+.tool-sheet__bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 28px;
+  border-bottom: 1px solid var(--rule);
+  background: rgba(255, 253, 248, 0.95);
+}
+.tool-sheet__title { margin: 0; font-family: var(--font-serif); font-size: 1.1rem; font-weight: 600; color: var(--ink); }
+.tool-sheet__note { margin: 0; font-size: 0.84rem; color: var(--ink-40); }
+.tool-sheet__close {
+  margin-left: auto;
+  padding: 8px 16px;
+  border: 1.5px solid rgba(20, 33, 61, 0.2);
+  border-radius: 30px;
+  font: inherit; font-size: 0.88rem; font-weight: 700;
+  color: var(--ink);
+  background: #fff;
+  cursor: pointer;
+}
+.tool-sheet__close:hover { border-color: var(--gold); }
+.tool-sheet__close:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+.tool-sheet__stage { position: relative; flex: 1; min-height: 0; }
+.tool-sheet__loading { position: absolute; inset: 40% 0 auto; margin: 0; text-align: center; color: var(--ink-40); }
+.tool-sheet__frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--parchment); opacity: 0; transition: opacity 0.2s ease; }
+.tool-sheet__frame.is-loaded { opacity: 1; }
+.tool-sheet__frame[hidden] { display: none; }
+
+/* The page underneath stays exactly where it was. */
+html.tool-sheet-open { overflow: hidden; }
+
+/* A tool shown inside the panel: no second header or footer. */
+.is-embedded .site-header,
+.is-embedded .site-footer { display: none; }
+.is-embedded .messages { top: 12px; }
+
+@media (max-width: 560px) {
+  .tool-sheet__bar { padding: 8px 18px; }
+  .tool-sheet__note { display: none; }
+  .header-actions { gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-sheet.is-in { animation: none; }
+  .tool-sheet__frame { transition: none; }
+}

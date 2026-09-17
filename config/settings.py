@@ -70,6 +70,10 @@ if PRODUCTION and not TESTING:
     if not ALLOWED_HOSTS:
         raise ImproperlyConfigured("Set DJANGO_ALLOWED_HOSTS to your domain(s) before running in production.")
 
+# Our own pages only: the header's Phonemic Chart and Quick Words open in
+# a panel over the page you're on. Other sites still can't frame ours.
+X_FRAME_OPTIONS = "SAMEORIGIN"
+
 if not DEBUG:
     # Behind nginx or a load balancer, this is how Django knows the
     # visitor arrived over HTTPS.
@@ -84,7 +88,6 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = env_flag("DJANGO_HSTS_PRELOAD", True)
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = "same-origin"
-    X_FRAME_OPTIONS = "DENY"
     SESSION_COOKIE_HTTPONLY = True
 
 

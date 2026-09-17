@@ -30,13 +30,18 @@
     <div class="header-actions">
       {% if user.is_authenticated %}
         {% url 'book:phonemic_chart' as chart_url %}
+        {% url 'quick_words:hub' as words_url %}
         {% if user.role == 'school_admin' %}{% url 'schools:dashboard' as dashboard_url %}{% else %}{% url 'accounts:dashboard' as dashboard_url %}{% endif %}
-        {# On the chart already, the chart button takes you back to the dashboard. #}
-        {% if request.path == chart_url %}
-        <a href="{{ dashboard_url }}" class="phonemic-icon-btn" aria-current="page" title="Back to my dashboard" aria-label="Close Phonemic Chart, back to my dashboard">
-        {% else %}
-        <a href="{{ chart_url }}" class="phonemic-icon-btn" title="Phonemic Chart" aria-label="Phonemic Chart">
-        {% endif %}
+        {% comment %}
+          The two quick-look tools. With JavaScript they open in a panel over
+          the page you're on (static/js/quick_tools.js), so nothing you were
+          doing is lost; press the same button again to go back to it.
+          Without it they are ordinary links, and on the tool's own page the
+          button leads back to the dashboard.
+        {% endcomment %}
+        <a href="{% if request.path == chart_url %}{{ dashboard_url }}{% else %}{{ chart_url }}{% endif %}"
+           class="phonemic-icon-btn tool-btn" data-tool="chart" data-tool-url="{{ chart_url }}" data-tool-title="Phonemic Chart"
+           title="Phonemic Chart" aria-label="Phonemic Chart"{% if request.path == chart_url %} aria-current="page"{% endif %}>
           <span class="phonemic-icon-btn__row">
             <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--accent">iː</span>
             <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--muted">ə</span>
@@ -45,6 +50,12 @@
             <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--muted">θ</span>
             <span class="phonemic-icon-btn__sym phonemic-icon-btn__sym--accent">ɑː</span>
           </span>
+        </a>
+        <a href="{% if request.path|slice:':13' == '/quick-words/' %}{{ dashboard_url }}{% else %}{{ words_url }}{% endif %}"
+           class="phonemic-icon-btn tool-btn tool-btn--words" data-tool="words" data-tool-url="{{ words_url }}" data-tool-title="Quick Words"
+           title="Quick Words" aria-label="Quick Words"{% if request.path|slice:':13' == '/quick-words/' %} aria-current="page"{% endif %}>
+          <span class="tool-btn__words" aria-hidden="true">Aa</span>
+          <svg class="tool-btn__glass" viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m10 10 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </a>
         <a href="{{ dashboard_url }}" class="link-quiet"{% if request.path == '/accounts/dashboard/' or request.path == '/school/dashboard/' %} aria-current="page"{% endif %}>My dashboard</a>
         <form method="post" action="{% url 'accounts:logout' %}" class="logout-form">
