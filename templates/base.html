@@ -6,6 +6,8 @@
   <title>{% block title %}Diction Masters — a private English tutor for every child{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Diction Masters gives every Nigerian school child a private British English tutor: video lessons, audio drills, speaking practice, and a teacher who sees it all.{% endblock %}">
 
+  {% if branding.favicon %}<link rel="icon" href="{{ branding.favicon.url }}">{% endif %}
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">

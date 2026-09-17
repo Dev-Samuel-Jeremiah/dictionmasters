@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin sign in — Diction Masters</title>
   <meta name="robots" content="noindex, nofollow">
+  {% if branding.favicon %}<link rel="icon" href="{{ branding.favicon.url }}">{% endif %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,7 +14,7 @@
 </head>
 <body class="cr-login">
   <main class="cr-login__card">
-    <span class="cr-brand__mark cr-login__mark" aria-hidden="true">iː</span>
+    {% if branding.logo %}<img src="{{ branding.logo.url }}" alt="" class="cr-login__logo">{% else %}<span class="cr-brand__mark cr-login__mark" aria-hidden="true">iː</span>{% endif %}
     <p class="cr-login__eyebrow">Diction Masters</p>
     <h1 class="cr-login__title">Control room</h1>
     <p class="cr-login__note">For the team who run the platform. Learners and teachers sign in on the main site.</p>

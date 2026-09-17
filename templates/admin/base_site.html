@@ -4,6 +4,7 @@
 {% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
 
 {% block extrastyle %}{{ block.super }}
+{% if branding.favicon %}<link rel="icon" href="{{ branding.favicon.url }}">{% endif %}
 <link rel="stylesheet" href="{% static 'css/admin_media.css' %}">
 <link rel="stylesheet" href="{% static 'css/admin_console.css' %}">
 {% endblock %}
@@ -11,8 +12,8 @@
 {% block branding %}
 <div id="site-name">
   <a href="{% url 'admin:index' %}" class="dm-brand">
-    <span class="dm-brand__mark" aria-hidden="true">iː</span>
-    <span class="dm-brand__text">Diction Masters <small>Admin</small></span>
+    {% if branding.logo %}<img src="{{ branding.logo.url }}" alt="" class="dm-brand__logo">{% else %}<span class="dm-brand__mark" aria-hidden="true">iː</span>{% endif %}
+    <span class="dm-brand__text">{% if not branding.logo or branding.show_name_with_logo %}Diction Masters {% endif %}<small>Admin</small></span>
   </a>
 </div>
 {% if user.is_active and user.is_staff %}

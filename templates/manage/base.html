@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Control room — Diction Masters{% endblock %}</title>
   <meta name="robots" content="noindex, nofollow">
+  {% if branding.favicon %}<link rel="icon" href="{{ branding.favicon.url }}">{% endif %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -17,8 +18,8 @@
   <header class="cr-top">
     <button type="button" class="cr-burger" aria-label="Menu" aria-expanded="false" aria-controls="cr-side">&#9776;</button>
     <a href="{% url 'manage:home' %}" class="cr-brand">
-      <span class="cr-brand__mark" aria-hidden="true">iː</span>
-      <span class="cr-brand__text">Diction Masters<small>Control room</small></span>
+      {% if branding.logo %}<img src="{{ branding.logo.url }}" alt="" class="cr-brand__logo">{% else %}<span class="cr-brand__mark" aria-hidden="true">iː</span>{% endif %}
+      <span class="cr-brand__text">{% if not branding.logo or branding.show_name_with_logo %}Diction Masters{% endif %}<small>Control room</small></span>
     </a>
 
     <form class="cr-search" role="search" action="{% url 'manage:search' %}" method="get">
@@ -37,6 +38,7 @@
     <nav class="cr-side" id="cr-side" aria-label="Sections">
       <button type="button" class="cr-side__close" aria-label="Close menu">&times;</button>
       <a href="{% url 'manage:home' %}" class="cr-side__home {% if not current_key %}is-on{% endif %}">&#127968; Control room home</a>
+      <a href="{% url 'manage:branding' %}" class="cr-side__home {% if current_key == 'branding' %}is-on{% endif %}">&#127912; Logo &amp; favicon</a>
       {% for section in nav %}
       <details class="cr-group" {% if section.open %}open{% endif %}>
         <summary><span aria-hidden="true">{{ section.icon }}</span> {{ section.name }}</summary>

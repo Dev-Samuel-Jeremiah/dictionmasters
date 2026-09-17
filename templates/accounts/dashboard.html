@@ -27,8 +27,8 @@
           <p class="dash-hero__note">Your class dashboard is on its way. Until then, every learning tool is open to you.</p>
         {% endif %}
         <div class="dash-hero__actions">
-          <a href="{{ echospell.url }}" class="dash-btn dash-btn--gold">
-            {% if echospell.group %}Continue {{ echospell.group.level.name }} · Group {{ echospell.group.number }}{% else %}Open EchoSpell{% endif %}
+          <a href="{% if echospell.resume %}{{ echospell.resume.url }}{% else %}{{ echospell.url }}{% endif %}" class="dash-btn dash-btn--gold">
+            {% if echospell.resume %}Continue {{ echospell.resume.group.level.name }} · Group {{ echospell.resume.group.number }} · {{ echospell.resume.category.name }}{% elif echospell.group %}Continue {{ echospell.group.level.name }} · Group {{ echospell.group.number }}{% else %}Open EchoSpell{% endif %}
             <span aria-hidden="true">&rarr;</span>
           </a>
           <a href="{% url 'clash:hub' %}" class="dash-btn dash-btn--glass">&#9876;&#65039; Play Diction Clash</a>
@@ -73,30 +73,30 @@
 
     {# ================= Headline numbers ================= #}
     <section class="dash-stats" aria-label="Your numbers">
-      <article class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-green)">
+      <a href="{% url 'echospell:hub' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-green)">
         <span class="dash-stat__icon" aria-hidden="true">&#127919;</span>
         <p class="dash-stat__label">EchoSpell groups</p>
         <p class="dash-stat__value"><span class="dash-count" style="--to: {{ echospell.completed }}"></span><small> / {{ echospell.total }}</small></p>
         <p class="dash-stat__foot">{% if activity_average is not None %}{{ activities_done }} activit{{ activities_done|pluralize:"y,ies" }} · {{ activity_average }}% average{% else %}No activities yet{% endif %}</p>
-      </article>
-      <article class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-blue)">
+      </a>
+      <a href="{% url 'learning_modules:hub' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-blue)">
         <span class="dash-stat__icon" aria-hidden="true">&#128197;</span>
         <p class="dash-stat__label">Module days</p>
         <p class="dash-stat__value"><span class="dash-count" style="--to: {{ modules.completed }}"></span><small> / {{ modules.total }}</small></p>
         <p class="dash-stat__foot">{{ modules.percent }}% of your course path</p>
-      </article>
-      <article class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-maroon)">
+      </a>
+      <a href="{% url 'assessments:my_results' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-maroon)">
         <span class="dash-stat__icon" aria-hidden="true">&#128221;</span>
         <p class="dash-stat__label">Assessment average</p>
         <p class="dash-stat__value">{% if assessment_average is not None %}<span class="dash-count" style="--to: {{ assessment_average }}"></span><small>%</small>{% else %}—{% endif %}</p>
         <p class="dash-stat__foot">{{ assessments_taken }} marked assessment{{ assessments_taken|pluralize }}</p>
-      </article>
-      <article class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-gold)">
+      </a>
+      <a href="{% url 'clash:hub' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-gold)">
         <span class="dash-stat__icon" aria-hidden="true">&#9889;</span>
         <p class="dash-stat__label">Clash best score</p>
         <p class="dash-stat__value">{% if clash_best is not None %}<span class="dash-count" style="--to: {{ clash_best }}"></span>{% else %}—{% endif %}</p>
         <p class="dash-stat__foot">{{ clash_games }} game{{ clash_games|pluralize }} played</p>
-      </article>
+      </a>
     </section>
 
     {# ================= Continue + week ================= #}
@@ -106,13 +106,13 @@
           <h2 class="dash-panel__title">Pick up where you left off</h2>
         </header>
 
-        <a href="{{ echospell.url }}" class="dash-next dash-tilt" data-tilt>
+        <a href="{% if echospell.resume %}{{ echospell.resume.url }}{% else %}{{ echospell.url }}{% endif %}" class="dash-next dash-tilt" data-tilt>
           <span class="dash-ring" style="--p: {{ echospell.percent }}; --ring: var(--dash-green)">
             <span class="dash-ring__num">{{ echospell.percent }}%</span>
           </span>
           <span class="dash-next__text">
             <span class="dash-next__kicker">EchoSpell</span>
-            <span class="dash-next__title">{% if echospell.group %}{{ echospell.group.level.name }} · Group {{ echospell.group.number }}{% elif echospell.total %}Every group complete{% else %}Levels coming soon{% endif %}</span>
+            <span class="dash-next__title">{% if echospell.resume %}{{ echospell.resume.group.level.name }} · Group {{ echospell.resume.group.number }} · {{ echospell.resume.category.name }}{% elif echospell.group %}{{ echospell.group.level.name }} · Group {{ echospell.group.number }}{% elif echospell.total %}Every group complete{% else %}Levels coming soon{% endif %}</span>
             <span class="dash-next__meta">{{ echospell.completed }} of {{ echospell.total }} groups complete</span>
           </span>
           <span class="dash-next__go" aria-hidden="true">&rarr;</span>

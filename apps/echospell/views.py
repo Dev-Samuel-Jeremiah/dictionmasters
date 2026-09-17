@@ -16,7 +16,7 @@ from apps.accounts.access import limit_to_levels, require_level
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -27,6 +27,7 @@ from .models import (
     ActivityAttempt,
     ActivityResponse,
     CardLesson,
+    CardPosition,
     GroupProgress,
     Level,
 )
@@ -180,6 +181,15 @@ def card_detail(request, level_slug, group_slug, category_slug):
 
     context = {"level": level, "group": group, "category": category}
 
+    # Remember this card page for "Pick up where you left off". The exact
+    # card on it is filled in by save_card_position as they work down it.
+    position, created = CardPosition.objects.get_or_create(
+        user=request.user, defaults={"group": group, "category": category}
+    )
+    if not created and (position.group_id, position.category_id) != (group.id, category.id):
+        position.group, position.category, position.lesson = group, category, None
+        position.save()
+
     if category.kind == "passage":
         context["passage"] = getattr(group, "passage", None)
     elif category.kind == "dialogue":
@@ -215,6 +225,26 @@ def card_detail(request, level_slug, group_slug, category_slug):
         context["entries"] = entries
 
     return render(request, "echospell/card_detail.html", context)
+
+
+@login_required
+@require_POST
+def save_card_position(request):
+    """The card a learner is on, sent from the card page as they scroll
+    or tap. Quietly ignores anything they couldn't open themselves."""
+    lesson_id = request.POST.get("lesson", "")
+    lesson = (
+        CardLesson.objects.filter(pk=lesson_id, is_published=True, group__level__is_published=True)
+        .select_related("group__level")
+        .first()
+    ) if lesson_id.isdigit() else None
+    if lesson is None or not lesson.group.level.categories.filter(pk=lesson.category_id).exists():
+        return HttpResponse(status=204)
+    require_level(request.user, lesson.group.level.name)
+    CardPosition.objects.update_or_create(
+        user=request.user, defaults={"group": lesson.group, "category": lesson.category, "lesson": lesson}
+    )
+    return HttpResponse(status=204)
 
 
 @login_required

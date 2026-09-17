@@ -7,6 +7,7 @@ app_name = "echospell"
 urlpatterns = [
     path("", views.hub, name="hub"),
     path("vocabulary/check-sentences/", views.check_vocabulary_sentences, name="check_vocabulary_sentences"),
+    path("card-position/", views.save_card_position, name="save_card_position"),
     path("<slug:level_slug>/", views.level_detail, name="level_detail"),
     path("<slug:level_slug>/<slug:group_slug>/", views.group_detail, name="group_detail"),
     path(

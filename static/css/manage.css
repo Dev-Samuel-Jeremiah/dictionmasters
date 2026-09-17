@@ -42,6 +42,8 @@
   color: #14213D; background: linear-gradient(135deg, #f0c878, #c98f3a);
   box-shadow: 0 6px 14px rgba(0, 0, 0, .3);
 }
+.cr-brand__logo { display: block; height: 36px; width: auto; max-width: 180px; object-fit: contain; }
+.cr-login__logo { display: block; height: 56px; width: auto; max-width: 240px; margin: 0 auto 12px; object-fit: contain; }
 .cr-brand__text { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 600; line-height: 1.1; }
 .cr-brand__text small { display: block; font-family: var(--font-sans); font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #f3d38d; }
 
@@ -281,6 +283,16 @@ select[multiple].cr-input { background-image: none; padding-right: 14px; min-hei
 .cr-login__note { margin: 8px 0 22px; font-size: .9rem; color: var(--cr-dim); }
 .cr-login__foot { margin: 18px 0 0; text-align: center; font-size: .88rem; }
 .cr-login__foot a { color: var(--maroon); }
+
+/* ---------- logo & favicon ---------- */
+
+.cr-brandpreview { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.cr-brandpreview__label { margin: 0 0 8px; font-size: .82rem; font-weight: 600; color: var(--cr-dim); }
+.cr-brandpreview__stage { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 12px 16px; border: 1px solid var(--cr-line); border-radius: 12px; background: #fff; font-family: var(--font-serif); }
+.cr-brandpreview__stage img { height: 40px; width: auto; max-width: 220px; object-fit: contain; }
+.cr-brandpreview__stage--tab { min-height: 0; width: fit-content; max-width: 100%; padding: 8px 14px; border-radius: 10px 10px 0 0; background: #eef0f4; font-family: var(--font-sans); font-size: .85rem; }
+.cr-brandpreview__stage--tab img { height: 16px; width: 16px; }
+.cr-brandpreview__blank { width: 16px; height: 16px; border-radius: 50%; background: rgba(20, 33, 61, .2); }
 
 /* ---------- smaller screens ---------- */
 

@@ -683,3 +683,8 @@
 @media (prefers-reduced-motion: reduce) {
   .es *, .es *::before, .es *::after, .es-hero::after { animation: none !important; transition: none !important; }
 }
+
+/* Coming back from the dashboard: land below the sticky header, and show
+   which card they were on. */
+[data-card-lesson] { scroll-margin-top: 110px; }
+[data-card-lesson].is-resumed { outline: 3px solid var(--gold, #c98f3a); outline-offset: 4px; }

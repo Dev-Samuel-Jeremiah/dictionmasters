@@ -463,3 +463,18 @@ class GroupProgress(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.group}"
+
+
+class CardPosition(models.Model):
+    """Where a learner last was in EchoSpell's cards — the card page and
+    the exact card on it — so the dashboard can send them straight back.
+    One row per learner, overwritten as they move."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="echospell_position")
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="+")
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="+")
+    lesson = models.ForeignKey(CardLesson, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user} — {self.group} · {self.category}"

@@ -142,6 +142,7 @@
 }
 .site-footer__brand { display: flex; flex-direction: column; gap: 6px; }
 .site-footer__brand .brand__name { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; }
+.site-footer__logo { height: 36px; width: auto; max-width: 200px; object-fit: contain; }
 .site-footer__mark {
   display: grid; place-items: center;
   width: 36px; height: 36px;

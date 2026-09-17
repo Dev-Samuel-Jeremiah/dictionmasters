@@ -82,7 +82,7 @@
       <p class="echospell-instructions">Listen to the audio, then check each word in the order you hear it — the first one you check becomes 1, and so on.</p>
       <div class="entry-list">
         {% for entry in entries %}
-        <div class="content-card word-card">
+        <div id="card-{{ entry.id }}" data-card-lesson="{{ entry.id }}" class="content-card word-card">
           {% if entry.title %}<p class="word-card__note-title">{{ entry.title }}</p>{% endif %}
           {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
           <ol class="number-options">
@@ -111,7 +111,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div class="content-card word-card">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
           <div class="circle-options">
@@ -146,7 +146,7 @@
       {% csrf_token %}
       <div class="entry-list">
         {% for card in cards %}
-        <div class="content-card word-card">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
           {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%; margin: 6px 0 4px;"></audio>{% endif %}
@@ -180,7 +180,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div class="content-card word-card word-card--center">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card word-card--center">
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.image %}<img src="{{ card.entry.image.url }}" alt="{{ card.entry.word }}" class="word-card__image">{% endif %}
           <ol class="word-card__list">
@@ -204,7 +204,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div class="content-card word-card">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa word-card__ipa--big">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
           {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
@@ -232,7 +232,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div class="content-card word-card">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           <ol class="word-card__list word-card__list--puzzle">
             {% for w in card.display_list %}<li>{{ w|upper }}</li>{% endfor %}
@@ -257,7 +257,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div class="content-card word-card">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
           {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
@@ -284,6 +284,68 @@
 
 {% block extra_js %}
   <script src="{% static 'js/read_along.js' %}" defer></script>
+<script>
+  // Remember the card the learner is on, so the dashboard's "Pick up where
+  // you left off" opens this page at this card.
+  (function () {
+    var cards = Array.prototype.slice.call(document.querySelectorAll("[data-card-lesson]"));
+    if (!cards.length) return;
+    var url = "{% url 'echospell:save_card_position' %}";
+    var token = "{{ csrf_token }}";
+    var saved = null, timer = null;
+
+    function save(card) {
+      var id = card && card.getAttribute("data-card-lesson");
+      if (!id || id === saved) return;
+      saved = id;
+      var body = new FormData();
+      body.append("lesson", id);
+      body.append("csrfmiddlewaretoken", token);
+      // keepalive lets the save finish even if they leave the page.
+      fetch(url, { method: "POST", body: body, credentials: "same-origin", keepalive: true });
+    }
+
+    // The card at the top of the screen, just under the header — where a
+    // card lands when they come back to it.
+    function cardInView() {
+      var line = 160, found = null;
+      cards.forEach(function (card) {
+        if (card.getBoundingClientRect().top <= line) found = card;
+      });
+      return found || cards[0];
+    }
+
+    // Back from the dashboard: bring their card into view and mark it.
+    var resumed = location.hash.indexOf("#card-") === 0 && document.getElementById(location.hash.slice(1));
+    if (resumed) {
+      saved = resumed.getAttribute("data-card-lesson");
+      resumed.classList.add("is-resumed");
+      resumed.scrollIntoView({ block: "start" });
+      // Audio and images can push it down while loading; put it back,
+      // unless they've already started scrolling themselves.
+      var moved = false;
+      ["wheel", "touchstart", "keydown"].forEach(function (type) {
+        window.addEventListener(type, function () { moved = true; }, { once: true, passive: true });
+      });
+      window.addEventListener("load", function () { if (!moved) resumed.scrollIntoView({ block: "start" }); });
+    }
+
+    window.addEventListener("scroll", function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { save(cardInView()); }, 700);
+    }, { passive: true });
+
+    // Working on a card counts straight away.
+    ["click", "input", "play"].forEach(function (type) {
+      document.addEventListener(type, function (e) {
+        var card = e.target.closest && e.target.closest("[data-card-lesson]");
+        if (!card) return;
+        clearTimeout(timer);
+        save(card);
+      }, true);
+    });
+  })();
+</script>
 {% if category.slug == "listen-and-circle" or category.slug == "listen-and-number" or category.slug == "vocabulary" %}
 <script>
 {% if category.slug == "listen-and-circle" %}

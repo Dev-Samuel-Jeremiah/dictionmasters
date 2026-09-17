@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from apps.assessments.models import Attempt as AssessmentAttempt
 from apps.clash.models import Match
-from apps.echospell.models import ActivityAttempt, Group, GroupProgress
+from apps.echospell.models import ActivityAttempt, CardPosition, Group, GroupProgress
 from apps.learning_modules.models import Day, DayProgress
 from apps.quick_words.models import QuickWord
 
@@ -120,6 +120,26 @@ def _week(events, today):
     ]
 
 
+def _echospell_resume(user):
+    """The EchoSpell card page — and the exact card on it — the learner
+    was last on, if they can still open it."""
+    position = CardPosition.objects.filter(user=user).select_related("group__level", "category", "lesson").first()
+    if position is None:
+        return None
+    group, category, lesson = position.group, position.category, position.lesson
+    still_open = (
+        group.level.is_published
+        and limit_to_levels(Group.objects.filter(pk=group.pk), user, field="level__name", allow_blank=False).exists()
+        and group.level.categories.filter(pk=category.pk).exists()
+    )
+    if not still_open:
+        return None
+    url = reverse("echospell:card_detail", args=[group.level.slug, group.slug, category.slug])
+    if lesson and lesson.is_published and lesson.group_id == group.pk and lesson.category_id == category.pk:
+        url += f"#card-{lesson.pk}"
+    return {"group": group, "category": category, "url": url}
+
+
 def _next_echospell(user):
     done = set(GroupProgress.objects.filter(user=user).values_list("group_id", flat=True))
     groups = limit_to_levels(
@@ -135,6 +155,7 @@ def _next_echospell(user):
     return {
         "group": upcoming,
         "url": reverse("echospell:group_detail", args=[upcoming.level.slug, upcoming.slug]) if upcoming else reverse("echospell:hub"),
+        "resume": _echospell_resume(user),
         "completed": completed,
         "total": total,
         "percent": round(completed * 100 / total) if total else 0,

@@ -1,0 +1,52 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Logo &amp; favicon — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#127912; Site settings</p>
+    <h1 class="cr-pagehead__title">Logo &amp; favicon</h1>
+  </div>
+</header>
+
+<section class="cr-card cr-brandpreview" aria-label="How it looks now">
+  <div class="cr-brandpreview__item">
+    <p class="cr-brandpreview__label">Logo in the site header</p>
+    <div class="cr-brandpreview__stage">
+      {% if branding.logo %}<img src="{{ branding.logo.url }}" alt="Current logo">{% else %}<span class="cr-brand__mark" aria-hidden="true">iː</span>{% endif %}
+      {% if not branding.logo or branding.show_name_with_logo %}<strong>Diction Masters</strong>{% endif %}
+    </div>
+    {% if not branding.logo %}<p class="cr-help">No logo uploaded — the built-in mark is used.</p>{% endif %}
+  </div>
+  <div class="cr-brandpreview__item">
+    <p class="cr-brandpreview__label">Favicon in the browser tab</p>
+    <div class="cr-brandpreview__stage cr-brandpreview__stage--tab">
+      {% if branding.favicon %}<img src="{{ branding.favicon.url }}" alt="Current favicon" width="16" height="16">{% else %}<span class="cr-brandpreview__blank" aria-hidden="true"></span>{% endif %}
+      <span>Diction Masters</span>
+    </div>
+    {% if not branding.favicon %}<p class="cr-help">No favicon uploaded — browsers show their default icon.</p>{% endif %}
+  </div>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="cr-card cr-form">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <ul class="cr-errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% for field in form %}
+  <div class="cr-field {% if field.errors %}has-error{% endif %}">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<p class="cr-help">{{ field.help_text|safe }}</p>{% endif %}
+    {% if field.errors %}<ul class="cr-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endfor %}
+
+  <div class="cr-formactions">
+    <button type="submit" class="cr-btn cr-btn--gold">Save changes</button>
+    <a href="{% url 'manage:home' %}" class="cr-link">Cancel</a>
+  </div>
+</form>
+{% endblock %}

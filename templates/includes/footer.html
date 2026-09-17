@@ -1,7 +1,7 @@
 <footer class="site-footer">
   <div class="wrap site-footer__inner">
     <div class="site-footer__brand">
-      <span class="brand__name brand__name--light"><span class="site-footer__mark" aria-hidden="true">iː</span>Diction Masters</span>
+      <span class="brand__name brand__name--light">{% if branding.logo %}<img src="{{ branding.logo.url }}" alt="{% if not branding.show_name_with_logo %}Diction Masters{% endif %}" class="site-footer__logo">{% else %}<span class="site-footer__mark" aria-hidden="true">iː</span>{% endif %}{% if not branding.logo or branding.show_name_with_logo %}Diction Masters{% endif %}</span>
       <p>A private English tutor for every Nigerian school child.</p>
     </div>
     <nav class="site-footer__links" aria-label="Footer">

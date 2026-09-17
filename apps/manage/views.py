@@ -29,6 +29,7 @@ from django.views.decorators.http import require_POST
 from apps.book import phoneme_audio, video_poster
 from apps.console import jobs
 from apps.console.dashboard import console_context
+from apps.landing.models import SiteBranding
 
 from .forms import ControlLoginForm, build_form
 from .registry import QUICK_ADDS, SECTIONS, get_screen, screens
@@ -378,6 +379,27 @@ def record_delete(request, key, pk):
     return render(request, "manage/delete.html", _base_context(
         request, key, screen=screen, obj=obj, title=_title(screen), singular=_singular(screen), also=also
     ))
+
+
+# ---------------------------------------------------------------------------
+# Logo & favicon: one page, not a list, because the site has only one of each
+# ---------------------------------------------------------------------------
+
+@staff_only
+def branding(request):
+    obj = SiteBranding.load()
+    FormClass = build_form(SiteBranding, ["logo", "show_name_with_logo", "favicon"])
+    form = FormClass(request.POST or None, request.FILES or None, instance=obj)
+
+    if request.method == "POST" and form.is_valid():
+        saved = form.save()
+        _record(request, saved, CHANGE, "Changed in the control room")
+        messages.success(request, "Logo & favicon saved. They show across the site straight away.")
+        return redirect("manage:branding")
+
+    # The preview comes from the saved row (the `branding` context
+    # processor), not the form, so a rejected upload never shows as current.
+    return render(request, "manage/branding.html", _base_context(request, "branding", form=form))
 
 
 # ---------------------------------------------------------------------------
