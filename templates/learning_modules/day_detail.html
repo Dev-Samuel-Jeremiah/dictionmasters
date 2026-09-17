@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load read_along %}
 
 {% block title %}{{ day.get_day_name_display }} — {{ week.display_name }} — {{ module.name }}{% endblock %}
 
@@ -55,7 +56,7 @@
     {% if lesson_items %}
     <div class="lm-lessons">
       {% for item in lesson_items %}
-      <article class="content-card lesson-item"{% if item.body and item.audio_source or item.body and item.video_source %} data-read-along{% endif %}>
+      <article class="content-card lesson-item"{% if item.body and item.audio_source or item.body and item.video_source %} data-read-along{% read_along_sync item %}{% endif %}>
         <div class="lesson-item__head">
           <div>
             <p class="lesson-item__title">{{ item.title }}</p>

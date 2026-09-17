@@ -34,7 +34,7 @@
       .call(line.querySelectorAll(".chip"), function (chip) {
         return chip.textContent.trim();
       })
-      .join(" ");
+      .join(line.dataset.join || " ");
   }
 
   function dropInto(zone, chip) {

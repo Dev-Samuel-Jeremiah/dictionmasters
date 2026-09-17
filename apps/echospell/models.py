@@ -386,6 +386,9 @@ class ActivityItem(AudioContent):
         for this item so a reload doesn't reshuffle the puzzle."""
         from .marking import shuffled_tokens
 
+        if self.activity.kind == "listen-and-number":
+            # Whole entries, one per line, so "ice cream" stays one piece.
+            return shuffled_tokens(_parse_lines(self.first_answer), seed=self.pk or 0)
         return shuffled_tokens(self.first_answer, seed=self.pk or 0)
 
 

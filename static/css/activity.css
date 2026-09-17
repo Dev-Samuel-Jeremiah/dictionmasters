@@ -221,6 +221,20 @@
 }
 .order-bank { margin-top: 10px; }
 
+/* Listen and number: each word in the line wears its place, 1, 2, 3… */
+.order-line--numbered { list-style: none; margin-bottom: 0; counter-reset: heard; }
+.order-line--numbered:empty::before { content: "Tap the words in the order you hear them"; }
+.order-line--numbered .chip { counter-increment: heard; display: inline-flex; align-items: center; gap: 8px; }
+.order-line--numbered .chip::before {
+  content: counter(heard);
+  display: grid; place-items: center;
+  min-width: 22px; height: 22px;
+  border-radius: 50%;
+  font-size: 0.78rem; font-weight: 700;
+  color: #fff;
+  background: var(--maroon);
+}
+
 /* ---------- recording ---------- */
 
 .recorder { margin-top: 14px; }

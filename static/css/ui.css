@@ -773,7 +773,7 @@ a.ui-tab:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-2
    ========================================================= */
 
 @media (max-width: 860px) {
-  .site-header__inner { min-height: 64px; padding: 10px 0; row-gap: 10px; gap: 12px; }
+  .site-header__inner { min-height: 64px; padding-top: 10px; padding-bottom: 10px; row-gap: 10px; gap: 12px; }
   .ui-hero__inner { flex-direction: column; align-items: flex-start; }
   .ui-hero__side { align-self: flex-start; }
   .ui-ring { --size: 104px; }
@@ -790,7 +790,8 @@ a.ui-tab:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-2
   /* A phone screen is narrow: give the page a little more room and let
      the header settle onto two neat rows rather than one squashed one. */
   .wrap { padding: 0 18px; }
-  .site-header__inner { padding: 9px 0; row-gap: 8px; }
+  /* Top and bottom only: this row is also a .wrap, which gives the side gutters. */
+  .site-header__inner { padding-top: 9px; padding-bottom: 9px; row-gap: 8px; }
   .brand { margin-right: auto; }
   .brand__name { font-size: 1.02rem; }
   .header-actions { width: auto; justify-content: flex-end; gap: 8px; margin-left: auto; }
@@ -861,7 +862,10 @@ a.ui-tab:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-2
 .ra-hint { font-size: 0.8rem; color: var(--ink-40); }
 .ra.is-off .ra-hint { display: none; }
 
-/* The words themselves */
+/* The words themselves. The text box holds the gliding highlight, so it
+   is its own positioning and stacking context: the highlight sits behind
+   the words but above the card. */
+.ra-text { position: relative; isolation: isolate; }
 .ra-text .ra-w {
   border-radius: 6px;
   padding: 1px 2px;
@@ -875,14 +879,44 @@ a.ui-tab:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-2
    the rest of the page settles back. */
 .ra.is-playing:not(.is-off) .ra-text { color: var(--ink-40); }
 .ra:not(.is-off) .ra-text .ra-w--near { color: var(--ink); }
-.ra:not(.is-off) .ra-text .ra-w--on {
-  color: #14213D;
+.ra:not(.is-off) .ra-text .ra-w--on { color: #14213D; }
+
+/* One highlight for the whole text, moved from word to word. */
+.ra-marker {
+  position: absolute; left: 0; top: 0; z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, width;
+  transition: opacity 0.2s ease;
+}
+.ra-marker::before {
+  content: "";
+  position: absolute; inset: -2px -4px;
+  border-radius: 7px;
   background: linear-gradient(135deg, #f7e0a8, #e0b15c);
   box-shadow: 0 2px 0 rgba(140, 101, 38, 0.35), 0 6px 14px rgba(184, 134, 59, 0.3);
 }
+/* A thin bar that fills as the word is said. */
+.ra-marker__fill {
+  position: absolute; left: -4px; right: -4px; bottom: -2px;
+  height: 3px;
+  border-radius: 0 0 7px 7px;
+  background: rgba(122, 36, 56, 0.55);
+  transform: scaleX(var(--ra-p, 0));
+  transform-origin: left center;
+}
+.ra-marker.is-on { opacity: 1; }
+.ra.is-off .ra-marker { opacity: 0; }
+.ra-marker--glide {
+  transition: opacity 0.2s ease,
+              transform var(--ra-glide, 0.16s) cubic-bezier(0.25, 0.8, 0.35, 1),
+              width var(--ra-glide, 0.16s) cubic-bezier(0.25, 0.8, 0.35, 1),
+              height var(--ra-glide, 0.16s) ease;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .ra-text .ra-w, .ra-toggle, .ra-toggle__dot { transition: none; }
+  .ra-text .ra-w, .ra-toggle, .ra-toggle__dot, .ra-marker, .ra-marker--glide { transition: none; }
+  .ra-marker__fill { display: none; }
   .is-playing .ra-toggle__dot { animation: none; }
 }
 

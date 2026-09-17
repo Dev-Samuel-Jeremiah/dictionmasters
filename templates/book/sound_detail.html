@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load read_along %}
 
 {% block title %}{{ sound.symbol }} {{ sound.name }} — The 44 Academy{% endblock %}
 
@@ -135,7 +136,7 @@
       {% if entries %}
       <div class="entry-list">
         {% for entry in entries %}
-        <div class="content-card"{% if entry.audio_source %} data-read-along{% endif %}>
+        <div class="content-card"{% if entry.audio_source %} data-read-along{% read_along_sync entry %}{% endif %}>
           <h2 class="passage-card__title">{{ entry.title }}</h2>
           {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}" data-ra-media></audio>{% endif %}
           <p class="passage-card__body" data-ra-text>{{ entry.body }}</p>
@@ -150,7 +151,7 @@
       {% if entries %}
       <div class="entry-list">
         {% for entry in entries %}
-        <div class="content-card"{% if entry.audio_source %} data-read-along{% endif %}>
+        <div class="content-card"{% if entry.audio_source %} data-read-along{% read_along_sync entry %}{% endif %}>
           <h2 class="conversation-card__title">{{ entry.title }}</h2>
           {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}" data-ra-media></audio>{% endif %}
           <p class="conversation-card__script" data-ra-text>{{ entry.script }}</p>

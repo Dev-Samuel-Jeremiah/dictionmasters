@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load read_along %}
 
 {% block title %}{{ category.name }} — {{ group.display_name }} — {{ level.name }}{% endblock %}
 
@@ -42,7 +43,7 @@
 
     {% if category.kind == "passage" %}
       {% if passage and passage.body or passage.audio_source %}
-      <div class="content-card"{% if passage.audio_source and passage.body %} data-read-along{% endif %}>
+      <div class="content-card"{% if passage.audio_source and passage.body %} data-read-along{% read_along_sync passage %}{% endif %}>
         {% if passage.title %}<p class="passage-card__title">{{ passage.title }}</p>{% endif %}
         {% if passage.audio_source %}<audio controls src="{{ passage.audio_source }}" style="width: 100%; margin: 8px 0 14px;" data-ra-media></audio>{% endif %}
         {% if passage.body %}<div class="lesson-body" data-ra-text>{{ passage.body|linebreaksbr }}</div>{% endif %}
@@ -53,7 +54,7 @@
 
     {% elif category.kind == "dialogue" %}
       {% if dialogue and lines %}
-        <div{% if dialogue.audio_source %} data-read-along{% endif %}>
+        <div{% if dialogue.audio_source %} data-read-along{% read_along_sync dialogue %}{% endif %}>
         {% if dialogue.audio_source %}
         <div class="content-card" style="margin-bottom: 16px;">
           <p class="callout__title" style="color: var(--gold-deep);">LISTEN TO THE DIALOGUE</p>
@@ -261,8 +262,8 @@
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
           {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
-          <details class="reveal">
-            <summary>Reveal the spelling</summary>
+          <details class="reveal" open>
+            <summary><span class="reveal__closed">Reveal the spelling</span><span class="reveal__opened">Hide the spelling</span></summary>
             <ol class="word-card__list" style="margin-top: 10px;">
               {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
             </ol>

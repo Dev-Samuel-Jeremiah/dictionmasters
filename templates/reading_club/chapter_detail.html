@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load read_along %}
 
 {% block title %}{{ chapter.display_name }} — {{ term.name }} — {{ book.title }}{% endblock %}
 
@@ -57,7 +58,7 @@
     </div>
     {% endif %}
 
-    <section class="ui-panel"{% if chapter.audio_source and chapter.body %} data-read-along{% endif %}>
+    <section class="ui-panel"{% if chapter.audio_source and chapter.body %} data-read-along{% read_along_sync chapter %}{% endif %}>
       {% if chapter.audio_source %}
       <p class="ui-panel__label">Model reading</p>
       <p class="ui-panel__lede">Press play and the words highlight themselves as they are read.</p>

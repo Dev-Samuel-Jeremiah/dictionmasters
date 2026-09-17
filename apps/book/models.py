@@ -339,3 +339,38 @@ class PhonemeAudio(AudioContent):
 
     def __str__(self):
         return f"/{self.symbol}/ {self.key}"
+
+
+# ---------------------------------------------------------------------------
+# Read along: when each word is really spoken in a recording
+# ---------------------------------------------------------------------------
+
+class ReadAlongTiming(models.Model):
+    """The measured start and end of every word in one recording, so the
+    read-along highlight follows the voice rather than an estimate.
+
+    Made in the background by apps.book.read_along and kept for any
+    passage, dialogue, lesson or chapter that has text beside its audio
+    or video. The fingerprint is the recording plus the text: change
+    either and the timing is measured again."""
+
+    STATUS_WORKING = "working"
+    STATUS_READY = "ready"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = [(STATUS_WORKING, "Working"), (STATUS_READY, "Ready"), (STATUS_FAILED, "Failed")]
+
+    content_type = models.ForeignKey("contenttypes.ContentType", on_delete=models.CASCADE)
+    object_id = models.PositiveBigIntegerField()
+    fingerprint = models.CharField(max_length=64)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_WORKING)
+    engine = models.CharField(max_length=20, blank=True)
+    words = models.JSONField(default=list, blank=True, help_text="[[word, start, end], …] in seconds.")
+    error = models.CharField(max_length=255, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("content_type", "object_id")
+        verbose_name = "read-along timing"
+
+    def __str__(self):
+        return f"{self.content_type.model} {self.object_id} — {self.get_status_display()}"

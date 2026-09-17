@@ -92,8 +92,12 @@ def grade_sentence_use(word, sentence):
 
 def shuffled_tokens(sentence, seed):
     """The words of a sentence in a jumbled but stable order, so a
-    learner who reloads the page does not get a different puzzle."""
-    words = [w for w in str(sentence or "").split() if w]
+    learner who reloads the page does not get a different puzzle.
+    Also takes a ready-made list, for pieces that aren't single words."""
+    if isinstance(sentence, (list, tuple)):
+        words = [w for w in sentence if w]
+    else:
+        words = [w for w in str(sentence or "").split() if w]
     if len(words) < 2:
         return words
     rng = random.Random(seed)
@@ -121,6 +125,14 @@ def mark_response(kind, item, given):
     if kind.slug == "transcription":
         return answers_match(given, item.answer, transcription=True)
 
+    if kind.slug == "listen-and-number":
+        # The answer is a list, one per line and maybe numbered ("1. sheep");
+        # the learner's order arrives as "sheep, ship, shop".
+        from .models import _parse_lines
+
+        given_n = normalise(given)
+        return any(given_n == normalise(" ".join(_parse_lines(option))) for option in alternatives(item.answer))
+
     if kind.mode in (MODE_TYPED, MODE_CHOICE, MODE_SORT, MODE_ORDER):
         return answers_match(given, item.answer)
 
@@ -137,4 +149,8 @@ def feedback_for(kind, item, given, is_correct):
         return grade_sentence_use(item.prompt, given)[1]
     if not str(given or "").strip():
         return "You left this one blank."
+    if kind is not None and kind.slug == "listen-and-number":
+        from .models import _parse_lines
+
+        return "The order was " + ", ".join(_parse_lines(item.first_answer))
     return f"The answer is {item.first_answer}"

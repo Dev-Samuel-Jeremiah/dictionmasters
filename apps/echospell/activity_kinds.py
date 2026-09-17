@@ -310,6 +310,19 @@ KINDS = [
         answer_help="The finished sentence — its words are shuffled for the learner",
         tags=("grammar", "drag"),
     ),
+    ActivityKind(
+        slug="listen-and-number",
+        label="Listen and number",
+        mode=MODE_ORDER,
+        icon="🧮",
+        summary="Hear some words, put them in the order they were said.",
+        instructions="Listen to the audio, then tap the words in the order you hear them — the first word you tap is number 1.",
+        prompt_help="Leave blank — the audio is the question",
+        answer_help="The words in the order they are said, one per line, e.g.\nsheep\nship\nshop",
+        needs_audio=True,
+        uses_prompt=False,
+        tags=("listening", "drag"),
+    ),
     # ---- recording ------------------------------------------------------
     ActivityKind(
         slug="read-aloud",

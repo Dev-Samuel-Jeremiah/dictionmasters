@@ -103,7 +103,11 @@
 
           {% elif activity.mode == "order" %}
           <input type="hidden" name="item-{{ row.item.id }}" value="" data-answer-for="{{ row.item.id }}">
+          {% if activity.kind == "listen-and-number" %}
+          <ol class="order-line order-line--numbered dropzone" data-role="line" data-join=", " aria-label="The order you heard"></ol>
+          {% else %}
           <div class="order-line dropzone" data-role="line" aria-label="Your sentence"></div>
+          {% endif %}
           <div class="order-bank dropzone" data-role="bank">
             {% for token in row.tokens %}
             <button type="button" class="chip" draggable="true">{{ token }}</button>

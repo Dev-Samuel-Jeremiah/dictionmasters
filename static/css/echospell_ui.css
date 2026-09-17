@@ -494,6 +494,9 @@
 .es .reveal summary::-webkit-details-marker { display: none; }
 .es .reveal summary::before { content: "👁"; font-size: 0.9rem; }
 .es .reveal[open] summary { background: rgba(122, 36, 56, 0.14); }
+/* A summary with both labels says what pressing it will do. */
+.reveal__opened, .reveal[open] .reveal__closed { display: none; }
+.reveal[open] .reveal__opened { display: inline; }
 
 .es .circle-option {
   padding: 10px 22px;

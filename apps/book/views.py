@@ -1,9 +1,9 @@
 from django.contrib.auth.decorators import login_required
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 
 from .models import Sound, SoundCategory
-from . import phoneme_audio
+from . import phoneme_audio, read_along
 
 # The 44 sounds of British English, fixed — this is a linguistic
 # reference chart, not admin content, so it always shows all 44
@@ -181,3 +181,16 @@ def sound_detail(request, slug, tab="lens"):
         context["entries"] = sound.external_links.all()
 
     return render(request, "book/sound_detail.html", context)
+
+
+@login_required
+def read_along_timing(request, token):
+    """Measured word timings for one read-along recording, for the page's
+    highlight. Starts measuring in the background if there are none yet."""
+    obj = read_along.object_for_token(token)
+    if obj is None:
+        raise Http404("Nothing to read along with.")
+    status, words = read_along.timing_for(obj)
+    response = JsonResponse({"status": status, "words": words})
+    response["Cache-Control"] = "private, no-cache"
+    return response
