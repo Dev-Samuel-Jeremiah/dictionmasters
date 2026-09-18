@@ -1177,3 +1177,17 @@ html.qs-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .qs { backdrop-filter: none; }
 }
+
+/* "Reading starts at 0:33 — skip to it", for a recording that opens with a greeting. */
+.ra-skip {
+  padding: 6px 14px;
+  border: 1.5px solid rgba(184, 134, 59, 0.5);
+  border-radius: 30px;
+  font: inherit; font-size: 0.82rem; font-weight: 700;
+  color: var(--gold-deep);
+  background: rgba(224, 177, 92, 0.14);
+  cursor: pointer;
+}
+.ra-skip:hover { background: rgba(224, 177, 92, 0.26); }
+.ra-skip:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.ra-skip[hidden] { display: none; }

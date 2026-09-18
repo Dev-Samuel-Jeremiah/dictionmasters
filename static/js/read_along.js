@@ -55,6 +55,9 @@
   var AFTER_PAUSE = 0.25;     // ...but only for a word that follows a real gap
   var ANTICIPATE = 0.035;     // light a word a frame or two early, so it never reads as late
   var LEAST_LIT = 0.06;       // no word is lit for less time than the eye can catch
+  var LINGER = 1.2;           // how long a word stays lit after it has been said
+  var MOST_LIT = 1.5;         // the longest anyone spends saying a single word
+  var INTRO_MIN = 3;          // a greeting longer than this is worth pointing out
   var SYNC_RETRY = 15000;     // while the server is still measuring
   var SYNC_TRIES = 8;
   var TAP_PREROLL = 0.06;     // start a tapped word a hair early so its first sound isn't clipped
@@ -231,7 +234,7 @@
     run.forEach(function (word) {
       var share = (word.units / units) * length;
       word.start = clock ? clock.at(at) : at;
-      word.end = clock ? clock.at(at + share) : at + share;
+      word.end = Math.min(clock ? clock.at(at + share) : at + share, word.start + MOST_LIT);
       at += share;
     });
   }
@@ -407,6 +410,10 @@
         word.start = Math.max(word.start, floor);
         word.end = Math.max(word.end, word.start + LEAST_LIT);
         if (next && next.start > word.start) word.end = Math.min(word.end, next.start);
+        // Nobody says one word for a second and a half. A word next to a
+        // gap in the recording keeps its own length, and the gap stays a
+        // gap, rather than the highlight sitting on it while nothing is said.
+        word.end = Math.min(word.end, word.start + MOST_LIT);
         floor = word.start;
       });
       return "measured";
@@ -484,6 +491,30 @@
     var hint = el("span", "ra-hint", "Tap any word to jump there");
     bar.appendChild(toggle);
     bar.appendChild(hint);
+
+    // Some recordings open with a greeting before the reading itself. Say so,
+    // rather than leaving the words sitting there doing nothing.
+    var skip = el("button", "ra-skip");
+    skip.type = "button";
+    skip.hidden = true;
+    bar.appendChild(skip);
+
+    function offerSkip() {
+      var first = track[0];
+      if (!mode || !first || first.start < INTRO_MIN) { skip.hidden = true; return; }
+      var minutes = Math.floor(first.start / 60);
+      var seconds = Math.round(first.start % 60);
+      skip.textContent = "Reading starts at " + minutes + ":" + (seconds < 10 ? "0" : "") + seconds + " — skip to it";
+      skip.hidden = false;
+    }
+
+    skip.addEventListener("click", function () {
+      var first = track[0];
+      if (!first) return;
+      userScrolled = 0;
+      media.currentTime = Math.max(0, first.start - TAP_PREROLL);
+      if (media.paused) media.play().catch(function () { /* the browser may want a tap on the player */ });
+    });
 
     // ---- the highlight that glides between words
     var marker = el("span", "ra-marker");
@@ -568,6 +599,20 @@
       window.scrollBy({ top: Math.round(rect.top - view * 0.38), behavior: calm.matches ? "auto" : "smooth" });
     }
 
+    function litAt(time) {
+      /* Which word is being said now. A word stays lit through the breath
+         after it, but never through a real pause: in a silence — the
+         greeting before a reading, a gap in the middle — nothing is lit,
+         and the page waits with the reader instead of hanging on a word. */
+      var index = indexAt(time);
+      if (index < 0) return -1;
+      var word = track[index];
+      if (time <= word.end) return index;
+      var next = track[index + 1];
+      var until = next ? Math.min(next.start, word.end + LINGER) : word.end + LINGER;
+      return time <= until ? index : -1;
+    }
+
     function indexAt(time) {
       var low = 0;
       var high = track.length - 1;
@@ -619,7 +664,7 @@
     function render(glide) {
       if (!on || !mode) return;
       var time = now() - heardOffset() + ANTICIPATE;
-      paint(indexAt(time), glide);
+      paint(litAt(time), glide);
       fill(time);
     }
 
@@ -651,6 +696,7 @@
       mode = newMode;
       box.classList.add("is-timed");
       box.classList.toggle("is-measured", newMode === "measured" || newMode === "speech");
+      offerSkip();
       var keep = current;
       current = -1;
       if (track[keep]) track[keep].node.classList.remove("ra-w--on");
