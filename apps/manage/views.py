@@ -30,6 +30,8 @@ from apps.book import phoneme_audio, video_poster
 from apps.console import jobs
 from apps.console.dashboard import console_context
 from apps.billing import paystack
+from apps.book import read_along as book_read_along
+from apps.book.models import ReadAlongTiming
 from apps.billing.models import BillingSettings
 from apps.landing.models import SiteBranding
 
@@ -421,6 +423,65 @@ def billing_settings(request):
         paystack_ready=paystack.is_configured(), paystack_live=paystack.is_live(),
         webhook_url=request.build_absolute_uri(reverse("billing:webhook")),
     ))
+
+
+@staff_only
+def read_along(request):
+    """Every recording that has a read-along, and how well it matches the
+    words beside it."""
+    rows = []
+    for timing in ReadAlongTiming.objects.select_related("content_type").order_by("quality", "-updated_at"):
+        obj = timing.content_object
+        rows.append({
+            "timing": timing,
+            "object": obj,
+            "matches": timing.matches_text,
+            "can_fix": obj is not None and book_read_along.can_replace_text(obj),
+        })
+    return render(request, "manage/read_along.html", _base_context(
+        request, "read-along", rows=rows,
+        poor=sum(1 for row in rows if not row["matches"]),
+        configured=book_read_along.is_configured(),
+    ))
+
+
+@staff_only
+def read_along_detail(request, pk):
+    """One recording: what the page says, what the voice says, and the two
+    ways to bring them together."""
+    timing = get_object_or_404(ReadAlongTiming.objects.select_related("content_type"), pk=pk)
+    obj = timing.content_object
+    if obj is None:
+        timing.delete()
+        messages.info(request, "That lesson has been deleted, so its timing has been tidied away.")
+        return redirect("manage:read_along")
+
+    said = book_read_along.spoken_text(timing.words)
+    can_fix = book_read_along.can_replace_text(obj)
+
+    if request.method == "POST":
+        if request.POST.get("action") == "use_spoken" and can_fix and said:
+            book_read_along.replace_text_with_spoken(obj, timing)
+            _record(request, obj, CHANGE, "Text replaced with the recording's own words")
+            messages.success(
+                request,
+                f"The page now says exactly what the recording says, so the highlight follows it word for word. "
+                f"Open {_singular_for(obj).lower()} and press play to see it.",
+            )
+        else:
+            book_read_along.measure_in_background(obj)
+            messages.success(request, "Measuring this recording again. Refresh in a moment.")
+        return redirect("manage:read_along_detail", pk=timing.pk)
+
+    return render(request, "manage/read_along.html", _base_context(
+        request, "read-along", timing=timing, object=obj, said=said, can_fix=can_fix,
+        page_text=book_read_along.text_for(obj), detail=True,
+        configured=book_read_along.is_configured(),
+    ))
+
+
+def _singular_for(obj):
+    return str(obj._meta.verbose_name).capitalize()
 
 
 # ---------------------------------------------------------------------------

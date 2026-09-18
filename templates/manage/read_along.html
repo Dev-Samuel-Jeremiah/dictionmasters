@@ -1,0 +1,94 @@
+{% extends "manage/base.html" %}
+
+{% block title %}{% if detail %}{{ object }} — read-along{% else %}Read-along timings{% endif %} — Control room{% endblock %}
+
+{% block content %}
+{% if detail %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#127911; <a href="{% url 'manage:read_along' %}">Read-along timings</a></p>
+    <h1 class="cr-pagehead__title">{{ object }}</h1>
+  </div>
+  <span class="cr-pill cr-pill--{% if timing.matches_text %}good{% else %}bad{% endif %}">{{ timing.quality_label }}</span>
+</header>
+
+{% if not timing.matches_text %}
+<section class="cr-card cr-note">
+  <h2 class="cr-card__title">This recording is reading different words</h2>
+  <p>The highlight can only follow words that are actually spoken, so this page paces along the voice instead of following it word for word. Put the recording's own words on the page below and it will match exactly.</p>
+</section>
+{% endif %}
+
+<div class="cr-split">
+  <section class="cr-card">
+    <h2 class="cr-card__title">What the page says now</h2>
+    <p class="cr-help">{{ page_text|wordcount }} words</p>
+    <div class="cr-prose">{{ page_text|linebreaks }}</div>
+  </section>
+
+  <section class="cr-card">
+    <h2 class="cr-card__title">What the recording says</h2>
+    <p class="cr-help">{{ said|wordcount }} words, heard by {{ timing.engine|default:"the silence alone" }}</p>
+    {% if said %}
+    <div class="cr-prose">{{ said|linebreaks }}</div>
+    {% else %}
+    <p class="cr-empty">Nothing could be made out in this recording.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="cr-card">
+  <h2 class="cr-card__title">Bring them together</h2>
+  <form method="post" class="cr-form">
+    {% csrf_token %}
+    {% if can_fix and said %}
+    <p>Replacing the text puts the spoken words on the page exactly as they are said, so the highlight follows word for word. The old text is replaced, so copy it first if you need it.</p>
+    <div class="cr-formactions">
+      <button type="submit" name="action" value="use_spoken" class="cr-btn cr-btn--gold">Use the spoken words as the text</button>
+      <button type="submit" name="action" value="remeasure" class="cr-btn">Measure again</button>
+    </div>
+    {% else %}
+    <p>{% if not said %}There are no spoken words to put on the page.{% else %}A dialogue keeps its words in separate lines with speakers, so it's edited on its own screen. Either correct the lines to match the recording, or upload the recording that reads them.{% endif %}</p>
+    <div class="cr-formactions">
+      <button type="submit" name="action" value="remeasure" class="cr-btn">Measure again</button>
+    </div>
+    {% endif %}
+  </form>
+</section>
+
+{% else %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#127911; Read-along</p>
+    <h1 class="cr-pagehead__title">Read-along timings</h1>
+  </div>
+</header>
+
+<section class="cr-card">
+  <p>Every recording that has words beside it is measured, so the highlight can follow the voice. A recording that reads different words can't be followed exactly — open it and put its own words on the page.</p>
+  {% if poor %}<p class="cr-help">{{ poor }} recording{{ poor|pluralize }} {{ poor|pluralize:"is,are" }} reading something other than the text beside {{ poor|pluralize:"it,them" }}.</p>{% endif %}
+  {% if not configured %}<p class="cr-help">&#9888;&#65039; Measuring is switched off: ffmpeg, and an ElevenLabs or Groq key, are needed.</p>{% endif %}
+</section>
+
+<section class="cr-card">
+  <div class="cr-table-wrap">
+    <table class="cr-table">
+      <thead><tr><th>Lesson</th><th>Match</th><th>Heard by</th><th>Measured</th><th></th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><a href="{% url 'manage:read_along_detail' row.timing.pk %}">{{ row.object|default:"(deleted)" }}</a></td>
+          <td><span class="cr-pill cr-pill--{% if row.matches %}good{% else %}bad{% endif %}">{{ row.timing.quality_label }}</span></td>
+          <td>{{ row.timing.engine|default:"—" }}</td>
+          <td>{{ row.timing.updated_at|date:"j M Y, H:i" }}</td>
+          <td><a href="{% url 'manage:read_along_detail' row.timing.pk %}" class="cr-link">{% if row.matches %}Open{% else %}Fix{% endif %}</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="cr-empty">Nothing measured yet. Open a lesson that has a recording and its text, and it will be measured in the background.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

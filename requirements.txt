@@ -4,6 +4,7 @@
 Django>=5.2,<6.0
 python-dotenv>=1.0          # reads .env in development
 Pillow>=10.0                # image fields: video thumbnails, lesson images
+qrcode>=7.4                 # the QR code printed beside each EchoSpell card
 
 # Uploads live on Cloudflare R2
 boto3>=1.34

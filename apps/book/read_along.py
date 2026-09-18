@@ -6,13 +6,20 @@ evenly over its length drifts as soon as the reader slows down, pauses or
 speeds up. So each recording is measured once:
 
 1. ffmpeg pulls a small mono soundtrack out of the audio or video, from
-   wherever it lives (R2, a URL, or local storage).
-2. ElevenLabs forced alignment matches it against the very text shown on
-   the page and returns the start and end of every word. If ElevenLabs
-   isn't set up or can't do it, Groq's Whisper transcribes it with word
-   timestamps instead.
-3. The words are saved as a ReadAlongTiming, keyed by a fingerprint of
-   the recording and the text, so an edit to either is measured again.
+   wherever it lives (R2, a URL, or local storage), and notes where the
+   speaking actually happens — the runs between the silences.
+2. ElevenLabs forced alignment matches the sound against the very text
+   shown on the page and returns the start and end of every word. If
+   ElevenLabs isn't set up or can't do it, Groq's Whisper transcribes it
+   with word timestamps instead, told what the text should say so it
+   hears the same words.
+3. Both are saved as a ReadAlongTiming, with a quality score: how much of
+   the page's text the recording really says. A recording that turns out
+   to be reading something else scores low, and the page then follows the
+   speech runs rather than words it can't trust.
+
+The row is keyed by a fingerprint of the recording and the text, so an
+edit to either is measured again.
 
 It all happens in the background the first time someone opens the page,
 so nobody waits for it; until it's ready the page uses its estimate. The
@@ -31,6 +38,7 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import unicodedata
 import urllib.error
 import urllib.request
 import uuid
@@ -47,17 +55,19 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 # Bump to measure everything again after a change to how it's done.
-VERSION = "1"
+VERSION = "2"
 
 ELEVENLABS_URL = "https://api.elevenlabs.io/v1/forced-alignment"
 GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 GROQ_MODEL = "whisper-large-v3-turbo"
 GROQ_MAX_BYTES = 25 * 1024 * 1024
+GROQ_PROMPT_LIMIT = 880   # Groq's own limit is 896 characters
 
 EXTRACT_TIMEOUT = 15 * 60
 API_TIMEOUT = 10 * 60
 WORKING_FOR = timedelta(minutes=45)   # a run that's taken longer than this has died
 RETRY_FAILED_AFTER = timedelta(hours=6)
+PARAGRAPH_GAP = 1.4       # a silence this long reads as a new paragraph
 
 SIGNING_SALT = "dm-read-along"
 
@@ -90,6 +100,75 @@ TEXT_FOR = {
     "learning_modules.lessonitem": lambda obj: obj.body,
     "reading_club.chapter": lambda obj: obj.body,
 }
+
+
+# The field the page's words live in, where they can be replaced with what
+# the recording actually says. A dialogue keeps its words in separate lines
+# with speakers, so it isn't rewritten from here.
+TEXT_FIELD = {
+    "book.passage": "body",
+    "book.conversation": "script",
+    "echospell.passage": "body",
+    "echospell.dialogue": None,
+    "learning_modules.lessonitem": "body",
+    "reading_club.chapter": "body",
+}
+
+
+def spoken_text(words):
+    """What the recording says, as a paragraph: the words as transcribed,
+    with a blank line wherever the reader left a long silence."""
+    pieces = []
+    last_end = None
+    for text, start, end in words or []:
+        if last_end is not None and start - last_end >= PARAGRAPH_GAP:
+            pieces.append("\n\n")
+        elif pieces:
+            pieces.append(" ")
+        pieces.append(str(text).strip())
+        last_end = end
+    return _sentence_case("".join(pieces).strip())
+
+
+def _sentence_case(text):
+    """Transcripts come back with the odd lower-case sentence start; a page of
+    words should read properly."""
+    out = []
+    fresh = True
+    for character in text:
+        out.append(character.upper() if fresh and character.isalpha() else character)
+        if character in ".!?\n":
+            fresh = True
+        elif not character.isspace():
+            fresh = False
+    return "".join(out)
+
+
+def can_replace_text(obj):
+    return bool(TEXT_FIELD.get(_label(obj)))
+
+
+def replace_text_with_spoken(obj, timing):
+    """Put the recording's own words on the page, so the highlight follows it
+    word for word.
+
+    The timing already measured belongs to exactly these words, so it is
+    kept as it is rather than measured again: the page and the recording
+    now say the same thing, word for word, by construction. Returns the
+    new text, or "" if this kind of lesson can't be rewritten."""
+    field = TEXT_FIELD.get(_label(obj))
+    said = spoken_text(timing.words)
+    if not field or not said:
+        return ""
+    setattr(obj, field, said)
+    obj.save(update_fields=[field])
+
+    timing.fingerprint = _fingerprint(obj)
+    timing.quality = 1.0
+    timing.status = timing.STATUS_READY
+    timing.error = ""
+    timing.save(update_fields=["fingerprint", "quality", "status", "error", "updated_at"])
+    return said
 
 
 def _label(obj):
@@ -162,14 +241,15 @@ def object_for_token(token):
 
 
 def timing_for(obj, start=True):
-    """(status, words) for `obj`. status is "ready", "pending" or
-    "unavailable". When nothing current exists, measuring starts in the
-    background (unless `start` is False)."""
+    """(status, row) for `obj`. status is "ready", "pending" or
+    "unavailable"; row is the ReadAlongTiming when ready. When nothing
+    current exists, measuring starts in the background (unless
+    `start` is False)."""
     from .models import ReadAlongTiming
 
     fingerprint = _fingerprint(obj)
     if not fingerprint:
-        return "unavailable", []
+        return "unavailable", None
 
     content_type = ContentType.objects.get_for_model(obj)
     row = ReadAlongTiming.objects.filter(content_type=content_type, object_id=obj.pk).first()
@@ -177,18 +257,18 @@ def timing_for(obj, start=True):
 
     if row and row.fingerprint == fingerprint:
         if row.status == ReadAlongTiming.STATUS_READY:
-            return "ready", row.words
+            return "ready", row
         if row.status == ReadAlongTiming.STATUS_WORKING and now - row.updated_at < WORKING_FOR:
-            return "pending", []
+            return "pending", None
         if row.status == ReadAlongTiming.STATUS_FAILED and now - row.updated_at < RETRY_FAILED_AFTER:
-            return "unavailable", []
+            return "unavailable", None
 
     if not start or not is_configured():
-        return "unavailable", []
+        return "unavailable", None
 
     if _claim(obj, content_type, row, fingerprint):
         _queue(obj)
-    return "pending", []
+    return "pending", None
 
 
 def _claim(obj, content_type, row, fingerprint):
@@ -208,6 +288,12 @@ def _claim(obj, content_type, row, fingerprint):
         fingerprint=fingerprint, status=ReadAlongTiming.STATUS_WORKING, error="", updated_at=timezone.now()
     )
     return bool(claimed)
+
+
+def measure_in_background(obj):
+    """Measure this recording again, without holding up the page."""
+    _queue(obj)
+    return True
 
 
 def _queue(obj):
@@ -254,29 +340,48 @@ def measure(obj):
     text = text_for(obj)
     _identity, source = _media(obj)
     errors = []
-    words, engine = None, ""
+    words, engine, runs, length = None, "", [], None
     try:
         with tempfile.TemporaryDirectory(prefix="read-along-") as folder:
             audio = _extract_audio(source, folder)
+            length = _duration(audio)
+            runs = speech_runs(audio, length)
             if getattr(settings, "ELEVENLABS_API_KEY", ""):
                 try:
                     words, engine = _elevenlabs(audio, text), "elevenlabs"
                 except AlignmentUnavailable as error:
                     errors.append(str(error))
             if words is None and getattr(settings, "GROQ_API_KEY", ""):
-                try:
-                    words, engine = _groq(audio), "groq"
-                except AlignmentUnavailable as error:
-                    errors.append(str(error))
+                # Whisper is told roughly what it should hear, so it comes
+                # back with the page's own wording where it can. If that
+                # upsets it, ask again plainly rather than lose the words.
+                for hint in (text, ""):
+                    try:
+                        words, engine = _groq(audio, hint=hint), "groq"
+                        break
+                    except AlignmentUnavailable as error:
+                        errors.append(str(error))
     except AlignmentUnavailable as error:
         errors.append(str(error))
 
     row.fingerprint = fingerprint
+    row.speech = runs
+    row.duration = length
     if words:
         row.status, row.engine, row.words, row.error = ReadAlongTiming.STATUS_READY, engine, words, ""
+        row.quality = _spoken_share(text, words)
+        if row.quality < ReadAlongTiming.MATCH_FLOOR:
+            logger.warning(
+                "Read-along: %s %s says only %.0f%% of its text — the recording and the text look different.",
+                obj.__class__.__name__, obj.pk, row.quality * 100,
+            )
+    elif runs:
+        # Nothing transcribable, but we still know when the voice speaks.
+        row.status, row.engine, row.words, row.quality = ReadAlongTiming.STATUS_READY, "speech", [], 0.0
+        row.error = ("; ".join(errors))[-255:]
     else:
-        row.status, row.engine, row.words = ReadAlongTiming.STATUS_FAILED, "", []
-        row.error = ("; ".join(errors) or "No words came back.")[:255]
+        row.status, row.engine, row.words, row.quality = ReadAlongTiming.STATUS_FAILED, "", [], None
+        row.error = ("; ".join(errors) or "No words came back.")[-255:]
         logger.warning("No read-along timing for %s %s: %s", obj.__class__.__name__, obj.pk, row.error)
     row.save()
     return row
@@ -302,6 +407,81 @@ def _extract_audio(source, folder):
         detail = getattr(error, "stderr", b"") or b""
         raise AlignmentUnavailable(f"Couldn't read the recording: {detail.decode(errors='ignore')[:120]}") from error
     return out
+
+
+_SILENCE_START = re.compile(r"silence_start:\s*(-?[\d.]+)")
+_SILENCE_END = re.compile(r"silence_end:\s*(-?[\d.]+)")
+
+SILENCE_DB = -32          # quieter than this counts as a pause
+SILENCE_SECONDS = 0.32    # ...if it lasts at least this long
+RUN_MIN_SECONDS = 0.25    # ignore clicks and breaths between words
+
+
+def _duration(path):
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+            capture_output=True, timeout=120, check=True,
+        )
+        return round(float(out.stdout.decode().strip()), 3)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, ValueError):
+        return None
+
+
+def speech_runs(path, total=None):
+    """[[start, end], …] for the stretches where someone is speaking.
+
+    Even a recording nobody can transcribe gives this up, and it is what
+    keeps the highlight still during a pause and moving during speech."""
+    total = total or _duration(path)
+    if not total:
+        return []
+    command = [
+        "ffmpeg", "-nostdin", "-loglevel", "info", "-i", path,
+        "-af", f"silencedetect=noise={SILENCE_DB}dB:d={SILENCE_SECONDS}", "-f", "null", "-",
+    ]
+    try:
+        result = subprocess.run(command, capture_output=True, timeout=EXTRACT_TIMEOUT)
+    except (subprocess.TimeoutExpired, OSError):
+        return []
+    log = result.stderr.decode(errors="ignore")
+    starts = [float(value) for value in _SILENCE_START.findall(log)]
+    ends = [float(value) for value in _SILENCE_END.findall(log)]
+
+    # The gaps between the silences are the speech.
+    runs = []
+    at = 0.0
+    for index, start in enumerate(starts):
+        if start > at:
+            runs.append([round(at, 3), round(min(start, total), 3)])
+        at = ends[index] if index < len(ends) else total
+    if at < total:
+        runs.append([round(at, 3), round(total, 3)])
+    return [run for run in runs if run[1] - run[0] >= RUN_MIN_SECONDS]
+
+
+def _spoken_share(text, words):
+    """How much of the page's text the recording says, 0–1. It's the share
+    of the page's words that appear, in order, in what was heard."""
+    said = [_key(word[0]) for word in words]
+    said = [key for key in said if key]
+    page = [_key(word) for word in text.split()]
+    page = [key for key in page if key]
+    if not page or not said:
+        return 0.0
+    at = 0
+    found = 0
+    for key in page:
+        for index in range(at, min(at + 18, len(said))):
+            if said[index] == key:
+                found += 1
+                at = index + 1
+                break
+    return round(found / len(page), 3)
+
+
+def _key(word):
+    return re.sub(r"[^\w]", "", unicodedata.normalize("NFKD", str(word)).lower())
 
 
 def _multipart(fields, file_field, file_path):
@@ -365,7 +545,7 @@ def _elevenlabs(audio_path, text):
     return words
 
 
-def _groq(audio_path):
+def _groq(audio_path, hint=""):
     fields = [
         ("model", GROQ_MODEL),
         ("response_format", "verbose_json"),
@@ -373,6 +553,14 @@ def _groq(audio_path):
         ("language", "en"),
         ("temperature", "0"),
     ]
+    if hint:
+        # Whisper listens for these words in particular. Groq allows 896
+        # characters of context, so the opening of the text is sent, cut
+        # at a word so the last one isn't half a word.
+        opening = " ".join(hint.split())[:GROQ_PROMPT_LIMIT]
+        if len(opening) == GROQ_PROMPT_LIMIT and " " in opening:
+            opening = opening.rsplit(" ", 1)[0]
+        fields.append(("prompt", opening))
     body, content_type, size = _multipart(fields, "file", audio_path)
     if size > GROQ_MAX_BYTES:
         raise AlignmentUnavailable("The recording is too long for Groq.")

@@ -10,17 +10,23 @@
 
    How the timing works
    --------------------
-   Every recording is measured once on the server (apps/book/read_along.py):
-   the start and end of each spoken word, taken from the recording itself.
-   data-ra-sync is where those timings are fetched. They are lined up with
-   the words on the page by matching the words themselves, so a comma, a
-   heading or a word the reader skipped never knocks the rest out of step.
+   Every recording is measured once on the server (apps/book/read_along.py)
+   and fetched from data-ra-sync: the start and end of each spoken word,
+   the stretches where someone is actually speaking, and how much of the
+   page's text the recording really says.
 
-   Until a recording has been measured — the first visit, or without the
-   services set up — the words are spread over the recording's length in
-   proportion to how long each takes to say, with the pauses a reader
-   makes at punctuation. Measured timings replace that the moment they
-   arrive, even mid-play.
+   The words heard are lined up with the words on the page by matching
+   what is said, so punctuation, a heading or a skipped word never knock
+   the rest out of step. Words in between two matches share the gap, and
+   they share it in *speaking* time, so nothing moves while the reader
+   pauses for breath.
+
+   If the recording turns out not to be reading this text at all — a
+   different take, or the wrong file — the words can't be matched, so the
+   page is paced along the voice instead: phrase by phrase, each one
+   starting as the voice starts, nothing moving while it pauses. With neither (the first visit, or without
+   the services set up) the words are spread over the recording's length
+   in proportion to how long each takes to say.
 
    Smoothness
    ----------
@@ -43,6 +49,11 @@
   var BLOCK_PAUSE = 2.4;      // the breath at the end of a paragraph or line
   var USER_SCROLL_REST = 3500; // leave the reader alone this long after they scroll
   var MATCH_WINDOW = 14;      // how far ahead to look for a word the reader skipped
+  var MIN_MATCHED = 0.35;     // below this the recording isn't reading this text
+  var SNAP_ONSET = 0.22;      // pull a word's start onto the moment speech resumes, within this
+  var AFTER_PAUSE = 0.25;     // ...but only for a word that follows a real gap
+  var ANTICIPATE = 0.035;     // light a word a frame or two early, so it never reads as late
+  var LEAST_LIT = 0.06;       // no word is lit for less time than the eye can catch
   var SYNC_RETRY = 15000;     // while the server is still measuring
   var SYNC_TRIES = 8;
   var TAP_PREROLL = 0.06;     // start a tapped word a hair early so its first sound isn't clipped
@@ -138,9 +149,251 @@
 
   /* ---- timing ------------------------------------------------------ */
 
+  /* Where the reader is actually speaking, as a way of measuring time:
+     `spoken(t)` is how many seconds of speech have happened by `t`, and
+     `at(x)` is the other way round. Silence costs nothing, so words never
+     creep forward during a pause. */
+  function speechClock(runs, duration) {
+    var edges = [];
+    var total = 0;
+    (runs || []).forEach(function (run) {
+      var from = Math.max(0, Number(run[0]));
+      var to = Math.max(from, Number(run[1]));
+      edges.push({ from: from, to: to, before: total });
+      total += to - from;
+    });
+    if (!edges.length || total <= 0) return null;
+
+    return {
+      total: total,
+      spoken: function (time) {
+        var sum = 0;
+        for (var i = 0; i < edges.length; i++) {
+          if (time <= edges[i].from) break;
+          sum += Math.min(time, edges[i].to) - edges[i].from;
+          if (time < edges[i].to) break;
+        }
+        return sum;
+      },
+      at: function (seconds) {
+        for (var i = 0; i < edges.length; i++) {
+          var length = edges[i].to - edges[i].from;
+          if (seconds <= edges[i].before + length) return edges[i].from + (seconds - edges[i].before);
+        }
+        return edges[edges.length - 1].to;
+      },
+      lastEnd: edges[edges.length - 1].to,
+      firstStart: edges[0].from,
+      // The moment a run of speech begins, for a sentence to start on.
+      snap: function (time, within) {
+        var best = time;
+        var gap = within || 1.5;
+        edges.forEach(function (edge) {
+          var distance = Math.abs(edge.from - time);
+          if (distance < gap) { gap = distance; best = edge.from; }
+        });
+        return best;
+      },
+    };
+  }
+
+  /* Spread `run` of words between two moments, sharing the time out by how
+     long each word takes to say — through the speech clock when there is
+     one, so pauses stay quiet. */
+  function spread(run, from, to, clock) {
+    var units = run.reduce(function (sum, word) { return sum + word.units; }, 0) || run.length || 1;
+    var startAt = clock ? clock.spoken(from) : from;
+    var endAt = clock ? clock.spoken(to) : to;
+    var length = Math.max(endAt - startAt, 0);
+    var at = startAt;
+    run.forEach(function (word) {
+      var share = (word.units / units) * length;
+      word.start = clock ? clock.at(at) : at;
+      word.end = clock ? clock.at(at + share) : at + share;
+      at += share;
+    });
+  }
+
+  /* Phrase by phrase across the speech. A phrase ends wherever a reader
+     would draw breath — a comma, a full stop, the end of a line — so a
+     pause in the recording falls between phrases, never inside one. */
+  function spreadSentences(words, clock) {
+    var groups = [];
+    var open = null;
+    words.forEach(function (word) {
+      if (open === null) {
+        open = { words: [word], units: word.units };
+        groups.push(open);
+      } else {
+        open.words.push(word);
+        open.units += word.units;
+      }
+      if (word.pause > 0) open = null;         // a breath: start the next phrase here
+    });
+
+    var total = groups.reduce(function (sum, group) { return sum + group.units; }, 0) || 1;
+    var at = 0;
+    var edges = [clock.firstStart];
+    groups.forEach(function (group) {
+      at += (group.units / total) * clock.total;
+      edges.push(clock.at(at));
+    });
+    // Pull each sentence's start onto the start of a run of speech, keeping
+    // them in order.
+    for (var i = 1; i < edges.length - 1; i++) {
+      edges[i] = Math.max(edges[i - 1], clock.snap(edges[i]));
+    }
+    edges[edges.length - 1] = Math.max(edges[edges.length - 2], clock.lastEnd);
+    groups.forEach(function (group, index) {
+      spread(group.words, edges[index], edges[index + 1], clock);
+    });
+  }
+
+  /* ---- lining the page up with what was heard --------------------- */
+
+  function counts(list) {
+    var seen = {};
+    list.forEach(function (key) { seen[key] = (seen[key] || 0) + 1; });
+    return seen;
+  }
+
+  function longestRun(pairs) {
+    /* The longest set of pairs whose spoken positions keep going forward:
+       the backbone of the alignment (patience sorting). */
+    var tails = [];
+    var back = [];
+    pairs.forEach(function (pair, index) {
+      var low = 0, high = tails.length;
+      while (low < high) {
+        var mid = (low + high) >> 1;
+        if (pairs[tails[mid]].said < pair.said) { low = mid + 1; } else { high = mid; }
+      }
+      back[index] = low > 0 ? tails[low - 1] : -1;
+      tails[low] = index;
+      if (low === tails.length) tails.push(index);
+    });
+    var out = [];
+    var at = tails.length ? tails[tails.length - 1] : -1;
+    while (at >= 0) { out.unshift(pairs[at]); at = back[at]; }
+    return out;
+  }
+
+  function anchorsFor(page, said) {
+    /* Words that appear exactly once on the page and once in the recording
+       can only mean each other; they pin the two together. Then the words
+       between two pins are matched off in order. */
+    var pageSeen = counts(page.map(function (word) { return word.key; }));
+    var saidSeen = counts(said.map(function (word) { return word.key; }));
+    var unique = [];
+    page.forEach(function (word, index) {
+      if (pageSeen[word.key] === 1 && saidSeen[word.key] === 1) {
+        var where = -1;
+        for (var i = 0; i < said.length; i++) { if (said[i].key === word.key) { where = i; break; } }
+        if (where >= 0) unique.push({ page: index, said: where });
+      }
+    });
+
+    var pins = longestRun(unique);
+    var anchors = [];
+    var lastPage = -1, lastSaid = -1;
+    pins.concat([{ page: page.length, said: said.length }]).forEach(function (pin) {
+      // Fill in between this pin and the one before, in order.
+      var p = lastPage + 1, q = lastSaid + 1;
+      while (p < pin.page && q < pin.said) {
+        if (page[p].key === said[q].key) {
+          anchors.push({ page: p, said: q });
+          p += 1; q += 1;
+        } else {
+          var found = -1;
+          for (var i = q; i < Math.min(q + MATCH_WINDOW, pin.said); i++) {
+            if (said[i].key === page[p].key) { found = i; break; }
+          }
+          if (found >= 0) { anchors.push({ page: p, said: found }); p += 1; q = found + 1; } else { p += 1; }
+        }
+      }
+      if (pin.page < page.length) anchors.push({ page: pin.page, said: pin.said });
+      lastPage = pin.page; lastSaid = pin.said;
+    });
+    return anchors;
+  }
+
+  function applyTiming(words, data) {
+    /* Give every word on the page a start and an end. Returns the way it
+       was worked out: "measured", "speech" or "" when neither is possible. */
+    var duration = Number(data.duration) || 0;
+    var clock = speechClock(data.speech, duration);
+
+    var said = [];
+    (data.words || []).forEach(function (row) {
+      var key = keyOf(row[0]);
+      var start = Number(row[1]);
+      var end = Number(row[2]);
+      if (key && isFinite(start) && isFinite(end)) said.push({ key: key, start: start, end: Math.max(end, start) });
+    });
+
+    var page = [];
+    words.forEach(function (word, index) { if (word.key) page.push({ key: word.key, index: index }); });
+    if (!page.length) return "";
+
+    var anchors = said.length ? anchorsFor(page, said) : [];
+    if (anchors.length >= Math.max(2, page.length * MIN_MATCHED)) {
+      words.forEach(function (word) { word.start = word.end = null; });
+      anchors.forEach(function (anchor) {
+        var word = words[page[anchor.page].index];
+        word.start = said[anchor.said].start;
+        word.end = said[anchor.said].end;
+      });
+      // Everything between two anchors shares the gap between them.
+      var index = 0;
+      var lastEnd = said[said.length - 1].end;
+      while (index < words.length) {
+        if (words[index].start !== null && words[index].start !== undefined) { index += 1; continue; }
+        var from = index;
+        while (index < words.length && (words[index].start === null || words[index].start === undefined)) index += 1;
+        var before = from > 0 ? words[from - 1].end : (clock ? clock.firstStart : 0);
+        var after = index < words.length ? words[index].start : Math.max(lastEnd, duration || lastEnd);
+        spread(words.slice(from, index), before, Math.max(after, before), clock);
+      }
+      // A word spoken after a pause begins exactly when the voice comes
+      // back, which the silences know more precisely than the transcript.
+      if (data.speech && data.speech.length) {
+        var openings = data.speech.map(function (run) { return Number(run[0]); });
+        words.forEach(function (word, index) {
+          var before = index > 0 ? words[index - 1] : null;
+          if (before && word.start - before.end < AFTER_PAUSE) return;
+          for (var i = 0; i < openings.length; i++) {
+            if (Math.abs(openings[i] - word.start) <= SNAP_ONSET) { word.start = openings[i]; break; }
+          }
+        });
+      }
+
+      // Tidy the edges: always forward, never a word so short it flickers,
+      // and never one still lit after the voice has moved on.
+      var floor = 0;
+      words.forEach(function (word, index) {
+        var next = words[index + 1];
+        word.start = Math.max(word.start, floor);
+        word.end = Math.max(word.end, word.start + LEAST_LIT);
+        if (next && next.start > word.start) word.end = Math.min(word.end, next.start);
+        floor = word.start;
+      });
+      return "measured";
+    }
+
+    // The recording isn't reading this text — a different take, or the
+    // wrong file. The words heard still say when the voice speaks and how
+    // fast, which beats the silences, so the page is paced along them.
+    var heard = said.length ? speechClock(said.map(function (word) { return [word.start, word.end]; }), duration) : null;
+    if (heard || clock) {
+      spreadSentences(words, heard || clock);
+      return "speech";
+    }
+    return "";
+  }
+
   function estimate(words, duration) {
-    /* Spread the words across the real length of the recording. A little
-       is held back at each end for the silence a recording usually has. */
+    /* No measurement yet: spread the words across the recording's length,
+       with the pauses a reader takes at punctuation. */
     var total = words.reduce(function (sum, word) { return sum + word.units + word.pause; }, 0) || 1;
     var lead = Math.min(0.3, duration * 0.02);
     var tail = Math.min(0.5, duration * 0.03);
@@ -152,107 +405,6 @@
       word.end = at;
       at += (word.pause / total) * span;
     });
-  }
-
-  function applyMeasured(words, measured) {
-    /* Give each word on the page the time the recording says it. Words are
-       matched in order, looking a little way ahead when one doesn't line
-       up — the reader skipped it, or the page splits a word the
-       recording joins (and the other way round). Returns false if too
-       few match to trust, so the estimate stays. */
-    var spoken = [];
-    (measured || []).forEach(function (row) {
-      var key = keyOf(row[0]);
-      var start = Number(row[1]);
-      var end = Number(row[2]);
-      if (key && isFinite(start) && isFinite(end)) spoken.push({ key: key, start: start, end: Math.max(end, start) });
-    });
-    if (!spoken.length) return false;
-
-    var starts = new Array(words.length);
-    var ends = new Array(words.length);
-    var next = 0;
-    var matched = 0;
-    var said = 0;
-
-    for (var i = 0; i < words.length; i++) {
-      var key = words[i].key;
-      if (!key) continue;
-      said += 1;
-      var limit = Math.min(next + MATCH_WINDOW, spoken.length);
-      for (var s = next; s < limit; s++) {
-        // One spoken word, or several run together ("well" + "known").
-        var joined = "";
-        var m = s;
-        while (m < spoken.length && joined.length < key.length) {
-          joined += spoken[m].key;
-          m += 1;
-          if (key.indexOf(joined) !== 0) break;
-        }
-        if (joined === key) {
-          starts[i] = spoken[s].start;
-          ends[i] = spoken[m - 1].end;
-          next = m;
-          matched += 1;
-          break;
-        }
-        // The page splits what the recording says as one ("to" "day" / "today").
-        if (spoken[s].key.indexOf(key) === 0 && spoken[s].key !== key) {
-          var rest = spoken[s].key.slice(key.length);
-          var j = i + 1;
-          while (j < words.length && rest && rest.indexOf(words[j].key) === 0 && words[j].key) {
-            rest = rest.slice(words[j].key.length);
-            j += 1;
-          }
-          if (!rest) {
-            var share = (spoken[s].end - spoken[s].start) / (j - i);
-            for (var k = i; k < j; k++) {
-              starts[k] = spoken[s].start + share * (k - i);
-              ends[k] = starts[k] + share;
-            }
-            matched += j - i;
-            said += j - i - 1;
-            next = s + 1;
-            i = j - 1;
-            break;
-          }
-        }
-      }
-    }
-
-    if (matched < Math.max(2, said * 0.5)) return false;
-
-    // Words that didn't match share the gap between their neighbours,
-    // in proportion to how long each takes to say.
-    var lastEnd = spoken[spoken.length - 1].end;
-    var index = 0;
-    while (index < words.length) {
-      if (starts[index] !== undefined) { index += 1; continue; }
-      var from = index;
-      while (index < words.length && starts[index] === undefined) index += 1;
-      var run = words.slice(from, index);
-      var units = run.reduce(function (sum, w) { return sum + w.units; }, 0);
-      var before = from > 0 ? ends[from - 1] : null;
-      var after = index < words.length ? starts[index] : null;
-      var gapStart = before !== null ? before : Math.max(0, after - units * 0.07);
-      var gapEnd = after !== null ? after : Math.min(lastEnd + units * 0.07, gapStart + units * 0.07);
-      var length = Math.max(gapEnd - gapStart, 0);
-      var at = gapStart;
-      run.forEach(function (w, n) {
-        var part = units ? (w.units / units) * length : 0;
-        starts[from + n] = at;
-        ends[from + n] = at + part;
-        at += part;
-      });
-    }
-
-    var floor = 0;
-    words.forEach(function (w, n) {
-      w.start = Math.max(starts[n], floor);
-      w.end = Math.max(ends[n], w.start);
-      floor = w.start;
-    });
-    return true;
   }
 
   /* ---- one read-along block ---------------------------------------- */
@@ -280,7 +432,11 @@
     var clockWall = 0;
     var userScrolled = 0;
     var lastFollow = 0;
+    var latency = null;
+    var audio = null;
 
+    // A handle for measuring how closely the highlight tracks the voice.
+    box.readAlong = { words: words, track: track, mode: function () { return mode; } };
     box.classList.add("ra", "is-ready");
     textBox.classList.add("ra-text");
 
@@ -348,8 +504,9 @@
         track[current].node.classList.add("ra-w--on");
         markSentence(track[current].sentence, true);
         var before = track[current - 1];
+        var wasTop = markerTop;
         place(track[current].node, glide, before ? track[current].start - before.start : 0);
-        follow(track[current].node);
+        follow(track[current].node, wasTop === null || Math.abs(markerTop - wasTop) > 4);
       } else {
         marker.classList.remove("is-on");
         markerTop = null;
@@ -364,16 +521,19 @@
       marker.style.setProperty("--ra-p", progress.toFixed(3));
     }
 
-    function follow(node) {
+    function follow(node, newLine) {
+      /* Follow the line, not the word: the page moves once as the reading
+         reaches a new line, and only when that line is drifting out of
+         comfortable view. */
       if (!on || media.paused || Date.now() - userScrolled < USER_SCROLL_REST) return;
       var now = Date.now();
-      if (now - lastFollow < 500) return;
+      if (now - lastFollow < 400) return;
       var rect = node.getBoundingClientRect();
       var view = window.innerHeight;
-      if (rect.top < view * 0.15 || rect.bottom > view * 0.75) {
-        lastFollow = now;
-        window.scrollBy({ top: rect.top - view * 0.38, behavior: calm.matches ? "auto" : "smooth" });
-      }
+      var settled = rect.top > view * 0.16 && rect.bottom < view * 0.72;
+      if (settled || (!newLine && rect.top > view * 0.05 && rect.bottom < view * 0.85)) return;
+      lastFollow = now;
+      window.scrollBy({ top: Math.round(rect.top - view * 0.38), behavior: calm.matches ? "auto" : "smooth" });
     }
 
     function indexAt(time) {
@@ -392,6 +552,24 @@
       return found;
     }
 
+    function heardOffset() {
+      /* What comes out of the speakers is a moment behind the player's own
+         clock — a few milliseconds wired, a fifth of a second over
+         Bluetooth. The browser can say by how much, so the words can be
+         lit when the sound actually arrives rather than when it is sent. */
+      if (latency !== null) return latency;
+      latency = 0;
+      try {
+        var Ctor = window.AudioContext || window.webkitAudioContext;
+        if (Ctor) {
+          audio = audio || new Ctor();
+          var reported = audio.outputLatency || audio.baseLatency || 0;
+          latency = Math.min(Math.max(reported, 0), 0.4);
+        }
+      } catch (error) { /* no Web Audio: assume none */ }
+      return latency;
+    }
+
     function now() {
       /* The player's time, carried forward between its own updates so the
          highlight moves every frame. Never runs ahead while buffering. */
@@ -408,7 +586,7 @@
 
     function render(glide) {
       if (!on || !mode) return;
-      var time = now();
+      var time = now() - heardOffset() + ANTICIPATE;
       paint(indexAt(time), glide);
       fill(time);
     }
@@ -440,7 +618,7 @@
     function becomeTimed(newMode) {
       mode = newMode;
       box.classList.add("is-timed");
-      box.classList.toggle("is-measured", newMode === "measured");
+      box.classList.toggle("is-measured", newMode === "measured" || newMode === "speech");
       var keep = current;
       current = -1;
       if (track[keep]) track[keep].node.classList.remove("ra-w--on");
@@ -448,7 +626,7 @@
     }
 
     function useEstimate() {
-      if (mode === "measured") return;
+      if (mode === "measured" || mode === "speech") return;
       if (!isFinite(media.duration) || media.duration <= 0) return;
       estimate(words, media.duration);
       becomeTimed("estimate");
@@ -461,8 +639,11 @@
         .then(function (response) { return response.ok ? response.json() : null; })
         .then(function (data) {
           if (!data) return;
-          if (data.status === "ready" && applyMeasured(words, data.words)) {
-            becomeTimed("measured");
+          if (data.status === "ready") {
+            // Fill in the recording's own length if the player knows it.
+            if (!data.duration && isFinite(media.duration)) data.duration = media.duration;
+            var how = applyTiming(words, data);
+            if (how) becomeTimed(how);
           } else if (data.status === "pending" && triesLeft > 1) {
             window.setTimeout(function () { sync(triesLeft - 1); }, SYNC_RETRY);
           }
@@ -477,6 +658,11 @@
 
     media.addEventListener("play", function () {
       box.classList.add("is-playing");
+      // Two voices at once helps nobody: quieten the rest of the page.
+      document.querySelectorAll("audio, video").forEach(function (other) {
+        if (other !== media && !other.paused) other.pause();
+      });
+      latency = null;                       // re-read it: they may have switched to Bluetooth
       start();
     });
     media.addEventListener("playing", start);

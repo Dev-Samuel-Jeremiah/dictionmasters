@@ -16,10 +16,12 @@ from apps.accounts.access import limit_to_levels, require_level
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from . import qr
 from .activity_kinds import MODE_CHOICE, MODE_ORDER, MODE_RECORD
 from .marking import feedback_for, grade_sentence_use, mark_response
 from .models import (
@@ -224,7 +226,65 @@ def card_detail(request, level_slug, group_slug, category_slug):
 
         context["entries"] = entries
 
+    # Its own QR code, for printing beside this card in the book. Shown to
+    # the people who make the books, not to every learner.
+    context["card_url"] = qr.public_url(
+        reverse("echospell:card_detail", args=[level.slug, group.slug, category.slug])
+    )
+    context["show_qr"] = _makes_materials(request.user)
+
     return render(request, "echospell/card_detail.html", context)
+
+
+def _makes_materials(user):
+    """Only Diction Masters' own staff make the printed books, so only they
+    see a card's QR code. Everyone else — school admins, teachers,
+    learners — simply scans the code in the book."""
+    return bool(user.is_staff or user.is_superuser)
+
+
+def _card_urls(request, level, group):
+    """(category, address) for every card in a group, in the order they're shown."""
+    return [
+        (category, qr.public_url(
+            reverse("echospell:card_detail", args=[level.slug, group.slug, category.slug])
+        ))
+        for category in level.categories.all()
+    ]
+
+
+@login_required
+def card_qr_png(request, level_slug, group_slug, category_slug):
+    """The card's QR code as a PNG, to drop into a book layout."""
+    if not _makes_materials(request.user):
+        raise Http404("No such page.")
+    level = get_object_or_404(Level, slug=level_slug, is_published=True)
+    require_level(request.user, level.name)
+    group = get_object_or_404(level.groups, slug=group_slug)
+    category = get_object_or_404(level.categories, slug=category_slug)
+    address = qr.public_url(
+        reverse("echospell:card_detail", args=[level.slug, group.slug, category.slug])
+    )
+    response = HttpResponse(qr.png(address), content_type="image/png")
+    name = f"qr-{level.slug}-{group.slug}-{category.slug}.png"
+    response["Content-Disposition"] = f'inline; filename="{name}"'
+    response["Cache-Control"] = "private, max-age=86400"
+    return response
+
+
+@login_required
+def group_qr_sheet(request, level_slug, group_slug):
+    """Every card in one group, with its code, laid out to print and cut up."""
+    level = get_object_or_404(Level, slug=level_slug, is_published=True)
+    require_level(request.user, level.name)
+    group = get_object_or_404(level.groups, slug=group_slug)
+    if not _makes_materials(request.user):
+        raise Http404("No such page.")
+    return render(request, "echospell/qr_sheet.html", {
+        "level": level,
+        "group": group,
+        "cards": [{"category": category, "url": address} for category, address in _card_urls(request, level, group)],
+    })
 
 
 @login_required

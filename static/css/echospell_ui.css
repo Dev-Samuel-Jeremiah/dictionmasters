@@ -665,6 +665,7 @@
   .es-hero__main { flex-direction: column; gap: 14px; }
   .es-hero__icon { width: 60px; height: 60px; font-size: 1.7rem; border-radius: 18px; }
   .es-hero__side { display: none; }
+  .es .es-hero__qr { margin-top: 14px; }
   .es-overview { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .es-activities { grid-template-columns: minmax(0, 1fr); }
   .es-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -691,3 +692,65 @@
    which card they were on. */
 [data-card-lesson] { scroll-margin-top: 110px; }
 [data-card-lesson].is-resumed { outline: 3px solid var(--gold, #c98f3a); outline-offset: 4px; }
+
+/* ---------- the card's QR code, sitting in the hero ---------- */
+
+.es .es-hero__qr {
+  flex: 0 0 auto;
+  display: grid; justify-items: center; gap: 6px;
+  padding: 12px 12px 10px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .08);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: es-rise .6s .1s cubic-bezier(.2, .7, .2, 1) both;
+}
+.es .es-hero__qr-code { padding: 7px; border-radius: 10px; background: #fff; line-height: 0; }
+.es .es-hero__qr-code svg { display: block; }
+.es .es-hero__qr-note { margin: 0; font-size: .74rem; letter-spacing: .02em; color: rgba(255, 255, 255, .78); }
+.es .es-hero__qr-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 190px; }
+.es .es-hero__qr-actions button,
+.es .es-hero__qr-actions a {
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 20px;
+  font: inherit; font-size: .72rem; font-weight: 600; text-decoration: none;
+  color: #fff; background: rgba(255, 255, 255, .06);
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.es .es-hero__qr-actions button:hover,
+.es .es-hero__qr-actions a:hover { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .4); }
+.es .es-hero__qr-actions button:focus-visible,
+.es .es-hero__qr-actions a:focus-visible { outline: 2px solid #f0c878; outline-offset: 2px; }
+.es .es-hero__qr-said { margin: 0; min-height: 1em; font-size: .72rem; font-weight: 600; color: #f3d38d; }
+
+/* ---------- a sheet of codes to print and cut up ---------- */
+
+/* No hero above the sheet, so it starts below the header rather than under it. */
+.es .es-sheet-page { margin-top: 0; padding-top: 30px; padding-bottom: 50px; }
+.es .es-sheet__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 22px; }
+.es .es-sheet__eyebrow { margin: 0 0 6px; font-size: .9rem; }
+.es .es-sheet__title { margin: 0; font-family: var(--font-serif); font-size: 1.8rem; color: var(--ink); }
+.es .es-sheet__lede { margin: 6px 0 0; max-width: 62ch; color: var(--ink-70); }
+.es .es-sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+.es .es-sheet__card {
+  display: flex; align-items: center; gap: 14px;
+  margin: 0; padding: 14px;
+  border: 1px dashed rgba(20, 33, 61, .3);
+  border-radius: 14px;
+  background: #fff;
+  break-inside: avoid;
+}
+.es .es-sheet__code { flex: 0 0 auto; line-height: 0; }
+.es .es-sheet__code svg { display: block; width: 92px; height: 92px; }
+.es .es-sheet__name { margin: 0; font-weight: 700; color: var(--ink); }
+.es .es-sheet__where { margin: 2px 0 0; font-size: .82rem; color: var(--ink-40); }
+
+@media print {
+  .site-header, .site-footer, .no-print, .bl-banner, .messages { display: none !important; }
+  body, .es { background: #fff !important; }
+  .es .es-sheet { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .es .es-sheet__card { box-shadow: none; }
+}

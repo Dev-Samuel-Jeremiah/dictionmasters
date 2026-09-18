@@ -190,7 +190,15 @@ def read_along_timing(request, token):
     obj = read_along.object_for_token(token)
     if obj is None:
         raise Http404("Nothing to read along with.")
-    status, words = read_along.timing_for(obj)
-    response = JsonResponse({"status": status, "words": words})
+    status, row = read_along.timing_for(obj)
+    response = JsonResponse({
+        "status": status,
+        # Sent even when the recording turns out to be reading something
+        # else: the times still say when and how fast the voice speaks.
+        "words": row.words if row else [],
+        "speech": row.speech if row else [],
+        "duration": row.duration if row else None,
+        "quality": row.quality if row else None,
+    })
     response["Cache-Control"] = "private, no-cache"
     return response

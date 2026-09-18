@@ -16,6 +16,7 @@ video library is served from Cloudflare R2 instead. Whichever is
 filled in wins; see the `*_source` properties.
 """
 
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models
 from django.utils.text import slugify
 
@@ -365,6 +366,15 @@ class ReadAlongTiming(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_WORKING)
     engine = models.CharField(max_length=20, blank=True)
     words = models.JSONField(default=list, blank=True, help_text="[[word, start, end], …] in seconds.")
+    speech = models.JSONField(
+        default=list, blank=True,
+        help_text="[[start, end], …]: when someone is actually speaking, so the highlight waits through pauses.",
+    )
+    duration = models.FloatField(null=True, blank=True, help_text="Length of the recording, in seconds.")
+    quality = models.FloatField(
+        null=True, blank=True,
+        help_text="How much of the text the recording actually says, 0–1. Low means the recording and the text don't match.",
+    )
     error = models.CharField(max_length=255, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -372,5 +382,29 @@ class ReadAlongTiming(models.Model):
         unique_together = ("content_type", "object_id")
         verbose_name = "read-along timing"
 
+    # Two apps both have a "Passage", so the name says which is which.
+    content_object = GenericForeignKey("content_type", "object_id")
+
     def __str__(self):
-        return f"{self.content_type.model} {self.object_id} — {self.get_status_display()}"
+        where = f"{self.content_type.app_label} · {self.content_type.model}"
+        thing = self.content_object
+        return f"{thing} ({where})" if thing else f"{where} {self.object_id} (deleted)"
+
+    # Below this, the recording plainly isn't reading the text on the page.
+    MATCH_FLOOR = 0.35
+
+    @property
+    def matches_text(self):
+        return self.quality is None or self.quality >= self.MATCH_FLOOR
+
+    @property
+    def quality_label(self):
+        if self.status != self.STATUS_READY:
+            return self.get_status_display()
+        if self.quality is None:
+            return "Measured"
+        if self.quality >= 0.8:
+            return f"Word-for-word ({self.quality:.0%})"
+        if self.quality >= self.MATCH_FLOOR:
+            return f"Mostly matching ({self.quality:.0%})"
+        return f"Recording doesn't match the text ({self.quality:.0%})"

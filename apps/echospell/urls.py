@@ -19,5 +19,7 @@ urlpatterns = [
         views.activity_result, name="activity_result",
     ),
     path("<slug:level_slug>/<slug:group_slug>/complete/", views.toggle_complete, name="toggle_complete"),
+    path("<slug:level_slug>/<slug:group_slug>/qr-sheet/", views.group_qr_sheet, name="group_qr_sheet"),
+    path("<slug:level_slug>/<slug:group_slug>/<slug:category_slug>/qr.png", views.card_qr_png, name="card_qr_png"),
     path("<slug:level_slug>/<slug:group_slug>/<slug:category_slug>/", views.card_detail, name="card_detail"),
 ]

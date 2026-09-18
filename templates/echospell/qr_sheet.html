@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static echospell_qr %}
+
+{% block title %}QR codes — Group {{ group.number }}, {{ level.name }}{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/echospell.css' %}">
+  <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="es">
+  <div class="wrap es-body es-sheet-page">
+    <header class="es-sheet__head">
+      <div>
+        <p class="es-sheet__eyebrow no-print"><a href="{% url 'echospell:group_detail' level.slug group.slug %}">&larr; Group {{ group.number }}</a></p>
+        <h1 class="es-sheet__title">{{ level.name }} &middot; Group {{ group.number }}</h1>
+        <p class="es-sheet__lede">One code per card. Print this page, cut them out, and put each code beside its card in the book. Scanning a code opens that card on the site.</p>
+      </div>
+      <button type="button" class="es-btn es-btn--gold no-print" onclick="window.print()">&#128424; Print these codes</button>
+    </header>
+
+    {% if cards %}
+    <div class="es-sheet">
+      {% for card in cards %}
+      <figure class="es-sheet__card">
+        <div class="es-sheet__code">{% qr_svg card.url 150 %}</div>
+        <figcaption>
+          <p class="es-sheet__name"><span aria-hidden="true">{{ card.category.icon }}</span> {{ card.category.name }}</p>
+          <p class="es-sheet__where">{{ level.name }} &middot; Group {{ group.number }}</p>
+        </figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="es-empty">This level has no cards yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

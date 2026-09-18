@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils.functional import SimpleLazyObject
 
 
@@ -9,4 +10,4 @@ def branding(request):
         from .models import SiteBranding
         return SiteBranding.load()
 
-    return {"branding": SimpleLazyObject(load)}
+    return {"branding": SimpleLazyObject(load), "site_url": settings.SITE_URL}

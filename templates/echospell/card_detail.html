@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static echospell_qr %}
 {% load read_along %}
 
 {% block title %}{{ category.name }} — {{ group.display_name }} — {{ level.name }}{% endblock %}
@@ -31,6 +31,21 @@
           {% if category.description %}<p class="es-hero__lede">{{ category.description }}</p>{% endif %}
         </div>
       </div>
+      {% if show_qr %}
+      {# This card's own code, for printing beside it in the book. #}
+      <div class="es-hero__qr" data-qr data-qr-url="{{ card_url }}">
+        <div class="es-hero__qr-code">{% qr_svg card_url 108 %}</div>
+        <p class="es-hero__qr-note">Scan to open this card</p>
+        <div class="es-hero__qr-actions">
+          <button type="button" data-qr-copy-link>Copy link</button>
+          <button type="button" data-qr-copy-image>Copy image</button>
+          <a href="{% url 'echospell:card_qr_png' level.slug group.slug category.slug %}" download>PNG</a>
+          <a href="{% url 'echospell:group_qr_sheet' level.slug group.slug %}">All codes</a>
+        </div>
+        <p class="es-hero__qr-said" data-qr-said role="status"></p>
+      </div>
+      {% endif %}
+
       <div class="es-hero__side">
         <a href="{% url 'echospell:group_detail' level.slug group.slug %}" class="es-btn es-btn--glass">&larr; All cards in Group {{ group.number }}</a>
       </div>
@@ -40,6 +55,7 @@
 
 <section>
   <div class="wrap es-body es-body--narrow">
+
 
     {% if category.kind == "passage" %}
       {% if passage and passage.body or passage.audio_source %}
@@ -285,6 +301,40 @@
 
 {% block extra_js %}
   <script src="{% static 'js/read_along.js' %}" defer></script>
+{% if show_qr %}
+<script>
+  // Copying the code: the address as text, or the image itself for pasting
+  // straight into the book layout.
+  (function () {
+    var box = document.querySelector("[data-qr]");
+    var said = box.querySelector("[data-qr-said]");
+    var url = box.dataset.qrUrl;          // kept out of sight; the buttons hand it over
+    var png = "{% url 'echospell:card_qr_png' level.slug group.slug category.slug %}";
+
+    function say(message) {
+      said.textContent = message;
+      window.setTimeout(function () { said.textContent = ""; }, 4000);
+    }
+
+    box.querySelector("[data-qr-copy-link]").addEventListener("click", function () {
+      navigator.clipboard.writeText(url).then(function () { say("Link copied."); },
+        function () { say("Couldn't copy — the link is shown above."); });
+    });
+
+    box.querySelector("[data-qr-copy-image]").addEventListener("click", function () {
+      if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) {
+        say("This browser can't copy images — use Download PNG.");
+        return;
+      }
+      fetch(png, { credentials: "same-origin" })
+        .then(function (response) { return response.blob(); })
+        .then(function (blob) { return navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); })
+        .then(function () { say("QR image copied — paste it into your layout."); },
+              function () { say("Couldn't copy the image — use Download PNG."); });
+    });
+  })();
+</script>
+{% endif %}
 <script>
   // Remember the card the learner is on, so the dashboard's "Pick up where
   // you left off" opens this page at this card.

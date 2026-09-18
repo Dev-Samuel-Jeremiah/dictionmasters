@@ -58,6 +58,10 @@ DEBUG = env_flag("DJANGO_DEBUG", not PRODUCTION)
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
+# The address the world uses. QR codes printed in the books point here, so
+# a code made on a laptop still works for a child holding the book.
+SITE_URL = os.environ.get("DJANGO_SITE_URL", "https://www.dictionmasters.app").rstrip("/")
+
 # Full origins, needed for form posts over HTTPS, e.g.
 # "https://dictionmasters.com,https://www.dictionmasters.com".
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")

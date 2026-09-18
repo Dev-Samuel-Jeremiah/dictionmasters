@@ -1,0 +1,70 @@
+/* =========================================================
+   The upload bar (static/js/upload_progress.js). Self-contained, so it
+   looks the same in the control room, the Django admin and on a lesson
+   page, whatever else that page loads.
+   ========================================================= */
+
+.up-progress {
+  --up-ink: #14213D;
+  --up-line: rgba(20, 33, 61, 0.14);
+  --up-gold: #c98f3a;
+  --up-green: #2e7d62;
+  --up-red: #b23c5a;
+  margin: 18px 0 0;
+  padding: 16px 18px;
+  border: 1px solid var(--up-line);
+  border-left: 5px solid var(--up-gold);
+  border-radius: 14px;
+  background: #fffdf8;
+  box-shadow: 0 10px 26px -18px rgba(20, 33, 61, 0.5);
+  font-family: inherit;
+  color: var(--up-ink);
+}
+.up-progress__head, .up-progress__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.up-progress p { margin: 0; }
+.up-progress__name { font-weight: 700; overflow-wrap: anywhere; }
+.up-progress__percent { font-variant-numeric: tabular-nums; font-size: 1.15rem; font-weight: 700; color: var(--up-gold); }
+.up-progress__track {
+  height: 10px;
+  margin: 10px 0 8px;
+  border-radius: 20px;
+  background: rgba(20, 33, 61, 0.09);
+  overflow: hidden;
+}
+.up-progress__fill {
+  width: 0;
+  height: 100%;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #f0c878, var(--up-gold));
+  transition: width 0.25s ease;
+}
+.up-progress__detail { font-size: 0.86rem; color: rgba(20, 33, 61, 0.6); }
+.up-progress__cancel {
+  padding: 5px 14px;
+  border: 1px solid var(--up-line);
+  border-radius: 20px;
+  font: inherit; font-size: 0.84rem; font-weight: 600;
+  color: var(--up-ink);
+  background: #fff;
+  cursor: pointer;
+}
+.up-progress__cancel:hover { border-color: var(--up-red); color: var(--up-red); }
+
+/* Uploaded, now waiting on the server: the bar keeps moving so it doesn't
+   look stuck. */
+.up-progress.is-saving { border-left-color: var(--up-green); }
+.up-progress.is-saving .up-progress__percent { color: var(--up-green); }
+.up-progress.is-saving .up-progress__fill {
+  background: repeating-linear-gradient(115deg, #2e7d62 0 14px, #379a79 14px 28px);
+  animation: up-stripes 0.9s linear infinite;
+}
+@keyframes up-stripes { to { background-position: 56px 0; } }
+
+.up-progress.is-done { border-left-color: var(--up-green); }
+.up-progress.is-done .up-progress__fill { background: var(--up-green); animation: none; }
+.up-progress.is-failed { border-left-color: var(--up-red); }
+.up-progress.is-failed .up-progress__fill { background: var(--up-red); animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .up-progress__fill { transition: none; animation: none !important; }
+}

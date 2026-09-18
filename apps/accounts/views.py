@@ -103,7 +103,10 @@ class EmailLoginView(LoginView):
     redirect_authenticated_user = True
 
     def get_success_url(self):
-        return reverse_lazy(_post_login_redirect(self.request.user))
+        # Where they were heading before signing in — scanning a QR code on
+        # a card, following a link — wins over the usual home page.
+        wanted = self.get_redirect_url()
+        return wanted or reverse_lazy(_post_login_redirect(self.request.user))
 
 
 class EmailLogoutView(LogoutView):
