@@ -20,8 +20,27 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--all", action="store_true", help="Measure recordings that already have timings too.")
+        parser.add_argument(
+            "--rescore", action="store_true",
+            help="Only work out again how well each recording matches its text, using what was already heard.",
+        )
 
     def handle(self, *args, **options):
+        if options["rescore"]:
+            changed = 0
+            for row in ReadAlongTiming.objects.select_related("content_type"):
+                obj = row.content_object
+                if obj is None or not row.words:
+                    continue
+                before = row.quality
+                row.quality = read_along._spoken_share(read_along.text_for(obj), row.words)
+                if row.quality != before:
+                    row.save(update_fields=["quality", "updated_at"])
+                    changed += 1
+                self.stdout.write(f"  {str(obj)[:44]:46} {before if before is not None else '—'} → {row.quality:.0%}")
+            self.stdout.write(self.style.SUCCESS(f"Rescored {changed} recording(s). Nothing was transcribed again."))
+            return
+
         if not read_along.is_configured():
             raise CommandError("Needs ffmpeg plus ELEVENLABS_API_KEY or GROQ_API_KEY.")
 

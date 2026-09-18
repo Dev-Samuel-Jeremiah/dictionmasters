@@ -403,8 +403,10 @@ class ReadAlongTiming(models.Model):
             return self.get_status_display()
         if self.quality is None:
             return "Measured"
-        if self.quality >= 0.8:
+        if self.quality >= 0.95:
             return f"Word-for-word ({self.quality:.0%})"
+        if self.quality >= 0.7:
+            return f"Follows well ({self.quality:.0%})"
         if self.quality >= self.MATCH_FLOOR:
-            return f"Mostly matching ({self.quality:.0%})"
+            return f"Partly matching ({self.quality:.0%})"
         return f"Recording doesn't match the text ({self.quality:.0%})"

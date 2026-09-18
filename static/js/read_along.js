@@ -49,6 +49,7 @@
   var BLOCK_PAUSE = 2.4;      // the breath at the end of a paragraph or line
   var USER_SCROLL_REST = 3500; // leave the reader alone this long after they scroll
   var MATCH_WINDOW = 14;      // how far ahead to look for a word the reader skipped
+  var GAP_SEARCH = 400;       // ...and how far, at most, between two sure footholds
   var MIN_MATCHED = 0.35;     // below this the recording isn't reading this text
   var SNAP_ONSET = 0.22;      // pull a word's start onto the moment speech resumes, within this
   var AFTER_PAUSE = 0.25;     // ...but only for a word that follows a real gap
@@ -81,14 +82,35 @@
     return node;
   }
 
+  var ONES = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+    ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17,
+    eighteen: 18, nineteen: 19 };
+  var TENS = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+
+  function asNumber(key) {
+    /* "three" and "3" are the same word to a listener; so are "twenty-one"
+       and "21". A page can be written either way. */
+    if (key in ONES) return String(ONES[key]);
+    if (key in TENS) return String(TENS[key]);
+    var found = "";
+    Object.keys(TENS).forEach(function (tens) {
+      if (!found && key.indexOf(tens) === 0 && key.slice(tens.length) in ONES) {
+        found = String(TENS[tens] + ONES[key.slice(tens.length)]);
+      }
+    });
+    return found;
+  }
+
   /* A word reduced to what's said: lower case, no accents, no punctuation,
-     one kind of apostrophe. "Don’t," and "don't" are the same word. */
+     one kind of apostrophe, numbers as digits. "Don’t," and "don't" are the
+     same word, and so are "12" and "twelve". */
   function keyOf(text) {
-    return String(text)
+    var key = String(text)
       .toLowerCase()
       .normalize("NFKD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^\p{L}\p{N}]/gu, "");
+    return asNumber(key) || key;
   }
 
   /* ---- splitting the text into words ------------------------------- */
@@ -297,19 +319,29 @@
     var anchors = [];
     var lastPage = -1, lastSaid = -1;
     pins.concat([{ page: page.length, said: said.length }]).forEach(function (pin) {
-      // Fill in between this pin and the one before, in order.
+      // Fill in between this pin and the one before, in order. The search
+      // runs the whole way to the next pin, so a recording that opens with
+      // a greeting — "Hi, it's me, let's read together" — doesn't hide the
+      // place where the reading actually starts.
       var p = lastPage + 1, q = lastSaid + 1;
       while (p < pin.page && q < pin.said) {
         if (page[p].key === said[q].key) {
           anchors.push({ page: p, said: q });
           p += 1; q += 1;
-        } else {
-          var found = -1;
-          for (var i = q; i < Math.min(q + MATCH_WINDOW, pin.said); i++) {
-            if (said[i].key === page[p].key) { found = i; break; }
-          }
-          if (found >= 0) { anchors.push({ page: p, said: found }); p += 1; q = found + 1; } else { p += 1; }
+          continue;
         }
+        var limit = Math.min(pin.said, q + GAP_SEARCH);
+        var found = -1;
+        var pair = -1;
+        for (var i = q; i < limit; i++) {
+          if (said[i].key !== page[p].key) continue;
+          if (found < 0) found = i;
+          // Two words in a row settle it: a lone "the" or "and" can land
+          // anywhere, but "the Monday" only lands where the reading is.
+          if (p + 1 < pin.page && i + 1 < said.length && said[i + 1].key === page[p + 1].key) { pair = i; break; }
+        }
+        var at = pair >= 0 ? pair : found;
+        if (at >= 0) { anchors.push({ page: p, said: at }); p += 1; q = at + 1; } else { p += 1; }
       }
       if (pin.page < page.length) anchors.push({ page: pin.page, said: pin.said });
       lastPage = pin.page; lastSaid = pin.said;

@@ -301,7 +301,9 @@ R2_CONFIGURED = all([R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_
 # How long a media link stays valid. The bucket is private, so every link
 # the site hands out is signed and expires; long enough for a lesson page
 # left open all morning.
-R2_LINK_LIFETIME_SECONDS = 6 * 60 * 60
+# Short enough that a copied address is no use to anyone for long, and long
+# enough to play the longest lesson without the link dying mid-way.
+R2_LINK_LIFETIME_SECONDS = int(os.environ.get("R2_LINK_LIFETIME_SECONDS", 60 * 60))
 
 R2_STORAGE_OPTIONS = {
     "bucket_name": R2_BUCKET_NAME,

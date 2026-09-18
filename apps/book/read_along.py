@@ -39,6 +39,7 @@ import subprocess
 import tempfile
 import threading
 import unicodedata
+from difflib import SequenceMatcher
 import urllib.error
 import urllib.request
 import uuid
@@ -461,27 +462,44 @@ def speech_runs(path, total=None):
 
 
 def _spoken_share(text, words):
-    """How much of the page's text the recording says, 0–1. It's the share
-    of the page's words that appear, in order, in what was heard."""
-    said = [_key(word[0]) for word in words]
-    said = [key for key in said if key]
-    page = [_key(word) for word in text.split()]
-    page = [key for key in page if key]
+    """How much of the page's text the recording actually says, 0–1.
+
+    Matched the way the browser matches it: the longest runs the two have
+    in common, in order. A recording that opens with "Hi, it's me, let's
+    read together" and then reads the page still scores high — the
+    greeting is simply extra."""
+    said = [key for key in (_key(word[0]) for word in words) if key]
+    page = [key for key in (_key(word) for word in text.split()) if key]
     if not page or not said:
         return 0.0
-    at = 0
-    found = 0
-    for key in page:
-        for index in range(at, min(at + 18, len(said))):
-            if said[index] == key:
-                found += 1
-                at = index + 1
-                break
-    return round(found / len(page), 3)
+    blocks = SequenceMatcher(None, page, said, autojunk=False).get_matching_blocks()
+    shared = sum(block.size for block in blocks)
+    return round(min(shared / len(page), 1.0), 3)
+
+
+_ONES = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+         "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14,
+         "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19}
+_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
+         "eighty": 80, "ninety": 90}
+
+
+def _as_number(key):
+    """"three" and "3" are the same word to a listener, and so are
+    "twenty-one" and "21". Returns the digits, or "" if it isn't a number."""
+    if key in _ONES:
+        return str(_ONES[key])
+    if key in _TENS:
+        return str(_TENS[key])
+    for tens, value in _TENS.items():            # twentyone, fortyfive…
+        if key.startswith(tens) and key[len(tens):] in _ONES:
+            return str(value + _ONES[key[len(tens):]])
+    return ""
 
 
 def _key(word):
-    return re.sub(r"[^\w]", "", unicodedata.normalize("NFKD", str(word)).lower())
+    key = re.sub(r"[^\w]", "", unicodedata.normalize("NFKD", str(word)).lower())
+    return _as_number(key) or key
 
 
 def _multipart(fields, file_field, file_path):
