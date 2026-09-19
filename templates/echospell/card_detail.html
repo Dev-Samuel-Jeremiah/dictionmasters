@@ -39,7 +39,7 @@
         <div class="es-hero__qr-actions">
           <button type="button" data-qr-copy-link>Copy link</button>
           <button type="button" data-qr-copy-image>Copy image</button>
-          <a href="{% url 'echospell:card_qr_png' level.slug group.slug category.slug %}" download>PNG</a>
+          <a href="{% url 'echospell:card_qr_png' level.slug group.slug category.slug %}" download="{{ qr_filename }}">PNG</a>
           <a href="{% url 'echospell:group_qr_sheet' level.slug group.slug %}">All codes</a>
         </div>
         <p class="es-hero__qr-said" data-qr-said role="status"></p>

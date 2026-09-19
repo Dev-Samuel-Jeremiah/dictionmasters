@@ -11,6 +11,7 @@ blanked for Missing Letter, and so on).
 
 import json
 import random
+import re
 
 from apps.accounts.access import limit_to_levels, require_level
 
@@ -19,6 +20,7 @@ from django.db.models import Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_POST
 
 from . import qr
@@ -33,6 +35,11 @@ from .models import (
     GroupProgress,
     Level,
 )
+
+
+# Added to the address in a card's QR code: arriving from the book starts
+# the lesson (see static/js/lesson_start.js).
+PLAY_ON_ARRIVAL = "play=1"
 
 
 def _completed_group_ids(user, level):
@@ -228,12 +235,25 @@ def card_detail(request, level_slug, group_slug, category_slug):
 
     # Its own QR code, for printing beside this card in the book. Shown to
     # the people who make the books, not to every learner.
-    context["card_url"] = qr.public_url(
-        reverse("echospell:card_detail", args=[level.slug, group.slug, category.slug])
-    )
+    context["card_url"] = _card_link(level, group, category)
+    context["qr_filename"] = _qr_filename(level, group, category)
     context["show_qr"] = _makes_materials(request.user)
 
     return render(request, "echospell/card_detail.html", context)
+
+
+def _card_link(level, group, category):
+    """The address a card's QR code carries: the card on the real site,
+    marked so that arriving from the code starts the lesson by itself."""
+    path = reverse("echospell:card_detail", args=[level.slug, group.slug, category.slug])
+    return qr.public_url(path) + "?" + PLAY_ON_ARRIVAL
+
+
+def _qr_filename(level, group, category):
+    """ "Level 1 - Group 1 - Spelling - QR code.png": says which card it is
+    once it's sitting in a folder of book artwork."""
+    name = f"{level.name} - Group {group.number} - {category.name} - QR code.png"
+    return re.sub(r'[\\/:*?"<>|]+', "", name).strip()
 
 
 def _makes_materials(user):
@@ -246,9 +266,7 @@ def _makes_materials(user):
 def _card_urls(request, level, group):
     """(category, address) for every card in a group, in the order they're shown."""
     return [
-        (category, qr.public_url(
-            reverse("echospell:card_detail", args=[level.slug, group.slug, category.slug])
-        ))
+        (category, _card_link(level, group, category))
         for category in level.categories.all()
     ]
 
@@ -262,12 +280,9 @@ def card_qr_png(request, level_slug, group_slug, category_slug):
     require_level(request.user, level.name)
     group = get_object_or_404(level.groups, slug=group_slug)
     category = get_object_or_404(level.categories, slug=category_slug)
-    address = qr.public_url(
-        reverse("echospell:card_detail", args=[level.slug, group.slug, category.slug])
-    )
-    response = HttpResponse(qr.png(address), content_type="image/png")
-    name = f"qr-{level.slug}-{group.slug}-{category.slug}.png"
-    response["Content-Disposition"] = f'inline; filename="{name}"'
+    response = HttpResponse(qr.png(_card_link(level, group, category)), content_type="image/png")
+    # Saved under the card's own name, so a folder of them is easy to use.
+    response["Content-Disposition"] = content_disposition_header(True, _qr_filename(level, group, category))
     response["Cache-Control"] = "private, max-age=86400"
     return response
 
