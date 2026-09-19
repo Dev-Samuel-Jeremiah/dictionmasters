@@ -460,6 +460,18 @@ def read_along_detail(request, pk):
     can_fix = book_read_along.can_replace_text(obj)
 
     if request.method == "POST":
+        if request.POST.get("action") == "trim" and can_fix:
+            removed = book_read_along.trim_to_spoken(obj, timing)
+            if removed:
+                _record(request, obj, CHANGE, f"Trimmed {removed} unread words from the text")
+                messages.success(
+                    request,
+                    f"Removed the {removed} word{'s' if removed != 1 else ''} the recording never reads. "
+                    "The rest of your text is unchanged, and the highlight now follows all of it.",
+                )
+            else:
+                messages.info(request, "Nothing to trim — the recording reads the whole text.")
+            return redirect("manage:read_along_detail", pk=timing.pk)
         if request.POST.get("action") == "use_spoken" and can_fix and said:
             book_read_along.replace_text_with_spoken(obj, timing)
             _record(request, obj, CHANGE, "Text replaced with the recording's own words")

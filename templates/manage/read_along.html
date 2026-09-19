@@ -21,6 +21,13 @@
     Those words are never highlighted, because the voice never says them — the page simply rests there.
     Trim the text to match, or record the missing part.
   </p>
+  {% if can_fix %}
+  <form method="post" class="cr-formactions" onsubmit="return confirm('Remove the words the recording never reads? The rest of the text stays exactly as written.');">
+    {% csrf_token %}
+    <button type="submit" name="action" value="trim" class="cr-btn cr-btn--gold">Trim the text to what's read</button>
+    <span class="cr-help">Keeps your own wording. Only the unread {% if cover.head %}opening{% endif %}{% if cover.head and cover.tail %} and {% endif %}{% if cover.tail %}ending{% endif %} is removed.</span>
+  </form>
+  {% endif %}
 </section>
 {% endif %}
 

@@ -167,6 +167,41 @@ def coverage(text, words):
     }
 
 
+def trim_to_spoken(obj, timing):
+    """Cut the text down to the part the recording actually reads — the
+    opening it skips and the ending it stops short of go — keeping the
+    text's own wording, spelling and line breaks exactly as written.
+
+    The timing already belongs to these words, so it's kept rather than
+    measured again. Returns the number of words removed (0 if nothing was
+    unread, or this kind of lesson can't be edited here)."""
+    field = TEXT_FIELD.get(_label(obj))
+    text = getattr(obj, field, "") if field else ""
+    if not text:
+        return 0
+    cover = coverage(text_for(obj), timing.words)
+    if not (cover["head"] or cover["tail"]):
+        return 0
+
+    # Each word's place in the original text, counting only real words the
+    # same way the matching does, so punctuation-only pieces stay attached.
+    spans = [match.span() for match in re.finditer(r"\S+", text) if _key(match.group())]
+    keep_from = cover["head"]
+    keep_to = len(spans) - cover["tail"]
+    if keep_from >= keep_to:
+        return 0
+    start = spans[keep_from][0]
+    end = spans[keep_to - 1][1]
+    trimmed = text[start:end].strip()
+
+    setattr(obj, field, trimmed)
+    obj.save(update_fields=[field])
+    timing.fingerprint = _fingerprint(obj)
+    timing.quality = _spoken_share(text_for(obj), timing.words)
+    timing.save(update_fields=["fingerprint", "quality", "updated_at"])
+    return cover["head"] + cover["tail"]
+
+
 def can_replace_text(obj):
     return bool(TEXT_FIELD.get(_label(obj)))
 
