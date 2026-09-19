@@ -50,6 +50,9 @@
   var USER_SCROLL_REST = 3500; // leave the reader alone this long after they scroll
   var MATCH_WINDOW = 14;      // how far ahead to look for a word the reader skipped
   var GAP_SEARCH = 400;       // ...and how far, at most, between two sure footholds
+  var STEADY = 3;             // words in a row that show the reading has started
+  var LEAD_IN = 12;           // a title or greeting before the text is at most this many words...
+  var LEAD_IN_SECONDS = 8;    // ...and this long
   var MIN_MATCHED = 0.35;     // below this the recording isn't reading this text
   var SNAP_ONSET = 0.22;      // pull a word's start onto the moment speech resumes, within this
   var AFTER_PAUSE = 0.25;     // ...but only for a word that follows a real gap
@@ -172,7 +175,9 @@
       word.units = (word.key.length || 0) * LETTER_UNIT + (word.key ? WORD_UNIT : 0);
       word.pause = pause;
       word.sentence = sentence;
-      if (PAUSE_AFTER[last] >= 3) sentence += 1;
+      // A sentence ends at a full stop, and at the end of a line or
+      // paragraph even without one — a dialogue line often has none.
+      if (PAUSE_AFTER[last] >= 3 || pause >= BLOCK_PAUSE) sentence += 1;
     });
     return words;
   }
@@ -380,8 +385,28 @@
           && nearly(page[pageAt + 1].key, said[saidAt + 1].key);
       }
 
+      function runAt(pageAt, saidAt) {
+        // How many words in a row agree from here, up to STEADY — counting
+        // on into the next pin, which is itself a sure match.
+        var n = 0;
+        while (n < STEADY && pageAt + n < page.length && saidAt + n < said.length
+               && nearly(page[pageAt + n].key, said[saidAt + n].key)) n += 1;
+        return n;
+      }
+
       while (p < pin.page && q < pin.said) {
         if (agrees(p, q)) {
+          // A word or two in common can be a title or greeting said before
+          // the text ("Chapter one. The Beginning." before "Chapter 1
+          // Introduction"). If the reading holds together only a few words
+          // later, that is where the text really starts.
+          var here = runAt(p, q);
+          if (here < STEADY && p + here < page.length && q + here < said.length) {
+            for (var j = q + 1; j < Math.min(pin.said, q + LEAD_IN); j++) {
+              if (said[j].start - said[q].start > LEAD_IN_SECONDS) break;
+              if (runAt(p, j) >= STEADY) { q = j; break; }
+            }
+          }
           anchors.push({ page: p, said: q });
           p += 1; q += 1;
           continue;
@@ -589,6 +614,7 @@
     box.readAlong = { words: words, track: track, mode: function () { return mode; } };
     box.classList.add("ra", "is-ready");
     textBox.classList.add("ra-text");
+    if (textBox.querySelector("[data-ra-line]")) textBox.classList.add("ra-text--lines");
 
     // ---- the bar above the text
     var bar = box.querySelector("[data-ra-bar]") || box.insertBefore(el("div"), textBox);
@@ -671,6 +697,17 @@
       markerTop = y;
     }
 
+    // In a dialogue, the line being said — the speaker's bubble — comes
+    // forward, so the listener can see who is talking.
+    var speakingLine = null;
+    function speaking(node) {
+      var line = node ? node.closest("[data-ra-line]") : null;
+      if (line === speakingLine) return;
+      if (speakingLine) speakingLine.classList.remove("is-speaking");
+      if (line) line.classList.add("is-speaking");
+      speakingLine = line;
+    }
+
     function paint(index, glide) {
       if (index === current) return;
       if (track[current]) {
@@ -680,6 +717,7 @@
         }
       }
       current = index;
+      speaking(track[current] ? track[current].node : null);
       if (track[current]) {
         track[current].node.classList.add("ra-w--on");
         markSentence(track[current].sentence, true);
@@ -805,6 +843,7 @@
         markSentence(track[current].sentence, false);
       }
       current = -1;
+      speaking(null);
       marker.classList.remove("is-on");
       markerTop = null;
     }

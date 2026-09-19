@@ -906,6 +906,18 @@ a.ui-tab:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-2
   transform-origin: left center;
 }
 .ra-marker.is-on { opacity: 1; }
+
+/* A dialogue: every line sits in its own bubble, whose background would
+   hide a highlight behind it, so here the highlight lies over the words
+   like a highlighter pen — dark text stays dark, the paper turns gold.
+   The speaker's bubble comes forward; the others settle back. */
+.ra-text--lines .ra-marker { z-index: 2; mix-blend-mode: multiply; }
+.ra-text--lines .ra-marker::before { box-shadow: none; }
+.ra-text [data-ra-line] { transition: opacity 0.3s ease, box-shadow 0.3s ease; }
+.ra.is-playing:not(.is-off) .ra-text [data-ra-line]:not(.is-speaking) { opacity: 0.5; }
+.ra:not(.is-off) .ra-text [data-ra-line].is-speaking {
+  box-shadow: 0 0 0 2px var(--gold), 0 10px 24px rgba(184, 134, 59, 0.22);
+}
 .ra.is-off .ra-marker { opacity: 0; }
 .ra-marker--glide {
   transition: opacity 0.2s ease,

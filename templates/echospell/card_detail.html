@@ -80,7 +80,7 @@
         {% endif %}
         <div class="dialogue-lines" data-ra-text>
           {% for line in lines %}
-          <div class="dialogue-line {% cycle 'dialogue-line--a' 'dialogue-line--b' %}">
+          <div class="dialogue-line {% cycle 'dialogue-line--a' 'dialogue-line--b' %}" data-ra-line>
             <span class="dialogue-line__speaker" aria-hidden="true" data-ra-skip>{{ line.speaker|slice:":1"|upper }}</span>
             <div class="dialogue-line__body">
               <p class="dialogue-line__name" data-ra-skip>{{ line.speaker }}</p>
