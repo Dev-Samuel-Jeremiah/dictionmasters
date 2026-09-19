@@ -281,6 +281,45 @@
 
   /* ---- lining the page up with what was heard --------------------- */
 
+  function nearly(a, b) {
+    /* The same word spelt a little differently — "Timi" and "Timmy",
+       "colour" and "color" — one letter added, dropped or changed. Only
+       for words of four letters or more, where that can't be chance. */
+    if (a === b) return true;
+    if (a.length < 4 || b.length < 4 || Math.abs(a.length - b.length) > 1) return false;
+    var i = 0, j = 0, edits = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) { i += 1; j += 1; continue; }
+      if (++edits > 1) return false;
+      if (a.length > b.length) { i += 1; }
+      else if (b.length > a.length) { j += 1; }
+      else { i += 1; j += 1; }
+    }
+    return edits + (a.length - i) + (b.length - j) <= 1;
+  }
+
+  var SOUND_GROUPS = { b: 1, f: 1, p: 1, v: 1, c: 2, g: 2, j: 2, k: 2, q: 2, s: 2, x: 2, z: 2,
+    d: 3, t: 3, l: 4, m: 5, n: 5, r: 6 };
+
+  function soundOf(key) {
+    /* Soundex: what a word sounds like, so "Timi" and "Timmy", "Ade" and
+       "Addy" come out the same. */
+    if (!/^[a-z]+$/.test(key)) return key;
+    var code = key[0];
+    var last = SOUND_GROUPS[key[0]] || 0;
+    for (var i = 1; i < key.length && code.length < 4; i++) {
+      var group = SOUND_GROUPS[key[i]] || 0;
+      if (group && group !== last) code += group;
+      if (key[i] !== "h" && key[i] !== "w") last = group;
+    }
+    return (code + "000").slice(0, 4);
+  }
+
+  function soundsLike(a, b) {
+    return a.length >= 4 && b.length >= 4 && a[0] === b[0]
+      && Math.abs(a.length - b.length) <= 2 && soundOf(a) === soundOf(b);
+  }
+
   function counts(list) {
     var seen = {};
     list.forEach(function (key) { seen[key] = (seen[key] || 0) + 1; });
@@ -332,8 +371,17 @@
       // a greeting — "Hi, it's me, let's read together" — doesn't hide the
       // place where the reading actually starts.
       var p = lastPage + 1, q = lastSaid + 1;
+      function agrees(pageAt, saidAt) {
+        // The same word, or a spelling of it — "Timi" read as "Timmy" —
+        // as long as the word after it agrees as well.
+        if (nearly(page[pageAt].key, said[saidAt].key)) return true;
+        return soundsLike(page[pageAt].key, said[saidAt].key)
+          && pageAt + 1 < page.length && saidAt + 1 < said.length
+          && nearly(page[pageAt + 1].key, said[saidAt + 1].key);
+      }
+
       while (p < pin.page && q < pin.said) {
-        if (page[p].key === said[q].key) {
+        if (agrees(p, q)) {
           anchors.push({ page: p, said: q });
           p += 1; q += 1;
           continue;
@@ -342,11 +390,11 @@
         var found = -1;
         var pair = -1;
         for (var i = q; i < limit; i++) {
-          if (said[i].key !== page[p].key) continue;
+          if (!agrees(p, i)) continue;
           if (found < 0) found = i;
           // Two words in a row settle it: a lone "the" or "and" can land
           // anywhere, but "the Monday" only lands where the reading is.
-          if (p + 1 < pin.page && i + 1 < said.length && said[i + 1].key === page[p + 1].key) { pair = i; break; }
+          if (p + 1 < pin.page && i + 1 < said.length && nearly(said[i + 1].key, page[p + 1].key)) { pair = i; break; }
         }
         var at = pair >= 0 ? pair : found;
         if (at >= 0) { anchors.push({ page: p, said: at }); p += 1; q = at + 1; } else { p += 1; }
@@ -390,7 +438,12 @@
       var key = keyOf(row[0]);
       var start = Number(row[1]);
       var end = Number(row[2]);
-      if (key && isFinite(start) && isFinite(end)) said.push({ key: key, start: start, end: Math.max(end, start) });
+      if (!key || !isFinite(start) || !isFinite(end)) return;
+      // Two words aren't said at once: one that starts inside the word
+      // before it really starts where that one ends.
+      var previous = said[said.length - 1];
+      if (previous && start < previous.end && previous.end < end) start = previous.end;
+      said.push({ key: key, start: start, end: Math.max(end, start) });
     });
 
     var page = [];

@@ -38,6 +38,7 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import time
 import unicodedata
 from difflib import SequenceMatcher
 import urllib.error
@@ -69,6 +70,10 @@ API_TIMEOUT = 10 * 60
 WORKING_FOR = timedelta(minutes=45)   # a run that's taken longer than this has died
 RETRY_FAILED_AFTER = timedelta(hours=6)
 PARAGRAPH_GAP = 1.4       # a silence this long reads as a new paragraph
+DROPPED_VOICE = 1.5       # this much voice with no words heard means the transcriber skipped it
+WORD_MAX = 2.0            # no single word takes longer than this to say
+GAP_PAD = 0.8             # seconds either side of a skipped stretch, so no word is cut in half
+RATE_LIMIT_TRIES = 4      # told to slow down: wait and try again, this many attempts in all
 
 SIGNING_SALT = "dm-read-along"
 
@@ -410,15 +415,22 @@ def measure(obj):
                 except AlignmentUnavailable as error:
                     errors.append(str(error))
             if words is None and getattr(settings, "GROQ_API_KEY", ""):
-                # Whisper is told roughly what it should hear, so it comes
-                # back with the page's own wording where it can. If that
-                # upsets it, ask again plainly rather than lose the words.
+                # Told what it should hear, Whisper comes back with the
+                # page's own wording — but the hint can also make it skip a
+                # sentence it thinks it already has. So listen both ways
+                # and keep whichever follows the page more closely.
+                heard = []
                 for hint in (text, ""):
                     try:
-                        words, engine = _groq(audio, hint=hint), "groq"
-                        break
+                        heard.append(_groq(audio, hint=hint))
                     except AlignmentUnavailable as error:
                         errors.append(str(error))
+                heard = [attempt for attempt in heard if attempt]
+                if heard:
+                    words = max(heard, key=lambda attempt: (_spoken_share(text, attempt), len(attempt)))
+                    engine = "groq"
+                if words:
+                    words = _recover_dropped(audio, words, runs, folder)
     except AlignmentUnavailable as error:
         errors.append(str(error))
 
@@ -559,6 +571,80 @@ def _key(word):
     return _as_number(key) or key
 
 
+def _voice_without_words(runs, words):
+    """Stretches where the silence map hears a voice but the transcript has
+    no words in it. Whisper sometimes drops a whole passage of a longer
+    recording without a trace; this is where to look for it."""
+    spans = []
+    for start, end in runs or []:
+        if spans and start - spans[-1][1] < 0.6:
+            spans[-1][1] = end
+        else:
+            spans.append([start, end])
+    # No word takes more than a couple of seconds to say. When Whisper skips
+    # a passage it often stretches the next word right over it ("Wow!" from
+    # 76s to 90s), hiding the gap — so a stretched word vouches for nothing.
+    heard = [(float(word[1]), float(word[2])) for word in words or []
+             if float(word[2]) - float(word[1]) <= WORD_MAX]
+    missing = []
+    for start, end in spans:
+        pieces = [[start, end]]
+        for word_start, word_end in heard:
+            kept = []
+            for piece_start, piece_end in pieces:
+                if word_end <= piece_start or word_start >= piece_end:
+                    kept.append([piece_start, piece_end])
+                    continue
+                if word_start > piece_start:
+                    kept.append([piece_start, word_start])
+                if word_end < piece_end:
+                    kept.append([word_end, piece_end])
+            pieces = kept
+        missing += [piece for piece in pieces if piece[1] - piece[0] >= DROPPED_VOICE]
+    return missing
+
+
+def _recover_dropped(audio, words, runs, folder):
+    """Transcribe again, on its own, each stretch of voice the first pass
+    skipped, and let what it hears there replace what the first pass said."""
+    words = [list(word) for word in words]
+    recovered = 0
+    for start, end in _voice_without_words(runs, words):
+        begin = max(0.0, start - GAP_PAD)
+        clip = f"{folder}/gap-{int(begin * 1000)}.mp3"
+        try:
+            subprocess.run(
+                ["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-ss", f"{begin:.3f}",
+                 "-t", f"{(end - begin) + GAP_PAD:.3f}", "-i", audio, clip],
+                capture_output=True, timeout=EXTRACT_TIMEOUT, check=True,
+            )
+            # No hint here: on a short clip it could be echoed back as words.
+            found = _groq(clip, hint="")
+        except (AlignmentUnavailable, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+            continue
+        found = [[text, round(word_start + begin, 3), round(word_end + begin, 3)]
+                 for text, word_start, word_end in found]
+        # The first pass's words in the gap are the ones it got wrong: a
+        # word stretched over it, or a stray. The clip's own words go there
+        # instead, unless they only repeat a neighbour at the clip's edge.
+        within = lambda word: begin <= word[1] < end
+        kept = [word for word in words if not within(word)]
+        fresh = [word for word in found
+                 if within(word)
+                 and not any(_key(other[0]) == _key(word[0]) and abs(other[1] - word[1]) < 0.3 for other in kept)]
+        if len(fresh) <= len(words) - len(kept):
+            continue
+        recovered += len(fresh) - (len(words) - len(kept))
+        words = sorted(kept + fresh, key=lambda word: word[1])
+    if not recovered:
+        return words
+
+    # Anything still stretched is said once, at its start.
+    words = [[text, word_start, min(word_end, round(word_start + WORD_MAX, 3))] for text, word_start, word_end in words]
+    logger.info("Read-along: recovered %d word(s) the first transcription dropped.", recovered)
+    return _clean(words)
+
+
 def _multipart(fields, file_field, file_path):
     boundary = uuid.uuid4().hex
     parts = []
@@ -582,20 +668,29 @@ def _post(url, headers, body, content_type, service):
         url, data=body, method="POST",
         headers={**headers, "Content-Type": content_type, "Accept": "application/json", "User-Agent": "dictionmasters/1.0"},
     )
-    try:
-        with urllib.request.urlopen(request, timeout=API_TIMEOUT) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
-        detail = error.read()[:200].decode("utf-8", errors="ignore")
-        raise AlignmentUnavailable(f"{service} answered HTTP {error.code}: {detail}") from error
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as error:
-        raise AlignmentUnavailable(f"Couldn't reach {service}.") from error
+    for attempt in range(RATE_LIMIT_TRIES):
+        try:
+            with urllib.request.urlopen(request, timeout=API_TIMEOUT) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as error:
+            if error.code == 429 and attempt + 1 < RATE_LIMIT_TRIES:
+                # Busy: wait as long as it asks (within reason) and try again.
+                try:
+                    wait = float(error.headers.get("Retry-After") or 0)
+                except ValueError:
+                    wait = 0
+                time.sleep(min(max(wait, 5.0 * (attempt + 1)), 60.0))
+                continue
+            detail = error.read()[:200].decode("utf-8", errors="ignore")
+            raise AlignmentUnavailable(f"{service} answered HTTP {error.code}: {detail}") from error
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as error:
+            raise AlignmentUnavailable(f"Couldn't reach {service}.") from error
 
 
 def _clean(words):
     """[[word, start, end], …] with blanks dropped and times kept in order."""
     cleaned = []
-    last = 0.0
+    last, last_end = 0.0, 0.0
     for text, start, end in words:
         text = str(text or "").strip()
         try:
@@ -605,9 +700,14 @@ def _clean(words):
         if not text or start != start or end != end:     # NaN check
             continue
         start = max(start, last)
+        # Two words aren't said at once: one that starts inside the word
+        # before it (Whisper's "mother." 3.86–4.36, "She" 3.86–4.66) really
+        # starts where that one ends.
+        if start < last_end < end:
+            start = last_end
         end = max(end, start)
         cleaned.append([text, round(start, 3), round(end, 3)])
-        last = start
+        last, last_end = start, end
     return cleaned
 
 
