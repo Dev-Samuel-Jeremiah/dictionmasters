@@ -26,6 +26,7 @@ urlpatterns = [
     path("reading-club/", include("apps.reading_club.urls")),
     path("echospell/", include("apps.echospell.urls")),
     path("quick-words/", include("apps.quick_words.urls")),
+    path("tutor/", include("apps.tutor.urls")),
     path("assessments/", include("apps.assessments.urls")),
     path("clash/", include("apps.clash.urls")),
     path("billing/", include("apps.billing.urls")),

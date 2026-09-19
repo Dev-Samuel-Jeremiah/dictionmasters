@@ -31,6 +31,7 @@
     <div class="ui-grid">
       {% for tool in tools %}
         {% if tool.icon == "daily-practice" %}{% firstof "#2e7d62" as tone %}{% firstof "📅" as icon %}
+        {% elif tool.icon == "tutor" %}{% firstof "#1f6f5c" as tone %}{% firstof "🎙️" as icon %}
         {% elif tool.icon == "book" %}{% firstof "#7A2438" as tone %}{% firstof "📖" as icon %}
         {% elif tool.icon == "reading-club" %}{% firstof "#2f5d8a" as tone %}{% firstof "📚" as icon %}
         {% else %}{% firstof "#b8863b" as tone %}{% firstof "🔎" as icon %}{% endif %}

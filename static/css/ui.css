@@ -1143,6 +1143,19 @@ html.tool-sheet-open { overflow: hidden; }
 
 /* ---------- scanning a code from the book (static/js/qr_scanner.js) ---------- */
 
+/* ---------- the AI reading tutor's button ---------- */
+
+.tool-btn--tutor { position: relative; color: var(--ink-70); }
+.tool-btn--tutor svg:first-child { display: block; }
+.tool-btn--tutor:hover { color: var(--maroon); }
+.tool-btn__spark {
+  position: absolute; top: 3px; right: 3px;
+  color: var(--gold-deep);
+  animation: tutor-spark 2.6s ease-in-out infinite;
+}
+@keyframes tutor-spark { 50% { transform: scale(0.72) rotate(20deg); opacity: 0.7; } }
+@media (prefers-reduced-motion: reduce) { .tool-btn__spark { animation: none; } }
+
 .tool-btn--scan { color: var(--ink); }
 .tool-btn--scan svg { display: block; color: var(--ink-70); }
 .tool-btn--scan:hover svg { color: var(--maroon); }

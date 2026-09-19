@@ -32,6 +32,7 @@ GATED_PREFIXES = (
     "/reading-club/",
     "/echospell/",
     "/quick-words/",
+    "/tutor/",
     "/assessments/",
     "/clash/",
 )

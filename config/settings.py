@@ -126,6 +126,7 @@ LOCAL_APPS = [
     "apps.reading_club",
     "apps.echospell",
     "apps.quick_words",
+    "apps.tutor",
     "apps.assessments",
     "apps.clash",
     "apps.console",
@@ -440,3 +441,6 @@ ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "")
 # multilingual_v2 is the most natural voice and the steadiest (~1.5s per
 # word). "eleven_flash_v2_5" is quicker but noticeably less natural.
 ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
+# The live reading tutor answers in the middle of a reading, so it uses the
+# fast model: under a second, where the default takes nearly two.
+TUTOR_VOICE_MODEL_ID = os.environ.get("TUTOR_VOICE_MODEL_ID", "eleven_turbo_v2_5")

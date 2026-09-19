@@ -127,6 +127,18 @@ SECTIONS = [
         ],
     },
     {
+        "slug": "tutor", "name": "AI Reading Tutor", "icon": "🎙️", "tone": "#1f6f5c",
+        "blurb": "Passages learners read aloud to the live tutor, and how each reading went.",
+        "screens": [
+            {"key": "tutor-passages", "model": "tutor.TutorPassage",
+             "columns": ["title", "level", "order", "is_published"],
+             "search": ["title", "body"], "order": ["order", "title"]},
+            {"key": "tutor-sessions", "model": "tutor.TutorSession",
+             "columns": ["user", "title", "accuracy_percent", "wcpm", "reading_level", "started_at"],
+             "search": ["user__email", "title"], "order": ["-started_at"], "readonly": True},
+        ],
+    },
+    {
         "slug": "quick-words", "name": "Quick Words", "icon": "🔤", "tone": "#b8863b",
         "blurb": "The word library: meanings, transcriptions and pronunciations.",
         "screens": [
@@ -239,6 +251,7 @@ SECTIONS = [
 # Quick "add" buttons on the control room home page.
 QUICK_ADDS = [
     ("words", "Word", "🔤"),
+    ("tutor-passages", "Tutor passage", "🎙️"),
     ("activities", "EchoSpell activity", "🧩"),
     ("card-lessons", "Card lesson", "🃏"),
     ("lesson-items", "Lesson video / audio", "🎬"),

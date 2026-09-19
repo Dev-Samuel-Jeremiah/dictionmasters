@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Your reading report — AI Reading Tutor{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/tutor.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="tt tt-report" data-report data-say-url="{% url 'tutor:say' session.pk %}">
+  <div class="wrap">
+    <a class="tt-back" href="{% url 'tutor:hub' %}">← AI Reading Tutor</a>
+
+    <section class="tt-result tt-result--{{ session.band }}">
+      <div class="tt-result__level">
+        <p class="tt-eyebrow">Your reading level</p>
+        <p class="tt-result__big">{{ session.reading_level }}</p>
+        <p class="tt-result__band">{{ session.get_band_display }} <span>· {{ session.title }} ({{ session.passage_level }})</span></p>
+      </div>
+      <dl class="tt-stats">
+        <div class="tt-stat">
+          <dt>Accuracy</dt>
+          <dd>{{ session.accuracy_percent }}%</dd>
+          <small>{{ session.words_correct }} of {{ session.words_total }} words right first time</small>
+        </div>
+        <div class="tt-stat">
+          <dt>Reading speed</dt>
+          <dd>{% if session.wcpm %}{{ session.wcpm|floatformat:0 }}{% else %}—{% endif %}<span> wpm</span></dd>
+          <small>{% if typical %}typical for {{ session.passage_level }}: {{ typical }} words a minute{% else %}words correct per minute{% endif %}</small>
+        </div>
+        <div class="tt-stat">
+          <dt>Words practised</dt>
+          <dd>{{ session.practised|length }}</dd>
+          <small>with your tutor during the reading</small>
+        </div>
+      </dl>
+      {% if session.sentences_read < session.sentences_total %}
+      <p class="tt-result__note">You read {{ session.sentences_read }} of {{ session.sentences_total }} sentences. Read the whole passage for the most accurate level.</p>
+      {% endif %}
+    </section>
+
+    {% if session.feedback %}
+    <section class="tt-feedback">
+      <div class="tt-avatar tt-avatar--small" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="36" height="36"><circle cx="24" cy="24" r="22" fill="currentColor" opacity=".12"/><rect x="18" y="10" width="12" height="20" rx="6" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M13 23a11 11 0 0 0 22 0M24 34v5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <p class="tt-feedback__label">Your tutor says</p>
+        <h2 class="tt-feedback__headline">{{ session.feedback.headline }}</h2>
+        <p class="tt-feedback__message">{{ session.feedback.message }}</p>
+        {% if session.feedback.tips %}
+        <ul class="tt-feedback__tips">
+          {% for tip in session.feedback.tips %}<li>{{ tip }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    <div class="tt-report__grid">
+      <section class="tt-panel">
+        <h2 class="tt-h3">Words to practise</h2>
+        {% if practise %}
+        <ul class="tt-practise">
+          {% for word in practise %}
+          <li>
+            <button type="button" class="tt-practise__play" data-play data-sentence="{{ word.sentence }}" data-word="{{ word.word }}" aria-label="Hear {{ word.text }}">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+            <div>
+              <strong>{{ word.text }}</strong>
+              <small>{% if word.status == "missed" %}Left out{% elif word.heard %}You said “{{ word.heard }}”{% endif %}{% if word.tips %} — {{ word.tips.0 }}{% endif %}</small>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="tt-muted">Nothing to practise — every word was read correctly.</p>
+        {% endif %}
+
+        {% if session.patterns %}
+        <h3 class="tt-h4">Sounds to work on</h3>
+        <ul class="tt-patterns">
+          {% for pattern in session.patterns %}
+          <li><strong>{{ pattern.label }}</strong><span>{{ pattern.count }} time{{ pattern.count|pluralize }} · {{ pattern.words|join:", " }}</span></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </section>
+
+      <section class="tt-panel">
+        <h2 class="tt-h3">How you read it</h2>
+        <p class="tt-legend"><span class="tt-w tt-w--ok">right</span> <span class="tt-w tt-w--wrong">said differently</span> <span class="tt-w tt-w--missed">left out</span></p>
+        <div class="tt-passage tt-passage--report">
+          {% for sentence in marked %}<span class="tt-s">{% for word in sentence %}<span class="tt-w{% if word.status == 'ok' %} tt-w--ok{% elif word.status == 'wrong' %} tt-w--wrong{% elif word.status == 'missed' %} tt-w--missed{% elif word.status == 'unread' %} tt-w--unread{% endif %}"{% if word.heard and word.status == 'wrong' %} title="You said: {{ word.heard }}"{% endif %}>{{ word.text }}</span> {% endfor %}</span>{% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <div class="tt-report__actions">
+      {% if session.passage %}<a class="tt-btn tt-btn--soft" href="{% url 'tutor:read' session.passage.pk %}">Read it again</a>{% endif %}
+      {% if next_passage %}<a class="tt-btn" href="{% url 'tutor:read' next_passage.pk %}">Next: {{ next_passage.title }} ({{ next_passage.level }})</a>{% endif %}
+    </div>
+    <p class="tt-fineprint">Your tutor listens with speech recognition, so it catches words read as a different word (“tree” for “three”) and words left out. Reading level is estimated from accuracy and reading speed on this passage.</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    var root = document.querySelector("[data-report]");
+    if (!root) return;
+    root.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-play]");
+      if (!button) return;
+      button.disabled = true;
+      var text = button.parentElement.querySelector("strong").textContent;
+      var audio = new Audio(root.dataset.sayUrl + "?sentence=" + button.dataset.sentence + "&word=" + button.dataset.word);
+      new Promise(function (done) {
+        audio.onended = function () { done(true); };
+        audio.onerror = function () { done(false); };
+        audio.play().catch(function () { done(false); });
+      })
+        .then(function (played) {
+          if (played || !window.speechSynthesis) return;
+          var u = new SpeechSynthesisUtterance(text); u.lang = "en-GB"; u.rate = 0.8; speechSynthesis.speak(u);
+        })
+        .then(function () { button.disabled = false; });
+    });
+  })();
+</script>
+{% endblock %}

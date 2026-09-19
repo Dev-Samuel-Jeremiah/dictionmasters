@@ -8,6 +8,15 @@ def hub(request):
     as they're built, each as its own app."""
     tools = [
         {
+            "name": "AI Reading Tutor",
+            "blurb": "Read a passage aloud to a live tutor. It stops to "
+                     "help with any word you mispronounce, then gives you "
+                     "your reading level and feedback straight away.",
+            "url_name": "tutor:hub",
+            "available": True,
+            "icon": "tutor",
+        },
+        {
             "name": "Daily Practice",
             "blurb": "A fresh set of pronunciation drills — a word, a "
                      "sentence and a tongue twister — pulled at random "

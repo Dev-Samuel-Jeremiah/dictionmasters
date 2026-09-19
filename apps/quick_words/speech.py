@@ -42,12 +42,12 @@ def is_configured():
     return bool(settings.ELEVENLABS_API_KEY and settings.ELEVENLABS_VOICE_ID)
 
 
-def synthesise(word):
+def synthesise(word, model_id=None):
     """MP3 bytes of `word` being pronounced."""
-    return speak(f"{str(word).strip()}.")
+    return speak(f"{str(word).strip()}.", model_id=model_id)
 
 
-def speak(text):
+def speak(text, model_id=None):
     """MP3 bytes of `text` read aloud, exactly as written. Used directly
     where the wording matters, such as a phonemic chart keyword followed
     by its example words."""
@@ -56,7 +56,7 @@ def speak(text):
 
     body = {
         "text": str(text).strip(),
-        "model_id": settings.ELEVENLABS_MODEL_ID,
+        "model_id": model_id or settings.ELEVENLABS_MODEL_ID,
         "voice_settings": VOICE_SETTINGS,
     }
     request = urllib.request.Request(

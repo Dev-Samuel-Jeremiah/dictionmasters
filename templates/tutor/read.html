@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ passage.title }} — AI Reading Tutor{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/tutor.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="tt tt-read" data-tutor
+     data-start-url="{% url 'tutor:start' passage.pk %}"
+     data-check-url="{% url 'tutor:check' 0 %}"
+     data-say-url="{% url 'tutor:say' 0 %}"
+     data-finish-url="{% url 'tutor:finish' 0 %}"
+     data-name="{{ first_name }}">
+  {% csrf_token %}
+  <div class="wrap tt-read__wrap">
+    <header class="tt-read__head">
+      <a class="tt-back" href="{% url 'tutor:hub' %}">← All passages</a>
+      <div class="tt-read__title">
+        <h1>{{ passage.title }}</h1>
+        <span class="tt-chip">{{ passage.level }}</span>
+      </div>
+      <div class="tt-progress" aria-hidden="true"><span class="tt-progress__bar" data-progress></span></div>
+      <p class="tt-progress__text" data-progress-text>{{ sentences|length }} sentence{{ sentences|length|pluralize }}</p>
+    </header>
+
+    <article class="tt-passage" data-passage aria-label="The passage">
+      {% for sentence in sentences %}{% ifchanged sentence.paragraph %}{% if not forloop.first %}</p>{% endif %}<p class="tt-para">{% endifchanged %}<span class="tt-s" data-s="{{ forloop.counter0 }}">{% for word in sentence.words %}<span class="tt-w" data-w="{{ forloop.counter0 }}">{{ word.text }}</span>{% if not forloop.last %} {% endif %}{% endfor %}</span> {% if forloop.last %}</p>{% endif %}{% endfor %}
+    </article>
+  </div>
+
+  {# The tutor: what it's saying, what it's listening for, and the controls. #}
+  <aside class="tt-dock" aria-live="polite">
+    <div class="wrap tt-dock__inner">
+      <div class="tt-coach">
+        <div class="tt-avatar" data-avatar aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="44" height="44"><circle cx="24" cy="24" r="22" fill="currentColor" opacity=".12"/><rect x="18" y="10" width="12" height="20" rx="6" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M13 23a11 11 0 0 0 22 0M24 34v5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+        </div>
+        <div class="tt-coach__text">
+          <p class="tt-coach__title" data-say-title>Your reading tutor</p>
+          <p class="tt-coach__line" data-say-line>Press start, allow the microphone, and read each highlighted sentence aloud.</p>
+        </div>
+      </div>
+
+      <div class="tt-focus" data-focus hidden>
+        <button type="button" class="tt-focus__play" data-focus-play aria-label="Hear the word again">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <div>
+          <p class="tt-focus__word" data-focus-word></p>
+          <p class="tt-focus__ipa" data-focus-ipa></p>
+          <p class="tt-focus__tip" data-focus-tip></p>
+        </div>
+      </div>
+
+      <div class="tt-controls">
+        <button type="button" class="tt-mic" data-mic aria-label="Start reading">
+          <span class="tt-mic__ring" aria-hidden="true"></span>
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="8.5" y="3" width="7" height="11.5" rx="3.5" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="tt-mic__label" data-mic-label>Start</span>
+        </button>
+        <div class="tt-controls__side">
+          <button type="button" class="tt-link" data-hear disabled>Hear this sentence</button>
+          <button type="button" class="tt-link" data-skip disabled>Skip sentence</button>
+          <button type="button" class="tt-link tt-link--strong" data-finish disabled>Finish</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  {{ sentences|json_script:"tutor-sentences" }}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/tutor.js' %}" defer></script>
+{% endblock %}

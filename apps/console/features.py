@@ -32,6 +32,12 @@ FEATURES = [
         "site_url": "book:home",
     },
     {
+        "slug": "tutor", "name": "AI Reading Tutor", "icon": "🎙️", "tone": "#1f6f5c",
+        "blurb": "Passages learners read aloud to the live tutor, and how each reading went.",
+        "models": ["tutor.tutorpassage", "tutor.tutorsession"],
+        "site_url": "tutor:hub",
+    },
+    {
         "slug": "quick-words", "name": "Quick Words", "icon": "🔤", "tone": "#b8863b",
         "blurb": "The word library with meanings, transcriptions and pronunciations.",
         "models": ["quick_words.quickword", "quick_words.wordlist"],
