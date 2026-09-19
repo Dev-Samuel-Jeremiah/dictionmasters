@@ -145,6 +145,28 @@ def _sentence_case(text):
     return "".join(out)
 
 
+def coverage(text, words):
+    """Which parts of the page the recording actually reads: how many words
+    it says, and how many it never reaches at the start and the end."""
+    page = [key for key in (_key(word) for word in text.split()) if key]
+    said = [key for key in (_key(word[0]) for word in words) if key]
+    if not page:
+        return {"words": 0, "matched": 0, "head": 0, "tail": 0}
+    found = SequenceMatcher(None, page, said, autojunk=False).get_matching_blocks()
+    # A lone word matching somewhere is a coincidence; a run of two or more
+    # is the reading. Only runs say where the recording starts and stops.
+    blocks = [block for block in found if block.size >= 2]
+    if not blocks:
+        return {"words": len(page), "matched": 0, "head": len(page), "tail": 0}
+    first, last = blocks[0], blocks[-1]
+    return {
+        "words": len(page),
+        "matched": sum(block.size for block in found),
+        "head": first.a,
+        "tail": len(page) - (last.a + last.size),
+    }
+
+
 def can_replace_text(obj):
     return bool(TEXT_FIELD.get(_label(obj)))
 

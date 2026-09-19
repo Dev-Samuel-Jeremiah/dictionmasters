@@ -57,6 +57,11 @@
   var LEAST_LIT = 0.06;       // no word is lit for less time than the eye can catch
   var LINGER = 1.2;           // how long a word stays lit after it has been said
   var MOST_LIT = 1.5;         // the longest anyone spends saying a single word
+  var UNREAD_RUN = 10;        // more unmatched words in a row than this, and the voice isn't reading them
+  var EDGE_RUN = 4;           // ...or this many at the very start or end, which a recording often skips
+  var TRUST_MATCH = 0.5;      // below this the transcript is too patchy to say what was left unread
+  var LONELY = 4;             // an anchor with no other within this many words is a coincidence
+  var TIME_COMPANY = 5;       // ...and its neighbour must be within this many seconds of it
   var INTRO_MIN = 3;          // a greeting longer than this is worth pointing out
   var SYNC_RETRY = 15000;     // while the server is still measuring
   var SYNC_TRIES = 8;
@@ -352,11 +357,33 @@
     return anchors;
   }
 
+  function withoutStrays(anchors, said) {
+    /* A single "and" or "to" matching somewhere far from every other match
+       is a coincidence, not the reading — most often in a closing remark
+       after the passage has finished. Anchors need company to be believed. */
+    function close(one, other) {
+      // Company means next to each other on the page, next to each other in
+      // what was heard, and at about the same moment. A page word matched
+      // to a word spoken sixteen seconds later — in the reader's closing
+      // remarks — is a coincidence, however near it looks on the page.
+      if (!other) return false;
+      return Math.abs(other.page - one.page) <= LONELY
+        && Math.abs(other.said - one.said) <= LONELY * 3
+        && Math.abs(said[other.said].start - said[one.said].start) <= TIME_COMPANY;
+    }
+
+    return anchors.filter(function (anchor, at) {
+      return close(anchor, anchors[at - 1]) || close(anchor, anchors[at + 1]);
+    });
+  }
+
   function applyTiming(words, data) {
     /* Give every word on the page a start and an end. Returns the way it
        was worked out: "measured", "speech" or "" when neither is possible. */
     var duration = Number(data.duration) || 0;
     var clock = speechClock(data.speech, duration);
+
+    words.forEach(function (word) { word.silent = false; });
 
     var said = [];
     (data.words || []).forEach(function (row) {
@@ -370,24 +397,48 @@
     words.forEach(function (word, index) { if (word.key) page.push({ key: word.key, index: index }); });
     if (!page.length) return "";
 
-    var anchors = said.length ? anchorsFor(page, said) : [];
+    var anchors = said.length ? withoutStrays(anchorsFor(page, said), said) : [];
     if (anchors.length >= Math.max(2, page.length * MIN_MATCHED)) {
       words.forEach(function (word) { word.start = word.end = null; });
+      words.forEach(function (word) { word.heard = null; });
       anchors.forEach(function (anchor) {
         var word = words[page[anchor.page].index];
         word.start = said[anchor.said].start;
         word.end = said[anchor.said].end;
+        word.heard = said[anchor.said].key;      // which spoken word it was matched to
       });
-      // Everything between two anchors shares the gap between them.
+      // Everything between two anchors shares the gap between them — but a
+      // long run with nothing to anchor it is text the recording never
+      // reads: the opening it skips, the ending it stops short of, a
+      // paragraph the reader left out. Those words are never lit, so the
+      // highlight doesn't crawl through words nobody is saying.
       var index = 0;
       var lastEnd = said[said.length - 1].end;
+      var firstAnchored = -1, lastAnchored = -1;
+      words.forEach(function (word, at) {
+        if (word.start === null || word.start === undefined || !word.key) return;
+        if (firstAnchored < 0) firstAnchored = at;
+        lastAnchored = at;
+      });
       while (index < words.length) {
         if (words[index].start !== null && words[index].start !== undefined) { index += 1; continue; }
         var from = index;
         while (index < words.length && (words[index].start === null || words[index].start === undefined)) index += 1;
+        var run = words.slice(from, index);
+        var spoken = run.filter(function (word) { return word.key; }).length;
+        var atEdge = from < firstAnchored || index > lastAnchored + 1;
+        // Only trust "the voice never says this" when the recording was
+        // heard clearly. With a patchy transcript, a missing word means the
+        // listener missed it, not that the reader skipped it — so those
+        // words keep their place in the line rather than going dark.
+        var trusted = Number(data.quality) >= TRUST_MATCH;
+        if (trusted && (spoken > UNREAD_RUN || (atEdge && spoken >= EDGE_RUN))) {
+          run.forEach(function (word) { word.silent = true; word.start = word.end = null; });
+          continue;
+        }
         var before = from > 0 ? words[from - 1].end : (clock ? clock.firstStart : 0);
         var after = index < words.length ? words[index].start : Math.max(lastEnd, duration || lastEnd);
-        spread(words.slice(from, index), before, Math.max(after, before), clock);
+        spread(run, before, Math.max(after, before), clock);
       }
       // A word spoken after a pause begins exactly when the voice comes
       // back, which the silences know more precisely than the transcript.
@@ -406,6 +457,7 @@
       // and never one still lit after the voice has moved on.
       var floor = 0;
       words.forEach(function (word, index) {
+        if (word.silent) return;
         var next = words[index + 1];
         word.start = Math.max(word.start, floor);
         word.end = Math.max(word.end, word.start + LEAST_LIT);
@@ -458,10 +510,16 @@
     var words = measure(wordSpans(textBox));
     // Only words with something to say are ever highlighted: a lone dash
     // or bullet just belongs to its neighbours.
-    var track = words.filter(function (w) { return w.key; });
+    var track = [];
+
+    function rebuildTrack() {
+      track = words.filter(function (w) { return w.key && !w.silent; });
+      words.forEach(function (w) { w.track = -1; });
+      track.forEach(function (w, n) { w.track = n; });
+    }
+
+    rebuildTrack();
     if (track.length < 2) return;
-    words.forEach(function (w) { w.track = -1; });
-    track.forEach(function (w, n) { w.track = n; });
 
     var on = remembered();
     var mode = "";             // "", "estimate" or "measured"
@@ -524,9 +582,15 @@
     var markerTop = null;
 
     var sentences = {};
-    track.forEach(function (word) {
-      (sentences[word.sentence] = sentences[word.sentence] || []).push(word.node);
-    });
+
+    function groupSentences() {
+      sentences = {};
+      track.forEach(function (word) {
+        (sentences[word.sentence] = sentences[word.sentence] || []).push(word.node);
+      });
+    }
+
+    groupSentences();
 
     function markSentence(number, active) {
       (sentences[number] || []).forEach(function (node) {
@@ -694,6 +758,8 @@
 
     function becomeTimed(newMode) {
       mode = newMode;
+      rebuildTrack();
+      groupSentences();
       box.classList.add("is-timed");
       box.classList.toggle("is-measured", newMode === "measured" || newMode === "speech");
       offerSkip();

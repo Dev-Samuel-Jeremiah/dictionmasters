@@ -12,6 +12,18 @@
   <span class="cr-pill cr-pill--{% if timing.matches_text %}good{% else %}bad{% endif %}">{{ timing.quality_label }}</span>
 </header>
 
+{% if cover.head or cover.tail %}
+<section class="cr-card cr-note">
+  <h2 class="cr-card__title">The recording doesn't read all of this text</h2>
+  <p>
+    {% if cover.head %}It starts {{ cover.head }} word{{ cover.head|pluralize }} into the text{% if cover.tail %}, and it{% endif %}{% endif %}
+    {% if cover.tail %}{% if not cover.head %}It{% endif %} stops {{ cover.tail }} word{{ cover.tail|pluralize }} before the end{% endif %}.
+    Those words are never highlighted, because the voice never says them — the page simply rests there.
+    Trim the text to match, or record the missing part.
+  </p>
+</section>
+{% endif %}
+
 {% if not timing.matches_text %}
 <section class="cr-card cr-note">
   <h2 class="cr-card__title">This recording is reading different words</h2>

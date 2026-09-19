@@ -473,9 +473,10 @@ def read_along_detail(request, pk):
             messages.success(request, "Measuring this recording again. Refresh in a moment.")
         return redirect("manage:read_along_detail", pk=timing.pk)
 
+    page_text = book_read_along.text_for(obj)
     return render(request, "manage/read_along.html", _base_context(
         request, "read-along", timing=timing, object=obj, said=said, can_fix=can_fix,
-        page_text=book_read_along.text_for(obj), detail=True,
+        page_text=page_text, detail=True, cover=book_read_along.coverage(page_text, timing.words),
         configured=book_read_along.is_configured(),
     ))
 
