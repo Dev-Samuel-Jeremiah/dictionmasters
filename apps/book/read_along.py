@@ -663,6 +663,21 @@ def _multipart(fields, file_field, file_path):
     return b"".join(parts), f"multipart/form-data; boundary={boundary}", len(audio)
 
 
+# Connections are kept open between calls. Setting one up again costs as
+# much as half a second, which the reading tutor waits on while a learner
+# sits there — so the same connection is reused for every request.
+try:
+    import urllib3
+
+    _pool = urllib3.PoolManager(
+        maxsize=8, retries=False,
+        timeout=urllib3.Timeout(connect=15, read=API_TIMEOUT),
+        headers={"User-Agent": "dictionmasters/1.0"},
+    )
+except Exception:            # pragma: no cover - urllib3 comes with boto3
+    _pool = None
+
+
 def _post(url, headers, body, content_type, service):
     request = urllib.request.Request(
         url, data=body, method="POST",
@@ -670,21 +685,38 @@ def _post(url, headers, body, content_type, service):
     )
     for attempt in range(RATE_LIMIT_TRIES):
         try:
+            if _pool is not None:
+                answer = _pool.request("POST", url, body=body, headers=dict(request.headers))
+                if answer.status == 429 and attempt + 1 < RATE_LIMIT_TRIES:
+                    _wait(answer.headers.get("Retry-After"), attempt)
+                    continue
+                if answer.status >= 400:
+                    raise AlignmentUnavailable(
+                        f"{service} answered HTTP {answer.status}: {answer.data[:200].decode('utf-8', errors='ignore')}")
+                return json.loads(answer.data.decode("utf-8"))
             with urllib.request.urlopen(request, timeout=API_TIMEOUT) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as error:
             if error.code == 429 and attempt + 1 < RATE_LIMIT_TRIES:
-                # Busy: wait as long as it asks (within reason) and try again.
-                try:
-                    wait = float(error.headers.get("Retry-After") or 0)
-                except ValueError:
-                    wait = 0
-                time.sleep(min(max(wait, 5.0 * (attempt + 1)), 60.0))
+                _wait(error.headers.get("Retry-After"), attempt)
                 continue
             detail = error.read()[:200].decode("utf-8", errors="ignore")
             raise AlignmentUnavailable(f"{service} answered HTTP {error.code}: {detail}") from error
+        except AlignmentUnavailable:
+            raise
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as error:
             raise AlignmentUnavailable(f"Couldn't reach {service}.") from error
+        except Exception as error:      # urllib3's own troubles
+            raise AlignmentUnavailable(f"Couldn't reach {service}.") from error
+
+
+def _wait(retry_after, attempt):
+    """Told to slow down: wait as long as it asks, within reason."""
+    try:
+        asked = float(retry_after or 0)
+    except (TypeError, ValueError):
+        asked = 0
+    time.sleep(min(max(asked, 5.0 * (attempt + 1)), 60.0))
 
 
 def _clean(words):

@@ -1,4 +1,22 @@
+import threading
+
 from django.apps import AppConfig
+from django.conf import settings
+
+
+def _warm():
+    """Open the connection to the transcriber before anyone needs it.
+
+    The first call from a fresh worker spends over a second setting up the
+    connection; every one after reuses it in well under half. A learner
+    should never be the one waiting for that."""
+    try:
+        from apps.book.read_along import GROQ_URL, _pool
+
+        if _pool is not None:
+            _pool.request("GET", GROQ_URL.rsplit("/openai", 1)[0] + "/", retries=False, timeout=8)
+    except Exception:
+        pass       # it will simply be set up on the first reading instead
 
 
 class TutorConfig(AppConfig):
@@ -6,3 +24,8 @@ class TutorConfig(AppConfig):
     name = "apps.tutor"
     label = "tutor"
     verbose_name = "AI Reading Tutor"
+
+    def ready(self):
+        if getattr(settings, "TESTING", False) or not getattr(settings, "GROQ_API_KEY", ""):
+            return
+        threading.Thread(target=_warm, name="tutor-warm", daemon=True).start()

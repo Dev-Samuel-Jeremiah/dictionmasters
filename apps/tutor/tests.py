@@ -5,6 +5,7 @@ Nothing here reaches Groq, ElevenLabs or cloud storage — transcription,
 the voice and the feedback are all stood in for.
 """
 
+import os
 import tempfile
 from unittest import mock
 
@@ -56,7 +57,7 @@ class JudgingTests(TestCase):
         self.assertEqual(len(wrong), 1)
         self.assertEqual(words[wrong[0]["i"]]["text"], "three")
         self.assertIn("/θ/", wrong[0]["tips"][0])
-        self.assertEqual(wrong[0]["patterns"], [["TH", "T"]])
+        self.assertEqual(wrong[0]["patterns"], [["θ", "t"]])
         self.assertEqual(result["model"], [wrong[0]["i"]])
         self.assertFalse(result["again"])
 
@@ -76,13 +77,49 @@ class JudgingTests(TestCase):
         words = listen.sentences("Timi and his brother ran to the market.")[0]["words"]
         self.assertTrue(listen.judge_sentence(words, heard("Tim and"))["again"])
 
-    def test_british_r_is_not_blamed(self):
-        changes = pronounce.sound_changes("brother", "mother")
-        self.assertEqual([c["kind"] for c in changes], ["swap"])
+    def test_everything_is_judged_in_british_english(self):
+        # The R at the end of a word is silent in British English…
+        self.assertEqual(pronounce.transcription("car"), "/kɑː/")
+        self.assertEqual(pronounce.transcription("water"), "/wɔːtə/")
+        # …which makes these two words the same word to a British listener.
+        self.assertTrue(pronounce.sound_alike("father", "farther"))
+        # The R inside a word is still a sound the reader has to make.
+        self.assertIn("r", [change["expected"] for change in pronounce.sound_changes("brother", "bother")])
+
+    def test_words_an_american_says_differently(self):
+        for word, kind in [("dance", "bath"), ("class", "bath"), ("water", "flap"),
+                           ("new", "yod"), ("tomato", "lexical")]:
+            self.assertEqual(pronounce.american_difference(word)["kind"], kind, word)
+        self.assertEqual(pronounce.american_difference("dance")["british"], "/dɑːns/")
+        self.assertEqual(pronounce.american_difference("dance")["american"], "/dæns/")
+        # The accent's own system — the sounded R, the American O — is
+        # taught as a pattern, not marked on every other word.
+        for word in ["car", "market", "mother", "go", "hot", "the", "stories"]:
+            self.assertIsNone(pronounce.american_difference(word), word)
 
     def test_one_word_again(self):
         self.assertTrue(listen.judge_word("three", heard("Three."))["ok"])
         self.assertFalse(listen.judge_word("three", heard("Tree."))["ok"])
+
+
+class BritishTests(TestCase):
+    def test_feedback_is_written_in_british_spelling(self):
+        self.assertEqual(report.in_british_spelling("Practice saying it"), "Practise saying it")
+        self.assertEqual(report.in_british_spelling("memorize the color"), "memorise the colour")
+        # …without touching the noun, or words that only look American.
+        self.assertEqual(report.in_british_spelling("Good practice, the size of the prize"),
+                         "Good practice, the size of the prize")
+
+    def test_the_reading_page_marks_words_americans_say_differently(self):
+        user = User.objects.create_user(email="rp@example.com", password="pw-12345678",
+                                        first_name="Ada", is_staff=True)
+        passage = TutorPassage.objects.create(title="RP", level="Level 2",
+                                              body="My brother asked for a glass of water.")
+        self.client.force_login(user)
+        page = self.client.get(f"/tutor/read/{passage.pk}/")
+        self.assertContains(page, 'data-british="bath"')     # asked, glass
+        self.assertContains(page, 'data-british="flap"')     # water
+        self.assertContains(page, "British English")
 
 
 class LevelTests(TestCase):
@@ -170,6 +207,30 @@ class EndpointTests(TestCase):
         page = self.client.get(done["report"])
         self.assertContains(page, "Words to practise")
         self.assertContains(page, "You said “tree”")
+
+    @mock.patch("apps.tutor.listen.transcribe_file")
+    def test_a_recording_sent_while_it_is_spoken(self, transcribe_file):
+        """The page sends the reading in pieces as it is read, then names it
+        in the check — so when the reader stops, nothing is left to upload."""
+        session = self.start()
+        sent = self.client.post(f"/tutor/session/{session}/piece/",
+                                {"clip": "abc123", "piece": 0, "audio": self.clip()})
+        self.assertEqual(sent.status_code, 200)
+        joined = {}
+
+        def read_it(path, *args, **kwargs):
+            with open(path, "rb") as handle:
+                joined["bytes"] = handle.read()
+            return heard("I have a red hat.")
+
+        transcribe_file.side_effect = read_it
+        reply = self.client.post(f"/tutor/session/{session}/check/",
+                                 {"sentence": 0, "clip": "abc123", "piece": 1, "audio": self.clip()})
+        self.assertEqual(reply.json()["sentence"]["right"], 5)
+        # Both pieces were joined, in order, into the one recording.
+        self.assertEqual(joined["bytes"], self.clip().read() * 2)
+        # And the pieces are cleared away afterwards.
+        self.assertFalse(os.path.isdir(listen.clip_folder(session, "abc123")))
 
     @mock.patch("apps.tutor.listen.transcribe", side_effect=listen.NotHeard("quiet"))
     def test_silence_is_not_a_mistake(self, _transcribe):

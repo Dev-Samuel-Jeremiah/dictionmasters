@@ -23,6 +23,8 @@
 .tt-hero__inner { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 40px; align-items: center; }
 .tt-hero__title { margin: 0 0 12px; font-family: var(--font-serif); font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.15; color: var(--ink); }
 .tt-hero__lede { margin: 0 0 22px; max-width: 58ch; font-size: 1.04rem; line-height: 1.65; color: var(--ink-70); }
+.tt-hero__british { margin: -8px 0 20px; padding: 10px 14px; border-radius: 12px; font-size: 0.92rem; color: var(--ink-70); background: var(--tt-green-tint); border-left: 3px solid var(--tt-green); max-width: 58ch; }
+.tt-hero__british strong { color: var(--tt-green); }
 .tt-hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .tt-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .tt-steps li { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; border-radius: 14px; background: #fff; box-shadow: 0 6px 18px rgba(20, 33, 61, 0.06); }
@@ -80,6 +82,26 @@
 .tt-w--wrong { color: var(--tt-red) !important; background: var(--tt-red-tint); text-decoration: underline wavy rgba(178, 58, 72, 0.6); text-underline-offset: 5px; }
 .tt-w--missed { color: var(--ink-40) !important; text-decoration: line-through rgba(20, 33, 61, 0.35); }
 .tt-w--fixed { color: var(--tt-green) !important; background: var(--tt-green-tint); }
+/* A word an American says differently: marked so it can be tapped and
+   heard the British way. */
+.tt-w--british { border-bottom: 2px dotted var(--gold); cursor: pointer; }
+.tt-w--british:hover { background: var(--gold-tint); }
+.tt-british-note { margin: 10px 0 0; font-size: 0.85rem; color: var(--ink-70); }
+.tt-british-note .tt-w--british { cursor: default; }
+.tt-link--toggle[aria-pressed="true"]::before,
+.tt-link--toggle[aria-pressed="false"]::before {
+  content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px;
+  border-radius: 50%; background: var(--tt-green); vertical-align: middle;
+}
+.tt-link--toggle[aria-pressed="false"] { color: var(--ink-40); }
+.tt-link--toggle[aria-pressed="false"]::before { background: var(--ink-40); }
+.tt-focus[data-british="1"] { border-color: var(--tt-green); }
+.tt-focus[data-british="1"] .tt-focus__play { background: var(--tt-green); }
+.tt-ipa { font-family: var(--font-sans); color: var(--tt-green); white-space: nowrap; }
+.tt-ipa--us { color: var(--ink-40); }
+.tt-small { font-size: 0.85rem; margin: -6px 0 10px; }
+.tt-practise--british strong { font-size: 1rem; }
+
 .tt-w--focus { outline: 2px solid var(--gold); outline-offset: 2px; background: rgba(184, 134, 59, 0.18); }
 .tt-w--unread { color: var(--ink-40); }
 .tt-read .tt-s:not(.tt-s--now) .tt-w { cursor: pointer; }

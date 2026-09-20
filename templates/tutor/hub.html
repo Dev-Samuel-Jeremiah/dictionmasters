@@ -15,6 +15,7 @@
         <p class="tt-eyebrow">Live AI Reading Tutor</p>
         <h1 class="tt-hero__title">Read aloud. Get coached as you go.</h1>
         <p class="tt-hero__lede">Choose a passage and read it out loud, one sentence at a time. Your tutor listens. If a word doesn't come out right, it stops, says the word properly and lets you try it. When you finish, you get your reading level and feedback straight away.</p>
+        <p class="tt-hero__british"><strong>British English only.</strong> Every word is modelled in Received Pronunciation — the accent on the phonemic chart — and the words Americans say differently are practised with you as you read.</p>
         {% if suggested %}
         <div class="tt-hero__actions">
           <a class="tt-btn" href="{% url 'tutor:read' suggested.pk %}">Start reading: {{ suggested.title }}</a>

@@ -27,7 +27,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.accounts.access import limit_to_levels
 from apps.book.read_along import AlignmentUnavailable
 
-from . import listen, report, voice
+from . import listen, pronounce, report, voice
 from .models import TutorPassage, TutorSession, level_index
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,8 @@ logger = logging.getLogger(__name__)
 CHECKS_PER_MINUTE = 30
 CHECKS_PER_SESSION = 400
 SPEECH_PER_MINUTE = 40
+PIECES_PER_MINUTE = 400        # a recording arrives in pieces while it is spoken
+MAX_CLIP_BYTES = 6 * 1024 * 1024
 
 
 def _passages(user):
@@ -97,11 +99,23 @@ def hub(request):
 @require_GET
 def read(request, pk):
     passage = get_object_or_404(_passages(request.user), pk=pk)
+    sentences = _with_british(listen.sentences(passage.body))
     return render(request, "tutor/read.html", {
         "passage": passage,
-        "sentences": listen.sentences(passage.body),
+        "sentences": sentences,
         "first_name": (request.user.first_name or "").strip(),
     })
+
+
+def _with_british(sentences):
+    """Mark the words an American would say differently enough to be worth
+    hearing in British — "dance", "water", "new" — so the page can show
+    them and the tutor can model them."""
+    for sentence in sentences:
+        found = pronounce.british_words([word["text"] for word in sentence["words"]])
+        for index, difference in found.items():
+            sentence["words"][index]["british"] = difference
+    return sentences
 
 
 @login_required
@@ -111,6 +125,7 @@ def start(request, pk):
     session = TutorSession.objects.create(
         user=request.user, passage=passage, title=passage.title, passage_level=passage.level,
     )
+    listen.sweep()      # anything left by a reading someone walked away from
     return JsonResponse({"session": session.pk})
 
 
@@ -124,14 +139,39 @@ def _index(value, size):
 
 @login_required
 @require_POST
+def piece(request, session_id):
+    """One piece of a recording, sent while the learner is still reading,
+    so that when they stop there is nothing left to upload."""
+    session = _own_session(request, session_id)
+    if session.status != TutorSession.STATUS_READING:
+        return JsonResponse({"error": "This reading has finished."}, status=409)
+    clip, number, audio = request.POST.get("clip"), request.POST.get("piece"), request.FILES.get("audio")
+    if not clip or number is None or audio is None:
+        return JsonResponse({"error": "Missing piece."}, status=400)
+    if _limited(request.user, "piece", PIECES_PER_MINUTE):
+        return JsonResponse({"error": "Too many pieces."}, status=429)
+    try:
+        held = listen.keep_piece(session.pk, clip, number, audio,
+                                 listen._suffix(audio.name, audio.content_type))
+    except (OSError, ValueError):
+        return JsonResponse({"error": "Couldn't keep that piece."}, status=400)
+    if held > MAX_CLIP_BYTES:
+        listen.forget(session.pk, clip)
+        return JsonResponse({"error": "That recording is too long."}, status=413)
+    return JsonResponse({"ok": True})
+
+
+@login_required
+@require_POST
 def check(request, session_id):
     session = _own_session(request, session_id)
     if session.status != TutorSession.STATUS_READING or session.passage is None:
         return JsonResponse({"error": "This reading has finished."}, status=409)
     parts = listen.sentences(session.passage.body)
     number = _index(request.POST.get("sentence"), len(parts))
-    clip = request.FILES.get("audio")
-    if number is None or clip is None:
+    upload = request.FILES.get("audio")
+    clip = request.POST.get("clip")
+    if number is None or (upload is None and not clip):
         return JsonResponse({"error": "Missing sentence or recording."}, status=400)
     if session.checks >= CHECKS_PER_SESSION or _limited(request.user, "check", CHECKS_PER_MINUTE):
         return JsonResponse({"error": "Slow down a little — try again in a moment."}, status=429)
@@ -140,7 +180,15 @@ def check(request, session_id):
     words = parts[number]["words"]
     word_at = request.POST.get("word")
     try:
-        heard = listen.transcribe(clip)
+        if clip:
+            # Sent piece by piece while it was spoken; the last piece comes
+            # with this request, so nothing is waited on here.
+            if upload is not None:
+                listen.keep_piece(session.pk, clip, request.POST.get("piece") or 999, upload,
+                                  listen._suffix(upload.name, upload.content_type))
+            heard = listen.transcribe_file(listen.gather(session.pk, clip))
+        else:
+            heard = listen.transcribe(upload)
     except listen.NotHeard:
         session.save(update_fields=["checks"])
         return JsonResponse({"heard": False})
@@ -148,6 +196,9 @@ def check(request, session_id):
         session.save(update_fields=["checks"])
         logger.warning("Tutor couldn't transcribe: %s", error)
         return JsonResponse({"error": "The tutor can't listen right now. Please try again shortly."}, status=503)
+    finally:
+        if clip:
+            listen.forget(session.pk, clip)
 
     if word_at not in (None, ""):
         at = _index(word_at, len(words))
@@ -169,8 +220,8 @@ def check(request, session_id):
     result["ipa"] = {}
     for at in result["model"]:
         entry = voice.library_word(words[at]["text"])
-        if entry and entry.ipa:
-            result["ipa"][str(at)] = entry.ipa
+        result["ipa"][str(at)] = (entry.ipa if entry and entry.ipa
+                                  else pronounce.transcription(words[at]["text"]))
     kept = session.sentences.get(str(number))
     if kept is None:
         # The first reading is the one scored; later ones are practice.
@@ -246,6 +297,7 @@ def _audio_response(request, audio):
 @require_POST
 def finish(request, session_id):
     session = _own_session(request, session_id)
+    listen.forget(session.pk)
     if session.status == TutorSession.STATUS_READING:
         if session.passage is None or not session.sentences:
             return JsonResponse({"error": "Read at least one sentence first."}, status=400)
@@ -282,8 +334,15 @@ def report_page(request, session_id):
                 practise.append({"text": text, "sentence": index, "word": word["i"],
                                  "heard": word.get("heard", ""), "tips": word.get("tips", []),
                                  "status": word["status"]})
+    british = []
+    for index, part in enumerate(parts):
+        for at, difference in pronounce.british_words([w["text"] for w in part["words"]]).items():
+            text = voice.bare(part["words"][at]["text"])
+            if text and text.lower() not in {entry["text"].lower() for entry in british}:
+                british.append({"text": text, "sentence": index, "word": at, **difference})
     return render(request, "tutor/report.html", {
         "session": session,
+        "british": british[:10],
         "marked": marked,
         "practise": practise[:12],
         "typical": report.TYPICAL_WCPM.get(session.passage_level),

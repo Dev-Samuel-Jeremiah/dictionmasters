@@ -10,6 +10,7 @@
 {% block content %}
 <div class="tt tt-read" data-tutor
      data-start-url="{% url 'tutor:start' passage.pk %}"
+     data-piece-url="{% url 'tutor:piece' 0 %}"
      data-check-url="{% url 'tutor:check' 0 %}"
      data-say-url="{% url 'tutor:say' 0 %}"
      data-finish-url="{% url 'tutor:finish' 0 %}"
@@ -24,10 +25,11 @@
       </div>
       <div class="tt-progress" aria-hidden="true"><span class="tt-progress__bar" data-progress></span></div>
       <p class="tt-progress__text" data-progress-text>{{ sentences|length }} sentence{{ sentences|length|pluralize }}</p>
+      <p class="tt-british-note">Every word is taught in British English. <span class="tt-w tt-w--british">Underlined words</span> are ones Americans say differently — tap any of them to hear the British way.</p>
     </header>
 
     <article class="tt-passage" data-passage aria-label="The passage">
-      {% for sentence in sentences %}{% ifchanged sentence.paragraph %}{% if not forloop.first %}</p>{% endif %}<p class="tt-para">{% endifchanged %}<span class="tt-s" data-s="{{ forloop.counter0 }}">{% for word in sentence.words %}<span class="tt-w" data-w="{{ forloop.counter0 }}">{{ word.text }}</span>{% if not forloop.last %} {% endif %}{% endfor %}</span> {% if forloop.last %}</p>{% endif %}{% endfor %}
+      {% for sentence in sentences %}{% ifchanged sentence.paragraph %}{% if not forloop.first %}</p>{% endif %}<p class="tt-para">{% endifchanged %}<span class="tt-s" data-s="{{ forloop.counter0 }}">{% for word in sentence.words %}<span class="tt-w{% if word.british %} tt-w--british{% endif %}" data-w="{{ forloop.counter0 }}"{% if word.british %} data-british="{{ word.british.kind }}" title="British {{ word.british.british }} — tap to hear it"{% endif %}>{{ word.text }}</span>{% if not forloop.last %} {% endif %}{% endfor %}</span> {% if forloop.last %}</p>{% endif %}{% endfor %}
     </article>
   </div>
 
@@ -63,6 +65,8 @@
         </button>
         <div class="tt-controls__side">
           <button type="button" class="tt-link" data-hear disabled>Hear this sentence</button>
+          <button type="button" class="tt-link tt-link--toggle" data-british-toggle aria-pressed="true"
+                  title="Practise the words Americans say differently">British check</button>
           <button type="button" class="tt-link" data-skip disabled>Skip sentence</button>
           <button type="button" class="tt-link tt-link--strong" data-finish disabled>Finish</button>
         </div>

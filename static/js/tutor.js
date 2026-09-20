@@ -23,12 +23,15 @@
   var root = document.querySelector("[data-tutor]");
   if (!root) return;
 
-  var SENTENCE_END_SILENCE = 1300;   // ms of quiet after speaking that ends a sentence
-  var WORD_END_SILENCE = 800;        // ...and a single word
+  var SENTENCE_END_SILENCE = 600;    // ms of quiet after speaking that ends a sentence
+  var WORD_END_SILENCE = 400;        // ...and a single word
+  var PIECE_MS = 300;                // the recording is sent in pieces this long, as it is spoken
   var WAIT_FOR_VOICE = 12000;        // how long to wait for the learner to begin
   var MIN_VOICE = 180;               // ms of sound that counts as speech, not a cough
   var MAX_WORD_TRIES = 2;
   var MAX_WORDS_PER_SENTENCE = 3;    // more than this and it's a sentence to hear again
+  var BRITISH_PER_SENTENCE = 1;      // never more than one British check in a row
+  var BRITISH_PER_READING = 5;
   var PRAISE = ["Well read!", "Lovely — every word.", "Perfect!", "Great reading.", "Brilliant, keep going.", "Clear and correct!"];
   var TRY_AGAIN = ["That's it!", "Much better!", "Perfect — well done.", "Yes, that's right!"];
 
@@ -51,6 +54,7 @@
     hear: root.querySelector("[data-hear]"),
     skip: root.querySelector("[data-skip]"),
     finish: root.querySelector("[data-finish]"),
+    british: root.querySelector("[data-british-toggle]"),
     progress: root.querySelector("[data-progress]"),
     progressText: root.querySelector("[data-progress-text]"),
   };
@@ -138,15 +142,25 @@
     return voiceCache[key];
   }
 
-  var bestVoice = null;
+  // If the tutor's own recording can't be played, the browser speaks — but
+  // only in a British voice. An American voice is never used to model a
+  // word: it would teach the accent the tutor is there to correct. Other
+  // British Isles voices come next, and an American one is refused.
+  var bestVoice = null, lookedForVoice = false;
   function browserVoice() {
-    if (bestVoice || !window.speechSynthesis) return bestVoice;
-    var voices = window.speechSynthesis.getVoices();
-    var ranked = ["en-GB", "en-NG", "en-IE", "en-AU", "en-US", "en"];
-    for (var i = 0; i < ranked.length && !bestVoice; i++) {
-      bestVoice = voices.find(function (v) { return v.lang && v.lang.replace("_", "-").indexOf(ranked[i]) === 0 && /natural|google|premium|enhanced/i.test(v.name); })
-        || voices.find(function (v) { return v.lang && v.lang.replace("_", "-").indexOf(ranked[i]) === 0; });
+    if (lookedForVoice || !window.speechSynthesis) return bestVoice;
+    var voices = window.speechSynthesis.getVoices() || [];
+    if (!voices.length) return null;                 // not loaded yet; ask again later
+    lookedForVoice = true;
+    function tagged(pattern, fancy) {
+      return voices.find(function (v) {
+        var lang = (v.lang || "").replace("_", "-");
+        if (!pattern.test(lang) && !pattern.test(v.name || "")) return false;
+        return fancy ? /natural|google|premium|enhanced|siri/i.test(v.name || "") : true;
+      });
     }
+    bestVoice = tagged(/^en-GB|British|United Kingdom/i, true) || tagged(/^en-GB|British|United Kingdom/i, false)
+      || tagged(/^en-(IE|NG|ZA|IN|AU|NZ)/i, false) || null;
     return bestVoice;
   }
 
@@ -156,7 +170,7 @@
       var utterance = new SpeechSynthesisUtterance(text);
       var voice = browserVoice();
       if (voice) utterance.voice = voice;
-      utterance.lang = voice ? voice.lang : "en-GB";
+      utterance.lang = voice ? voice.lang : "en-GB";      // never en-US
       utterance.rate = slow ? 0.8 : 0.92;
       utterance.onend = utterance.onerror = function () { resolve(); };
       window.speechSynthesis.cancel();
@@ -247,14 +261,31 @@
   }
 
   function listen(opts) {
-    /* Record until the learner has spoken and then paused. Resolves with
-       the recording, or null if they never started. */
+    /* Record until the learner has spoken and then paused. Each piece of
+       the recording is sent as it is made, so when they stop there is
+       nothing left to upload — only the checking itself to wait for.
+       Resolves with the recording's name, or null if they never began. */
     return new Promise(function (resolve) {
       if (audioCtx.state === "suspended") audioCtx.resume();
       var type = recorderType();
-      var chunks = [];
       recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
-      recorder.ondataavailable = function (event) { if (event.data && event.data.size) chunks.push(event.data); };
+      var clip = "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      var sending = [];
+      var pieces = 0;
+      var stopping = false, tail = null;
+      recorder.ondataavailable = function (event) {
+        if (!event.data || !event.data.size) return;
+        // The last piece rides along with the check itself, saving the
+        // reader one more trip to the server before anything can happen.
+        if (stopping) { tail = event.data; return; }
+        var form = new FormData();
+        form.append("clip", clip);
+        form.append("piece", pieces++);
+        form.append("audio", event.data, "piece.webm");
+        sending.push(fetch(url(root.dataset.pieceUrl, session), {
+          method: "POST", body: form, credentials: "same-origin", headers: { "X-CSRFToken": csrf },
+        }).catch(function () { /* the check will say if too little arrived */ }));
+      };
 
       var began = Date.now();
       var floor = Infinity, spoke = 0, lastVoice = 0, voiced = false, finished = false;
@@ -267,13 +298,16 @@
         stopListening = null;
         el.mic.style.setProperty("--level", 0);
         recorder.onstop = function () {
-          resolve(keep && chunks.length ? new Blob(chunks, { type: recorder.mimeType || type || "audio/webm" }) : null);
+          if (!keep || !(pieces || tail)) { resolve(null); return; }
+          // Wait only for whatever is still in the air — usually nothing.
+          Promise.all(sending).then(function () { resolve({ clip: clip, tail: tail, pieces: pieces }); });
         };
+        stopping = true;
         try { recorder.stop(); } catch (error) { resolve(null); }
       }
       stopListening = function (keep) { end(keep && voiced); };
 
-      recorder.start(250);
+      recorder.start(PIECE_MS);
       timer = setInterval(function () {
         var level = loudness();
         var now = Date.now();
@@ -293,10 +327,13 @@
     });
   }
 
-  function send(blob, sentence, word) {
+  function send(heard, sentence, word) {
     var form = new FormData();
-    var ext = /mp4/.test(blob.type) ? "m4a" : /ogg/.test(blob.type) ? "ogg" : "webm";
-    form.append("audio", blob, "clip." + ext);
+    form.append("clip", heard.clip);
+    if (heard.tail) {
+      form.append("piece", heard.pieces);
+      form.append("audio", heard.tail, "piece.webm");
+    }
     form.append("sentence", sentence);
     if (word !== undefined) form.append("word", word);
     return fetch(url(root.dataset.checkUrl, session), {
@@ -329,15 +366,15 @@
     say(attempt > 1 ? "Your turn again" : "Your turn",
         attempt > 1 ? "Read the highlighted sentence once more." : "Read the highlighted sentence aloud.", "listen");
     var words = sentences[index].words.length;
-    return listen({ endSilence: SENTENCE_END_SILENCE, maxMs: 8000 + words * 900 }).then(function (blob) {
+    return listen({ endSilence: SENTENCE_END_SILENCE, maxMs: 8000 + words * 900 }).then(function (heardClip) {
       if (!alive(id)) return null;
-      if (!blob) {
+      if (!heardClip) {
         say("I'm listening", "Take your time — read the highlighted sentence when you're ready.", "listen");
         return readSentence(id, index, attempt);
       }
       state("checking");
       say("Checking…", "Listening back to what you read.", "think");
-      return send(blob, index).then(function (data) {
+      return send(heardClip, index).then(function (data) {
         if (!alive(id)) return null;
         if (data.status === 429 || data.status === 503 || data.error) {
           say("One moment", data.error || "Something went wrong — let's try that sentence again.", "warn");
@@ -345,7 +382,7 @@
         }
         if (!data.heard) {
           say("I didn't catch that", "Please read the sentence again, a little louder.", "warn");
-          return wait(1400).then(function () { return readSentence(id, index, attempt); });
+          return wait(700).then(function () { return readSentence(id, index, attempt); });
         }
         return coach(id, index, data.sentence, attempt);
       });
@@ -362,7 +399,7 @@
     if (result.again && attempt === 1) voiceFor(index);
     if (!result.model.length) {
       say(pick(PRAISE), attempt > 1 ? "That's the sentence done." : "", "happy");
-      return wait(900);
+      return wait(350).then(function () { return britishCheck(id, index); });
     }
     if (result.again && attempt === 1) {
       say("Let's hear it first", "Listen to the whole sentence, then read it again.", "teach");
@@ -385,8 +422,67 @@
       hideFocus();
       if (!alive(id)) return null;
       say("Good work", "On to the next sentence.", "happy");
-      return wait(700);
+      return wait(350).then(function () { return britishCheck(id, index); });
     });
+  }
+
+  // Keeping to British English. Some words an American says differently
+  // enough to matter — "dance", "water", "new". When the sentence is read,
+  // the tutor says the British way and the learner says it back, so the
+  // accent is taught rather than assumed.
+  var britishDone = {};
+  var britishCount = 0;
+
+  function britishWaiting(index) {
+    if (!britishOn() || britishCount >= BRITISH_PER_READING) return -1;
+    var words = sentences[index].words;
+    for (var at = 0; at < words.length; at++) {
+      var key = bareWord(words[at].text).toLowerCase();
+      if (words[at].british && !britishDone[key]) return at;
+    }
+    return -1;
+  }
+
+  function britishCheck(id, index) {
+    var at = britishWaiting(index);
+    if (at < 0 || !alive(id)) return Promise.resolve();
+    var word = sentences[index].words[at];
+    var text = bareWord(word.text);
+    var key = text.toLowerCase();
+    britishDone[key] = true;
+    britishCount += 1;
+    var node = wordEl(index, at);
+    if (node) node.classList.add("tt-w--focus");
+    showFocus(text, word.british.british, "British English: " + word.british.note +
+              ". Americans say " + word.british.american + ".");
+    el.focus.dataset.british = "1";
+    say("The British way", "Listen to “" + text + "”, then say it after me.", "teach");
+    focusAudio = function () { return model(index, at, text); };
+    return model(index, at, text).then(function () {
+      if (!alive(id)) return null;
+      state("listening");
+      say("Now you say it", "“" + text + "” the British way.", "listen");
+      return listen({ endSilence: WORD_END_SILENCE, maxMs: 5000 });
+    }).then(function (heardClip) {
+      if (!alive(id) || !heardClip) return null;
+      state("checking");
+      return send(heardClip, index, at).then(function (data) {
+        if (!alive(id)) return null;
+        var said = data.heard && data.word && data.word.ok;
+        say(said ? "That's the British way!" : "Keep that one in mind",
+            said ? "“" + text + "” — " + word.british.british : "We'll put “" + text + "” on your report.",
+            said ? "happy" : "teach");
+        return wait(450);
+      });
+    }).then(function () {
+      if (node) node.classList.remove("tt-w--focus");
+      hideFocus();
+      delete el.focus.dataset.british;
+    });
+  }
+
+  function britishOn() {
+    return el.british ? el.british.getAttribute("aria-pressed") !== "false" : true;
   }
 
   function practiseWord(id, index, at, verdict, attempt) {
@@ -404,27 +500,27 @@
       state("listening");
       say("Now you say it", "Say “" + text + "” clearly.", "listen");
       return listen({ endSilence: WORD_END_SILENCE, maxMs: 6000 });
-    }).then(function (blob) {
+    }).then(function (heardClip) {
       if (!alive(id)) return null;
-      if (!blob) {
+      if (!heardClip) {
         say("Say it when you're ready", "Just the one word: “" + text + "”.", "listen");
         return attempt < MAX_WORD_TRIES + 1 ? practiseWord(id, index, at, verdict, attempt + 1) : null;
       }
       state("checking");
-      return send(blob, index, at).then(function (data) {
+      return send(heardClip, index, at).then(function (data) {
         if (!alive(id)) return null;
         var ok = data.heard && data.word && data.word.ok;
         if (ok) {
           if (node) { node.classList.remove("tt-w--wrong", "tt-w--missed"); node.classList.add("tt-w--fixed"); }
           say(pick(TRY_AGAIN), "“" + text + "” — just right.", "happy");
-          return wait(900);
+          return wait(450);
         }
         if (attempt < MAX_WORD_TRIES) {
           var next = { status: "wrong", heard: data.word && data.word.heard, tips: data.word && data.word.tips, ipa: verdict.ipa };
           return practiseWord(id, index, at, next, attempt + 1);
         }
         say("Good try", "We'll keep practising “" + text + "”. It's on your report.", "teach");
-        return wait(1300);
+        return wait(800);
       });
     }).then(function () {
       if (node) node.classList.remove("tt-w--focus");
@@ -500,8 +596,8 @@
     }).then(function (r) { return r.json(); }).then(function (data) {
       session = data.session;
       if (window.speechSynthesis) window.speechSynthesis.getVoices();
-      say("Hello" + (name ? " " + name : "") + "!", "I'll listen as you read. If a word needs work, I'll help you with it.", "happy");
-      return wait(1800);
+      say("Hello" + (name ? " " + name : "") + "!", "Read each highlighted sentence aloud. I'll stop you if a word needs work.", "happy");
+      return wait(700);
     }).then(function () {
       run();
     }).catch(function (error) {
@@ -540,6 +636,17 @@
     finish();
   });
 
+  if (el.british) {
+    try {
+      if (window.localStorage.getItem("tutor-british") === "off") el.british.setAttribute("aria-pressed", "false");
+    } catch (error) { /* private browsing */ }
+    el.british.addEventListener("click", function () {
+      var on = !britishOn();
+      el.british.setAttribute("aria-pressed", on ? "true" : "false");
+      try { window.localStorage.setItem("tutor-british", on ? "on" : "off"); } catch (error) { /* fine */ }
+    });
+  }
+
   el.focusPlay.addEventListener("click", function () {
     if (focusAudio && root.dataset.state !== "listening") focusAudio();
   });
@@ -550,7 +657,8 @@
     if (!node || !session || root.dataset.state === "listening" || root.dataset.state === "checking") return;
     var s = Number(node.closest("[data-s]").dataset.s);
     var w = Number(node.dataset.w);
-    if (s >= current) return;
+    // Any word already read, and any word marked British, can be heard.
+    if (s >= current && !node.hasAttribute("data-british")) return;
     model(s, w, bareWord(node.textContent)).then(function () { if (paused) state("paused"); });
   });
 

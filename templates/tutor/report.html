@@ -79,6 +79,24 @@
         <p class="tt-muted">Nothing to practise — every word was read correctly.</p>
         {% endif %}
 
+        {% if british %}
+        <h3 class="tt-h4">British pronunciations in this passage</h3>
+        <p class="tt-muted tt-small">These are the words an American would say differently. Tap to hear the British way.</p>
+        <ul class="tt-practise tt-practise--british">
+          {% for word in british %}
+          <li>
+            <button type="button" class="tt-practise__play" data-play data-sentence="{{ word.sentence }}" data-word="{{ word.word }}" aria-label="Hear {{ word.text }} in British English">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+            <div>
+              <strong>{{ word.text }}</strong>
+              <small><span class="tt-ipa">{{ word.british }}</span> British · <span class="tt-ipa tt-ipa--us">{{ word.american }}</span> American — {{ word.note }}</small>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+
         {% if session.patterns %}
         <h3 class="tt-h4">Sounds to work on</h3>
         <ul class="tt-patterns">
@@ -102,7 +120,7 @@
       {% if session.passage %}<a class="tt-btn tt-btn--soft" href="{% url 'tutor:read' session.passage.pk %}">Read it again</a>{% endif %}
       {% if next_passage %}<a class="tt-btn" href="{% url 'tutor:read' next_passage.pk %}">Next: {{ next_passage.title }} ({{ next_passage.level }})</a>{% endif %}
     </div>
-    <p class="tt-fineprint">Your tutor listens with speech recognition, so it catches words read as a different word (“tree” for “three”) and words left out. Reading level is estimated from accuracy and reading speed on this passage.</p>
+    <p class="tt-fineprint">Every pronunciation your tutor plays is British English (Received Pronunciation), the accent on the phonemic chart. Your tutor listens with speech recognition, so it catches words read as a different word (“tree” for “three”) and words left out; it cannot hear a British word said with an American accent, which is why the British words above are practised with you as you read. Reading level is estimated from accuracy and reading speed on this passage.</p>
   </div>
 </div>
 {% endblock %}
