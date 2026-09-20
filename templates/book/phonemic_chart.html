@@ -9,7 +9,7 @@
     <div class="wrap">
       <ol class="ui-crumbs">
         <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
-        <li><a href="{% url 'book:home' %}">Book of Conversation</a></li>
+        <li><a href="{% url 'book:home' %}">44 Academy</a></li>
         <li>Phonemic Chart</li>
       </ol>
       <div class="ui-hero__inner">
@@ -77,7 +77,7 @@
         {% endif %}
         <p style="margin-top: 16px;"><a href="{% url 'book:sound_detail' selected.sound.slug %}" class="ui-btn ui-btn--gold">Open full lesson &rarr;</a></p>
       {% else %}
-      <div class="ui-empty"><p>This sound hasn't been added to the 44 Academy yet. Check back soon.</p></div>
+      <div class="ui-empty"><p>This sound hasn't been added to 44 Academy yet. Check back soon.</p></div>
       {% endif %}
     </section>
     {% endif %}

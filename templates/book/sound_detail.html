@@ -2,7 +2,7 @@
 {% load static %}
 {% load read_along %}
 
-{% block title %}{{ sound.symbol }} {{ sound.name }} — The 44 Academy{% endblock %}
+{% block title %}{{ sound.symbol }} {{ sound.name }} — 44 Academy{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
@@ -14,8 +14,8 @@
 <section class="ui-hero ui-hero--maroon">
   <div class="wrap">
     <ol class="ui-crumbs">
-      <li><a href="{% url 'book:home' %}">Book of Conversation</a></li>
-      <li><a href="{% url 'book:academy' %}">The 44 Academy</a></li>
+      <li><a href="{% url 'book:home' %}">44 Academy</a></li>
+      <li><a href="{% url 'book:academy' %}">All 44 Sounds</a></li>
       <li>{{ sound.name }}</li>
     </ol>
     <div class="ui-hero__inner">

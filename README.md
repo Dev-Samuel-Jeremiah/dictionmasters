@@ -6,7 +6,7 @@ all behind school-controlled access codes.
 
 Built so far: the public landing page; registration (schools,
 individuals, and code-based joining for teachers/students); and the
-first Learning Tool — the Book of Conversation's 44 Academy.
+first Learning Tool — 44 Academy.
 
 ## Project layout
 
@@ -19,7 +19,7 @@ dictionmasters/
 │   ├── accounts/        # custom User model (email login, role), registration, login
 │   ├── schools/         # School + AccessCode models, school admin dashboard
 │   ├── learning_tools/  # the hub that lists every learning tool
-│   └── book/            # Book of Conversation — the 44 Academy
+│   └── book/            # 44 Academy — the 44 sounds of English
 ├── templates/
 │   ├── base.html
 │   ├── includes/        # header, footer, messages, form field renderer
@@ -54,7 +54,7 @@ dictionmasters/
   and every tab's content is editable right there as inline forms —
   no code changes needed to add or update a lesson.
 
-Pages: `/learning-tools/` (hub) → `/book/` (Book of Conversation) →
+Pages: `/learning-tools/` (hub) → `/book/` (44 Academy) →
 `/book/44-academy/` (grid of all sounds, grouped by category) →
 `/book/44-academy/<sound-slug>/<tab>/` (the lesson, tabbed).
 Learning Tools sits behind login — any signed-in role can view it,

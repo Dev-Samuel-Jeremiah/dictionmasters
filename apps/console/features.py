@@ -24,8 +24,8 @@ FEATURES = [
         "site_url": "echospell:hub",
     },
     {
-        "slug": "book", "name": "Book of Conversation", "icon": "📖", "tone": "#7A2438",
-        "blurb": "The 44 Academy sounds, their lessons, and the phonemic chart audio.",
+        "slug": "book", "name": "44 Academy", "icon": "📖", "tone": "#7A2438",
+        "blurb": "The 44 sounds, their lessons, and the phonemic chart audio.",
         "models": ["book.soundcategory", "book.sound", "book.wordbankentry", "book.sentencepractice",
                    "book.passage", "book.conversation", "book.tonguetwister", "book.minimalpair",
                    "book.externallink", "book.phonemeaudio"],

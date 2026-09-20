@@ -261,6 +261,41 @@ p { margin: 0; }
 
 /* ---------- show / hide a password (static/js/password_toggle.js) ---------- */
 
+/* ---------- choosing a password (static/js/password_strength.js) ---------- */
+
+.pw-guide { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: rgba(20, 33, 61, 0.04); border: 1px solid var(--rule); }
+.pw-guide.is-accepted { background: rgba(36, 71, 62, 0.07); border-color: rgba(36, 71, 62, 0.35); }
+.pw-meter { display: flex; align-items: center; gap: 10px; }
+.pw-meter__bar { flex: 1 1 auto; height: 7px; border-radius: 999px; background: rgba(20, 33, 61, 0.12); overflow: hidden; }
+.pw-meter__fill { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--maroon); transition: width 0.25s ease, background 0.25s ease; }
+.pw-guide[data-score="2"] .pw-meter__fill { background: var(--gold); }
+.pw-guide[data-score="3"] .pw-meter__fill,
+.pw-guide[data-score="4"] .pw-meter__fill { background: var(--green); }
+.pw-meter__word { flex: 0 0 auto; font-size: 0.82rem; font-weight: 600; color: var(--ink-70); }
+.pw-guide.is-accepted .pw-meter__word { color: var(--green); }
+
+.pw-rules { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 4px 14px; }
+.pw-rule { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--ink-40); }
+.pw-rule__mark { flex: 0 0 auto; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid currentColor; position: relative; }
+.pw-rule.is-met { color: var(--green); }
+.pw-rule.is-met .pw-rule__mark { background: var(--green); border-color: var(--green); }
+.pw-rule.is-met .pw-rule__mark::after {
+  content: ""; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px;
+  border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.pw-rule.is-missing { color: var(--maroon); }
+
+.pw-example { margin: 10px 0 0; font-size: 0.82rem; color: var(--ink-70); }
+.pw-example strong { color: var(--ink); font-weight: 600; }
+.pw-make { margin-top: 10px; padding: 7px 12px; border: 1px solid var(--rule); border-radius: 999px; background: #fff; font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--ink); cursor: pointer; }
+.pw-make:hover { border-color: var(--gold); color: var(--gold-deep); }
+.pw-made { margin: 8px 0 0; font-size: 0.85rem; color: var(--green); }
+.pw-made strong { font-family: var(--font-sans); letter-spacing: 0.02em; }
+.pw-match { margin: 6px 0 0; font-size: 0.82rem; }
+.pw-match.is-same { color: var(--green); }
+.pw-match.is-different { color: var(--maroon); }
+@media (prefers-reduced-motion: reduce) { .pw-meter__fill { transition: none; } }
+
 .pw-wrap { position: relative; display: block; }
 .pw-wrap input { width: 100%; padding-right: 48px; }
 .pw-toggle {

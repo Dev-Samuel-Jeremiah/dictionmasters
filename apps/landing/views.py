@@ -102,7 +102,7 @@ def home(request):
         "drift": _drift_layer(),
         "stats": [
             {"value": "100", "label": "schools onboarding"},
-            {"value": "350", "label": "videos in the Book of Conversation"},
+            {"value": "350", "label": "videos in 44 Academy"},
             {"value": "44", "label": "sounds on the phonemic chart"},
         ],
         "steps": [

@@ -26,8 +26,8 @@ def hub(request):
             "icon": "daily-practice",
         },
         {
-            "name": "Book of Conversation",
-            "blurb": "The 44 Academy — a full lesson for every sound of "
+            "name": "44 Academy",
+            "blurb": "A full lesson for every sound of "
                      "English: articulation, word bank, sentence practice, "
                      "passages, conversations, twisters and minimal pairs.",
             "url_name": "book:home",

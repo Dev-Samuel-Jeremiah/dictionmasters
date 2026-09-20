@@ -86,7 +86,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "book", "name": "Book of Conversation", "icon": "📖", "tone": "#7A2438",
+        "slug": "book", "name": "44 Academy", "icon": "📖", "tone": "#7A2438",
         "blurb": "The 44 Academy sounds, their lessons, and the phonemic chart audio.",
         "screens": [
             {"key": "sound-groups", "model": "book.SoundCategory",

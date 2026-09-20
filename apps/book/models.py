@@ -1,5 +1,5 @@
 """
-The Book of Conversation is Diction Masters' first Learning Tool.
+44 Academy is Diction Masters' first Learning Tool.
 Inside it, the 44 Academy is one lesson per sound of English: a
 child taps a sound on the chart and lands on a page with several
 tabs — Lens (articulation), Word Bank, Sentence Practice, Passage,

@@ -24,6 +24,17 @@ from apps.schools.models import AccessCode, School
 
 from .models import User
 
+# Said the same way on every form that sets a password, and matching what
+# the site actually checks (see AUTH_PASSWORD_VALIDATORS): eight characters
+# or more, not all numbers, not one of the common ones, and not made from
+# the name or email already on the form. The registration pages turn this
+# into a live check as the person types (static/js/password_strength.js);
+# without JavaScript it is still shown here.
+PASSWORD_HELP = (
+    "8 characters or more, not all numbers, and not an easy one to guess. "
+    "Three small words and a number work well — like “mango river 47” or “Blue-Gate-8”."
+)
+
 
 class StyledFormMixin:
     """Adds a consistent CSS class to every field, so templates don't
@@ -96,7 +107,7 @@ class SchoolRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
     first_name = forms.CharField(label="Your first name", max_length=150)
     last_name = forms.CharField(label="Your last name", max_length=150, required=False)
     email = forms.EmailField(label="Your email (used to sign in)")
-    password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
+    password1 = forms.CharField(label="Password", widget=forms.PasswordInput, help_text=PASSWORD_HELP)
     password2 = forms.CharField(label="Confirm password", widget=forms.PasswordInput)
 
     def __init__(self, *args, **kwargs):
@@ -147,7 +158,7 @@ class IndividualRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
     first_name = forms.CharField(label="First name", max_length=150)
     last_name = forms.CharField(label="Last name", max_length=150, required=False)
     email = forms.EmailField(label="Email")
-    password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
+    password1 = forms.CharField(label="Password", widget=forms.PasswordInput, help_text=PASSWORD_HELP)
     password2 = forms.CharField(label="Confirm password", widget=forms.PasswordInput)
 
     def __init__(self, *args, **kwargs):
@@ -210,7 +221,7 @@ class StudentRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
     first_name = forms.CharField(label="First name", max_length=150)
     last_name = forms.CharField(label="Last name", max_length=150, required=False)
     email = forms.EmailField(label="Email", help_text="A parent's email is fine.")
-    password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
+    password1 = forms.CharField(label="Password", widget=forms.PasswordInput, help_text=PASSWORD_HELP)
     password2 = forms.CharField(label="Confirm password", widget=forms.PasswordInput)
 
     def __init__(self, *args, **kwargs):
@@ -285,7 +296,7 @@ class JoinWithCodeForm(StyledFormMixin, forms.Form):
     first_name = forms.CharField(label="First name", max_length=150)
     last_name = forms.CharField(label="Last name", max_length=150, required=False)
     email = forms.EmailField(label="Email")
-    password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
+    password1 = forms.CharField(label="Password", widget=forms.PasswordInput, help_text=PASSWORD_HELP)
     password2 = forms.CharField(label="Confirm password", widget=forms.PasswordInput)
 
     def __init__(self, *args, **kwargs):

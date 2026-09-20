@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}The 44 Academy — Diction Masters{% endblock %}
+{% block title %}All 44 Sounds — 44 Academy{% endblock %}
 
 {% block content %}
 <div class="ui">
@@ -9,15 +9,15 @@
     <div class="wrap">
       <ol class="ui-crumbs">
         <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
-        <li><a href="{% url 'book:home' %}">Book of Conversation</a></li>
-        <li>The 44 Academy</li>
+        <li><a href="{% url 'book:home' %}">44 Academy</a></li>
+        <li>All 44 Sounds</li>
       </ol>
       <div class="ui-hero__inner">
         <div class="ui-hero__main">
           <span class="ui-hero__icon" aria-hidden="true">&#127891;</span>
           <div>
-            <p class="ui-hero__eyebrow">Book of Conversation</p>
-            <h1 class="ui-hero__title">The 44 Academy</h1>
+            <p class="ui-hero__eyebrow">44 Academy</p>
+            <h1 class="ui-hero__title">All 44 Sounds</h1>
             <p class="ui-hero__lede">Tap a sound to open its lesson: articulation, word bank, sentence practice and more.</p>
             <div class="ui-hero__chips">
               {% for group in groups %}<span class="ui-chip">{{ group.category.name }} &middot; {{ group.sounds|length }}</span>{% endfor %}

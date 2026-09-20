@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Book of Conversation — Diction Masters{% endblock %}
+{% block title %}44 Academy — Diction Masters{% endblock %}
 
 {% block content %}
 <div class="ui">
@@ -10,14 +10,14 @@
       <ol class="ui-crumbs">
         <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
         <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
-        <li>Book of Conversation</li>
+        <li>44 Academy</li>
       </ol>
       <div class="ui-hero__inner">
         <div class="ui-hero__main">
           <span class="ui-hero__icon" aria-hidden="true">&#128214;</span>
           <div>
             <p class="ui-hero__eyebrow">Learning tools</p>
-            <h1 class="ui-hero__title">The Book of Conversation</h1>
+            <h1 class="ui-hero__title">44 Academy</h1>
             <p class="ui-hero__lede">A complete lesson for every sound of English: how to shape your mouth, words to practise, sentences and passages to read aloud, conversations to act out, and the tongue twisters that make it stick.</p>
             <div class="ui-hero__chips">
               <span class="ui-chip ui-chip--gold">{{ total_sounds }} sound{{ total_sounds|pluralize }}</span>
@@ -32,9 +32,9 @@
     <div class="ui-grid">
       <a href="{% url 'book:academy' %}" class="ui-card ui-lift" style="--tone: #7A2438; --i: 0">
         <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#127891;</span><span class="ui-status ui-status--current">Start here</span></span>
-        <span class="ui-card__name">The 44 Academy</span>
-        <span class="ui-card__desc">{{ total_sounds }} sounds, each with its own lesson: articulation, word bank, sentence practice, a passage, a conversation, tongue twisters and minimal pairs.</span>
-        <span class="ui-card__cta">Open the 44 Academy &rarr;</span>
+        <span class="ui-card__name">All 44 Sounds</span>
+        <span class="ui-card__desc">{{ total_sounds }} sound{{ total_sounds|pluralize }}, each with its own lesson: articulation, word bank, sentence practice, a passage, a conversation, tongue twisters and minimal pairs.</span>
+        <span class="ui-card__cta">Open the sounds &rarr;</span>
       </a>
       <a href="{% url 'book:phonemic_chart' %}" class="ui-card ui-lift" style="--tone: #2f5d8a; --i: 1">
         <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">iː</span></span>
@@ -45,7 +45,7 @@
       <a href="{% url 'daily_practice:home' %}" class="ui-card ui-lift" style="--tone: #2e7d62; --i: 2">
         <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#128197;</span></span>
         <span class="ui-card__name">Daily Practice</span>
-        <span class="ui-card__desc">A fresh set of drills pulled from the 44 Academy every day.</span>
+        <span class="ui-card__desc">A fresh set of drills pulled from the 44 sounds every day.</span>
         <span class="ui-card__cta">Practise today &rarr;</span>
       </a>
     </div>

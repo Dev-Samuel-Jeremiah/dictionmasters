@@ -74,6 +74,7 @@
               <div class="field">
                 <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
                 {{ form.password1 }}
+                {% if form.password1.help_text %}<p class="field-help">{{ form.password1.help_text }}</p>{% endif %}
                 {% if form.password1.errors %}<ul class="field-errors">{% for error in form.password1.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
               </div>
               <div class="field">
