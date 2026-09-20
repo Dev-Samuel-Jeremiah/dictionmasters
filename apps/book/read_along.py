@@ -322,7 +322,9 @@ def timing_for(obj, start=True):
         if row.status == ReadAlongTiming.STATUS_READY:
             return "ready", row
         if row.status == ReadAlongTiming.STATUS_WORKING and now - row.updated_at < WORKING_FOR:
-            return "pending", None
+            # Whatever is known so far — usually where the voice speaks —
+            # so the page can follow the reading while it waits.
+            return "pending", row
         if row.status == ReadAlongTiming.STATUS_FAILED and now - row.updated_at < RETRY_FAILED_AFTER:
             return "unavailable", None
 
@@ -351,6 +353,41 @@ def _claim(obj, content_type, row, fingerprint):
         fingerprint=fingerprint, status=ReadAlongTiming.STATUS_WORKING, error="", updated_at=timezone.now()
     )
     return bool(claimed)
+
+
+def measure_when_saved(sender, instance, raw=False, **kwargs):
+    """Start measuring as soon as an admin saves a recording, so the words
+    are ready before anyone opens the page. Without this the measuring
+    only begins when the first learner arrives, and they spend the first
+    minute of the lesson without the highlight."""
+    from django.conf import settings
+
+    if raw or getattr(settings, "TESTING", False) or not is_configured():
+        return
+    try:
+        fingerprint = _fingerprint(instance)
+        if not fingerprint:
+            return
+        from .models import ReadAlongTiming
+
+        content_type = ContentType.objects.get_for_model(instance)
+        row = ReadAlongTiming.objects.filter(content_type=content_type, object_id=instance.pk).first()
+        if row and row.fingerprint == fingerprint and row.status != ReadAlongTiming.STATUS_FAILED:
+            return                     # already measured, or being measured now
+        _queue(instance)
+    except Exception:                  # a timing must never break saving
+        logger.exception("Couldn't start measuring %s %s", instance.__class__.__name__, instance.pk)
+
+
+def read_along_models():
+    """Every model whose recordings the words follow."""
+    from django.apps import apps as django_apps
+
+    for label in TEXT_FOR:
+        try:
+            yield django_apps.get_model(label)
+        except LookupError:
+            continue
 
 
 def measure_in_background(obj):
@@ -409,6 +446,12 @@ def measure(obj):
             audio = _extract_audio(source, folder)
             length = _duration(audio)
             runs = speech_runs(audio, length)
+            # Saved before the transcribing begins, which takes far longer:
+            # knowing when the voice speaks and pauses is enough for the
+            # page to follow the reading sensibly while it waits for the
+            # word-by-word timings.
+            if runs:
+                ReadAlongTiming.objects.filter(pk=row.pk).update(speech=runs, duration=length, updated_at=timezone.now())
             if getattr(settings, "ELEVENLABS_API_KEY", ""):
                 try:
                     words, engine = _elevenlabs(audio, text), "elevenlabs"
@@ -663,19 +706,20 @@ def _multipart(fields, file_field, file_path):
     return b"".join(parts), f"multipart/form-data; boundary={boundary}", len(audio)
 
 
-# Connections are kept open between calls. Setting one up again costs as
+# Connections to the services are kept open between calls (_http — not to
+# be confused with _pool above, which runs measurements in the background). Setting one up again costs as
 # much as half a second, which the reading tutor waits on while a learner
 # sits there — so the same connection is reused for every request.
 try:
     import urllib3
 
-    _pool = urllib3.PoolManager(
+    _http = urllib3.PoolManager(
         maxsize=8, retries=False,
         timeout=urllib3.Timeout(connect=15, read=API_TIMEOUT),
         headers={"User-Agent": "dictionmasters/1.0"},
     )
 except Exception:            # pragma: no cover - urllib3 comes with boto3
-    _pool = None
+    _http = None
 
 
 def _post(url, headers, body, content_type, service):
@@ -685,8 +729,8 @@ def _post(url, headers, body, content_type, service):
     )
     for attempt in range(RATE_LIMIT_TRIES):
         try:
-            if _pool is not None:
-                answer = _pool.request("POST", url, body=body, headers=dict(request.headers))
+            if _http is not None:
+                answer = _http.request("POST", url, body=body, headers=dict(request.headers))
                 if answer.status == 429 and attempt + 1 < RATE_LIMIT_TRIES:
                     _wait(answer.headers.get("Retry-After"), attempt)
                     continue

@@ -193,6 +193,9 @@ def read_along_timing(request, token):
     status, row = read_along.timing_for(obj)
     response = JsonResponse({
         "status": status,
+        # While it is still being measured, the page is told how long to
+        # keep asking rather than guessing.
+        "retry": 4 if status == "pending" else 0,
         # Sent even when the recording turns out to be reading something
         # else: the times still say when and how fast the voice speaks.
         "words": row.words if row else [],

@@ -66,8 +66,13 @@
   var LONELY = 4;             // an anchor with no other within this many words is a coincidence
   var TIME_COMPANY = 5;       // ...and its neighbour must be within this many seconds of it
   var INTRO_MIN = 3;          // a greeting longer than this is worth pointing out
-  var SYNC_RETRY = 15000;     // while the server is still measuring
-  var SYNC_TRIES = 8;
+  // A recording uploaded a moment ago is still being measured: ask often
+  // at first, then less often, and keep asking for a good while — a long
+  // chapter can take minutes, and the page must start following the
+  // words the moment they are ready, without anyone reloading.
+  var SYNC_FIRST = 3000;
+  var SYNC_SLOWEST = 20000;
+  var SYNC_GIVE_UP = 15 * 60 * 1000;
   var TAP_PREROLL = 0.06;     // start a tapped word a hair early so its first sound isn't clipped
 
   var calm = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -868,29 +873,62 @@
       becomeTimed("estimate");
     }
 
-    function sync(triesLeft) {
+    var syncWait = SYNC_FIRST;
+    var syncStarted = Date.now();
+    var syncTimer = null;
+    var syncing = false;
+
+    function sync(again) {
       var url = box.getAttribute("data-ra-sync");
-      if (!url || !window.fetch) return;
+      if (!url || !window.fetch || mode === "measured" || syncing) return;
+      syncing = true;
       fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } })
         .then(function (response) { return response.ok ? response.json() : null; })
         .then(function (data) {
+          syncing = false;
           if (!data) return;
-          if (data.status === "ready") {
-            // Fill in the recording's own length if the player knows it.
-            if (!data.duration && isFinite(media.duration)) data.duration = media.duration;
+          // Fill in the recording's own length if the player knows it.
+          if (!data.duration && isFinite(media.duration)) data.duration = media.duration;
+          if (data.status === "ready" || (data.words && data.words.length) ||
+              (data.speech && data.speech.length)) {
             var how = applyTiming(words, data);
             if (how) becomeTimed(how);
-          } else if (data.status === "pending" && triesLeft > 1) {
-            window.setTimeout(function () { sync(triesLeft - 1); }, SYNC_RETRY);
           }
+          if (data.status === "ready") { waiting(false); return; }
+          // Still being measured: say so, and keep asking.
+          waiting(true);
+          if (again !== false) later();
         })
-        .catch(function () { /* the estimate carries on */ });
+        .catch(function () { syncing = false; if (again !== false) later(); });
     }
+
+    function later() {
+      if (Date.now() - syncStarted > SYNC_GIVE_UP || mode === "measured") return;
+      window.clearTimeout(syncTimer);
+      syncTimer = window.setTimeout(function () { sync(true); }, syncWait);
+      syncWait = Math.min(Math.round(syncWait * 1.4), SYNC_SLOWEST);
+    }
+
+    function waiting(on) {
+      box.classList.toggle("is-preparing", Boolean(on));
+      if (on && mode !== "measured") {
+        hint.textContent = "Getting the words ready — the highlight will follow exactly in a moment";
+      } else if (!on) {
+        hint.textContent = "Tap any word to jump there";
+      }
+    }
+
+    // Ask again when the reader is most likely to notice: when they press
+    // play, and when they come back to the page.
+    media.addEventListener("play", function () { if (mode !== "measured") sync(true); });
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden && mode !== "measured") { syncWait = SYNC_FIRST; sync(true); }
+    });
 
     media.addEventListener("loadedmetadata", useEstimate);
     media.addEventListener("durationchange", useEstimate);
     if (media.readyState >= 1) useEstimate();
-    sync(SYNC_TRIES);
+    sync(true);
 
     media.addEventListener("play", function () {
       box.classList.add("is-playing");

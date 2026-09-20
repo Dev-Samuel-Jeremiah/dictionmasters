@@ -12,7 +12,7 @@ import json
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from apps.book.read_along import _pool
+from apps.book.read_along import _http
 
 VOICE_URL = "https://api.elevenlabs.io/v1/voices/{voice_id}"
 
@@ -29,7 +29,7 @@ class Command(BaseCommand):
             return
 
         try:
-            answer = _pool.request(
+            answer = _http.request(
                 "GET", VOICE_URL.format(voice_id=voice_id),
                 headers={"xi-api-key": settings.ELEVENLABS_API_KEY}, timeout=20,
             )

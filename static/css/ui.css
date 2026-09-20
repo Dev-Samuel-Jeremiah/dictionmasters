@@ -860,6 +860,15 @@ a.ui-tab:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-2
 .is-playing .ra-toggle__dot { animation: ra-pulse 1.6s ease-in-out infinite; }
 @keyframes ra-pulse { 50% { box-shadow: 0 0 0 7px rgba(224, 177, 92, 0.18); } }
 .ra-hint { font-size: 0.8rem; color: var(--ink-40); }
+/* The recording was only just added: the words are still being measured,
+   and the highlight follows the voice's pauses until they arrive. */
+.ra.is-preparing .ra-hint { color: var(--gold-deep); }
+.ra.is-preparing .ra-hint::before {
+  content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px;
+  border-radius: 50%; background: var(--gold); animation: ra-wait 1.2s ease-in-out infinite;
+}
+@keyframes ra-wait { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .ra.is-preparing .ra-hint::before { animation: none; } }
 .ra.is-off .ra-hint { display: none; }
 
 /* The words themselves. The text box holds the gliding highlight, so it

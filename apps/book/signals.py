@@ -1,5 +1,5 @@
 """
-Keep video thumbnails in step with the videos themselves.
+Keep video thumbnails, and read-along timings, in step with the media.
 
 Every model with a video gets the same treatment: save a video and its
 poster is made in the background; change the video and the old poster is
@@ -9,7 +9,7 @@ left alone — only posters we made are replaced.
 
 from django.db.models.signals import post_init, post_save
 
-from . import video_poster
+from . import read_along, video_poster
 
 STASH = "_dm_video_source"
 
@@ -51,3 +51,8 @@ def connect():
     for model in video_poster.video_models():
         post_init.connect(remember_video, sender=model, dispatch_uid="dm-video-remember")
         post_save.connect(refresh_poster, sender=model, dispatch_uid="dm-video-poster")
+
+    # A recording is measured the moment it is saved, so the words are
+    # ready before a learner opens the lesson.
+    for model in read_along.read_along_models():
+        post_save.connect(read_along.measure_when_saved, sender=model, dispatch_uid="dm-read-along-measure")

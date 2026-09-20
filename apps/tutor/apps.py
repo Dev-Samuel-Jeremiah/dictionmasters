@@ -11,10 +11,10 @@ def _warm():
     connection; every one after reuses it in well under half. A learner
     should never be the one waiting for that."""
     try:
-        from apps.book.read_along import GROQ_URL, _pool
+        from apps.book.read_along import GROQ_URL, _http
 
-        if _pool is not None:
-            _pool.request("GET", GROQ_URL.rsplit("/openai", 1)[0] + "/", retries=False, timeout=8)
+        if _http is not None:
+            _http.request("GET", GROQ_URL.rsplit("/openai", 1)[0] + "/", retries=False, timeout=8)
     except Exception:
         pass       # it will simply be set up on the first reading instead
 
