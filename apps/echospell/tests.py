@@ -35,7 +35,39 @@ class SpellingCardTests(TestCase):
         self.assertContains(page, '<span class="word-card__audio-tag">Full</span>', html=False)
         self.assertContains(page, "https://example.com/goat.mp3")
 
+    def test_both_recordings_of_the_same_words_are_tagged(self):
+        """One card, one set of words, said two ways."""
+        self.card(audio_url="https://example.com/goat.mp3",
+                  quick_audio_url="https://example.com/goat-quick.mp3")
+        page = self.client.get(self.url())
+        body = page.content.decode()
+        self.assertIn(">Full</span>", body)
+        self.assertIn(">Quick</span>", body)
+        self.assertIn("https://example.com/goat.mp3", body)
+        self.assertIn("https://example.com/goat-quick.mp3", body)
+        self.assertEqual(body.count("<audio controls"), 2)
+
+    def test_a_card_can_have_the_quick_one_alone(self):
+        self.card(quick_audio_url="https://example.com/goat-quick.mp3")
+        body = self.client.get(self.url()).content.decode()
+        self.assertIn(">Quick</span>", body)
+        self.assertNotIn(">Full</span>", body)
+
     def test_no_recording_means_no_tag(self):
         self.card()
         page = self.client.get(self.url())
         self.assertNotContains(page, "word-card__audio-tag")
+
+    def test_the_admin_uploading_sees_which_is_which(self):
+        """Whoever uploads has to know if they are replacing the Full or
+        the Quick one, so the fields carry those names."""
+        card = self.card(audio_url="https://example.com/goat.mp3")
+        boss = User.objects.create_superuser(email="boss@example.com", password="mango-river-47",
+                                             first_name="Boss")
+        self.client.force_login(boss)
+        for url in [f"/manage/card-lessons/{card.pk}/", f"/admin/echospell/cardlesson/{card.pk}/change/"]:
+            page = self.client.get(url)
+            self.assertEqual(page.status_code, 200, url)
+            body = page.content.decode()
+            self.assertIn("Full recording", body, url)
+            self.assertIn("Quick recording", body, url)

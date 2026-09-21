@@ -163,6 +163,27 @@ class CardLesson(VideoContent, AudioContent):
     A group + category usually has several of these (several puzzle
     items, several vocabulary entries, ...), same as a word list."""
 
+    # The card's own recordings, both of the same words: "Full" says the
+    # word right through, the way a teacher says it on its own; "Quick"
+    # says it at the speed of ordinary speech. The names an admin sees
+    # here are the names a learner sees beside each player.
+    audio_file = models.FileField(
+        upload_to="book/audio/%Y/%m/", blank=True, verbose_name="Full recording",
+        help_text="The whole word said slowly and clearly, on its own.",
+    )
+    audio_url = models.URLField(
+        blank=True, verbose_name="Full recording link",
+        help_text="Use instead of the Full upload for audio hosted elsewhere.",
+    )
+    quick_audio_file = models.FileField(
+        upload_to="echospell/lessons/quick/%Y/%m/", blank=True, verbose_name="Quick recording",
+        help_text="The same word at normal speaking speed. Optional — the Full one is enough on its own.",
+    )
+    quick_audio_url = models.URLField(
+        blank=True, verbose_name="Quick recording link",
+        help_text="Use instead of the Quick upload for audio hosted elsewhere.",
+    )
+
     group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="lessons")
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="lessons")
     title = models.CharField(max_length=150, blank=True)
@@ -190,6 +211,11 @@ class CardLesson(VideoContent, AudioContent):
 
     def __str__(self):
         return ", ".join(self.word_list) or self.title or f"{self.category.name} — {self.group}"
+
+    @property
+    def quick_audio_source(self):
+        """Where the quick recording lives, or "" when there isn't one."""
+        return self.quick_audio_url or (self.quick_audio_file.url if self.quick_audio_file else "")
 
     @property
     def word_list(self):

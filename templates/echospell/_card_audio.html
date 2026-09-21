@@ -1,0 +1,22 @@
+{% comment %}
+  A card's recordings of the same words, each tagged with what it is:
+  "Full" says the word slowly and clearly on its own, "Quick" says it at
+  the speed of ordinary speech. A card may have either or both; the tags
+  are the same names the admin sees when uploading them.
+{% endcomment %}
+{% if entry.audio_source or entry.quick_audio_source %}
+<div class="word-card__audios">
+  {% if entry.audio_source %}
+  <div class="word-card__audio">
+    <span class="word-card__audio-tag">Full</span>
+    <audio controls src="{{ entry.audio_source }}"></audio>
+  </div>
+  {% endif %}
+  {% if entry.quick_audio_source %}
+  <div class="word-card__audio">
+    <span class="word-card__audio-tag word-card__audio-tag--quick">Quick</span>
+    <audio controls src="{{ entry.quick_audio_source }}"></audio>
+  </div>
+  {% endif %}
+</div>
+{% endif %}

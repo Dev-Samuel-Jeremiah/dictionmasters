@@ -99,7 +99,12 @@ class CardLessonAdmin(VideoPosterAdminMixin, admin.ModelAdmin):
         ("Meaning", {"fields": ["definition", "example_sentence", "image"]}),
         ("Notes", {"fields": ["body"]}),
         ("Video", {"fields": [("video_file", "video_url"), ("video_caption", "video_duration_label"), "video_poster"]}),
-        ("Audio", {"fields": [("audio_file", "audio_url")]}),
+        ("Audio — the same words, said two ways", {
+            "fields": [("audio_file", "audio_url"), ("quick_audio_file", "quick_audio_url")],
+            "description": "<strong>Full</strong> is the word said slowly and clearly on its own. "
+                           "<strong>Quick</strong> is the same word at normal speaking speed. "
+                           "A learner sees each one tagged with its name.",
+        }),
     ]
 
     def word_display(self, obj):
