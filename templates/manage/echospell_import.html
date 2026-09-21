@@ -86,18 +86,18 @@
     <input type="hidden" name="step" value="save">
     <div class="cr-field">
       <label for="level">Fill in this level</label>
-      <select name="level" id="level">
+      <select name="level" id="level" class="cr-input cr-select">
         {% if found.level %}<option value="">{{ found.level }} — as named in the book</option>{% endif %}
         {% for one in levels %}<option value="{{ one.pk }}"{% if level and one.pk == level.pk %} selected{% endif %}>{{ one.name }}</option>{% endfor %}
       </select>
       {% if level_missing %}
-      <label class="cr-check"><input type="checkbox" name="create_level" value="1"> Create {{ found.level }} if it isn't there</label>
+      <label class="cr-option"><input type="checkbox" name="create_level" value="1" class="cr-check"> <span>Create {{ found.level }} if it isn't there yet</span></label>
       {% endif %}
     </div>
     <div class="cr-field">
       <label>What to do with cards that already have text</label>
-      <label class="cr-check"><input type="radio" name="mode" value="fill" {% if mode != "replace" %}checked{% endif %}> Leave them alone — only fill in what's empty</label>
-      <label class="cr-check"><input type="radio" name="mode" value="replace" {% if mode == "replace" %}checked{% endif %}> Rewrite them from the book (recordings are kept)</label>
+      <label class="cr-option"><input type="radio" name="mode" value="fill" class="cr-check" {% if mode != "replace" %}checked{% endif %}> <span><strong>Leave them alone</strong> — only fill in what's empty</span></label>
+      <label class="cr-option"><input type="radio" name="mode" value="replace" class="cr-check" {% if mode == "replace" %}checked{% endif %}> <span><strong>Rewrite them from the book</strong> — recordings are kept</span></label>
     </div>
     <p class="cr-formactions">
       <button type="submit" class="cr-btn cr-btn--gold">Save into the level</button>
@@ -129,7 +129,7 @@
     <input type="hidden" name="step" value="read">
     <div class="cr-field">
       <label for="book">The book file (.pdf, .docx or .txt)</label>
-      <input type="file" name="book" id="book" accept=".pdf,.docx,.txt,application/pdf,text/plain" required>
+      <input type="file" name="book" id="book" class="cr-file" accept=".pdf,.docx,.txt,application/pdf,text/plain" required>
     </div>
     <p class="cr-formactions">
       <button type="submit" class="cr-btn cr-btn--gold">Read the book</button>

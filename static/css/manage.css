@@ -247,6 +247,18 @@
 .cr-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%2314213D' stroke-width='2'%3E%3Cpath d='m1 1 5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 select[multiple].cr-input { background-image: none; padding-right: 14px; min-height: 140px; }
 .cr-check { width: 20px; height: 20px; accent-color: var(--cr-gold); }
+/* A choice with words beside its box: the whole row can be clicked, and
+   the one chosen is marked. (.cr-check is only ever the box itself.) */
+.cr-field > label.cr-option {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin: 8px 0 0; padding: 11px 14px;
+  border: 1.5px solid var(--cr-line); border-radius: 12px; background: #fff;
+  font-size: .92rem; font-weight: 400; line-height: 1.4; cursor: pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+.cr-field > label.cr-option:hover { border-color: var(--cr-gold); }
+.cr-field > label.cr-option:has(input:checked) { border-color: var(--cr-gold); background: rgba(201, 143, 58, .08); }
+.cr-option .cr-check { flex: 0 0 auto; margin: 0; }
 .cr-file { display: block; width: 100%; padding: 12px; border: 1.5px dashed var(--cr-line); border-radius: 12px; background: rgba(20, 33, 61, .02); font-size: .9rem; }
 .cr-code { display: inline-block; max-width: 100%; padding: 6px 10px; border-radius: 8px; background: rgba(20, 33, 61, .06); font-family: ui-monospace, Menlo, monospace; font-size: .86rem; overflow-wrap: anywhere; }
 .cr-help { margin: 6px 0 0; font-size: .82rem; color: var(--cr-dim); }
