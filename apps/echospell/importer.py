@@ -102,8 +102,23 @@ def _from_pdf(data):
 
 
 def _from_word(data):
+    """The text of a Word file, as the book shows it.
+
+    Two things Word keeps out of the text itself have to be put back:
+
+      * Automatic numbering. The word list and the conversation are Word
+        numbered lists, so "1. Ingredient" is stored as just "Ingredient"
+        with Word drawing the number. The numbers are written back in,
+        counting afresh at the start of each list.
+      * Paragraphs. Every Word paragraph is a whole paragraph — the
+        passage's title and each of its paragraphs — so they are kept
+        apart rather than run together like wrapped lines from a PDF.
+
+    Tables are read too, cell by cell, in case a level sets its words out
+    in one."""
     try:
         import docx
+        from docx.oxml.ns import qn
     except ImportError as error:                      # pragma: no cover
         raise CannotRead("This server can't read Word files.") from error
     with tempfile.TemporaryDirectory(prefix="echospell-import-") as folder:
@@ -113,7 +128,44 @@ def _from_word(data):
             document = docx.Document(str(source))
         except Exception as error:
             raise CannotRead("That Word file couldn't be read.") from error
-        return "\n".join(paragraph.text for paragraph in document.paragraphs)
+
+    numbered_styles = {
+        style.style_id for style in document.styles
+        if getattr(style, "element", None) is not None and style.element.find(".//" + qn("w:numPr")) is not None
+    }
+
+    def is_numbered(paragraph):
+        if paragraph.find(".//" + qn("w:numPr")) is not None:
+            return True
+        style = paragraph.find(qn("w:pPr") + "/" + qn("w:pStyle"))
+        return style is not None and style.get(qn("w:val")) in numbered_styles
+
+    def paragraphs(element):
+        for child in element.iterchildren():
+            if child.tag == qn("w:p"):
+                yield child
+            elif child.tag == qn("w:tbl"):
+                for cell in child.iter(qn("w:tc")):
+                    yield from paragraphs(cell)
+            elif child.tag == qn("w:sdt"):          # content controls wrap paragraphs too
+                content = child.find(qn("w:sdtContent"))
+                if content is not None:
+                    yield from paragraphs(content)
+
+    lines, count = [], 0
+    for paragraph in paragraphs(document.element.body):
+        text = "".join(node.text or "" for node in paragraph.iter(qn("w:t"))).strip()
+        if not text:
+            lines.append("")
+            continue
+        if is_numbered(paragraph):
+            count += 1
+            text = f"{count}. {text}"
+        else:
+            count = 0                                # the next list counts from 1
+        lines.append(text)
+    # A blank line between Word paragraphs keeps each one whole.
+    return "\n\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -183,17 +235,62 @@ def _split_group(block):
     return "\n".join(lines[:words_end]), "\n".join(lines[words_end:]), dialogue_region
 
 
+_SENTENCE_END = (".", "!", "?", '"', "”", "’", "'")
+
+
+def _looks_like_title(line):
+    """A passage's title: a short line with no full stop, usually centred.
+    The real PDFs set it straight above the story with no gap, so it has
+    to be recognised by its shape rather than by the space around it."""
+    text = line.strip()
+    words = text.split()
+    if not words or len(words) > 12 or text.endswith((".", ",", ";", ":")):
+        return False
+    indent = len(line) - len(line.lstrip())
+    return indent >= 8 or len(words) <= 8
+
+
+def _paragraphs_of(lines):
+    """The story's paragraphs. A blank line ends one; so does a line that
+    finishes a sentence well short of the others — the last line of a
+    paragraph in a PDF, where there is no blank line to go by."""
+    widths = [len(line.strip()) for line in lines if line.strip()]
+    if not widths:
+        return []
+    full = max(widths)
+    out, current = [], []
+    for index, line in enumerate(lines):
+        text = line.strip()
+        if not text:
+            if current:
+                out.append(" ".join(current))
+                current = []
+            continue
+        current.append(text)
+        more = any(later.strip() for later in lines[index + 1:])
+        if more and text.endswith(_SENTENCE_END) and len(text) < full * 0.92 and len(current) > 1:
+            out.append(" ".join(current))
+            current = []
+    if current:
+        out.append(" ".join(current))
+    return out
+
+
 def _read_passage(region):
-    """{"title": …, "body": …} — the first line is the title, the rest the
-    passage itself."""
-    paragraphs = _paragraphs(region.split("\n"))
-    if not paragraphs:
+    """{"title": …, "body": …} — the title line, then the passage itself."""
+    lines = region.split("\n")
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    if not lines:
         return None
-    title, body = paragraphs[0], paragraphs[1:]
-    # A one-paragraph region is a passage with no title of its own.
+    title = ""
+    if _looks_like_title(lines[0]):
+        title = " ".join(lines[0].split())[:150]
+        lines = lines[1:]
+    body = _paragraphs_of(lines)
     if not body:
-        return {"title": "", "body": title}
-    return {"title": " ".join(title.split())[:150], "body": "\n\n".join(body)}
+        return {"title": "", "body": title} if title else None
+    return {"title": title, "body": "\n\n".join(body)}
 
 
 def _read_dialogue(region):

@@ -167,6 +167,65 @@ class ImportBookTests(TestCase):
         words = importer.parse(wrapped)["groups"][0]["words"]
         self.assertEqual(words, ["Anchor", "Violet", "Walnut"])
 
+    def test_a_word_file_with_automatic_numbering(self):
+        """The real books are Word files whose word lists and conversations
+        are Word numbered lists: the numbers are drawn by Word, not typed,
+        so "1. Ingredient" is stored as just "Ingredient"."""
+        import io
+
+        import docx
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+
+        document = docx.Document()
+        document.add_paragraph("LEVEL 6 GROUP 1")
+        for word in ["Ingredient", "Recruitment", "Genius"]:
+            document.add_paragraph(word, style="List Number")        # numbered by its style
+        document.add_paragraph("")
+        document.add_paragraph("The Eclipse Adventure")               # no gap before the story
+        document.add_paragraph("Maya joined a secret recruitment drive to find an ingredient.")
+        document.add_paragraph("On that occasion she used her genius.")
+        document.add_paragraph("Conversation Group 1")
+        for line in ["JANE: Did you finish?", "MARCUS: Yes, I did."]:
+            paragraph = document.add_paragraph(line)
+            numbering = OxmlElement("w:numPr")                         # numbered directly
+            level, number = OxmlElement("w:ilvl"), OxmlElement("w:numId")
+            level.set(qn("w:val"), "0")
+            number.set(qn("w:val"), "1")
+            numbering.extend([level, number])
+            paragraph._p.get_or_add_pPr().append(numbering)
+        saved = io.BytesIO()
+        document.save(saved)
+
+        upload = SimpleUploadedFile("level-6.docx", saved.getvalue())
+        group = importer.parse(importer.read_text(upload))["groups"][0]
+        self.assertEqual(group["words"], ["Ingredient", "Recruitment", "Genius"])
+        self.assertEqual(group["passage"]["title"], "The Eclipse Adventure")
+        self.assertEqual(len(group["passage"]["body"].split("\n\n")), 2)
+        self.assertEqual([line["speaker"] for line in group["dialogue"]], ["JANE", "MARCUS"])
+
+    def test_a_pdf_title_with_no_gap_under_it(self):
+        """The real PDFs set the title straight above the story, and the
+        story's paragraphs with no blank line between them."""
+        text = (
+            "LEVEL 6 GROUP 1\n"
+            "1. Ingredient    5. Scheme\n"
+            "2. Recruitment   6. Conduction\n\n"
+            "                          The Eclipse Adventure\n"
+            "Maya joined a secret recruitment drive in the parliament to find a magical ingredient that\n"
+            "promised long fame, leaving her to interpret the chaos.\n"
+            "On that occasion, under a rare eclipse, she realised the possession of the secret\n"
+            "formula was very relevant to the division of their tasks and the magical story.\n"
+            "                          Conversation Group 1\n"
+            "1.   JANE: Did you finish the questionnaire?\n"
+        )
+        passage = importer.parse(text)["groups"][0]["passage"]
+        self.assertEqual(passage["title"], "The Eclipse Adventure")
+        paragraphs = passage["body"].split("\n\n")
+        self.assertEqual(len(paragraphs), 2)
+        self.assertTrue(paragraphs[0].startswith("Maya joined"))
+        self.assertTrue(paragraphs[1].startswith("On that occasion"))
+
     def test_it_fills_the_cards_in(self):
         report = importer.apply_import(importer.parse(BOOK), self.level)
         self.assertEqual(report["created"], 6)          # words, passage and conversation, twice
