@@ -277,7 +277,13 @@
         <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
-          {% if card.entry.audio_source %}<audio controls src="{{ card.entry.audio_source }}" style="width: 100%;"></audio>{% endif %}
+          {# The whole word, said straight through, labelled beside its player. #}
+          {% if card.entry.audio_source %}
+          <div class="word-card__audio">
+            <span class="word-card__audio-tag">Full</span>
+            <audio controls src="{{ card.entry.audio_source }}"></audio>
+          </div>
+          {% endif %}
           <details class="reveal" open>
             <summary><span class="reveal__closed">Reveal the spelling</span><span class="reveal__opened">Hide the spelling</span></summary>
             <ol class="word-card__list" style="margin-top: 10px;">

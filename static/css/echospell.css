@@ -61,6 +61,21 @@
   font-size: 1rem;
 }
 .word-card__ipa--big { font-size: 1.6rem; color: var(--ink); margin-bottom: 10px; }
+
+/* The word said straight through, labelled "Full" beside its player. */
+.word-card__audio { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.word-card__audio audio { flex: 1 1 200px; min-width: 0; }
+.word-card__audio-tag {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  background: var(--gold-tint);
+}
 .word-card__definition { margin-top: 10px; color: var(--ink-70); font-size: 0.96rem; text-align: left; }
 .word-card__example { margin-top: 8px; color: var(--ink-40); font-style: italic; font-size: 0.9rem; text-align: left; }
 .word-card__image {
