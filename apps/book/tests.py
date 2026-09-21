@@ -103,3 +103,62 @@ class TimingHandoverTests(TestCase):
             status, _row = read_along.timing_for(self.passage)
         self.assertEqual(status, "pending")
         self.assertEqual(queue.call_count, 1)      # started again rather than left stuck
+
+
+class TabVideoTests(TestCase):
+    """Any tab of a sound's lesson can carry several videos."""
+
+    def setUp(self):
+        from .models import Sound, SoundCategory
+
+        category = SoundCategory.objects.create(name="Long vowels")
+        self.sound = Sound.objects.create(category=category, symbol="uː", name="Long OO",
+                                          slug="long-oo-test", is_published=True)
+        self.user = User.objects.create_user(email="viewer@example.com", password="pw-12345678",
+                                             first_name="Ada", is_staff=True)
+        self.client.force_login(self.user)
+
+    def video(self, section, order, caption):
+        from .models import SectionVideo
+
+        return SectionVideo.objects.create(sound=self.sound, section=section, order=order,
+                                           video_caption=caption, video_url=f"https://example.com/{order}.mp4")
+
+    def url(self, tab):
+        return f"/book/44-academy/{self.sound.slug}/{tab}/"
+
+    def test_a_tab_shows_all_its_videos_in_order(self):
+        self.video("word-bank", 2, "Second")
+        self.video("word-bank", 1, "First")
+        body = self.client.get(self.url("word-bank")).content.decode()
+        self.assertLess(body.index("First"), body.index("Second"))
+        self.assertIn("1 of 2", body)
+
+    def test_each_video_stays_on_its_own_tab(self):
+        self.video("twisters", 1, "Twister drill")
+        self.assertNotContains(self.client.get(self.url("word-bank")), "Twister drill")
+        self.assertContains(self.client.get(self.url("twisters")), "Twister drill")
+
+    def test_every_tab_can_take_videos(self):
+        from .views import TABS
+
+        for number, (slug, _label) in enumerate(TABS):
+            self.video(slug, number, f"Video for {slug}")
+        for slug, _label in TABS:
+            self.assertContains(self.client.get(self.url(slug)), f"Video for {slug}", msg_prefix=slug)
+
+    def test_lens_videos_are_enough_on_their_own(self):
+        """A lens tab with videos but no written lesson yet shows the
+        videos, not "being put together"."""
+        self.video("lens", 1, "Mouth close-up")
+        page = self.client.get(self.url("lens"))
+        self.assertContains(page, "Mouth close-up")
+        self.assertNotContains(page, "being put together")
+
+    def test_videos_wait_until_played(self):
+        """Several videos on a tab must not all start downloading at once
+        on a phone."""
+        self.video("passage", 1, "Reading aloud")
+        body = self.client.get(self.url("passage")).content.decode()
+        self.assertIn('preload="metadata"', body)
+        self.assertNotIn('preload="auto"', body)

@@ -177,6 +177,47 @@ class Articulation(VideoContent):
 
 
 # ---------------------------------------------------------------------------
+# Videos for any tab
+# ---------------------------------------------------------------------------
+
+# The sound page's tabs, in the order they appear. The page's own tab list
+# (book.views.TABS) is built from this, so a video can only ever be filed
+# under a tab that exists.
+SECTION_CHOICES = [
+    ("lens", "Lens"),
+    ("word-bank", "Word Bank"),
+    ("sentence-practice", "Sentence Practice"),
+    ("passage", "Passage"),
+    ("conversations", "Conversations"),
+    ("twisters", "Twisters"),
+    ("minimal-pairs", "Min. Pairs"),
+    ("external-links", "External Links"),
+]
+
+
+class SectionVideo(VideoContent):
+    """A video on one tab of a sound's lesson. A tab can have as many as it
+    needs, shown in order at the top of the tab. The Lens tab's own
+    demonstration video (Articulation) stays first; these follow it."""
+
+    sound = models.ForeignKey(Sound, on_delete=models.CASCADE, related_name="videos")
+    section = models.CharField(
+        max_length=30, choices=SECTION_CHOICES, default="lens",
+        help_text="Which tab of the lesson this video appears on.",
+    )
+    order = models.PositiveIntegerField(default=0, help_text="Lower numbers show first.")
+
+    class Meta:
+        ordering = ["section", "order", "pk"]
+        verbose_name = "tab video"
+        verbose_name_plural = "tab videos"
+
+    def __str__(self):
+        title = self.video_caption or "Video"
+        return f"{title} — {self.sound} · {self.get_section_display()}"
+
+
+# ---------------------------------------------------------------------------
 # Word Bank tab
 # ---------------------------------------------------------------------------
 

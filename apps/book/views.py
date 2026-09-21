@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 
-from .models import Sound, SoundCategory
+from .models import SECTION_CHOICES, Sound, SoundCategory
 from . import phoneme_audio, read_along
 
 # The 44 sounds of British English, fixed — this is a linguistic
@@ -65,16 +65,7 @@ def _real_sounds_by_symbol():
 
 
 # (url slug, tab label) — order here is the order the tabs appear in.
-TABS = [
-    ("lens", "Lens"),
-    ("word-bank", "Word Bank"),
-    ("sentence-practice", "Sentence Practice"),
-    ("passage", "Passage"),
-    ("conversations", "Conversations"),
-    ("twisters", "Twisters"),
-    ("minimal-pairs", "Min. Pairs"),
-    ("external-links", "External Links"),
-]
+TABS = SECTION_CHOICES
 TAB_SLUGS = {slug for slug, _label in TABS}
 
 
@@ -160,6 +151,8 @@ def sound_detail(request, slug, tab="lens"):
         "sound": sound,
         "tabs": TABS,
         "active_tab": tab,
+        # Any number of videos for this tab, in the order the admin set.
+        "section_videos": list(sound.videos.filter(section=tab)),
     }
 
     if tab == "lens":

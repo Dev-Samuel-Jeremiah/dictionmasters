@@ -8,6 +8,7 @@ from .models import (
     MinimalPairsAudio,
     PhonemeAudio,
     Passage,
+    SectionVideo,
     SentencePractice,
     Sound,
     SoundCategory,
@@ -92,6 +93,24 @@ class ExternalLinkInline(admin.TabularInline):
     fields = ["order", "title", "url", "description"]
 
 
+class SectionVideoInline(admin.StackedInline):
+    """Videos for any tab of the lesson — as many per tab as needed."""
+    model = SectionVideo
+    extra = 0
+    fields = [("section", "order"), "video_caption", ("video_file", "video_url"),
+              "video_duration_label", "video_poster"]
+    verbose_name = "video"
+    verbose_name_plural = "Videos on the lesson's tabs (Lens, Word Bank, Passage …)"
+
+
+@admin.register(SectionVideo)
+class SectionVideoAdmin(admin.ModelAdmin):
+    list_display = ["__str__", "sound", "section", "order"]
+    list_filter = ["section", "sound__category"]
+    search_fields = ["video_caption", "sound__name", "sound__symbol"]
+    ordering = ["sound", "section", "order"]
+
+
 @admin.register(Sound)
 class SoundAdmin(admin.ModelAdmin):
     list_display = ["symbol", "name", "category", "order", "is_published"]
@@ -101,6 +120,7 @@ class SoundAdmin(admin.ModelAdmin):
     ordering = ["category__order", "order"]
     inlines = [
         ArticulationInline,
+        SectionVideoInline,
         WordBankEntryInline,
         SentencePracticeInline,
         PassageInline,

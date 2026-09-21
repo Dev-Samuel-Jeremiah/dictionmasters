@@ -26,7 +26,7 @@ FEATURES = [
     {
         "slug": "book", "name": "44 Academy", "icon": "📖", "tone": "#7A2438",
         "blurb": "The 44 sounds, their lessons, and the phonemic chart audio.",
-        "models": ["book.soundcategory", "book.sound", "book.wordbankentry", "book.sentencepractice",
+        "models": ["book.soundcategory", "book.sound", "book.sectionvideo", "book.wordbankentry", "book.sentencepractice",
                    "book.passage", "book.conversation", "book.tonguetwister", "book.minimalpair",
                    "book.externallink", "book.phonemeaudio"],
         "site_url": "book:home",

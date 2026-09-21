@@ -43,6 +43,8 @@
 <section>
   <div class="wrap ui-body ui-body--narrow">
 
+    {% if active_tab != "lens" %}{% include "book/_section_videos.html" %}{% endif %}
+
     {% if active_tab == "lens" %}
       {% if articulation %}
       <div class="video-card">
@@ -67,7 +69,11 @@
           {% endif %}
         </div>
       </div>
+      {% endif %}
 
+      {% include "book/_section_videos.html" %}
+
+      {% if articulation %}
       {% if articulation.trap_text %}
       <div class="ui-callout ui-callout--maroon" style="margin-top: 16px;">
         <p class="ui-callout__title">{{ articulation.trap_heading }}</p>
@@ -97,7 +103,7 @@
         <span><strong>{{ articulation.qr_label }}</strong>{{ articulation.qr_code }}</span>
       </div>
       {% endif %}
-      {% else %}
+      {% elif not section_videos %}
       <div class="ui-empty"><p>This sound's lens content is being put together. Check back soon.</p></div>
       {% endif %}
 

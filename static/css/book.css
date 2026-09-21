@@ -146,6 +146,21 @@
 
 /* ---------- video (Lens tab) ---------- */
 
+/* Several videos on one tab of a lesson, one under the other. */
+.section-videos { display: grid; gap: 18px; margin: 0 0 22px; }
+.section-videos:first-child { margin-top: 0; }
+* + .section-videos { margin-top: 18px; }
+.video-card__count {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(255, 253, 248, 0.85);
+  background: rgba(255, 253, 248, 0.14);
+}
+
 .video-card {
   border-radius: var(--radius);
   overflow: hidden;
