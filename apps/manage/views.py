@@ -10,6 +10,7 @@ learned one has learned them all.
 Staff accounts only, with the control room's own sign-in page.
 """
 
+import json
 from functools import wraps
 
 from django.apps import apps as django_apps
@@ -27,6 +28,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.book import phoneme_audio, video_poster
+from apps.echospell import importer as echospell_importer
+from apps.echospell.models import Group, Level
 from apps.console import jobs
 from apps.console.dashboard import console_context
 from apps.billing import paystack
@@ -521,3 +524,93 @@ def run_job(request, job):
     else:
         messages.info(request, "Nothing to start: it is already done, a run is going, or the service isn't set up.")
     return redirect("manage:home")
+
+
+# ---------------------------------------------------------------------------
+# Bringing in a level of the Echospell book
+# ---------------------------------------------------------------------------
+
+# One book at a time: parsed levels are held in the session between the
+# preview and saving, and a whole series would be too much to keep there.
+IMPORT_LIMIT = 600_000
+SESSION_KEY = "echospell-import"
+
+
+@staff_only
+def echospell_import(request):
+    """Upload a level of the Echospell book and let its groups fill in
+    their own cards: the words, the passage and the conversation.
+
+    Nothing is saved until the preview has been agreed to, and nothing is
+    ever deleted — a card that already has words keeps them unless the
+    admin asks for the text to be rewritten."""
+    levels = list(Level.objects.all())
+    mode = request.POST.get("mode") or echospell_importer.FILL_GAPS
+    context = {"levels": levels, "mode": mode}
+
+    if request.method != "POST":
+        request.session.pop(SESSION_KEY, None)
+        return render(request, "manage/echospell_import.html", _base_context(request, "echospell-import", **context))
+
+    if request.POST.get("step") == "save":
+        found = request.session.get(SESSION_KEY)
+        if not found:
+            messages.error(request, "That upload has expired. Please choose the file again.")
+            return redirect("manage:echospell_import")
+        level = _import_level(request, found)
+        if level is None:
+            return redirect("manage:echospell_import")
+        report = echospell_importer.apply_import(found, level, mode)
+        request.session.pop(SESSION_KEY, None)
+        for done in report["groups"]:
+            group = Group.objects.filter(level=level, number=done["number"]).first()
+            if group and done["did"]:
+                _record(request, group, ADDITION if done["group_created"] else CHANGE,
+                        "From the Echospell book: " + ", ".join(done["did"]))
+        messages.success(
+            request,
+            f"{report['created']} card{'s' if report['created'] != 1 else ''} added"
+            + (f", {report['updated']} rewritten" if report["updated"] else "")
+            + f" in {level.name}."
+        )
+        return render(request, "manage/echospell_import.html", _base_context(
+            request, "echospell-import", report=report, level=level, **context))
+
+    upload = request.FILES.get("book")
+    if upload is None:
+        messages.error(request, "Choose the book file first.")
+        return redirect("manage:echospell_import")
+
+    try:
+        found = echospell_importer.parse(echospell_importer.read_text(upload))
+    except echospell_importer.CannotRead as error:
+        messages.error(request, str(error))
+        return redirect("manage:echospell_import")
+
+    if len(json.dumps(found)) > IMPORT_LIMIT:
+        messages.error(request, "That file holds more than one level. Please upload one level at a time.")
+        return redirect("manage:echospell_import")
+
+    request.session[SESSION_KEY] = found
+    level = _import_level(request, found, quiet=True)
+    plan = echospell_importer.describe_plan(found, level, mode) if level else {"plan": found["groups"], "missing_types": []}
+    return render(request, "manage/echospell_import.html", _base_context(
+        request, "echospell-import", found=found, plan=plan, level=level,
+        level_missing=level is None, file_name=upload.name, **context))
+
+
+def _import_level(request, found, quiet=False):
+    """The level this book belongs to: the one chosen, or the one named in
+    the book itself, made if it isn't there yet."""
+    chosen = request.POST.get("level")
+    if chosen and chosen.isdigit():
+        return Level.objects.filter(pk=int(chosen)).first()
+    name = found.get("level") or ""
+    if not name:
+        if not quiet:
+            messages.error(request, "The book names more than one level. Choose which one to fill in.")
+        return None
+    level = echospell_importer.level_for(name, create=bool(request.POST.get("create_level")))
+    if level is None and not quiet:
+        messages.error(request, f"There is no {name} yet. Tick “create it” or choose another level.")
+    return level

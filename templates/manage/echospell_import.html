@@ -1,0 +1,140 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Import an Echospell level — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#128218; Echospell</p>
+    <h1 class="cr-pagehead__title">Import a level from the book</h1>
+  </div>
+</header>
+
+{% if report %}
+<section class="cr-card">
+  <h2 class="cr-card__title">Done — {{ report.level }}</h2>
+  <p class="cr-help">
+    {{ report.created }} card{{ report.created|pluralize }} added{% if report.updated %}, {{ report.updated }} rewritten{% endif %}{% if report.left %},
+    {{ report.left }} left exactly as {{ report.left|pluralize:"it was,they were" }}{% endif %}.
+    {% if report.linked %}This level now uses: {{ report.linked|join:", " }}.{% endif %}
+  </p>
+  <div class="cr-tablewrap">
+    <table class="cr-table cr-table--rows">
+      <thead><tr><th>Group</th><th>What was written</th><th>What was left alone</th></tr></thead>
+      <tbody>
+        {% for group in report.groups %}
+        <tr>
+          <td><strong>Group {{ group.number }}</strong>{% if group.group_created %} <span class="cr-pill cr-pill--good">new</span>{% endif %}</td>
+          <td>{% if group.did %}{{ group.did|join:", " }}{% else %}—{% endif %}</td>
+          <td class="cr-dim">{% if group.left %}{{ group.left|join:", " }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="cr-formactions">
+    <a class="cr-btn cr-btn--ghost" href="{% url 'manage:list' 'groups' %}">See the groups</a>
+    <a class="cr-btn cr-btn--gold" href="{% url 'manage:echospell_import' %}">Import another level</a>
+  </p>
+</section>
+
+{% elif found %}
+<section class="cr-card">
+  <h2 class="cr-card__title">What's in {{ file_name }}</h2>
+  {% if level_missing %}
+  <p class="cr-note">
+    The book is for <strong>{{ found.level|default:"a level the site doesn't have" }}</strong>, which isn't on the site yet.
+    Choose the level to fill in below, or tick the box to create it.
+  </p>
+  {% else %}
+  <p class="cr-help">
+    Found <strong>{{ found.level|default:"a level" }}</strong> with {{ found.groups|length }} group{{ found.groups|length|pluralize }}.
+    Vocabulary pages are left out, as they are meant to be filled in by the learner.
+  </p>
+  {% endif %}
+  {% if plan.missing_types %}
+  <p class="cr-note">These card types don't exist on the site, so that part can't be filled in: {{ plan.missing_types|join:", " }}.</p>
+  {% endif %}
+
+  <div class="cr-tablewrap">
+    <table class="cr-table cr-table--rows">
+      <thead>
+        <tr><th>Group</th><th>Words</th><th>Passage</th><th>Conversation</th><th>What will happen</th></tr>
+      </thead>
+      <tbody>
+        {% for group in plan.plan %}
+        <tr>
+          <td><strong>Group {{ group.number }}</strong>{% if not group.exists %} <span class="cr-pill cr-pill--good">new</span>{% endif %}</td>
+          <td>
+            {{ group.words|length }}
+            {% if group.words %}<small class="cr-dim">{{ group.words|slice:":3"|join:", " }}…{{ group.words|last }}</small>{% endif %}
+          </td>
+          <td>{% if group.passage %}{{ group.passage.title|default:"(no title)" }}{% else %}<span class="cr-dim">—</span>{% endif %}</td>
+          <td>{% if group.dialogue %}{{ group.dialogue|length }} lines{% else %}<span class="cr-dim">—</span>{% endif %}</td>
+          <td>
+            {% for line in group.doing %}<div>{{ line }}</div>{% endfor %}
+            {% for note in group.notes %}<div class="cr-warn">{{ note }}</div>{% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <form method="post" class="cr-form">
+    {% csrf_token %}
+    <input type="hidden" name="step" value="save">
+    <div class="cr-field">
+      <label for="level">Fill in this level</label>
+      <select name="level" id="level">
+        {% if found.level %}<option value="">{{ found.level }} — as named in the book</option>{% endif %}
+        {% for one in levels %}<option value="{{ one.pk }}"{% if level and one.pk == level.pk %} selected{% endif %}>{{ one.name }}</option>{% endfor %}
+      </select>
+      {% if level_missing %}
+      <label class="cr-check"><input type="checkbox" name="create_level" value="1"> Create {{ found.level }} if it isn't there</label>
+      {% endif %}
+    </div>
+    <div class="cr-field">
+      <label>What to do with cards that already have text</label>
+      <label class="cr-check"><input type="radio" name="mode" value="fill" {% if mode != "replace" %}checked{% endif %}> Leave them alone — only fill in what's empty</label>
+      <label class="cr-check"><input type="radio" name="mode" value="replace" {% if mode == "replace" %}checked{% endif %}> Rewrite them from the book (recordings are kept)</label>
+    </div>
+    <p class="cr-formactions">
+      <button type="submit" class="cr-btn cr-btn--gold">Save into the level</button>
+      <a class="cr-btn cr-btn--ghost" href="{% url 'manage:echospell_import' %}">Choose a different file</a>
+    </p>
+  </form>
+</section>
+
+{% else %}
+<section class="cr-card">
+  <h2 class="cr-card__title">Upload one level of the book</h2>
+  <p class="cr-help">
+    A PDF or Word file of a whole level. Every <strong>LEVEL&nbsp;X GROUP&nbsp;Y</strong> heading in it becomes a group, and
+    that group's pages fill in its cards:
+  </p>
+  <ul class="cr-help">
+    <li>the numbered word list &rarr; the <strong>Spelling</strong> card</li>
+    <li>the story under it, with its title &rarr; the <strong>Passage reading</strong> card</li>
+    <li><strong>Conversation Group Y</strong>, line by line with each speaker &rarr; the <strong>Dialogue</strong> card</li>
+    <li><strong>Vocabulary Group Y</strong> is left out, and so is everything before the first group heading</li>
+  </ul>
+  <p class="cr-help">
+    You'll see everything that was found, and what it would change, before anything is saved.
+    Recordings already uploaded are never touched.
+  </p>
+
+  <form method="post" enctype="multipart/form-data" class="cr-form">
+    {% csrf_token %}
+    <input type="hidden" name="step" value="read">
+    <div class="cr-field">
+      <label for="book">The book file (.pdf, .docx or .txt)</label>
+      <input type="file" name="book" id="book" accept=".pdf,.docx,.txt,application/pdf,text/plain" required>
+    </div>
+    <p class="cr-formactions">
+      <button type="submit" class="cr-btn cr-btn--gold">Read the book</button>
+    </p>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

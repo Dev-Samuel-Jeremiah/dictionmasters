@@ -139,6 +139,8 @@
 .cr-card__title { margin: 0 0 14px; font-family: var(--font-serif); font-size: 1.15rem; }
 .cr-split { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; }
 .cr-empty { margin: 0; color: var(--cr-dim); }
+.cr-dim { color: var(--cr-dim); font-size: .85em; display: block; }
+.cr-warn { color: #9b3550; font-size: .85em; }
 .cr-empty--big { padding: 40px 20px; text-align: center; border: 1.5px dashed var(--cr-line); border-radius: 18px; background: rgba(255, 253, 248, .6); }
 .cr-empty--big .cr-btn { margin-top: 14px; }
 .cr-link { font-weight: 600; color: var(--maroon); text-decoration: none; font-size: .9rem; }
