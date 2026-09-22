@@ -71,6 +71,19 @@ class NamingTests(TestCase):
             self.assertNotContains(page, "Book of Conversation", msg_prefix=url)
 
 
+class DashboardCardTests(TestCase):
+    def test_yela_has_a_card_that_opens_the_reading_tutor(self):
+        user = get_user_model().objects.create_user(
+            email="cards@example.com", password="mango-river-47", first_name="Ada")
+        self.client.force_login(user)
+        page = self.client.get("/accounts/dashboard/")
+        self.assertContains(page, "Yela")
+        self.assertContains(page, "your AI Diction Assistant")
+        self.assertContains(page, 'href="/tutor/"')
+        # Nothing read yet: the card invites instead of counting.
+        self.assertContains(page, "Read aloud")
+
+
 class TemplateHygieneTests(TestCase):
     def test_no_comment_spills_onto_the_page(self):
         """Django's {# … #} comment only works on one line. Spread over two,

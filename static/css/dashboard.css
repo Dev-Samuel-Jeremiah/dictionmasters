@@ -13,6 +13,7 @@
   --dash-maroon: #b23c5a;
   --dash-gold: #c9953f;
   --dash-plum: #6b5a8e;
+  --dash-teal: #1f7a86;
   --dash-card: #fffdf8;
   --dash-ground: #f4efe2;
   --dash-shadow:
@@ -254,7 +255,7 @@
 
 .dash-stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   margin-bottom: 22px;
 }
@@ -272,6 +273,7 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
 .dash-stat:nth-child(3) { animation-delay: 0.12s; }
 .dash-stat:nth-child(4) { animation-delay: 0.18s; }
 .dash-stat:nth-child(5) { animation-delay: 0.24s; }
+.dash-stat:nth-child(6) { animation-delay: 0.3s; }
 .dash-stat::before {
   content: "";
   position: absolute; left: 0; right: 0; top: 0; height: 4px;
@@ -299,6 +301,8 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
 }
 .dash-stat__value small { font-size: 1rem; color: var(--ink-40); font-weight: 500; }
 .dash-stat__foot { margin: 0; font-size: 0.8rem; color: var(--ink-40); }
+/* A card with nothing counted yet says what it is for instead. */
+.dash-stat__invite { font-size: 1.5rem; }
 /* A place to learn that isn't open yet: visible, but quiet and not clickable. */
 .dash-stat--locked { cursor: not-allowed; }
 .dash-stat--locked .dash-stat__icon { filter: grayscale(0.6); opacity: 0.75; }
@@ -529,12 +533,6 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
 
 /* ---------- responsive ---------- */
 
-@media (max-width: 1180px) {
-  /* Five cards: three across, then two. */
-  .dash-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .dash-stat { grid-column: span 2; }
-  .dash-stat:nth-child(n+4) { grid-column: span 3; }
-}
 @media (max-width: 1080px) {
   .dash-hero__inner { grid-template-columns: minmax(0, 1fr) auto; }
   .dash-hero__scene { display: none; }
@@ -542,8 +540,6 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
 }
 @media (max-width: 860px) {
   .dash-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dash-stat, .dash-stat:nth-child(n+4) { grid-column: auto; }
-  .dash-stat:last-child { grid-column: 1 / -1; }
   .dash-row, .dash-row--bottom { grid-template-columns: minmax(0, 1fr); }
   .dash-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

@@ -107,6 +107,16 @@
         <p class="dash-stat__value"><span class="dash-count" style="--to: {{ tricks_count }}"></span><small> trick{{ tricks_count|pluralize }}</small></p>
         <p class="dash-stat__foot">{% if tricks_count %}{{ tricks_done }} of {{ tricks_count }} complete{% else %}The little tricks that make English flow{% endif %}</p>
       </a>
+      {# Yela: the live reading tutor. #}
+      <a href="{% url 'tutor:hub' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-teal)">
+        <span class="dash-stat__icon" aria-hidden="true">&#127908;</span>
+        <p class="dash-stat__label">Yela &middot; your AI Diction Assistant</p>
+        <p class="dash-stat__value">
+          {% if tutor.readings %}<span class="dash-count" style="--to: {{ tutor.readings }}"></span><small> reading{{ tutor.readings|pluralize }}</small>
+          {% else %}<span class="dash-stat__invite">Read aloud</span>{% endif %}
+        </p>
+        <p class="dash-stat__foot">{% if tutor.level %}Last reading: {{ tutor.level }}{% if tutor.accuracy %} &middot; {{ tutor.accuracy }}% accurate{% endif %}{% else %}Reads with you and helps with every word{% endif %}</p>
+      </a>
       <a href="{% url 'learning_modules:hub' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-blue)">
         <span class="dash-stat__icon" aria-hidden="true">&#127891;</span>
         <p class="dash-stat__label">My Modules</p>

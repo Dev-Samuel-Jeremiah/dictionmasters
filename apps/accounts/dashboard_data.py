@@ -214,6 +214,7 @@ def learner_dashboard(user):
         "academy_sounds": Sound.objects.in_programme(ACADEMY).filter(is_published=True).count(),
         "tricks_count": Sound.objects.in_programme(TRICKS).filter(is_published=True).count(),
         "tricks_done": _lessons_done(user, TRICKS),
+        "tutor": _tutor(user),
         "academy_done": _lessons_done(user, ACADEMY),
         "clash_best": clash["best"],
         "clash_games": matches.count(),
@@ -236,3 +237,17 @@ def _lessons_done(user, programme):
     from apps.tricks.progress import Standing
 
     return Standing(user, programme).done
+
+
+def _tutor(user):
+    """Yela, the reading tutor: how many readings, and the last level."""
+    from apps.tutor.models import TutorSession
+
+    done = TutorSession.objects.filter(user=user, status=TutorSession.STATUS_DONE)
+    latest = done.order_by("-finished_at").first()
+    return {
+        "readings": done.count(),
+        "level": latest.reading_level if latest else "",
+        "accuracy": latest.accuracy_percent if latest else None,
+    }
+
