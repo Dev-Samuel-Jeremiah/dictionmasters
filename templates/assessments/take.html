@@ -13,11 +13,7 @@
 <div class="ui">
   <section class="ui-hero ui-hero--maroon" style="padding-bottom: 44px;">
     <div class="wrap">
-      {% if assessment.trick_id %}
-      <ol class="ui-crumbs"><li><a href="{% url 'tricks:home' %}">Tricks to Sound Fluent</a></li><li><a href="{% url 'tricks:lesson' assessment.trick.slug %}">{{ assessment.trick.name }}</a></li><li>Assessment</li></ol>
-      {% else %}
       <ol class="ui-crumbs"><li><a href="{% url 'assessments:hub' %}">Assessments</a></li><li><a href="{% url 'assessments:kind_list' assessment.kind %}">{{ assessment.get_kind_display }}</a></li><li>{{ assessment.title }}</li></ol>
-      {% endif %}
       <div class="ui-hero__inner">
         <div class="ui-hero__main">
           <span class="ui-hero__icon" aria-hidden="true">&#128221;</span>

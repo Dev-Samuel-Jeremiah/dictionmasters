@@ -1,8 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 
-from apps.assessments.models import Assessment, Attempt, Question
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+from apps.assessments.models import Assessment
 from apps.book.models import Articulation, SoundCategory, Sound, WordBankEntry
+
+from .models import TrickActivity, TrickActivityAttempt, TrickActivityItem
 
 User = get_user_model()
 
@@ -24,21 +28,19 @@ class TrickUnlockTests(TestCase):
         WordBankEntry.objects.create(sound=self.two, word="to")
         self.three = Sound.objects.create(category=group, name="Stress", order=3)
 
-        self.test = Assessment.objects.create(title="-age Ending check", trick=self.one, pass_mark=70,
-                                              kind=Assessment.Kind.PRACTICE, shuffle_questions=False)
-        self.question = Question.objects.create(
-            assessment=self.test, type=Question.Type.CHOICE, prompt="How is village said?",
-            options="VIL-idge\nvil-LAGE", answer="VIL-idge")
+        self.test = TrickActivity.objects.create(trick=self.one, kind="stress-placement",
+                                                 title="Where is the stress?", pass_mark=70)
+        self.question = TrickActivityItem.objects.create(activity=self.test, prompt="village",
+                                                         options="vil\nlage", answer="vil")
 
         self.learner = User.objects.create_user(email="learner@example.com", password="pw-12345678", first_name="Ada")
         self.client.force_login(self.learner)
 
-    def take_test(self, answer):
-        self.client.post(f"/assessments/{self.test.slug}/start/")
-        attempt = Attempt.objects.filter(user=self.learner, assessment=self.test).latest("started_at")
-        self.client.post(f"/assessments/attempt/{attempt.pk}/", {f"q-{self.question.pk}": answer})
-        attempt.refresh_from_db()
-        return attempt
+    def take_test(self, answer, activity=None, question=None):
+        activity, question = activity or self.test, question or self.question
+        self.client.post(f"/tricks/lessons/{activity.trick.slug}/assessment/{activity.slug}/",
+                         {f"item-{question.pk}": answer})
+        return TrickActivityAttempt.objects.filter(user=self.learner, activity=activity).latest("created_at")
 
     def open_every_tab(self, trick):
         for tab in ("lens", "word-bank"):
@@ -58,27 +60,31 @@ class TrickUnlockTests(TestCase):
     def test_the_assessment_waits_until_every_part_is_opened(self):
         page = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/")
         self.assertContains(page, "Not opened yet")
-        self.assertContains(page, "disabled>Start the assessment")
+        self.assertContains(page, 'aria-disabled="true">Start')
         # Going round the gate is sent back to the trick.
-        self.client.post(f"/assessments/{self.test.slug}/start/")
-        self.assertFalse(Attempt.objects.filter(user=self.learner).exists())
+        self.client.post(
+            f"/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/", {f"item-{self.question.pk}": "vil"})
+        self.assertFalse(TrickActivityAttempt.objects.filter(user=self.learner).exists())
 
         self.open_every_tab(self.one)
         page = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/")
         self.assertNotContains(page, "Not opened yet")
-        self.assertContains(page, f'action="/assessments/{self.test.slug}/start/"')
+        self.assertContains(page, f'href="/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/"')
+        activity = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/")
+        self.assertContains(activity, "Word stress")
+        self.assertContains(activity, 'name="item-')
 
     def test_failing_keeps_the_next_trick_locked_and_passing_opens_it(self):
         self.open_every_tab(self.one)
-        failed = self.take_test("vil-LAGE")
+        failed = self.take_test("lage")
         self.assertFalse(failed.passed)
         self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 403)
-        result = self.client.get(f"/assessments/attempt/{failed.pk}/result/")
-        self.assertContains(result, "You need 70%")
+        result = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/result/{failed.pk}/")
+        self.assertContains(result, "1 activity left to pass")
 
-        passed = self.take_test("VIL-idge")
+        passed = self.take_test("vil")
         self.assertTrue(passed.passed)
-        result = self.client.get(f"/assessments/attempt/{passed.pk}/result/")
+        result = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/result/{passed.pk}/")
         self.assertContains(result, "Trick 2 is unlocked")
         self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 200)
         # Only the one after it: Trick 3 waits for Trick 2.
@@ -87,7 +93,7 @@ class TrickUnlockTests(TestCase):
 
     def test_a_trick_without_an_assessment_opens_the_next_once_finished(self):
         self.open_every_tab(self.one)
-        self.take_test("VIL-idge")
+        self.take_test("vil")
         self.assertEqual(self.client.get(f"/tricks/lessons/{self.three.slug}/").status_code, 403)
         self.client.get(f"/tricks/lessons/{self.two.slug}/word-bank/")
         self.assertEqual(self.client.get(f"/tricks/lessons/{self.three.slug}/").status_code, 200)
@@ -95,13 +101,36 @@ class TrickUnlockTests(TestCase):
     def test_an_empty_trick_still_has_to_be_opened(self):
         self.two.word_bank_entries.all().delete()
         self.open_every_tab(self.one)
-        self.take_test("VIL-idge")
+        self.take_test("vil")
         self.assertEqual(self.client.get(f"/tricks/lessons/{self.three.slug}/").status_code, 403)
         self.client.get(f"/tricks/lessons/{self.two.slug}/")
         self.assertEqual(self.client.get(f"/tricks/lessons/{self.three.slug}/").status_code, 200)
 
-    def test_trick_assessments_stay_out_of_the_general_assessment_lists(self):
-        self.assertNotContains(self.client.get("/assessments/type/practice/"), "-age Ending check")
+    def test_every_activity_must_be_passed_and_recordings_count_once_sent(self):
+        sort = TrickActivity.objects.create(trick=self.one, kind="sound-sort", title="Sort them",
+                                            buckets="/ɪdʒ/\n/eɪdʒ/", order=2)
+        village = TrickActivityItem.objects.create(activity=sort, prompt="village", answer="/ɪdʒ/")
+        aloud = TrickActivity.objects.create(trick=self.one, kind="read-aloud", title="Read it", order=3)
+        line = TrickActivityItem.objects.create(activity=aloud, prompt="Our cottage is in the village.")
+        self.open_every_tab(self.one)
+
+        self.take_test("vil")
+        self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 403)
+        self.assertTrue(self.take_test("/ɪdʒ/", sort, village).passed)
+        self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 403)
+
+        self.client.post(f"/tricks/lessons/{self.one.slug}/assessment/{aloud.slug}/",
+                         {f"recording-{line.pk}": SimpleUploadedFile("me.webm", b"voice", content_type="audio/webm")})
+        sent = TrickActivityAttempt.objects.get(user=self.learner, activity=aloud)
+        self.assertEqual(sent.status, sent.STATUS_AWAITING)
+        self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 200)
+
+    def test_the_activity_pages_lead_back_to_the_trick(self):
+        self.open_every_tab(self.one)
+        page = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/")
+        self.assertContains(page, f'href="/tricks/lessons/{self.one.slug}/assessment/"')
+        self.assertNotContains(page, 'href="/echospell/')
+        self.assertNotContains(page, "Back to Group")
 
     def test_staff_see_every_trick(self):
         self.client.force_login(User.objects.create_user(
@@ -112,11 +141,14 @@ class TrickUnlockTests(TestCase):
         staff = User.objects.create_user(email="admin@example.com", password="pw-12345678", first_name="Sam",
                                          is_staff=True, is_superuser=True)
         self.client.force_login(staff)
-        self.assertContains(self.client.get(f"/manage/trick-sounds/{self.one.pk}/"), "-age Ending check")
-        self.assertContains(self.client.get("/manage/trick-assessments/"), "-age Ending check")
-        self.assertNotContains(self.client.get("/manage/assessments/"), "-age Ending check")
-        self.client.post(f"/manage/trick-assessments/new/?in={self.two.pk}", {
-            "_in": self.two.pk, "title": "Weak forms check", "kind": "practice", "pass_mark": 60,
-            "max_attempts": 0, "shuffle_questions": "on", "is_published": "on",
+        self.assertContains(self.client.get(f"/manage/trick-sounds/{self.one.pk}/"), "Where is the stress?")
+        form = self.client.get(f"/manage/trick-activities/new/?in={self.two.pk}")
+        self.assertContains(form, "Activity type")
+        for label in ("Transcription", "Sound sort", "Minimal pairs", "Read aloud", "Sentence builder"):
+            self.assertContains(form, label)
+        self.client.post(f"/manage/trick-activities/new/?in={self.two.pk}", {
+            "_in": self.two.pk, "kind": "minimal-pairs", "title": "Hear the difference", "pass_mark": 60,
+            "order": 1, "is_published": "on",
         })
-        self.assertEqual(Assessment.objects.get(title="Weak forms check").trick, self.two)
+        self.assertEqual(TrickActivity.objects.get(title="Hear the difference").trick, self.two)
+        self.assertFalse(Assessment.objects.exists())

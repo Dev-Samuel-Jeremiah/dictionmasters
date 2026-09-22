@@ -55,8 +55,8 @@
           <span class="ui-numlist__body">
             <span class="ui-numlist__name">{{ step.trick.name }}</span>
             <span class="ui-numlist__words">
-              {% if step.state == "done" %}{{ programme.lesson_word|capfirst }} {{ step.number }} &middot; complete{% if step.best is not None %} &middot; best {{ step.best }}%{% endif %}
-              {% elif step.state == "current" %}{% if step.waiting %}Assessment waiting for marking{% elif step.finished and step.assessment %}Ready for the assessment{% elif step.tabs_left %}{{ step.tabs_left }} tab{{ step.tabs_left|pluralize }} to go, then the assessment{% else %}{{ step.trick.example_words }}{% endif %}
+              {% if step.state == "done" %}{{ programme.lesson_word|capfirst }} {{ step.number }} &middot; complete
+              {% elif step.state == "current" %}{% if step.finished and step.tests_left %}Ready for the assessment &middot; {{ step.tests_left }} activit{{ step.tests_left|pluralize:"y,ies" }} to pass{% elif step.tabs_left %}{{ step.tabs_left }} tab{{ step.tabs_left|pluralize }} to go, then the assessment{% else %}{{ step.trick.example_words }}{% endif %}
               {% else %}Pass {{ programme.lesson_word|capfirst }} {{ step.number|add:"-1" }}'s assessment to unlock{% endif %}
             </span>
           </span>

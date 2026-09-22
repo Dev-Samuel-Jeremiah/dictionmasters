@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ activity.title }} — {{ level.name }} — EchoSpell{% endblock %}
+{% block title %}{{ activity.title }} — {% if place %}{{ place }}{% else %}{{ level.name }} — EchoSpell{% endif %}{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
@@ -15,9 +15,13 @@
 <section class="es-hero">
   <div class="wrap">
     <ol class="es-crumbs">
+      {% if crumbs %}
+      {% for crumb in crumbs %}<li><a href="{{ crumb.url }}">{{ crumb.label }}</a></li>{% endfor %}
+      {% else %}
       <li><a href="{% url 'echospell:hub' %}">EchoSpell</a></li>
       <li><a href="{% url 'echospell:level_detail' level.slug %}">{{ level.name }}</a></li>
       <li><a href="{% url 'echospell:group_detail' level.slug group.slug %}">Group {{ group.number }}</a></li>
+      {% endif %}
       <li>{{ activity.title }}</li>
     </ol>
     <div class="es-hero__inner">
@@ -139,7 +143,8 @@
           {% if activity.mode == "record" %}Your teacher will listen and send a score.{% else %}Answered them all? You'll see your score straight away.{% endif %}
         </p>
         <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-          <a href="{% url 'echospell:group_detail' level.slug group.slug %}" class="es-link">Back to Group {{ group.number }}</a>
+          {% if back_url %}<a href="{{ back_url }}" class="es-link">{{ back_label }}</a>{% else %}
+          <a href="{% url 'echospell:group_detail' level.slug group.slug %}" class="es-link">Back to Group {{ group.number }}</a>{% endif %}
           <button type="submit" class="es-btn es-btn--green">
             {% if activity.mode == "record" %}Send to my teacher{% else %}Submit &amp; see my score{% endif %} &rarr;
           </button>

@@ -35,7 +35,7 @@
       <a href="{% url 'tricks:lesson' current.trick.slug %}" class="ui-card ui-lift" style="--tone: #b8863b; --i: 0">
         <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ current.number }}</span><span class="ui-status ui-status--current">Up next</span></span>
         <span class="ui-card__name">Trick {{ current.number }}: {{ current.trick.name }}</span>
-        <span class="ui-card__desc">{% if current.waiting %}Your assessment is waiting for marking.{% elif current.finished and current.assessment %}You've opened every part — take the assessment to unlock the next trick.{% elif current.tabs_left %}{{ current.tabs_left }} part{{ current.tabs_left|pluralize }} to open, then the assessment.{% else %}Pick up where you left off.{% endif %}</span>
+        <span class="ui-card__desc">{% if current.finished and current.tests_left %}You've opened every part — pass the assessment to unlock the next trick.{% elif current.tabs_left %}{{ current.tabs_left }} part{{ current.tabs_left|pluralize }} to open, then the assessment.{% else %}Pick up where you left off.{% endif %}</span>
         <span class="ui-card__cta">Carry on &rarr;</span>
       </a>
       {% endif %}

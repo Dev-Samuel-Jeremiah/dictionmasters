@@ -30,9 +30,8 @@
         <p class="tr-test__eyebrow">What to do next</p>
         <h2 class="tr-test__title">{{ programme.lesson_word|capfirst }} {{ blocker.number }}: {{ blocker.trick.name }}</h2>
         <p class="tr-test__note">
-          {% if blocker.waiting %}Your assessment is waiting for your teacher to mark it.
-          {% elif not blocker.finished %}Open the {{ blocker.tabs_left }} part{{ blocker.tabs_left|pluralize }} you haven't opened yet{% if blocker.assessment %}, then take the assessment{% endif %}.
-          {% else %}You've opened every part — now pass the assessment{% if blocker.best is not None %} (best so far {{ blocker.best }}%, you need {{ blocker.assessment.pass_mark }}%){% endif %}.{% endif %}
+          {% if not blocker.finished %}Open the {{ blocker.tabs_left }} part{{ blocker.tabs_left|pluralize }} you haven't opened yet{% if blocker.tests %}, then pass the assessment{% endif %}.
+          {% else %}You've opened every part — now pass the assessment: {{ blocker.tests_left }} activit{{ blocker.tests_left|pluralize:"y,ies" }} to go.{% endif %}
         </p>
         <div class="tr-test__actions">
           <a href="{% if blocker.finished %}{% url programme.lesson_tab blocker.trick.slug 'assessment' %}{% else %}{% url programme.lesson blocker.trick.slug %}{% endif %}" class="ui-btn ui-btn--gold">Go to {{ programme.lesson_word|capfirst }} {{ blocker.number }} &rarr;</a>

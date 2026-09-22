@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Your score — {{ activity.title }} — EchoSpell{% endblock %}
+{% block title %}Your score — {{ activity.title }} — {% if place %}{{ place }}{% else %}EchoSpell{% endif %}{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
@@ -15,9 +15,13 @@
   <section class="es-hero">
     <div class="wrap">
       <ol class="es-crumbs">
+        {% if crumbs %}
+        {% for crumb in crumbs %}<li><a href="{{ crumb.url }}">{{ crumb.label }}</a></li>{% endfor %}
+        {% else %}
         <li><a href="{% url 'echospell:hub' %}">EchoSpell</a></li>
         <li><a href="{% url 'echospell:level_detail' level.slug %}">{{ level.name }}</a></li>
         <li><a href="{% url 'echospell:group_detail' level.slug group.slug %}">Group {{ group.number }}</a></li>
+        {% endif %}
         <li>Your result</li>
       </ol>
       <div class="es-hero__inner">
@@ -57,6 +61,8 @@
     </section>
     {% endif %}
 
+    {% if after_result %}{% include after_result %}{% endif %}
+
     {% if attempt.teacher_feedback or attempt.teacher_score is not None %}
     <section class="es-panel content-card teacher-note">
       <p class="teacher-note__label">Your teacher says</p>
@@ -90,8 +96,13 @@
     </section>
 
     <div class="es-submitbar es-submitbar--static">
+      {% if back_url %}
+      <a href="{{ back_url }}" class="es-link">&larr; {{ back_label }}</a>
+      <a href="{{ retry_url }}" class="es-btn es-btn--gold">&#8635; Try again</a>
+      {% else %}
       <a href="{% url 'echospell:group_detail' level.slug group.slug %}" class="es-link">&larr; Back to Group {{ group.number }}</a>
       <a href="{% url 'echospell:activity_detail' level.slug group.slug activity.slug %}" class="es-btn es-btn--gold">&#8635; Try again</a>
+      {% endif %}
     </div>
   </div>
 </div>

@@ -76,15 +76,6 @@ class Assessment(models.Model):
     order = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    # Tricks to Sound Fluent: a trick's own assessment. Passing it unlocks
-    # the next trick (apps/tricks/progress.py). These are taken from the
-    # trick's page, so they stay out of the general Assessments lists.
-    trick = models.OneToOneField(
-        "book.Sound", on_delete=models.SET_NULL, null=True, blank=True, related_name="trick_assessment",
-        limit_choices_to={"category__programme": "tricks"},
-        help_text="The trick this assessment belongs to. Passing it unlocks the next trick.",
-    )
-
     class Meta:
         ordering = ["kind", "order", "title"]
 

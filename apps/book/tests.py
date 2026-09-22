@@ -184,10 +184,10 @@ class TricksToSoundFluentTests(TestCase):
 
     def test_the_tabs_are_called_trick_and_word_list(self):
         page = self.client.get(f"/book/44-academy/{self.sound.slug}/lens/")
-        self.assertContains(page, ">Trick</a>")
-        self.assertContains(page, ">Word List</a>")
-        self.assertNotContains(page, ">Lens</a>")
-        self.assertNotContains(page, ">Word Bank</a>")
+        self.assertContains(page, ">Trick</span></a>")
+        self.assertContains(page, ">Word List</span></a>")
+        self.assertNotContains(page, ">Lens<")
+        self.assertNotContains(page, ">Word Bank<")
 
     def test_the_dashboard_card_opens_tricks(self):
         page = self.client.get("/accounts/dashboard/")

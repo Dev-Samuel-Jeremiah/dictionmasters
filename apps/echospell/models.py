@@ -279,21 +279,12 @@ class DialogueLine(models.Model):
         return f"{self.speaker}: {self.text[:40]}"
 
 
-class Activity(VideoContent, AudioContent):
-    """One scored exercise inside a group, e.g. "Transcribe these 8
-    words".
-
-    An activity belongs to exactly one Group — the level it sits in
-    follows from that group, so the two can never disagree. Its `kind`
+class ActivityBase(models.Model):
+    """What every scored exercise has, wherever it hangs: an EchoSpell
+    group's Activity, or a trick's in Tricks to Sound Fluent. Its `kind`
     (see activity_kinds.py) decides what learners see and how their
-    answers are marked, so a new exercise type never needs a new model
-    here.
-    """
+    answers are marked."""
 
-    group = models.ForeignKey(
-        Group, on_delete=models.CASCADE, related_name="activities",
-        help_text="The group this exercise belongs to.",
-    )
     kind = models.CharField(
         max_length=40, choices=ACTIVITY_KIND_CHOICES, default="transcription",
         help_text="What learners do, and how their answers get marked.",
@@ -314,33 +305,26 @@ class Activity(VideoContent, AudioContent):
     is_published = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ["group", "order", "id"]
-        unique_together = ("group", "slug")
-        verbose_name_plural = "Activities"
+        abstract = True
 
     def __str__(self):
         return self.title
 
-    def save(self, *args, **kwargs):
+    def _unique_slug(self, **scope):
         if not self.slug:
             base = slugify(self.title) or self.kind
             slug = base
             i = 1
-            while Activity.objects.filter(group=self.group, slug=slug).exclude(pk=self.pk).exists():
+            while type(self).objects.filter(slug=slug, **scope).exclude(pk=self.pk).exists():
                 i += 1
                 slug = f"{base}-{i}"
             self.slug = slug
-        super().save(*args, **kwargs)
 
     def clean(self):
         from django.core.exceptions import ValidationError
 
         if self.kind_spec and self.kind_spec.mode == MODE_SORT and not self.bucket_list:
             raise ValidationError({"buckets": "A sound sort needs at least two boxes to drag into."})
-
-    @property
-    def level(self):
-        return self.group.level
 
     @property
     def kind_spec(self):
@@ -371,10 +355,40 @@ class Activity(VideoContent, AudioContent):
         return _parse_lines(self.buckets)
 
 
-class ActivityItem(AudioContent):
-    """One question inside an activity."""
+class Activity(VideoContent, AudioContent, ActivityBase):
+    """One scored exercise inside a group, e.g. "Transcribe these 8
+    words".
 
-    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="items")
+    An activity belongs to exactly one Group — the level it sits in
+    follows from that group, so the two can never disagree. Its `kind`
+    (see activity_kinds.py) decides what learners see and how their
+    answers are marked, so a new exercise type never needs a new model
+    here.
+    """
+
+    group = models.ForeignKey(
+        Group, on_delete=models.CASCADE, related_name="activities",
+        help_text="The group this exercise belongs to.",
+    )
+
+    class Meta:
+        ordering = ["group", "order", "id"]
+        unique_together = ("group", "slug")
+        verbose_name_plural = "Activities"
+
+    def save(self, *args, **kwargs):
+        self._unique_slug(group=self.group)
+        super().save(*args, **kwargs)
+
+    @property
+    def level(self):
+        return self.group.level
+
+
+class ActivityItemBase(models.Model):
+    """One question inside an activity; the concrete model adds the link
+    to its activity and where pictures are stored."""
+
     prompt = models.TextField(blank=True, help_text="What the learner is shown.")
     answer = models.TextField(
         blank=True,
@@ -384,10 +398,10 @@ class ActivityItem(AudioContent):
         blank=True, help_text="For multiple choice — the options, one per line.",
     )
     hint = models.CharField(max_length=200, blank=True)
-    image = models.ImageField(upload_to="echospell/activities/%Y/%m/", blank=True)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
+        abstract = True
         ordering = ["order", "id"]
 
     def __str__(self):
@@ -418,8 +432,19 @@ class ActivityItem(AudioContent):
         return shuffled_tokens(self.first_answer, seed=self.pk or 0)
 
 
-class ActivityAttempt(models.Model):
-    """One learner's go at an activity, with its score."""
+class ActivityItem(AudioContent, ActivityItemBase):
+    """One question inside an activity."""
+
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="items")
+    image = models.ImageField(upload_to="echospell/activities/%Y/%m/", blank=True)
+
+    class Meta(ActivityItemBase.Meta):
+        pass
+
+
+class ActivityAttemptBase(models.Model):
+    """One learner's go at an activity, with its score; the concrete
+    model adds who and which activity."""
 
     STATUS_MARKED = "marked"
     STATUS_AWAITING = "awaiting"
@@ -430,10 +455,6 @@ class ActivityAttempt(models.Model):
         (STATUS_REVIEWED, "Reviewed by the teacher"),
     ]
 
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="echospell_attempts"
-    )
-    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="attempts")
     score = models.PositiveIntegerField(default=0)
     max_score = models.PositiveIntegerField(default=0)
     percent = models.PositiveIntegerField(default=0)
@@ -446,6 +467,7 @@ class ActivityAttempt(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        abstract = True
         ordering = ["-created_at"]
 
     def __str__(self):
@@ -460,6 +482,18 @@ class ActivityAttempt(models.Model):
         self.percent = round(self.score * 100 / self.max_score) if self.max_score else 0
         self.status = self.STATUS_MARKED if marked else self.STATUS_AWAITING
         self.passed = bool(marked) and self.percent >= self.activity.pass_mark
+
+
+class ActivityAttempt(ActivityAttemptBase):
+    """One learner's go at an activity, with its score."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="echospell_attempts"
+    )
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="attempts")
+
+    class Meta(ActivityAttemptBase.Meta):
+        pass
 
 
 class ActivityResponse(models.Model):
