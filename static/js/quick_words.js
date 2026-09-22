@@ -21,7 +21,7 @@
 
   var input = form.querySelector("input[name='q']");
   var list = form.querySelector(".qw-suggest");
-  var csrf = form.querySelector("input[name='csrfmiddlewaretoken']");
+  var csrf = document.querySelector("input[name='csrfmiddlewaretoken']");
   var suggestUrl = form.dataset.suggestUrl;
   var lookupUrl = form.dataset.lookupUrl;
 

@@ -1,0 +1,29 @@
+{% comment %}
+  The Quick Words search box: type a word to find it, or look it up and
+  add it. Used on the library page and on a word's own page, so a learner
+  can go straight on to the next word (static/js/quick_words.js).
+{% endcomment %}
+<section class="qk-panel qk-searchpanel" aria-label="Search the library">
+  <form hidden>{% csrf_token %}</form>
+  <div class="qk-searchpanel__row qw-toolbar__inner">
+    <form method="get" action="{% url 'quick_words:hub' %}" class="qw-search" role="search" data-live-search
+          data-suggest-url="{% url 'quick_words:suggest' %}"
+          data-lookup-url="{% url 'quick_words:lookup' %}">
+      <label class="qw-search__label" for="qw-q">Search words</label>
+      <div class="qw-search__field">
+        <input type="search" id="qw-q" name="q" value="{{ query }}" class="qw-search__input"
+               placeholder="Type any word — we'll find it or look it up&hellip;" autocomplete="off"
+               spellcheck="false" autocapitalize="off"
+               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="qw-suggest">
+        <ul class="qw-suggest" id="qw-suggest" role="listbox" hidden></ul>
+      </div>
+      <button type="submit" class="btn btn--maroon btn--small">Search</button>
+      {% if query %}<a href="{% url 'quick_words:hub' %}" class="link-quiet qw-search__clear">Clear</a>{% endif %}
+    </form>
+    <p class="qw-count">
+      {% if showing is not None %}<span><strong>{{ showing }}</strong> of {{ total }} word{{ total|pluralize }}</span>
+      {% else %}<span>{{ total }} word{{ total|pluralize }} in the library</span>{% endif %}
+      <a href="{% url 'quick_words:my_lists' %}" class="btn btn--gold btn--small qw-count__lists">&#128278; My lists</a>
+    </p>
+  </div>
+</section>

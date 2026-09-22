@@ -37,6 +37,9 @@
 </section>
 
 <div class="wrap qk-body">
+  {# Carry on to the next word without going back. #}
+  {% include "quick_words/_search.html" %}
+
   <div class="qk-word">
     <div class="qk-word__main">
       {% if word.audio_source %}
@@ -105,4 +108,8 @@
   {% endif %}
 </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/quick_words.js' %}"></script>
 {% endblock %}
