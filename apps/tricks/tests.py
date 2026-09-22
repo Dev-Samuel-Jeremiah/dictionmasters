@@ -4,9 +4,9 @@ from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.assessments.models import Assessment
-from apps.book.models import Articulation, SoundCategory, Sound, WordBankEntry
+from apps.book.models import Articulation, Sound, SoundCategory, WordBankEntry
 
-from .models import TrickActivity, TrickActivityAttempt, TrickActivityItem
+from .models import LessonActivity, LessonActivityAttempt, LessonActivityItem
 
 User = get_user_model()
 
@@ -28,9 +28,9 @@ class TrickUnlockTests(TestCase):
         WordBankEntry.objects.create(sound=self.two, word="to")
         self.three = Sound.objects.create(category=group, name="Stress", order=3)
 
-        self.test = TrickActivity.objects.create(trick=self.one, kind="stress-placement",
+        self.test = LessonActivity.objects.create(lesson=self.one, kind="stress-placement",
                                                  title="Where is the stress?", pass_mark=70)
-        self.question = TrickActivityItem.objects.create(activity=self.test, prompt="village",
+        self.question = LessonActivityItem.objects.create(activity=self.test, prompt="village",
                                                          options="vil\nlage", answer="vil")
 
         self.learner = User.objects.create_user(email="learner@example.com", password="pw-12345678", first_name="Ada")
@@ -38,9 +38,9 @@ class TrickUnlockTests(TestCase):
 
     def take_test(self, answer, activity=None, question=None):
         activity, question = activity or self.test, question or self.question
-        self.client.post(f"/tricks/lessons/{activity.trick.slug}/assessment/{activity.slug}/",
+        self.client.post(f"/tricks/lessons/{activity.lesson.slug}/assessment/{activity.slug}/",
                          {f"item-{question.pk}": answer})
-        return TrickActivityAttempt.objects.filter(user=self.learner, activity=activity).latest("created_at")
+        return LessonActivityAttempt.objects.filter(user=self.learner, activity=activity).latest("created_at")
 
     def open_every_tab(self, trick):
         for tab in ("lens", "word-bank"):
@@ -64,7 +64,7 @@ class TrickUnlockTests(TestCase):
         # Going round the gate is sent back to the trick.
         self.client.post(
             f"/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/", {f"item-{self.question.pk}": "vil"})
-        self.assertFalse(TrickActivityAttempt.objects.filter(user=self.learner).exists())
+        self.assertFalse(LessonActivityAttempt.objects.filter(user=self.learner).exists())
 
         self.open_every_tab(self.one)
         page = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/")
@@ -107,11 +107,11 @@ class TrickUnlockTests(TestCase):
         self.assertEqual(self.client.get(f"/tricks/lessons/{self.three.slug}/").status_code, 200)
 
     def test_every_activity_must_be_passed_and_recordings_count_once_sent(self):
-        sort = TrickActivity.objects.create(trick=self.one, kind="sound-sort", title="Sort them",
+        sort = LessonActivity.objects.create(lesson=self.one, kind="sound-sort", title="Sort them",
                                             buckets="/ɪdʒ/\n/eɪdʒ/", order=2)
-        village = TrickActivityItem.objects.create(activity=sort, prompt="village", answer="/ɪdʒ/")
-        aloud = TrickActivity.objects.create(trick=self.one, kind="read-aloud", title="Read it", order=3)
-        line = TrickActivityItem.objects.create(activity=aloud, prompt="Our cottage is in the village.")
+        village = LessonActivityItem.objects.create(activity=sort, prompt="village", answer="/ɪdʒ/")
+        aloud = LessonActivity.objects.create(lesson=self.one, kind="read-aloud", title="Read it", order=3)
+        line = LessonActivityItem.objects.create(activity=aloud, prompt="Our cottage is in the village.")
         self.open_every_tab(self.one)
 
         self.take_test("vil")
@@ -121,7 +121,7 @@ class TrickUnlockTests(TestCase):
 
         self.client.post(f"/tricks/lessons/{self.one.slug}/assessment/{aloud.slug}/",
                          {f"recording-{line.pk}": SimpleUploadedFile("me.webm", b"voice", content_type="audio/webm")})
-        sent = TrickActivityAttempt.objects.get(user=self.learner, activity=aloud)
+        sent = LessonActivityAttempt.objects.get(user=self.learner, activity=aloud)
         self.assertEqual(sent.status, sent.STATUS_AWAITING)
         self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 200)
 
@@ -150,7 +150,7 @@ class TrickUnlockTests(TestCase):
             "_in": self.two.pk, "kind": "minimal-pairs", "title": "Hear the difference", "pass_mark": 60,
             "order": 1, "is_published": "on",
         })
-        self.assertEqual(TrickActivity.objects.get(title="Hear the difference").trick, self.two)
+        self.assertEqual(LessonActivity.objects.get(title="Hear the difference").lesson, self.two)
         self.assertFalse(Assessment.objects.exists())
 
     def test_the_question_form_shows_only_what_the_activity_type_needs(self):
@@ -165,14 +165,14 @@ class TrickUnlockTests(TestCase):
         self.assertIn("The stressed syllable", page)
 
         # Dictation: the audio is the question, so no prompt and no options.
-        dictation = TrickActivity.objects.create(trick=self.one, kind="dictation", title="Hear and spell")
+        dictation = LessonActivity.objects.create(lesson=self.one, kind="dictation", title="Hear and spell")
         page = self.client.get(f"/manage/trick-activity-items/new/?in={dictation.pk}").content.decode()
         self.assertIn('name="audio_file"', page)
         self.assertNotIn('name="prompt"', page)
         self.assertNotIn('name="options"', page)
 
         # Read aloud: nothing to mark against, so no answer.
-        aloud = TrickActivity.objects.create(trick=self.one, kind="read-aloud", title="Say it")
+        aloud = LessonActivity.objects.create(lesson=self.one, kind="read-aloud", title="Say it")
         page = self.client.get(f"/manage/trick-activity-items/new/?in={aloud.pk}").content.decode()
         self.assertIn('name="prompt"', page)
         self.assertNotIn('name="answer"', page)
@@ -197,7 +197,7 @@ class TrickUnlockTests(TestCase):
     def test_a_sound_sort_question_picks_its_box(self):
         self.client.force_login(User.objects.create_user(
             email="admin4@example.com", password="pw-12345678", first_name="Sam", is_staff=True, is_superuser=True))
-        sort = TrickActivity.objects.create(trick=self.one, kind="sound-sort", title="Sort",
+        sort = LessonActivity.objects.create(lesson=self.one, kind="sound-sort", title="Sort",
                                             buckets="/ɪdʒ/ as in village\n/eɪdʒ/ as in page")
         page = self.client.get(f"/manage/trick-activity-items/new/?in={sort.pk}")
         self.assertContains(page, '<option value="/ɪdʒ/ as in village">')
@@ -205,3 +205,92 @@ class TrickUnlockTests(TestCase):
                          {"_in": sort.pk, "order": 1, "prompt": "cottage", "answer": "/ɪdʒ/ as in village"})
         self.assertEqual(sort.items.get(prompt="cottage").answer, "/ɪdʒ/ as in village")
 
+
+
+@override_settings(STORAGES={
+    "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+})
+class AcademyUnlockTests(TestCase):
+    """44 Academy works the same way: each sound has an assessment, and the
+    sounds are taken in order."""
+
+    def setUp(self):
+        group = SoundCategory.objects.create(name="Long vowels", order=1)
+        self.first = Sound.objects.create(category=group, symbol="iː", name="Long EE", order=1)
+        WordBankEntry.objects.create(sound=self.first, word="sheep")
+        self.second = Sound.objects.create(category=group, symbol="ɪ", name="Short I", order=2)
+        WordBankEntry.objects.create(sound=self.second, word="ship")
+
+        self.test = LessonActivity.objects.create(lesson=self.first, kind="minimal-pairs",
+                                                  title="Sheep or ship?", pass_mark=70)
+        self.question = LessonActivityItem.objects.create(activity=self.test, options="sheep\nship", answer="sheep")
+
+        self.learner = User.objects.create_user(email="sam@example.com", password="pw-12345678", first_name="Sam")
+        self.client.force_login(self.learner)
+
+    def test_sounds_open_one_at_a_time(self):
+        self.assertEqual(self.client.get(f"/book/44-academy/{self.first.slug}/").status_code, 200)
+        locked = self.client.get(f"/book/44-academy/{self.second.slug}/")
+        self.assertEqual(locked.status_code, 403)
+        self.assertContains(locked, "Long EE", status_code=403)
+        listing = self.client.get("/book/44-academy/")
+        self.assertContains(listing, "ui-sound--locked")
+        self.assertContains(listing, "Up next")
+        self.assertNotContains(listing, f'href="/book/44-academy/{self.second.slug}/"')
+
+    def test_a_sounds_assessment_unlocks_the_next_sound(self):
+        page = self.client.get(f"/book/44-academy/{self.first.slug}/assessment/")
+        self.assertContains(page, "Sheep or ship?")
+        self.assertContains(page, "Minimal pairs")
+        self.assertContains(page, 'aria-disabled="true">Start')
+
+        self.client.get(f"/book/44-academy/{self.first.slug}/word-bank/")
+        page = self.client.get(f"/book/44-academy/{self.first.slug}/assessment/")
+        self.assertContains(page, f'href="/book/44-academy/{self.first.slug}/assessment/{self.test.slug}/"')
+
+        self.client.post(f"/book/44-academy/{self.first.slug}/assessment/{self.test.slug}/",
+                         {f"item-{self.question.pk}": "ship"})
+        self.assertEqual(self.client.get(f"/book/44-academy/{self.second.slug}/").status_code, 403)
+
+        self.client.post(f"/book/44-academy/{self.first.slug}/assessment/{self.test.slug}/",
+                         {f"item-{self.question.pk}": "sheep"})
+        attempt = LessonActivityAttempt.objects.filter(activity=self.test).latest("created_at")
+        self.assertTrue(attempt.passed)
+        result = self.client.get(
+            f"/book/44-academy/{self.first.slug}/assessment/{self.test.slug}/result/{attempt.pk}/")
+        self.assertContains(result, "Sound 2 is unlocked")
+        self.assertNotContains(result, "Trick 2")
+        self.assertEqual(self.client.get(f"/book/44-academy/{self.second.slug}/").status_code, 200)
+        self.assertContains(self.client.get("/accounts/dashboard/"), "1 of 2 complete")
+
+    def test_the_two_programmes_are_counted_apart(self):
+        from apps.book.models import TRICKS
+
+        trick = Sound.objects.create(category=SoundCategory.for_tricks(), name="Linking", order=1)
+        WordBankEntry.objects.create(sound=trick, word="an apple")
+        # Finishing a sound doesn't touch the tricks, and the other way round.
+        self.client.get(f"/book/44-academy/{self.first.slug}/word-bank/")
+        from apps.tricks.progress import Standing
+
+        self.assertEqual(Standing(self.learner, TRICKS).done, 0)
+        self.assertEqual(Standing(self.learner, TRICKS).steps[0]["lesson"], trick)
+        self.assertEqual(self.client.get(f"/tricks/lessons/{trick.slug}/").status_code, 200)
+
+    def test_the_control_room_has_a_sounds_assessment(self):
+        self.client.force_login(User.objects.create_user(
+            email="admin5@example.com", password="pw-12345678", first_name="Sam", is_staff=True, is_superuser=True))
+        self.assertContains(self.client.get(f"/manage/sounds/{self.first.pk}/"), "Sheep or ship?")
+        listing = self.client.get("/manage/sound-activities/")
+        self.assertContains(listing, "Sheep or ship?")
+        # Each programme's screens show only its own.
+        LessonActivity.objects.create(lesson=Sound.objects.create(category=SoundCategory.for_tricks(), name="A trick"),
+                                      kind="transcription", title="A trick's check")
+        self.assertNotContains(self.client.get("/manage/sound-activities/"), "A trick's check")
+        self.assertNotContains(self.client.get("/manage/trick-activities/"), "Sheep or ship?")
+        form = self.client.get(f"/manage/sound-activities/new/?in={self.second.pk}")
+        self.assertContains(form, "Activity type")
+        self.client.post(f"/manage/sound-activities/new/?in={self.second.pk}",
+                         {"_in": self.second.pk, "kind": "odd-one-out", "title": "Odd one out", "pass_mark": 70,
+                          "order": 1, "is_published": "on"})
+        self.assertEqual(LessonActivity.objects.get(title="Odd one out").lesson, self.second)

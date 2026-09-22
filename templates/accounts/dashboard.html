@@ -99,7 +99,7 @@
         <span class="dash-stat__icon" aria-hidden="true">&#128214;</span>
         <p class="dash-stat__label">44 Academy</p>
         <p class="dash-stat__value"><span class="dash-count" style="--to: {{ academy_sounds }}"></span><small> sound{{ academy_sounds|pluralize }}</small></p>
-        <p class="dash-stat__foot">A full lesson for every sound of English</p>
+        <p class="dash-stat__foot">{% if academy_sounds %}{{ academy_done }} of {{ academy_sounds }} complete{% else %}A full lesson for every sound of English{% endif %}</p>
       </a>
       <a href="{% url 'tricks:home' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-gold)">
         <span class="dash-stat__icon" aria-hidden="true">&#10024;</span>

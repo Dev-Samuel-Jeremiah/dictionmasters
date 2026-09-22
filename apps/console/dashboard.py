@@ -21,7 +21,7 @@ from apps.assessments.models import Assessment, Attempt
 from apps.book import phoneme_audio, video_poster
 from apps.clash.models import Match
 from apps.echospell.models import Activity, ActivityAttempt
-from apps.tricks.models import TrickActivityAttempt
+from apps.tricks.models import LessonActivityAttempt
 from apps.quick_words.models import QuickWord
 from apps.quick_words.speech import is_configured as speech_configured
 from apps.schools.models import School
@@ -114,7 +114,7 @@ def _attention():
         })
 
     recordings = (ActivityAttempt.objects.filter(status=ActivityAttempt.STATUS_AWAITING).count()
-                  + TrickActivityAttempt.objects.filter(status=TrickActivityAttempt.STATUS_AWAITING).count())
+                  + LessonActivityAttempt.objects.filter(status=LessonActivityAttempt.STATUS_AWAITING).count())
     if recordings:
         items.append({
             "tone": "bad", "icon": "🎙️", "count": recordings,
@@ -203,7 +203,7 @@ def console_context(request):
                 {"label": "Schools", "value": School.objects.count(), "note": f"{User.objects.filter(role=User.Role.TEACHER).count()} teachers", "icon": "🏫", "link": _admin_link("schools.school")},
                 {"label": "Quick Words", "value": words_total, "note": f"{words_audio} with audio", "icon": "🔤", "link": _admin_link("quick_words.quickword")},
                 {"label": "Chart audio", "value": f"{chart_done}/{chart_total}", "note": "phonemic chart sounds", "icon": "🔊", "link": _admin_link("book.phonemeaudio")},
-                {"label": "To mark", "value": Attempt.objects.filter(status=Attempt.Status.AWAITING).count() + ActivityAttempt.objects.filter(status=ActivityAttempt.STATUS_AWAITING).count() + TrickActivityAttempt.objects.filter(status=TrickActivityAttempt.STATUS_AWAITING).count(), "note": "speaking & recordings", "icon": "✍️", "link": f"{reverse('manage:results')}?show=to-mark"},
+                {"label": "To mark", "value": Attempt.objects.filter(status=Attempt.Status.AWAITING).count() + ActivityAttempt.objects.filter(status=ActivityAttempt.STATUS_AWAITING).count() + LessonActivityAttempt.objects.filter(status=LessonActivityAttempt.STATUS_AWAITING).count(), "note": "speaking & recordings", "icon": "✍️", "link": f"{reverse('manage:results')}?show=to-mark"},
                 {"label": "Clash games", "value": Match.objects.filter(started_at__gte=week_ago).count(), "note": "in the last 7 days", "icon": "⚔️", "link": _admin_link("clash.match")},
             ],
             "quick_adds": _quick_adds(request),

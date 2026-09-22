@@ -1475,3 +1475,12 @@ html.qs-open { overflow: hidden; }
 .app-update__go { padding: 8px 16px; border: 0; border-radius: 999px; font: inherit; font-weight: 700; color: #14213D; background: linear-gradient(135deg, #f0c878, #c98f3a); cursor: pointer; }
 .app-update__later { width: 32px; height: 32px; border: 0; border-radius: 50%; font-size: 1.2rem; color: rgba(255, 253, 248, 0.7); background: transparent; cursor: pointer; }
 @media (max-width: 560px) { .app-update { border-radius: 18px; bottom: 12px; } .app-update__text { font-size: 0.84rem; } }
+
+/* ---------- 44 Academy's sound tiles, taken in order ---------- */
+.ui-sound__badge { position: absolute; top: 8px; left: 8px; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; color: #fff; background: #2e9a74; }
+.ui-sound__badge--next { padding: 0 8px; color: #7a5518; background: rgba(224, 177, 92, 0.3); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.6rem; }
+.ui-sound--current { box-shadow: 0 0 0 2px rgba(224, 177, 92, 0.75), var(--ui-shadow); }
+.ui-sound--locked { cursor: not-allowed; box-shadow: none; background: rgba(255, 253, 248, 0.6); border: 1px dashed rgba(20, 33, 61, 0.14); }
+.ui-sound--locked .ui-sound__symbol { filter: grayscale(1); opacity: 0.45; }
+.ui-sound--locked .ui-sound__name { color: var(--ink-40); }
+.ui-sound__lock { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; color: #a39e92; }

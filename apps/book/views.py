@@ -74,9 +74,14 @@ TAB_SLUGS = {slug for slug, _label in TABS}
 def home(request):
     categories = SoundCategory.objects.filter(programme=ACADEMY).order_by("order").prefetch_related("sounds")
     total_sounds = Sound.objects.in_programme(ACADEMY).filter(is_published=True).count()
+    from apps.tricks.progress import Standing
+
+    standing = Standing(request.user, ACADEMY)
     context = {
         "categories": categories,
         "total_sounds": total_sounds,
+        "done": standing.done,
+        "current": standing.current,
     }
     return render(request, "book/home.html", context)
 
@@ -84,23 +89,27 @@ def home(request):
 def lesson_groups(programme):
     """A programme's published lessons, group by group, in order."""
     groups = []
-    for category in SoundCategory.objects.filter(programme=programme).order_by("order"):
-        sounds = category.sounds.filter(is_published=True).order_by("order")
+    for category in SoundCategory.objects.filter(programme=programme).order_by("order", "name", "pk"):
+        sounds = category.sounds.filter(is_published=True).order_by("order", "name")
         if sounds:
             groups.append({"category": category, "sounds": sounds})
     return groups
 
 
-def lesson_list(request, programme):
-    """Every lesson of one programme — All 44 Sounds, or All Tricks."""
-    return render(request, "book/academy.html", {
-        "groups": lesson_groups(programme), "programme": programme_for(programme),
-    })
+def lesson_list(request, programme, steps=None):
+    """Every lesson of one programme — All 44 Sounds, or All Tricks — with
+    where the learner stands on each, when the lessons are taken in order."""
+    groups = lesson_groups(programme)
+    for group in groups:
+        group["rows"] = [{"sound": sound, "step": (steps or {}).get(sound.pk)} for sound in group["sounds"]]
+    return render(request, "book/academy.html", {"groups": groups, "programme": programme_for(programme)})
 
 
 @login_required
 def academy(request):
-    return lesson_list(request, ACADEMY)
+    from apps.tricks.progress import Standing
+
+    return lesson_list(request, ACADEMY, steps=Standing(request.user, ACADEMY).by_lesson)
 
 
 @login_required
@@ -201,7 +210,25 @@ def lesson_detail(request, programme, slug, tab="lens", sound=None, extra_tabs=(
 
 @login_required
 def sound_detail(request, slug, tab="lens"):
-    return lesson_detail(request, ACADEMY, slug, tab)
+    """A sound's lesson. The 44 sounds are taken in order, each unlocking
+    the next once finished and its assessment passed (apps/tricks)."""
+    from apps.tricks.views import open_lesson
+
+    return open_lesson(request, ACADEMY, slug, tab)
+
+
+@login_required
+def sound_activity(request, slug, activity_slug):
+    from apps.tricks.views import take_activity
+
+    return take_activity(request, ACADEMY, slug, activity_slug)
+
+
+@login_required
+def sound_activity_result(request, slug, activity_slug, attempt_id):
+    from apps.tricks.views import activity_result
+
+    return activity_result(request, ACADEMY, slug, activity_slug, attempt_id)
 
 
 @login_required

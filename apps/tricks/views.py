@@ -1,8 +1,13 @@
 """
 Tricks to Sound Fluent — a programme of its own, built on 44 Academy's
 lessons. Each trick is a lesson with the same eight tabs, plus an
-Assessment tab; the tricks are taken in order, each unlocking the next
-(apps/tricks/progress.py).
+Assessment tab.
+
+The lesson pages taken in order live here too, for both programmes:
+opening a lesson (locked until the one before it is complete), its
+Assessment tab, and its assessment activities on EchoSpell's activity
+pages (apps/tricks/progress.py has the rules). 44 Academy's views call
+these with its own programme.
 """
 
 from django.contrib import messages
@@ -19,19 +24,133 @@ from apps.echospell.marking import feedback_for, mark_response
 from apps.echospell.views import _item_rows
 
 from . import progress
-from .models import TrickActivity, TrickActivityAttempt, TrickActivityResponse
+from .models import LessonActivity, LessonActivityAttempt, LessonActivityResponse
 
 ASSESSMENT = "assessment"
 
 
+# ---------------------------------------------------------------------------
+# Lessons taken in order, for either programme
+# ---------------------------------------------------------------------------
+
+def open_lesson(request, programme, slug, tab="lens"):
+    """One lesson and its tabs, or the page saying what to finish first."""
+    info = programme_for(programme)
+    lesson = get_object_or_404(Sound.objects.in_programme(programme).select_related("category"),
+                               slug=slug, is_published=True)
+    if tab not in progress.TAB_CONTENT and tab != ASSESSMENT:
+        raise Http404("That tab doesn't exist.")
+    standing = progress.Standing(request.user, programme)
+    blocker = standing.blocker(lesson)
+    if blocker:
+        return render(request, "tricks/locked.html", {
+            "programme": info, "lesson": lesson, "blocker": blocker, "step": standing.step(lesson),
+        }, status=403)
+    progress.record_tab(request.user, lesson, tab)
+    step = progress.Standing(request.user, programme).step(lesson)
+    return book.lesson_detail(
+        request, programme, slug, tab, sound=lesson,
+        extra_tabs=[(ASSESSMENT, "Assessment")],
+        # Tricks are called by number (Trick 3); a sound keeps its group's name.
+        extra={"step": step, "number": step["number"] if info["numbered"] else None,
+               "seen_tabs": [one["slug"] for one in step["tabs"] if one["seen"]]},
+    )
+
+
+def _open_activity(request, programme, slug, activity_slug):
+    """The lesson and its activity, or where to send the learner instead:
+    the lesson has to be open to them, and every part of it opened."""
+    info = programme_for(programme)
+    lesson = get_object_or_404(Sound.objects.in_programme(programme), slug=slug, is_published=True)
+    activity = get_object_or_404(LessonActivity, lesson=lesson, slug=activity_slug, is_published=True)
+    standing = progress.Standing(request.user, programme)
+    if standing.blocker(lesson):
+        return lesson, activity, standing, redirect(info["lesson"], slug=lesson.slug)
+    if not standing.step(lesson)["finished"]:
+        messages.info(request, f"Open every part of the {info['lesson_word']} first, then take its assessment.")
+        return lesson, activity, standing, redirect(info["lesson_tab"], slug=lesson.slug, tab=ASSESSMENT)
+    return lesson, activity, standing, None
+
+
+def _page(programme, lesson, number):
+    """Breadcrumbs and the way back, for EchoSpell's activity templates."""
+    info = programme_for(programme)
+    word = info["lesson_word"].capitalize()
+    back = reverse(info["lesson_tab"], args=[lesson.slug, ASSESSMENT])
+    return {
+        "programme": info,
+        "place": f"{word} {number} — {info['name']}",
+        "crumbs": [{"url": reverse(info["home"]), "label": info["name"]},
+                   {"url": reverse(info["lesson"], args=[lesson.slug]), "label": f"{word} {number}: {lesson.name}"},
+                   {"url": back, "label": "Assessment"}],
+        "back_url": back, "back_label": "Back to the assessment",
+    }
+
+
+def take_activity(request, programme, slug, activity_slug):
+    lesson, activity, standing, elsewhere = _open_activity(request, programme, slug, activity_slug)
+    if elsewhere:
+        return elsewhere
+    items = list(activity.items.all())
+
+    if request.method == "POST" and items:
+        attempt = LessonActivityAttempt.objects.create(user=request.user, activity=activity)
+        is_recording = activity.mode == MODE_RECORD
+        for item in items:
+            given = request.POST.get(f"item-{item.id}", "").strip()[:1000]
+            LessonActivityResponse.objects.create(
+                attempt=attempt, item=item, given=given,
+                is_correct=None if is_recording else mark_response(activity.kind_spec, item, given),
+                recording=request.FILES.get(f"recording-{item.id}") or "",
+            )
+        attempt.recalculate()
+        attempt.save()
+        return redirect(programme_for(programme)["activity_result"],
+                        slug=lesson.slug, activity_slug=activity.slug, attempt_id=attempt.pk)
+
+    best = max(LessonActivityAttempt.objects.filter(user=request.user, activity=activity),
+               key=lambda a: a.percent, default=None)
+    return render(request, "echospell/activity_detail.html", {
+        "activity": activity,
+        "item_rows": _item_rows(activity, items),
+        "buckets": activity.bucket_list,
+        "previous": best,
+        **_page(programme, lesson, standing.step(lesson)["number"]),
+    })
+
+
+def activity_result(request, programme, slug, activity_slug, attempt_id):
+    info = programme_for(programme)
+    lesson = get_object_or_404(Sound.objects.in_programme(programme), slug=slug)
+    activity = get_object_or_404(LessonActivity, lesson=lesson, slug=activity_slug)
+    attempt = get_object_or_404(LessonActivityAttempt, pk=attempt_id, activity=activity, user=request.user)
+    kind = activity.kind_spec
+    rows = [
+        {"response": response, "item": response.item,
+         "feedback": feedback_for(kind, response.item, response.given, response.is_correct)}
+        for response in attempt.responses.select_related("item")
+    ]
+    step = progress.Standing(request.user, programme).step(lesson)
+    return render(request, "echospell/activity_result.html", {
+        "activity": activity, "attempt": attempt, "rows": rows,
+        "retry_url": reverse(info["activity"], args=[lesson.slug, activity.slug]),
+        "after_result": "tricks/_after_activity.html", "step": step, "lesson": lesson,
+        **_page(programme, lesson, step["number"] if step else ""),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Tricks to Sound Fluent's own pages
+# ---------------------------------------------------------------------------
+
 @login_required
 def home(request):
-    steps = progress.journey(request.user)
+    standing = progress.Standing(request.user, TRICKS)
     return render(request, "tricks/home.html", {
         "programme": programme_for(TRICKS),
-        "total_tricks": len(steps),
-        "done": sum(1 for step in steps if step["state"] == "done"),
-        "current": next((step for step in steps if step["state"] == "current"), None),
+        "total_tricks": len(standing.steps),
+        "done": standing.done,
+        "current": standing.current,
         "sections": book.TABS,
     })
 
@@ -40,116 +159,25 @@ def home(request):
 def lessons(request):
     return render(request, "book/academy.html", {
         "programme": programme_for(TRICKS),
-        "steps": progress.journey(request.user),
+        "steps": progress.Standing(request.user, TRICKS).steps,
     })
 
 
 @login_required
 def lesson(request, slug, tab="lens"):
-    trick = get_object_or_404(Sound.objects.in_programme(TRICKS).select_related("category"),
-                              slug=slug, is_published=True)
-    blocker = progress.locked_by(request.user, trick)
-    if blocker:
-        return render(request, "tricks/locked.html", {
-            "programme": programme_for(TRICKS), "trick": trick, "blocker": blocker,
-            "step": progress.step_for(request.user, trick),
-        }, status=403)
-    if tab not in progress.TAB_CONTENT and tab != ASSESSMENT:
-        raise Http404("That tab doesn't exist.")
-    progress.record_tab(request.user, trick, tab)
-    step = progress.step_for(request.user, trick)
-    return book.lesson_detail(
-        request, TRICKS, slug, tab, sound=trick,
-        extra_tabs=[(ASSESSMENT, "Assessment")],
-        extra={"step": step, "number": step["number"],
-               "seen_tabs": [one["slug"] for one in step["tabs"] if one["seen"]]},
-    )
+    return open_lesson(request, TRICKS, slug, tab)
 
 
 @login_required
 def sections(request, section=None):
-    steps = {step["trick"].pk: step for step in progress.journey(request.user)}
-    return book.lesson_sections(request, TRICKS, section, steps=steps)
-
-
-# ---------------------------------------------------------------------------
-# A trick's assessment activities, on EchoSpell's activity pages
-# ---------------------------------------------------------------------------
-
-def _open_activity(request, slug, activity_slug):
-    """The trick and its activity, or where to send the learner instead:
-    the trick has to be open to them, and every part of it opened."""
-    trick = get_object_or_404(Sound.objects.in_programme(TRICKS), slug=slug, is_published=True)
-    activity = get_object_or_404(TrickActivity, trick=trick, slug=activity_slug, is_published=True)
-    if progress.locked_by(request.user, trick):
-        return trick, activity, redirect("tricks:lesson", slug=trick.slug)
-    step = progress.step_for(request.user, trick)
-    if not step["finished"]:
-        messages.info(request, "Open every part of the trick first, then take its assessment.")
-        return trick, activity, redirect("tricks:lesson_tab", slug=trick.slug, tab=ASSESSMENT)
-    return trick, activity, None
-
-
-def _page(trick, number):
-    """Breadcrumbs and way back, for EchoSpell's activity templates."""
-    back = reverse("tricks:lesson_tab", args=[trick.slug, ASSESSMENT])
-    return {
-        "place": f"Trick {number} — Tricks to Sound Fluent",
-        "crumbs": [{"url": reverse("tricks:home"), "label": "Tricks to Sound Fluent"},
-                   {"url": reverse("tricks:lesson", args=[trick.slug]), "label": f"Trick {number}: {trick.name}"},
-                   {"url": back, "label": "Assessment"}],
-        "back_url": back, "back_label": "Back to the assessment",
-    }
+    return book.lesson_sections(request, TRICKS, section, steps=progress.Standing(request.user, TRICKS).by_lesson)
 
 
 @login_required
 def activity(request, slug, activity_slug):
-    trick, activity, elsewhere = _open_activity(request, slug, activity_slug)
-    if elsewhere:
-        return elsewhere
-    items = list(activity.items.all())
-
-    if request.method == "POST" and items:
-        attempt = TrickActivityAttempt.objects.create(user=request.user, activity=activity)
-        is_recording = activity.mode == MODE_RECORD
-        for item in items:
-            given = request.POST.get(f"item-{item.id}", "").strip()[:1000]
-            TrickActivityResponse.objects.create(
-                attempt=attempt, item=item, given=given,
-                is_correct=None if is_recording else mark_response(activity.kind_spec, item, given),
-                recording=request.FILES.get(f"recording-{item.id}") or "",
-            )
-        attempt.recalculate()
-        attempt.save()
-        return redirect("tricks:activity_result", slug=trick.slug, activity_slug=activity.slug, attempt_id=attempt.pk)
-
-    step = progress.step_for(request.user, trick)
-    best = max(TrickActivityAttempt.objects.filter(user=request.user, activity=activity),
-               key=lambda a: a.percent, default=None)
-    return render(request, "echospell/activity_detail.html", {
-        "activity": activity,
-        "item_rows": _item_rows(activity, items),
-        "buckets": activity.bucket_list,
-        "previous": best,
-        **_page(trick, step["number"]),
-    })
+    return take_activity(request, TRICKS, slug, activity_slug)
 
 
 @login_required
-def activity_result(request, slug, activity_slug, attempt_id):
-    trick = get_object_or_404(Sound.objects.in_programme(TRICKS), slug=slug)
-    activity = get_object_or_404(TrickActivity, trick=trick, slug=activity_slug)
-    attempt = get_object_or_404(TrickActivityAttempt, pk=attempt_id, activity=activity, user=request.user)
-    kind = activity.kind_spec
-    rows = [
-        {"response": response, "item": response.item,
-         "feedback": feedback_for(kind, response.item, response.given, response.is_correct)}
-        for response in attempt.responses.select_related("item")
-    ]
-    step = progress.step_for(request.user, trick)
-    return render(request, "echospell/activity_result.html", {
-        "activity": activity, "attempt": attempt, "rows": rows,
-        "retry_url": reverse("tricks:activity", args=[trick.slug, activity.slug]),
-        "after_result": "tricks/_after_activity.html", "step": step, "trick": trick,
-        **_page(trick, step["number"] if step else ""),
-    })
+def activity_result_page(request, slug, activity_slug, attempt_id):
+    return activity_result(request, TRICKS, slug, activity_slug, attempt_id)

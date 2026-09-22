@@ -21,6 +21,7 @@
             <p class="ui-hero__lede">A complete lesson for every sound of English: how to shape your mouth, words to practise, sentences and passages to read aloud, conversations to act out, and the tongue twisters that make it stick.</p>
             <div class="ui-hero__chips">
               <span class="ui-chip ui-chip--gold">{{ total_sounds }} sound{{ total_sounds|pluralize }}</span>
+              {% if total_sounds %}<span class="ui-chip">{{ done }} of {{ total_sounds }} complete</span>{% endif %}
             </div>
           </div>
         </div>
@@ -30,8 +31,16 @@
 
   <div class="wrap ui-body">
     <div class="ui-grid">
+      {% if current %}
+      <a href="{% url 'book:sound_detail' current.lesson.slug %}" class="ui-card ui-lift" style="--tone: #b8863b; --i: 0">
+        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ current.lesson.symbol }}</span><span class="ui-status ui-status--current">Up next</span></span>
+        <span class="ui-card__name">{{ current.lesson.name }}</span>
+        <span class="ui-card__desc">{% if current.finished and current.tests_left %}You've opened every part — pass the assessment to unlock the next sound.{% elif current.tabs_left %}{{ current.tabs_left }} part{{ current.tabs_left|pluralize }} to open, then the assessment.{% else %}Pick up where you left off.{% endif %}</span>
+        <span class="ui-card__cta">Carry on &rarr;</span>
+      </a>
+      {% endif %}
       <a href="{% url 'book:academy' %}" class="ui-card ui-lift" style="--tone: #7A2438; --i: 0">
-        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#127891;</span><span class="ui-status ui-status--current">Start here</span></span>
+        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#127891;</span>{% if not current %}<span class="ui-status ui-status--current">Start here</span>{% endif %}</span>
         <span class="ui-card__name">All 44 Sounds</span>
         <span class="ui-card__desc">{{ total_sounds }} sound{{ total_sounds|pluralize }}, each with its own lesson: the trick to making it, a word list, sentence practice, a passage, a conversation, tongue twisters and minimal pairs.</span>
         <span class="ui-card__cta">Open the sounds &rarr;</span>

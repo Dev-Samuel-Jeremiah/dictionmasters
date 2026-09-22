@@ -38,7 +38,7 @@ class ResultsAndMarkingTests(TestCase):
         from apps.assessments.models import Answer, Assessment, Attempt, Question
         from apps.book.models import SoundCategory, Sound
         from apps.echospell.models import Activity, ActivityAttempt, ActivityItem, ActivityResponse, Group, Level
-        from apps.tricks.models import TrickActivity, TrickActivityAttempt, TrickActivityItem, TrickActivityResponse
+        from apps.tricks.models import LessonActivity, LessonActivityAttempt, LessonActivityItem, LessonActivityResponse
 
         self.admin = User.objects.create_user(email="admin@example.com", password="pw-12345678", first_name="Sam",
                                               is_staff=True, is_superuser=True)
@@ -56,11 +56,11 @@ class ResultsAndMarkingTests(TestCase):
 
         # Tricks: two recordings.
         trick = Sound.objects.create(category=SoundCategory.for_tricks(), name="-age Ending")
-        say = TrickActivity.objects.create(trick=trick, kind="repeat-after", title="Say it after me", pass_mark=50)
-        self.trick = TrickActivityAttempt.objects.create(user=self.learner, activity=say, status="awaiting")
+        say = LessonActivity.objects.create(lesson=trick, kind="repeat-after", title="Say it after me", pass_mark=50)
+        self.trick = LessonActivityAttempt.objects.create(user=self.learner, activity=say, status="awaiting")
         self.trick_lines = [
-            TrickActivityResponse.objects.create(
-                attempt=self.trick, item=TrickActivityItem.objects.create(activity=say, prompt=word, order=n),
+            LessonActivityResponse.objects.create(
+                attempt=self.trick, item=LessonActivityItem.objects.create(activity=say, prompt=word, order=n),
                 recording=SimpleUploadedFile(f"{word}.webm", b"voice", content_type="audio/webm"))
             for n, word in enumerate(["village", "message"])
         ]
@@ -84,7 +84,7 @@ class ResultsAndMarkingTests(TestCase):
 
     def test_the_attempt_lists_open_each_attempt(self):
         for screen, source, attempt in (("activity-attempts", "echospell", self.echo),
-                                        ("trick-activity-attempts", "trick", self.trick),
+                                        ("trick-activity-attempts", "lesson", self.trick),
                                         ("attempts", "assessment", self.exam)):
             listing = self.client.get(f"/manage/{screen}/")
             self.assertContains(listing, f'href="/manage/results/{source}/{attempt.pk}/"', msg_prefix=screen)
@@ -95,9 +95,9 @@ class ResultsAndMarkingTests(TestCase):
     def test_marking_recordings(self):
         good, work = self.trick_lines
         # Every recording needs a mark.
-        page = self.client.post(f"/manage/results/trick/{self.trick.pk}/", {f"verdict-{good.pk}": "good"})
+        page = self.client.post(f"/manage/results/lesson/{self.trick.pk}/", {f"verdict-{good.pk}": "good"})
         self.assertContains(page, "Mark every recording")
-        self.client.post(f"/manage/results/trick/{self.trick.pk}/", {
+        self.client.post(f"/manage/results/lesson/{self.trick.pk}/", {
             f"verdict-{good.pk}": "good", f"verdict-{work.pk}": "work", "feedback": "Lovely -idge on village.",
         })
         self.trick.refresh_from_db()
@@ -122,4 +122,4 @@ class ResultsAndMarkingTests(TestCase):
 
     def test_learners_cannot_get_in(self):
         self.client.force_login(self.learner)
-        self.assertEqual(self.client.get(f"/manage/results/trick/{self.trick.pk}/").status_code, 302)
+        self.assertEqual(self.client.get(f"/manage/results/lesson/{self.trick.pk}/").status_code, 302)

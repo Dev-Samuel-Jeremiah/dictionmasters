@@ -1,4 +1,4 @@
-{# A trick's Assessment tab: finish the trick, then pass its test to unlock the next. #}
+{# A lesson's Assessment tab (a sound or a trick): finish it, then pass its activities to unlock the next. #}
 <div class="tr-test">
   <section class="tr-test__card">
     <p class="tr-test__eyebrow">Step 1 &middot; Finish {{ programme.lesson_word }} {{ step.number }}</p>
@@ -46,7 +46,7 @@
             </span>
           </span>
           {% if step.finished %}
-          <a href="{% url 'tricks:activity' sound.slug activity.slug %}" class="ui-btn {% if test.done %}ui-btn--ghost{% else %}ui-btn--gold{% endif %} tr-act__go">{% if test.done %}Do it again{% elif test.tries %}Try again{% else %}Start{% endif %}</a>
+          <a href="{% url programme.activity sound.slug activity.slug %}" class="ui-btn {% if test.done %}ui-btn--ghost{% else %}ui-btn--gold{% endif %} tr-act__go">{% if test.done %}Do it again{% elif test.tries %}Try again{% else %}Start{% endif %}</a>
           {% else %}
           <span class="ui-btn ui-btn--gold tr-act__go" aria-disabled="true">Start</span>
           {% endif %}
@@ -55,7 +55,7 @@
         {% endfor %}
       </ol>
       {% if step.passed and step.next %}
-      <div class="tr-test__actions"><a href="{% url programme.lesson step.next.trick.slug %}" class="ui-btn ui-btn--gold">Go to {{ programme.lesson_word|capfirst }} {{ step.next.number }}: {{ step.next.trick.name }} &rarr;</a></div>
+      <div class="tr-test__actions"><a href="{% url programme.lesson step.next.lesson.slug %}" class="ui-btn ui-btn--gold">Go to {{ programme.lesson_word|capfirst }} {{ step.next.number }}: {{ step.next.lesson.name }} &rarr;</a></div>
       {% endif %}
     {% endif %}
   </section>

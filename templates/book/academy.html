@@ -18,7 +18,7 @@
           <div>
             <p class="ui-hero__eyebrow">{{ programme.name }}</p>
             <h1 class="ui-hero__title">{{ programme.list_title }}</h1>
-            <p class="ui-hero__lede">{% if programme.numbered %}Take them in order: finish each {{ programme.lesson_word }}, pass its assessment, and the next one unlocks.{% else %}Tap a {{ programme.lesson_word }} to open its lesson: the trick, a word list, sentence practice and more.{% endif %}</p>
+            <p class="ui-hero__lede">{% if programme.activity %}Take them in order: finish each {{ programme.lesson_word }}, pass its assessment, and the next one unlocks.{% else %}Tap a {{ programme.lesson_word }} to open its lesson: the trick, a word list, sentence practice and more.{% endif %}</p>
             <div class="ui-hero__chips">
               {% if programme.numbered %}
               <span class="ui-chip ui-chip--gold">{{ steps|length }} {% if steps|length == 1 %}{{ programme.lesson_word }}{% else %}{{ programme.lessons_word }}{% endif %}</span>
@@ -47,16 +47,16 @@
       {% for step in steps %}
       <li style="--i: {{ forloop.counter0 }}">
         {% if step.unlocked %}
-        <a href="{% url programme.lesson step.trick.slug %}" class="ui-numlist__item ui-numlist__item--{{ step.state }}">
+        <a href="{% url programme.lesson step.lesson.slug %}" class="ui-numlist__item ui-numlist__item--{{ step.state }}">
         {% else %}
         <div class="ui-numlist__item ui-numlist__item--locked" aria-disabled="true">
         {% endif %}
           <span class="ui-numlist__num">{% if step.state == "done" %}&#10003;{% else %}{{ step.number }}{% endif %}</span>
           <span class="ui-numlist__body">
-            <span class="ui-numlist__name">{{ step.trick.name }}</span>
+            <span class="ui-numlist__name">{{ step.lesson.name }}</span>
             <span class="ui-numlist__words">
               {% if step.state == "done" %}{{ programme.lesson_word|capfirst }} {{ step.number }} &middot; complete
-              {% elif step.state == "current" %}{% if step.finished and step.tests_left %}Ready for the assessment &middot; {{ step.tests_left }} activit{{ step.tests_left|pluralize:"y,ies" }} to pass{% elif step.tabs_left %}{{ step.tabs_left }} tab{{ step.tabs_left|pluralize }} to go, then the assessment{% else %}{{ step.trick.example_words }}{% endif %}
+              {% elif step.state == "current" %}{% if step.finished and step.tests_left %}Ready for the assessment &middot; {{ step.tests_left }} activit{{ step.tests_left|pluralize:"y,ies" }} to pass{% elif step.tabs_left %}{{ step.tabs_left }} tab{{ step.tabs_left|pluralize }} to go, then the assessment{% else %}{{ step.lesson.example_words }}{% endif %}
               {% else %}Pass {{ programme.lesson_word|capfirst }} {{ step.number|add:"-1" }}'s assessment to unlock{% endif %}
             </span>
           </span>
@@ -83,12 +83,24 @@
         <p class="ui-section__aside">{{ group.sounds|length }} {% if group.sounds|length == 1 %}{{ programme.lesson_word }}{% else %}{{ programme.lessons_word }}{% endif %}</p>
       </header>
       <div class="ui-sounds">
-        {% for sound in group.sounds %}
-        <a href="{% url programme.lesson sound.slug %}" class="ui-sound ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
+        {# Taken in order: each tile shows done, up next, or locked. #}
+        {% for row in group.rows %}
+        {% with sound=row.sound step=row.step %}
+        {% if step and not step.unlocked %}
+        <div class="ui-sound ui-sound--locked" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}" aria-disabled="true">
+          <span class="ui-sound__symbol">{{ sound.symbol|default:programme.icon }}</span>
+          <span class="ui-sound__name">{{ sound.name }}</span>
+          <span class="ui-sound__lock" aria-label="Locked"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" fill="currentColor"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg> Locked</span>
+        </div>
+        {% else %}
+        <a href="{% url programme.lesson sound.slug %}" class="ui-sound ui-lift{% if step %} ui-sound--{{ step.state }}{% endif %}" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
+          {% if step.state == "done" %}<span class="ui-sound__badge" aria-label="Complete">&#10003;</span>{% elif step.state == "current" %}<span class="ui-sound__badge ui-sound__badge--next" aria-label="Up next">Next</span>{% endif %}
           <span class="ui-sound__symbol">{{ sound.symbol|default:programme.icon }}</span>
           <span class="ui-sound__name">{{ sound.name }}</span>
           {% if sound.example_words %}<span class="ui-sound__words">{{ sound.example_words }}</span>{% endif %}
         </a>
+        {% endif %}
+        {% endwith %}
         {% endfor %}
       </div>
     </section>

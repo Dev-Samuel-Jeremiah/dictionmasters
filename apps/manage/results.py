@@ -8,7 +8,7 @@ Three kinds of attempt are graded on the site:
               marked on the five-point rubric, by the same rules as the
               teachers' marking page (scoring.apply_marks).
   echospell   an EchoSpell activity (apps/echospell).
-  trick       a Tricks to Sound Fluent assessment activity (apps/tricks).
+  lesson      an assessment activity of a 44 Academy sound or a trick (apps/tricks).
 
 For the two activity kinds, recordings are marked Good or Needs work;
 the score, pass and the "reviewed by the teacher" status follow from
@@ -19,9 +19,10 @@ from django.db.models import Q
 
 from apps.assessments import scoring
 from apps.assessments.models import RUBRIC_CRITERIA, Attempt
+from apps.book.models import TRICKS
 from apps.echospell.marking import feedback_for
 from apps.echospell.models import ActivityAttempt
-from apps.tricks.models import TrickActivityAttempt
+from apps.tricks.models import LessonActivityAttempt
 
 # Each source, as the results pages need it.
 SOURCES = {
@@ -38,11 +39,11 @@ SOURCES = {
         "waiting": Q(status=ActivityAttempt.STATUS_AWAITING),
         "search": ["user__email", "user__first_name", "user__last_name", "activity__title"],
     },
-    "trick": {
-        "label": "Tricks to Sound Fluent", "icon": "✨",
-        "rows": lambda: TrickActivityAttempt.objects.select_related("activity__trick", "user"),
-        "waiting": Q(status=TrickActivityAttempt.STATUS_AWAITING),
-        "search": ["user__email", "user__first_name", "user__last_name", "activity__title", "activity__trick__name"],
+    "lesson": {
+        "label": "44 Academy & Tricks", "icon": "✨",
+        "rows": lambda: LessonActivityAttempt.objects.select_related("activity__lesson__category", "user"),
+        "waiting": Q(status=LessonActivityAttempt.STATUS_AWAITING),
+        "search": ["user__email", "user__first_name", "user__last_name", "activity__title", "activity__lesson__name"],
     },
 }
 
@@ -74,7 +75,8 @@ def summarise(source, attempt):
     if source == "echospell":
         where = f"EchoSpell · {activity.group.level.name} · Group {activity.group.number}"
     else:
-        where = f"Tricks · {activity.trick.name}"
+        lesson = activity.lesson
+        where = f"{'Tricks' if lesson.programme == TRICKS else '44 Academy'} · {lesson.name}"
     waiting = attempt.status == attempt.STATUS_AWAITING
     return {
         "source": source, "pk": attempt.pk, "learner": learner_name(attempt.user),

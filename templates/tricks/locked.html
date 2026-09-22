@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ trick.name }} — {{ programme.name }}{% endblock %}
+{% block title %}{{ lesson.name }} — {{ programme.name }}{% endblock %}
 
 {% block content %}
 <div class="ui">
@@ -16,7 +16,7 @@
           <span class="ui-hero__icon" aria-hidden="true">&#128274;</span>
           <div>
             <p class="ui-hero__eyebrow">{{ programme.lesson_word|capfirst }} {{ step.number }} &middot; locked</p>
-            <h1 class="ui-hero__title">{{ trick.name }}</h1>
+            <h1 class="ui-hero__title">{{ lesson.name }}</h1>
             <p class="ui-hero__lede">The {{ programme.lessons_word }} open one at a time. Finish {{ programme.lesson_word|capfirst }} {{ blocker.number }} and pass its assessment to get here.</p>
           </div>
         </div>
@@ -28,13 +28,13 @@
     <div class="tr-test">
       <section class="tr-test__card">
         <p class="tr-test__eyebrow">What to do next</p>
-        <h2 class="tr-test__title">{{ programme.lesson_word|capfirst }} {{ blocker.number }}: {{ blocker.trick.name }}</h2>
+        <h2 class="tr-test__title">{{ programme.lesson_word|capfirst }} {{ blocker.number }}: {{ blocker.lesson.name }}</h2>
         <p class="tr-test__note">
           {% if not blocker.finished %}Open the {{ blocker.tabs_left }} part{{ blocker.tabs_left|pluralize }} you haven't opened yet{% if blocker.tests %}, then pass the assessment{% endif %}.
           {% else %}You've opened every part — now pass the assessment: {{ blocker.tests_left }} activit{{ blocker.tests_left|pluralize:"y,ies" }} to go.{% endif %}
         </p>
         <div class="tr-test__actions">
-          <a href="{% if blocker.finished %}{% url programme.lesson_tab blocker.trick.slug 'assessment' %}{% else %}{% url programme.lesson blocker.trick.slug %}{% endif %}" class="ui-btn ui-btn--gold">Go to {{ programme.lesson_word|capfirst }} {{ blocker.number }} &rarr;</a>
+          <a href="{% if blocker.finished %}{% url programme.lesson_tab blocker.lesson.slug 'assessment' %}{% else %}{% url programme.lesson blocker.lesson.slug %}{% endif %}" class="ui-btn ui-btn--gold">Go to {{ programme.lesson_word|capfirst }} {{ blocker.number }} &rarr;</a>
           <a href="{% url programme.list %}" class="ui-btn ui-btn--ghost">{{ programme.list_title }}</a>
         </div>
       </section>

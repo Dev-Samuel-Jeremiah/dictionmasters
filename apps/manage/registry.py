@@ -23,7 +23,7 @@ delete and uploads all follow from it.
     limit      {field: filter} narrows a dropdown's choices
     labels     {field: (label, help)} to word a form's fields for this screen
     name, singular   what to call the records, when the model's own words don't fit
-    view             a results source ("assessment", "echospell", "trick"): each
+    view             a results source ("assessment", "echospell", "lesson"): each
                      row opens that attempt in Results & marking
     kind_fields      "activity" or "item": show only the fields the activity type
                      needs (apps/manage/kind_fields.py)
@@ -74,7 +74,7 @@ def lesson_screens(programme, prefix):
              "search": ["name", "symbol", "example_words"],
              "parent": ("category", prefix + "sound-groups"),
              "where": lesson, "limit": {"category": {"programme": programme}},
-             "children": tabs},
+             "children": [*tabs, "sound-activities"]},
         ]
 
     return [
@@ -93,34 +93,43 @@ def lesson_screens(programme, prefix):
         tab("twisters", "book.TongueTwister", ["text", "sound", "order"], ["text"]),
         tab("minimal-pairs", "book.MinimalPair", ["word_a", "word_b", "sound", "order"], ["word_a", "word_b"]),
         tab("links", "book.ExternalLink", ["title", "sound", "url", "order"], ["title", "url"]),
-        *(trick_assessment_screens() if programme == "tricks" else []),
+        *(assessment_screens("tricks", "trick-sounds", "trick", "trick") if programme == "tricks"
+          else assessment_screens(programme, prefix + "sounds", "sound", "sound")),
     ]
 
 
-def trick_assessment_screens():
-    """A trick's assessment: activities of any EchoSpell type, each with
-    its questions. Passing them all unlocks the next trick
-    (apps/tricks/progress.py)."""
+def assessment_screens(programme, lessons_key, key_prefix, lesson_word):
+    """A lesson's assessment — a 44 Academy sound's or a trick's:
+    activities of any EchoSpell type, each with its questions. Passing
+    them all unlocks the next lesson (apps/tricks/progress.py). Each
+    programme sees only its own."""
+    of_programme = {"lesson__category__programme": programme}
     return [
-        {"key": "trick-activities", "model": "tricks.TrickActivity", "name": "Assessment activities",
+        {"key": f"{key_prefix}-activities", "model": "tricks.LessonActivity", "name": "Assessment activities",
          "singular": "assessment activity",
-         "columns": ["title", "trick", "kind", "pass_mark", "is_published"],
-         "order": ["trick__order", "order", "id"], "search": ["title", "trick__name"],
-         "parent": ("trick", "trick-sounds"), "children": ["trick-activity-items"],
-         "form": ["trick", "kind", "title", "instructions", "buckets", "pass_mark", "order", "is_published"],
+         "columns": ["title", "lesson", "kind", "pass_mark", "is_published"],
+         "order": ["lesson__category__order", "lesson__order", "order", "id"], "search": ["title", "lesson__name"],
+         "parent": ("lesson", lessons_key), "children": [f"{key_prefix}-activity-items"],
+         "where": of_programme, "limit": {"lesson": {"category__programme": programme}},
+         "form": ["lesson", "kind", "title", "instructions", "buckets", "pass_mark", "order", "is_published"],
          "kind_fields": "activity",
-         "labels": {"kind": ("Activity type", "The same types as EchoSpell activities: what the learner does, "
+         "labels": {"lesson": (lesson_word.capitalize(), f"The {lesson_word} this activity tests. Passing all of a "
+                                                         f"{lesson_word}'s activities unlocks the next one."),
+                    "kind": ("Activity type", "The same types as EchoSpell activities: what the learner does, "
                                               "and how it is marked."),
                     "pass_mark": ("Pass mark (%)", "The score needed to pass. Recorded activities count once sent.")}},
-        {"key": "trick-activity-items", "model": "tricks.TrickActivityItem", "name": "Activity questions",
+        {"key": f"{key_prefix}-activity-items", "model": "tricks.LessonActivityItem", "name": "Activity questions",
          "singular": "question",
          "columns": ["__str__", "activity", "order"], "order": ["activity", "order"],
-         "search": ["prompt", "answer"], "parent": ("activity", "trick-activities"),
+         "search": ["prompt", "answer"], "parent": ("activity", f"{key_prefix}-activities"),
+         "where": {f"activity__{k}": v for k, v in of_programme.items()},
+         "limit": {"activity": of_programme},
          "form": ["activity", "order", "prompt", "answer", "options", "hint", "audio_file", "audio_url", "image"],
          "kind_fields": "item"},
-        {"key": "trick-activity-attempts", "model": "tricks.TrickActivityAttempt", "name": "Activity results",
+        {"key": f"{key_prefix}-activity-attempts", "model": "tricks.LessonActivityAttempt", "name": "Activity results",
          "columns": ["user", "activity", "percent", "status", "created_at"],
-         "search": ["user__email", "activity__title"], "readonly": True, "view": "trick"},
+         "search": ["user__email", "activity__title"], "readonly": True, "view": "lesson",
+         "where": {f"activity__{k}": v for k, v in of_programme.items()}},
     ]
 
 

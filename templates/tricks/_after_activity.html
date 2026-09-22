@@ -1,21 +1,23 @@
-{# On a trick activity's result: what it means for unlocking the next trick. #}
+{# On an assessment activity's result: what it means for unlocking the next sound or trick. #}
 {% if step %}
+{% with word=programme.lesson_word|capfirst %}
 <section class="es-panel content-card tr-after">
   {% if step.passed %}
-    <p class="tr-after__label">Trick {{ step.number }} complete</p>
+    <p class="tr-after__label">{{ word }} {{ step.number }} complete</p>
     {% if step.next %}
-    <p class="tr-after__headline">Trick {{ step.next.number }} is unlocked</p>
-    <p class="tr-after__note">{{ step.next.trick.name }} is ready for you.</p>
-    <a href="{% url 'tricks:lesson' step.next.trick.slug %}" class="es-btn es-btn--gold">Go to Trick {{ step.next.number }} &rarr;</a>
+    <p class="tr-after__headline">{{ word }} {{ step.next.number }} is unlocked</p>
+    <p class="tr-after__note">{{ step.next.lesson.name }} is ready for you.</p>
+    <a href="{% url programme.lesson step.next.lesson.slug %}" class="es-btn es-btn--gold">Go to {{ word }} {{ step.next.number }} &rarr;</a>
     {% else %}
-    <p class="tr-after__headline">Every trick done</p>
-    <p class="tr-after__note">You've passed the last assessment in Tricks to Sound Fluent.</p>
+    <p class="tr-after__headline">Every {{ programme.lesson_word }} done</p>
+    <p class="tr-after__note">You've passed the last assessment in {{ programme.name }}.</p>
     {% endif %}
   {% elif step.tests_left %}
-    <p class="tr-after__label">Trick {{ step.number }}</p>
+    <p class="tr-after__label">{{ word }} {{ step.number }}</p>
     <p class="tr-after__headline">{{ step.tests_left }} activit{{ step.tests_left|pluralize:"y,ies" }} left to pass</p>
-    <p class="tr-after__note">{% if step.next %}Pass {% if step.tests_left == 1 %}it{% else %}them all{% endif %} to unlock Trick {{ step.next.number }}.{% endif %}</p>
-    <a href="{% url 'tricks:lesson_tab' trick.slug 'assessment' %}" class="es-btn es-btn--gold">Back to the assessment</a>
+    <p class="tr-after__note">{% if step.next %}Pass {% if step.tests_left == 1 %}it{% else %}them all{% endif %} to unlock {{ word }} {{ step.next.number }}.{% endif %}</p>
+    <a href="{% url programme.lesson_tab lesson.slug 'assessment' %}" class="es-btn es-btn--gold">Back to the assessment</a>
   {% endif %}
 </section>
+{% endwith %}
 {% endif %}

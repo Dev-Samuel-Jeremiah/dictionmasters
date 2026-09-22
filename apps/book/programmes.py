@@ -26,6 +26,8 @@ PROGRAMMES = {
         "lesson_tab": "book:sound_detail_tab",
         "sections": None,
         "section": None,
+        "activity": "book:sound_activity",
+        "activity_result": "book:sound_activity_result",
         # All 44 Sounds shows tiles in groups; All Tricks a numbered list.
         "numbered": False,
     },
@@ -42,6 +44,8 @@ PROGRAMMES = {
         "lesson_tab": "tricks:lesson_tab",
         "sections": "tricks:sections",
         "section": "tricks:section",
+        "activity": "tricks:activity",
+        "activity_result": "tricks:activity_result",
         "numbered": True,
     },
 }
