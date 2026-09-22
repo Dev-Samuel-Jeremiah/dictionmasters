@@ -20,9 +20,9 @@
     </ol>
     <div class="ui-hero__inner">
       <div class="ui-hero__main">
-        <span class="ui-hero__icon ui-hero__icon--big" aria-hidden="true"><span class="ui-hero__symbol">{{ sound.symbol|default:programme.icon }}</span></span>
+        <span class="ui-hero__icon ui-hero__icon--big" aria-hidden="true"><span class="ui-hero__symbol">{% if sound.symbol %}{{ sound.symbol }}{% elif number %}{{ number }}{% else %}{{ programme.icon }}{% endif %}</span></span>
         <div>
-          <p class="ui-hero__eyebrow">{{ sound.category.name }}</p>
+          <p class="ui-hero__eyebrow">{% if number %}{{ programme.lesson_word|capfirst }} {{ number }}{% else %}{{ sound.category.name }}{% endif %}</p>
           <h1 class="ui-hero__title">{{ sound.name }}</h1>
           {% if sound.example_words %}<p class="ui-hero__lede">{{ sound.example_words }}</p>{% endif %}
         </div>

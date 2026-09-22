@@ -268,11 +268,33 @@ class TricksToSoundFluentTests(TestCase):
         self.assertEqual(self.client.get(f"/manage/sounds/{self.trick.pk}/").status_code, 404)
         self.assertNotContains(self.client.get("/manage/trick-word-bank/"), "moon")
 
-        # A group added under Tricks is a trick group, and a trick's group
-        # can only be a trick group.
-        self.client.post("/manage/trick-sound-groups/new/", {"name": "Weak forms", "order": 2})
-        self.assertEqual(SoundCategory.objects.get(name="Weak forms").programme, TRICKS)
+        # Tricks have no groups: there is no screen for them, and a trick is
+        # added with just its name, landing at the end of the list.
+        self.assertEqual(self.client.get("/manage/trick-sound-groups/").status_code, 404)
         form = self.client.get("/manage/trick-sounds/new/")
-        self.assertContains(form, "Weak forms")
-        self.assertNotContains(form, ">Long vowels<")
-        self.assertTrue(Sound.objects.filter(pk=self.trick.pk).exists())
+        self.assertContains(form, "Trick number")
+        self.assertNotContains(form, 'name="category"')
+        self.client.post("/manage/trick-sounds/new/", {"name": "-age Ending", "order": 0, "is_published": "on"})
+        added = Sound.objects.get(name="-age Ending")
+        self.assertEqual(added.category, SoundCategory.for_tricks())
+        self.assertEqual(added.programme, TRICKS)
+        self.assertEqual(added.order, self.trick.order + 1)
+        # A sound, though, still needs its symbol for the phonemic chart.
+        page = self.client.post("/manage/sounds/new/", {"name": "Short I", "category": self.sound.category.pk,
+                                                        "order": 1, "is_published": "on"})
+        self.assertContains(page, "A sound needs its symbol")
+        self.assertFalse(Sound.objects.filter(name="Short I").exists())
+
+    def test_a_trick_shows_its_number_not_a_group(self):
+        from .models import Sound
+
+        page = self.client.get(f"/tricks/lessons/{self.trick.slug}/")
+        self.assertContains(page, "Trick 1")
+        self.assertNotContains(page, "Linking")
+        plain = Sound.objects.create(category=self.trick.category, name="-age Ending", is_published=True)
+        page = self.client.get(f"/tricks/lessons/{plain.slug}/")
+        self.assertContains(page, "Trick 2")
+        self.assertContains(page, '<span class="ui-hero__symbol">2</span>')
+        section = self.client.get("/tricks/sections/passage/")
+        self.assertContains(section, 'class="ui-numlist"')
+        self.assertNotContains(section, "ui-section__title")

@@ -45,7 +45,31 @@
   </section>
 
   <div class="wrap ui-body{% if section %} ui-stack{% endif %}">
-    {% if section %}
+    {% if section and programme.numbered %}
+      {# Numbered programmes: one list, each leading straight to this section. #}
+      {% if lessons %}
+      <ol class="ui-numlist">
+        {% for sound in lessons %}
+        <li style="--i: {{ forloop.counter0 }}">
+          <a href="{% url programme.lesson_tab sound.slug section.slug %}" class="ui-numlist__item">
+            <span class="ui-numlist__num">{{ forloop.counter }}</span>
+            <span class="ui-numlist__body">
+              <span class="ui-numlist__name">{{ sound.name }}</span>
+              <span class="ui-numlist__words">
+                {% if sound.items or sound.videos_here %}
+                  {% if section.slug == "lens" %}Ready{% else %}{{ sound.items }} item{{ sound.items|pluralize }}{% endif %}{% if sound.videos_here %} · {{ sound.videos_here }} video{{ sound.videos_here|pluralize }}{% endif %}
+                {% else %}Nothing here yet{% endif %}
+              </span>
+            </span>
+            <span class="ui-numlist__arrow" aria-hidden="true">&rarr;</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <div class="ui-empty"><p>{{ programme.lessons_word|capfirst }} are being added. Check back soon.</p></div>
+      {% endif %}
+    {% elif section %}
       {% for group in groups %}
       {% cycle "#7A2438" "#2f5d8a" "#2e7d62" "#b8863b" as tone silent %}
       <section class="ui-panel">

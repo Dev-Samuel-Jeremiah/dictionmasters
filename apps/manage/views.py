@@ -88,6 +88,15 @@ def _model_for(screen):
     return django_apps.get_model(screen["model"])
 
 
+def _default_value(value):
+    """A screen's default, where a few are worked out when saving."""
+    if value == "book.tricks_group":
+        from apps.book.models import SoundCategory
+
+        return SoundCategory.for_tricks()
+    return value
+
+
 def _rows_for(screen):
     """The records that belong to a screen. Some screens share a table and
     see only their part of it, e.g. 44 Academy's sounds and the tricks."""
@@ -314,6 +323,9 @@ def record_form(request, key, pk=None):
 
     FormClass = build_form(model, screen.get("form"), exclude_parent=parent_field if not pk else None)
     form = FormClass(request.POST or None, request.FILES or None, instance=obj)
+    for name, (label, help_text) in screen.get("labels", {}).items():
+        if name in form.fields:
+            form.fields[name].label, form.fields[name].help_text = label, help_text
     # Dropdowns offer only what belongs here, e.g. a trick's group is a trick group.
     for name, condition in screen.get("limit", {}).items():
         if name in form.fields and hasattr(form.fields[name], "queryset"):
@@ -325,7 +337,7 @@ def record_form(request, key, pk=None):
             setattr(saved, parent_field, parent_obj)
         if not pk:
             for name, value in screen.get("defaults", {}).items():
-                setattr(saved, name, value)
+                setattr(saved, name, _default_value(value))
         saved.save()
         form.save_m2m()
         _record(request, saved, CHANGE if pk else ADDITION, "Changed in the control room" if pk else "Added in the control room")

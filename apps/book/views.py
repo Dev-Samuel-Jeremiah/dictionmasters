@@ -164,9 +164,13 @@ def lesson_detail(request, programme, slug, tab="lens"):
         Sound.objects.in_programme(programme).select_related("category"), slug=slug, is_published=True
     )
 
+    info = programme_for(programme)
     context = {
         "sound": sound,
-        "programme": programme_for(programme),
+        "programme": info,
+        # Tricks are numbered by their place in the list: Trick 1, Trick 2…
+        "number": ([s.pk for group in lesson_groups(programme) for s in group["sounds"]].index(sound.pk) + 1
+                   if info["numbered"] else None),
         "tabs": TABS,
         "active_tab": tab,
         # Any number of videos for this tab, in the order the admin set.
@@ -279,6 +283,7 @@ def lesson_sections(request, programme, section=None):
     current = next(one for one in sections if one["slug"] == section)
     return render(request, "book/sections.html", {
         "sections": sections, "section": current, "groups": groups, "programme": info,
+        "lessons": [sound for group in groups for sound in group["sounds"]],
     })
 
 

@@ -18,8 +18,10 @@ delete and uploads all follow from it.
     readonly   records the site writes itself: viewable, not editable
     where      only the records matching this filter belong to the screen
                (44 Academy and Tricks to Sound Fluent share their tables)
-    defaults   set on every record added here
+    defaults   set on every record added here ("book.tricks_group" = the
+               hidden group every trick is filed in)
     limit      {field: filter} narrows a dropdown's choices
+    labels     {field: (label, help)} to word a form's fields for this screen
     name, singular   what to call the records, when the model's own words don't fit
 """
 
@@ -33,24 +35,46 @@ def lesson_screens(programme, prefix):
     inside = {"sound__category__programme": programme}
 
     def tab(key, model, columns, search, **extra):
-        return {"key": prefix + key, "model": model, "columns": columns, "search": search,
-                "parent": ("sound", prefix + "sounds"), "where": inside,
-                "limit": {"sound": lesson}, **extra}
+        screen = {"key": prefix + key, "model": model, "columns": columns, "search": search,
+                  "parent": ("sound", prefix + "sounds"), "where": inside,
+                  "limit": {"sound": lesson}, **extra}
+        if programme == "tricks":
+            screen["labels"] = {"sound": ("Trick", "")}
+        return screen
+
+    tabs = [prefix + key for key in ("articulation", "tab-videos", "word-bank", "sentences",
+                                     "book-passages", "conversations", "twisters", "minimal-pairs", "links")]
+    if programme == "tricks":
+        # Tricks have no groups: just Trick 1, Trick 2, … Each is filed in
+        # the one group the site keeps for them, out of sight.
+        first = [
+            {"key": prefix + "sounds", "model": "book.Sound", "name": "Tricks", "singular": "trick",
+             "columns": ["order", "name", "symbol", "is_published"], "order": ["order", "name"],
+             "search": ["name", "symbol", "example_words"], "where": lesson,
+             "defaults": {"category": "book.tricks_group"},
+             "form": ["name", "order", "symbol", "example_words", "is_published"],
+             "labels": {"name": ("Name", 'e.g. "-age Ending"'),
+                        "order": ("Trick number", "Its place in the list: 1 is Trick 1. Leave at 0 to add it at the end."),
+                        "symbol": ("Badge", 'Optional, e.g. "-age".'),
+                        "is_published": ("Published", "Unpublished tricks are hidden from learners.")},
+             "children": tabs},
+        ]
+    else:
+        first = [
+            {"key": prefix + "sound-groups", "model": "book.SoundCategory",
+             "columns": ["name", "order"], "search": ["name"], "children": [prefix + "sounds"],
+             "where": {"programme": programme}, "defaults": {"programme": programme},
+             "form": ["name", "order"]},
+            {"key": prefix + "sounds", "model": "book.Sound",
+             "columns": ["symbol", "name", "category", "order", "is_published"],
+             "search": ["name", "symbol", "example_words"],
+             "parent": ("category", prefix + "sound-groups"),
+             "where": lesson, "limit": {"category": {"programme": programme}},
+             "children": tabs},
+        ]
 
     return [
-        {"key": prefix + "sound-groups", "model": "book.SoundCategory",
-         "name": "Trick groups" if prefix else None, "singular": "trick group" if prefix else None,
-         "columns": ["name", "order"], "search": ["name"], "children": [prefix + "sounds"],
-         "where": {"programme": programme}, "defaults": {"programme": programme},
-         "form": ["name", "order"]},
-        {"key": prefix + "sounds", "model": "book.Sound", "name": "Tricks" if prefix else None, "singular": "trick" if prefix else None,
-         "columns": ["symbol", "name", "category", "order", "is_published"],
-         "search": ["name", "symbol", "example_words"],
-         "parent": ("category", prefix + "sound-groups"),
-         "where": lesson, "limit": {"category": {"programme": programme}},
-         "children": [prefix + key for key in ("articulation", "tab-videos", "word-bank", "sentences",
-                                               "book-passages", "conversations", "twisters",
-                                               "minimal-pairs", "links")]},
+        *first,
         tab("tab-videos", "book.SectionVideo", ["video_caption", "section", "sound", "order"],
             ["video_caption", "sound__name"], order=["sound", "section", "order"],
             # Where it goes first, then the video itself.

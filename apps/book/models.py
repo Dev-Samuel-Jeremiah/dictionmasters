@@ -94,8 +94,9 @@ PROGRAMME_CHOICES = [(ACADEMY, "44 Academy"), (TRICKS, "Tricks to Sound Fluent")
 
 
 class SoundCategory(models.Model):
-    """A group of lessons: in 44 Academy e.g. Long Vowels or Consonants; in
-    Tricks to Sound Fluent whatever the tricks are grouped by."""
+    """A group of lessons in 44 Academy, e.g. Long Vowels or Consonants.
+    Tricks to Sound Fluent has no groups of its own: its tricks all sit in
+    one group the site keeps for them (see `for_tricks`), never shown."""
 
     name = models.CharField(max_length=100)
     programme = models.CharField(
@@ -111,6 +112,12 @@ class SoundCategory(models.Model):
     def __str__(self):
         return self.name
 
+    @classmethod
+    def for_tricks(cls):
+        """The one group every trick belongs to."""
+        group = cls.objects.filter(programme=TRICKS).order_by("pk").first()
+        return group or cls.objects.create(name="Tricks", programme=TRICKS)
+
 
 class SoundQuerySet(models.QuerySet):
     def in_programme(self, programme):
@@ -124,8 +131,8 @@ class Sound(models.Model):
 
     category = models.ForeignKey(SoundCategory, on_delete=models.CASCADE, related_name="sounds")
     symbol = models.CharField(
-        max_length=20,
-        help_text='The badge on the lesson\'s tile — a sound\'s symbol such as "/i\u02d0/", or a short mark for a trick.',
+        max_length=20, blank=True,
+        help_text='The sound\'s symbol, such as "/i\u02d0/". Optional for a trick: its badge, e.g. "-age".',
     )
     name = models.CharField(max_length=100, help_text='e.g. "Long EE"')
     slug = models.SlugField(max_length=120, unique=True, blank=True)
@@ -146,7 +153,14 @@ class Sound(models.Model):
         ordering = ["category__order", "order", "name"]
 
     def __str__(self):
-        return f"{self.symbol} {self.name}"
+        return f"{self.symbol} {self.name}".strip()
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        # The phonemic chart finds a sound by its symbol; a trick needs none.
+        if not self.symbol.strip() and self.category_id and self.category.programme == ACADEMY:
+            raise ValidationError({"symbol": "A sound needs its symbol, e.g. /iː/."})
 
     @property
     def programme(self):
@@ -158,6 +172,10 @@ class Sound(models.Model):
         return reverse(programme_for(self.programme)["lesson"], args=[self.slug])
 
     def save(self, *args, **kwargs):
+        # A new trick without a number goes to the end of the list.
+        if not self.pk and not self.order and self.category_id and self.category.programme == TRICKS:
+            last = Sound.objects.in_programme(TRICKS).aggregate(models.Max("order"))["order__max"]
+            self.order = (last or 0) + 1
         if not self.slug:
             base = slugify(self.name) or slugify(self.symbol) or "sound"
             slug = base
