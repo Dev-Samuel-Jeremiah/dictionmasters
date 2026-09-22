@@ -166,7 +166,6 @@ def lesson_detail(request, programme, slug, tab="lens"):
         "programme": programme_for(programme),
         "tabs": TABS,
         "active_tab": tab,
-        "active_tab_label": dict(TABS)[tab],
         # Any number of videos for this tab, in the order the admin set.
         "section_videos": list(sound.videos.filter(section=tab)),
     }

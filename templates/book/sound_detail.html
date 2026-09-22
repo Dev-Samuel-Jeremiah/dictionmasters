@@ -29,7 +29,7 @@
       </div>
       <div class="ui-hero__side">
         {% if programme.sections %}
-        <a href="{% url programme.section active_tab %}" class="ui-btn ui-btn--glass">Every {{ programme.lesson_word }}'s {{ active_tab_label|lower }}</a>
+        <a href="{% url programme.section active_tab %}" class="ui-btn ui-btn--glass">Browse by section</a>
         {% else %}
         <a href="{% url 'book:phonemic_chart' %}" class="ui-btn ui-btn--glass">iː Phonemic chart</a>
         {% endif %}
@@ -54,7 +54,7 @@
       <div class="video-card">
         <div class="video-card__bar">
           <div>
-            <div class="video-card__title">{{ articulation.video_caption|default:"Sound demonstration video" }}</div>
+            <div class="video-card__title">{% if articulation.video_caption %}{{ articulation.video_caption }}{% else %}{{ programme.lesson_word|capfirst }} demonstration video{% endif %}</div>
             {% if articulation.video_duration_label %}<div class="video-card__meta">{{ articulation.video_duration_label }}</div>{% endif %}
           </div>
         </div>
