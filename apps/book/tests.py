@@ -189,14 +189,13 @@ class TricksToSoundFluentTests(TestCase):
         self.assertNotContains(page, ">Lens</a>")
         self.assertNotContains(page, ">Word Bank</a>")
 
-    def test_the_dashboard_card_opens_tricks_and_every_section(self):
-        from .views import TABS
-
+    def test_the_dashboard_card_opens_tricks(self):
         page = self.client.get("/accounts/dashboard/")
         self.assertContains(page, 'href="/tricks/"')
+        self.assertContains(page, "Tricks to Sound Fluent")
         self.assertNotContains(page, "Coming soon")
-        for slug, _label in TABS:
-            self.assertContains(page, f'href="/tricks/sections/{slug}/"', msg_prefix=slug)
+        # Just the card: the sections live on the Tricks pages, not here.
+        self.assertNotContains(page, 'href="/tricks/sections/')
 
     def test_tricks_has_its_own_pages(self):
         home = self.client.get("/tricks/")

@@ -296,27 +296,6 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
   transform: translateZ(20px);
 }
 .dash-stat__value small { font-size: 1rem; color: var(--ink-40); font-weight: 500; }
-/* Tricks to Sound Fluent: the card's title and each section are links. */
-.dash-stat__link { color: inherit; text-decoration: none; }
-.dash-stat__link::after { content: " \2192"; color: var(--accent); }
-.dash-stat__link:hover { text-decoration: underline; text-underline-offset: 3px; }
-.dash-chips {
-  list-style: none; margin: 12px 0 0; padding: 0;
-  display: flex; flex-wrap: wrap; gap: 6px;
-  transform: translateZ(14px);
-}
-.dash-chips a {
-  display: inline-block; padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 0.76rem; font-weight: 600; line-height: 1.2;
-  color: var(--ink); text-decoration: none;
-  background: rgba(184, 134, 59, 0.12);
-  border: 1px solid rgba(184, 134, 59, 0.22);
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-.dash-chips a:hover, .dash-chips a:focus-visible {
-  color: #fff; background: #8C6526; border-color: #8C6526; outline: none;
-}
 .dash-stat__foot { margin: 0; font-size: 0.8rem; color: var(--ink-40); }
 
 .dash-row {
