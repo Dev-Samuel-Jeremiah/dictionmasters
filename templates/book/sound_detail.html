@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load videos %}
 {% load read_along %}
 
 {% block title %}{% if sound.symbol %}{{ sound.symbol }} {% endif %}{{ sound.name }} — {{ programme.name }}{% endblock %}
@@ -60,9 +61,7 @@
         </div>
         <div class="video-card__stage">
           {% if articulation.video_source %}
-          <video controls preload="{% if articulation.poster_source %}none{% else %}metadata{% endif %}" style="width:100%;"{% if articulation.poster_source %} poster="{{ articulation.poster_source }}"{% endif %}>
-            <source src="{{ articulation.video_source }}">
-          </video>
+          {% video_player articulation %}
           {% else %}
           <div class="video-card__placeholder">
             <span class="video-card__play" aria-hidden="true">

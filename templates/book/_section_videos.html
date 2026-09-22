@@ -1,3 +1,4 @@
+{% load videos %}
 {% comment %}
   The videos an admin has added to this tab of the lesson, in their order.
   Each loads only when played (preload="none" with a poster), so a tab with
@@ -16,9 +17,7 @@
     </div>
     <div class="video-card__stage">
       {% if video.video_source %}
-      <video controls preload="{% if video.poster_source %}none{% else %}metadata{% endif %}" style="width:100%;"{% if video.poster_source %} poster="{{ video.poster_source }}"{% endif %}>
-        <source src="{{ video.video_source }}">
-      </video>
+      {% video_player video %}
       {% else %}
       <div class="video-card__placeholder"><span>Video coming soon</span></div>
       {% endif %}

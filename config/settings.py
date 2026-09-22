@@ -120,6 +120,7 @@ LOCAL_APPS = [
     "apps.schools",
     "apps.learning_tools",
     "apps.book",
+    "apps.videos",
     "apps.tricks",
     "apps.reference_library",
     "apps.daily_practice",
@@ -425,6 +426,19 @@ LOGOUT_REDIRECT_URL = "landing:home"
 PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY", "")
 PAYSTACK_PUBLIC_KEY = os.environ.get("PAYSTACK_PUBLIC_KEY", "")
 
+
+# ---------------------------------------------------------------------------
+# Lesson videos, and keeping them for offline viewing (apps/videos)
+# ---------------------------------------------------------------------------
+
+# How long a learner may keep a copy before the app checks with the site
+# again, and how many of their own devices may hold copies at once.
+OFFLINE_VIDEO_LICENSE_DAYS = int(os.environ.get("OFFLINE_VIDEO_LICENSE_DAYS", 7))
+MAX_OFFLINE_DEVICES_PER_STUDENT = int(os.environ.get("MAX_OFFLINE_DEVICES_PER_STUDENT", 2))
+# A playing link is short-lived; the one that fetches a copy lasts longer,
+# because a whole video has to come down over it.
+VIDEO_LINK_SECONDS = int(os.environ.get("VIDEO_LINK_SECONDS", 15 * 60))
+VIDEO_DOWNLOAD_LINK_SECONDS = int(os.environ.get("VIDEO_DOWNLOAD_LINK_SECONDS", 2 * 60 * 60))
 
 # ---------------------------------------------------------------------------
 # OpenAI — hearing a reading, and writing about it

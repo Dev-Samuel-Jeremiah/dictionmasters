@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load videos %}
 {% load read_along %}
 
 {% block title %}{{ chapter.display_name }} — {{ term.name }} — {{ book.title }}{% endblock %}
@@ -51,9 +52,7 @@
         </div>
       </div>
       <div class="video-card__stage">
-        <video controls preload="{% if chapter.poster_source %}none{% else %}metadata{% endif %}" style="width:100%;"{% if chapter.poster_source %} poster="{{ chapter.poster_source }}"{% endif %}>
-          <source src="{{ chapter.video_source }}">
-        </video>
+        {% video_player chapter %}
       </div>
     </div>
     {% endif %}

@@ -318,6 +318,27 @@ SECTIONS = [
         ],
     },
     {
+        "slug": "offline", "name": "Videos & offline", "icon": "📶", "tone": "#2f5d8a",
+        "blurb": "The devices learners keep lesson videos on, and the copies they hold.",
+        "screens": [
+            {"key": "learner-devices", "model": "videos.StudentDevice", "name": "Learner devices",
+             "columns": ["name", "student", "copies_held", "is_active", "last_seen_at"],
+             "search": ["name", "student__email"], "order": ["-last_seen_at"],
+             "children": ["offline-copies"],
+             "form": ["name", "is_active"],
+             "labels": {"is_active": ("Allowed to keep videos",
+                                      "Turn off to stop this device keeping copies. The ones it holds end the "
+                                      "next time it is online.")}},
+            {"key": "offline-copies", "model": "videos.OfflineVideoLicense", "name": "Offline copies",
+             "columns": ["title", "student", "device", "expires_at", "is_active"],
+             "search": ["title", "student__email", "device__name"], "order": ["-issued_at"],
+             "parent": ("device", "learner-devices"),
+             "form": ["title", "expires_at", "is_active"],
+             "labels": {"is_active": ("Still allowed",
+                                      "Turn off to take this copy back. The device removes it next time it is online.")}},
+        ],
+    },
+    {
         "slug": "billing", "name": "Billing", "icon": "💳", "tone": "#2e7d62",
         "blurb": "Plans and prices, who has access until when, and every payment.",
         "screens": [

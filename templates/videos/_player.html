@@ -1,0 +1,27 @@
+{% comment %}
+  One lesson video. It plays from this site's own address, never from
+  storage (apps/videos/links.py), and a learner can keep a copy for
+  watching without the internet (static/js/offline_video.js).
+{% endcomment %}
+{% if not missing %}
+<div class="vid" data-video{% if ticket %} data-ticket="{{ ticket }}" data-video-id="{{ ref }}" data-title="{{ title }}"{% endif %}>
+  {% if ticket %}<form hidden>{% csrf_token %}</form>{% endif %}
+  <video class="vid__player" controls preload="{% if poster %}none{% else %}metadata{% endif %}"
+         {% if poster %}poster="{{ poster }}"{% endif %} playsinline data-video-el{% if ra %} data-ra-media{% endif %}
+         src="{{ src }}"></video>
+  {% if ticket %}
+  <div class="vid__bar" data-offline-bar>
+    <p class="vid__state" data-offline-state hidden></p>
+    <div class="vid__progress" data-offline-progress hidden><span></span></div>
+    <div class="vid__actions">
+      <button type="button" class="vid__btn vid__btn--keep" data-offline-keep>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 18.5h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Save for offline
+      </button>
+      <button type="button" class="vid__btn vid__btn--watch" data-offline-watch hidden>&#9654; Watch offline</button>
+      <button type="button" class="vid__btn vid__btn--remove" data-offline-remove hidden>Remove offline copy</button>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Offline videos — Diction Masters{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/videos.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li>Offline videos</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128246;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Watch without the internet</p>
+            <h1 class="ui-hero__title">Offline videos</h1>
+            <p class="ui-hero__lede">Videos you've saved on this device. Each one stays for {{ days }} day{{ days|pluralize }}, and renews itself whenever you're online and signed in.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body ui-stack">
+    <form hidden>{% csrf_token %}</form>
+    <section class="ui-panel">
+      <header class="ui-section__head">
+        <h2 class="ui-section__title">On this device</h2>
+      </header>
+      <ul class="vid-keptlist" data-offline-list>
+        <li class="vid-kept__none">Looking for your saved videos&hellip;</li>
+      </ul>
+    </section>
+
+    <section class="ui-panel">
+      <header class="ui-section__head">
+        <h2 class="ui-section__title">My devices</h2>
+        <p class="ui-section__aside">{{ limit }} device{{ limit|pluralize }} allowed</p>
+      </header>
+      {% if devices %}
+      <ul class="vid-devices">
+        {% for device in devices %}
+        <li class="vid-device{% if not device.active %} vid-device--off{% endif %}">
+          <div>
+            <p class="vid-device__name">{{ device.name }}</p>
+            <p class="vid-device__note">{{ device.copies }} video{{ device.copies|pluralize }} saved{% if not device.active %} · turned off{% endif %}</p>
+          </div>
+          {% if device.active %}
+          <form method="post" action="{% url 'videos:deactivate_device' device.id %}" data-device-form>
+            {% csrf_token %}
+            <button type="submit" class="vid__btn vid__btn--remove">Remove this device</button>
+          </form>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="ui-note">Removing a device frees a place and ends the copies it holds, the next time it goes online.</p>
+      {% else %}
+      <p class="ui-empty">No devices yet. Save a video and this one will appear here.</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/offline_video.js' %}" defer></script>
+{% endblock %}

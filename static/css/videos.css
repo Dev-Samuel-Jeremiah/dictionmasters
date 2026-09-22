@@ -1,0 +1,44 @@
+/* Lesson videos, and the copies kept for watching offline
+   (apps/videos, static/js/offline_video.js). */
+
+.vid { display: grid; gap: 10px; }
+.vid__player { width: 100%; border-radius: 14px; background: #14213D; display: block; }
+.vid__bar { display: grid; gap: 8px; }
+.vid__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.vid__btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 15px; border-radius: 11px;
+  font: inherit; font-size: 0.86rem; font-weight: 600; line-height: 1;
+  color: var(--ink); background: rgba(20, 33, 61, 0.06);
+  border: 1px solid rgba(20, 33, 61, 0.1); cursor: pointer; text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.vid__btn:hover { background: rgba(20, 33, 61, 0.1); transform: translateY(-1px); }
+.vid__btn[disabled] { opacity: 0.55; cursor: progress; transform: none; }
+.vid__btn--keep { color: #14213D; background: linear-gradient(135deg, #f0c878, #c98f3a); border-color: transparent; }
+.vid__btn--watch { color: #fff; background: #2e7d62; border-color: transparent; }
+.vid__btn--remove { color: #9b3550; background: transparent; border-color: rgba(155, 53, 80, 0.3); }
+.vid__state { margin: 0; font-size: 0.84rem; font-weight: 600; color: var(--ink-70); }
+.vid__state--good { color: #2e7d62; }
+.vid__state--bad { color: #9b3550; }
+.vid__progress { height: 6px; border-radius: 999px; background: rgba(20, 33, 61, 0.1); overflow: hidden; }
+.vid__progress > span { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #f0c878, #c98f3a); transition: width 0.25s ease; }
+
+/* The Offline videos page */
+.vid-keptlist, .vid-devices { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.vid-kept, .vid-device {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: 16px; background: var(--ui-card, #fffdf8);
+  box-shadow: var(--ui-shadow, 0 8px 20px rgba(20, 33, 61, 0.08));
+}
+.vid-kept__body, .vid-device > div { flex: 1; min-width: 200px; }
+.vid-kept__title, .vid-device__name { margin: 0; font-weight: 700; color: var(--ink); }
+.vid-kept__note, .vid-device__note { margin: 2px 0 0; font-size: 0.82rem; color: var(--ink-40); }
+.vid-kept__player { width: 100%; border-radius: 12px; background: #14213D; }
+.vid-kept__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.vid-kept__none { padding: 18px; border-radius: 16px; text-align: center; color: var(--ink-40); background: rgba(20, 33, 61, 0.03); }
+.vid-device--off { opacity: 0.6; }
+@media (max-width: 560px) {
+  .vid__actions, .vid-kept__actions { width: 100%; }
+  .vid__btn { flex: 1; justify-content: center; }
+}

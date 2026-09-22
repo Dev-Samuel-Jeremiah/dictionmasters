@@ -14,6 +14,7 @@ const CACHE = "dm-static-" + VERSION;
 const OFFLINE_URL = "{{ offline_url }}";
 const STATIC_PREFIX = "{{ static_prefix }}";
 const PRECACHE = {{ precache|safe }};
+const OFFLINE_PAGE = "/videos/offline/";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).catch(() => {}));
@@ -40,11 +41,26 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
+    // The Offline videos page is kept, so it opens with no connection.
+    if (url.pathname === OFFLINE_PAGE) {
+      event.respondWith(
+        fetch(request).then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(OFFLINE_PAGE, copy));
+          return response;
+        }).catch(() => caches.match(OFFLINE_PAGE).then((page) => page || caches.match(OFFLINE_URL)))
+      );
+      return;
+    }
     event.respondWith(
       fetch(request).catch(() => caches.match(OFFLINE_URL).then((page) => page || Response.error()))
     );
     return;
   }
+
+  // A video is never kept by the worker: saved copies are encrypted in
+  // the browser's own database instead.
+  if (url.pathname.startsWith("/videos/")) return;
 
   if (url.pathname.startsWith(STATIC_PREFIX)) {
     event.respondWith(

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static echospell_qr %}
+{% load videos %}
 {% load read_along %}
 
 {% block title %}{{ category.name }} — {{ group.display_name }} — {{ level.name }}{% endblock %}
@@ -206,7 +207,7 @@
           {% include "echospell/_card_audio.html" with entry=card.entry %}
           {% if card.entry.video_source %}
           <div class="video-card" style="margin-top: 14px; text-align: left;">
-            <div class="video-card__stage"><video controls preload="{% if card.entry.poster_source %}none{% else %}metadata{% endif %}" style="width:100%;"{% if card.entry.poster_source %} poster="{{ card.entry.poster_source }}"{% endif %}><source src="{{ card.entry.video_source }}"></video></div>
+            <div class="video-card__stage">{% video_player card.entry %}</div>
           </div>
           {% endif %}
           {% if card.entry.body %}<p class="word-card__note-body">{{ card.entry.body }}</p>{% endif %}
@@ -228,7 +229,7 @@
           {% if card.entry.video_source %}
           <div class="video-card" style="margin-top: 14px;">
             <div class="video-card__bar"><div class="video-card__title">Transcription video</div></div>
-            <div class="video-card__stage"><video controls preload="{% if card.entry.poster_source %}none{% else %}metadata{% endif %}" style="width:100%;"{% if card.entry.poster_source %} poster="{{ card.entry.poster_source }}"{% endif %}><source src="{{ card.entry.video_source }}"></video></div>
+            <div class="video-card__stage">{% video_player card.entry %}</div>
           </div>
           {% endif %}
           <details class="reveal">
