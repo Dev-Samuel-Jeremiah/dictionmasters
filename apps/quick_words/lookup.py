@@ -1,5 +1,5 @@
 """
-Looking up a word Quick Words doesn't have yet, using Groq.
+Looking up a word Quick Words doesn't have yet, using OpenAI.
 
 Whatever comes back is written into a library every learner shares,
 so nothing here trusts either side of the conversation:
@@ -25,7 +25,7 @@ from django.conf import settings
 
 from apps.echospell.models import LEVEL_NAME_CHOICES
 
-API_URL = "https://api.groq.com/openai/v1/chat/completions"
+API_URL = "https://api.openai.com/v1/chat/completions"
 TIMEOUT_SECONDS = 12
 
 # A single word: letters, with an apostrophe or hyphen inside (don't,
@@ -82,12 +82,12 @@ def normalise_ipa(raw):
     return f"/{text}/" if text else ""
 
 
-def _ask_groq(word):
-    if not settings.GROQ_API_KEY:
-        raise LookupUnavailable("No GROQ_API_KEY is configured.")
+def _ask_openai(word):
+    if not settings.OPENAI_API_KEY:
+        raise LookupUnavailable("No OPENAI_API_KEY is configured.")
 
     body = {
-        "model": settings.GROQ_MODEL,
+        "model": settings.OPENAI_MODEL,
         "temperature": 0.1,
         "max_completion_tokens": 400,
         "response_format": {"type": "json_object"},
@@ -96,17 +96,12 @@ def _ask_groq(word):
             {"role": "user", "content": word},
         ],
     }
-    # The gpt-oss models reason before answering; a dictionary entry
-    # needs very little of it, and less reasoning is a faster reply.
-    if settings.GROQ_MODEL.startswith("openai/gpt-oss"):
-        body["reasoning_effort"] = "low"
-
     request = urllib.request.Request(
         API_URL,
         data=json.dumps(body).encode("utf-8"),
         method="POST",
         headers={
-            "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
             "Content-Type": "application/json",
             "User-Agent": "dictionmasters/1.0",
         },
@@ -116,11 +111,11 @@ def _ask_groq(word):
             payload = json.load(response)
         return json.loads(payload["choices"][0]["message"]["content"])
     except urllib.error.HTTPError as error:
-        raise LookupUnavailable(f"Groq answered HTTP {error.code}.") from error
+        raise LookupUnavailable(f"OpenAI answered HTTP {error.code}.") from error
     except (urllib.error.URLError, TimeoutError, OSError) as error:
-        raise LookupUnavailable("Couldn't reach Groq.") from error
+        raise LookupUnavailable("Couldn't reach OpenAI.") from error
     except (KeyError, IndexError, TypeError, ValueError) as error:
-        raise LookupUnavailable("Groq's reply wasn't usable JSON.") from error
+        raise LookupUnavailable("OpenAI's reply wasn't usable JSON.") from error
 
 
 def lookup(word):
@@ -130,7 +125,7 @@ def lookup(word):
     if not is_lookup_candidate(word):
         return None
 
-    reply = _ask_groq(word)
+    reply = _ask_openai(word)
     if not isinstance(reply, dict) or reply.get("is_word") is not True:
         return None
 
@@ -143,9 +138,9 @@ def lookup(word):
     # Every required piece must be present and a believable length; a
     # half-filled or runaway reply is not written into the library.
     if not is_lookup_candidate(canonical):
-        raise LookupUnavailable("Groq returned something that isn't a single word.")
+        raise LookupUnavailable("OpenAI returned something that isn't a single word.")
     if not ipa or len(ipa) > 60 or not definition or len(definition) > 300:
-        raise LookupUnavailable("Groq's entry was incomplete.")
+        raise LookupUnavailable("OpenAI's entry was incomplete.")
 
     return {
         "word": canonical,

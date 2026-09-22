@@ -1,7 +1,7 @@
 """
 The AI reading tutor: judging readings, levels, and the endpoints.
 
-Nothing here reaches Groq, ElevenLabs or cloud storage — transcription,
+Nothing here reaches OpenAI, ElevenLabs or cloud storage — transcription,
 the voice and the feedback are all stood in for.
 """
 

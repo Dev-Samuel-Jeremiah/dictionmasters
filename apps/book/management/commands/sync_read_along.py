@@ -42,7 +42,7 @@ class Command(BaseCommand):
             return
 
         if not read_along.is_configured():
-            raise CommandError("Needs ffmpeg plus ELEVENLABS_API_KEY or GROQ_API_KEY.")
+            raise CommandError("Needs ffmpeg plus ELEVENLABS_API_KEY or OPENAI_API_KEY.")
 
         done = skipped = failed = 0
         for obj in read_along.candidates():

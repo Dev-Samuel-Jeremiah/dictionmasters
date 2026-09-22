@@ -2,7 +2,7 @@
 Read-along timings: a recording added a moment ago must start following
 the words on its own, without anyone reloading the page.
 
-Nothing here reaches Groq or cloud storage — measuring is stood in for.
+Nothing here reaches OpenAI or cloud storage — measuring is stood in for.
 """
 
 from unittest import mock

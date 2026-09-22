@@ -11,10 +11,10 @@ def _warm():
     connection; every one after reuses it in well under half. A learner
     should never be the one waiting for that."""
     try:
-        from apps.book.read_along import GROQ_URL, _http
+        from apps.book.read_along import OPENAI_URL, _http
 
         if _http is not None:
-            _http.request("GET", GROQ_URL.rsplit("/openai", 1)[0] + "/", retries=False, timeout=8)
+            _http.request("GET", "https://api.openai.com/v1/models", retries=False, timeout=8)
     except Exception:
         pass       # it will simply be set up on the first reading instead
 
@@ -26,6 +26,6 @@ class TutorConfig(AppConfig):
     verbose_name = "AI Reading Tutor"
 
     def ready(self):
-        if getattr(settings, "TESTING", False) or not getattr(settings, "GROQ_API_KEY", ""):
+        if getattr(settings, "TESTING", False) or not getattr(settings, "OPENAI_API_KEY", ""):
             return
         threading.Thread(target=_warm, name="tutor-warm", daemon=True).start()

@@ -41,7 +41,7 @@ LOOKUPS_PER_MINUTE = 20
 AUDIO_WAIT_SECONDS = 15
 
 # Audio is requested in the background the moment a look-up starts, so
-# it is ready by the time Groq has answered instead of being made
+# it is ready by the time OpenAI has answered instead of being made
 # afterwards. Shared across requests so threads aren't created per call.
 _speech_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="quick-words-speech")
 
@@ -162,7 +162,7 @@ def lookup_word(request):
     """Find a word the library doesn't have, and add it.
 
     Cheapest path first: if the word already exists nothing is sent to
-    Groq at all. Only a genuinely new, real word is written.
+    OpenAI at all. Only a genuinely new, real word is written.
     """
     typed = request.POST.get("word", "").strip()
 
@@ -176,7 +176,7 @@ def lookup_word(request):
     if _throttled(request.user):
         return _lookup_response(request, 429, "That's a lot of look-ups at once — give it a minute.")
 
-    # Start the pronunciation now, alongside Groq, rather than after it.
+    # Start the pronunciation now, alongside OpenAI, rather than after it.
     speech = _speech_pool.submit(synthesise, typed) if speech_is_configured() else None
 
     try:
@@ -214,7 +214,7 @@ def _attach_pronunciation(word, typed, speech):
     """Save the spoken word onto a freshly added entry.
 
     The audio already in progress was for what the person *typed*. If
-    Groq corrected the spelling, that recording says the wrong word, so
+    OpenAI corrected the spelling, that recording says the wrong word, so
     the corrected word is spoken instead. Any failure just leaves the
     word without audio — it is still a complete entry.
     """

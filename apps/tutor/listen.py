@@ -2,7 +2,7 @@
 Hearing the reader, and judging each word against the passage.
 
 A clip of the learner reading one sentence (or saying one word again) is
-turned into a small MP3 and transcribed by Whisper on Groq — never told
+turned into a small MP3 and transcribed by OpenAI's Whisper — never told
 what the text says, and prompted to write words as they sound, so it
 writes down what was actually said rather than what should have been. That transcript is lined up with the
 sentence, word by word, and each word on the page comes back as:
@@ -32,7 +32,7 @@ import time
 import uuid
 from difflib import SequenceMatcher
 
-from apps.book.read_along import AlignmentUnavailable, _groq, _key
+from apps.book.read_along import AlignmentUnavailable, _key, _transcribe
 
 from . import pronounce
 
@@ -111,7 +111,7 @@ def sentences(text):
 # Hearing the clip
 # ---------------------------------------------------------------------------
 
-# Groq reads these as they come from the browser, so nothing is converted
+# OpenAI reads these as they come from the browser, so nothing is converted
 # and nothing waits on ffmpeg.
 READY_MADE = {"webm": "webm", "ogg": "ogg", "opus": "ogg", "mp4": "mp4", "m4a": "m4a",
               "mp3": "mp3", "wav": "wav", "flac": "flac", "mpeg": "mp3", "mpga": "mp3"}
@@ -209,7 +209,7 @@ def _hear(path):
     try:
         # Never the passage as a hint: the tutor needs what was said, not
         # what should have been.
-        words = _groq(path, hint=LITERAL)
+        words = _transcribe(path, hint=LITERAL)
     except AlignmentUnavailable as error:
         if "no words" in str(error):
             raise NotHeard("Nothing was heard.") from error

@@ -10,7 +10,7 @@ speeds up. So each recording is measured once:
    speaking actually happens — the runs between the silences.
 2. ElevenLabs forced alignment matches the sound against the very text
    shown on the page and returns the start and end of every word. If
-   ElevenLabs isn't set up or can't do it, Groq's Whisper transcribes it
+   ElevenLabs isn't set up or can't do it, OpenAI's Whisper transcribes it
    with word timestamps instead, told what the text should say so it
    hears the same words.
 3. Both are saved as a ReadAlongTiming, with a quality score: how much of
@@ -60,10 +60,9 @@ logger = logging.getLogger(__name__)
 VERSION = "2"
 
 ELEVENLABS_URL = "https://api.elevenlabs.io/v1/forced-alignment"
-GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
-GROQ_MODEL = "whisper-large-v3-turbo"
-GROQ_MAX_BYTES = 25 * 1024 * 1024
-GROQ_PROMPT_LIMIT = 880   # Groq's own limit is 896 characters
+OPENAI_URL = "https://api.openai.com/v1/audio/transcriptions"
+OPENAI_MAX_BYTES = 25 * 1024 * 1024        # OpenAI's own limit
+OPENAI_PROMPT_LIMIT = 880                  # ~224 tokens, the prompt's limit
 
 EXTRACT_TIMEOUT = 15 * 60
 API_TIMEOUT = 10 * 60
@@ -270,7 +269,7 @@ def _fingerprint(obj):
 
 def is_configured():
     return bool(shutil.which("ffmpeg")) and bool(
-        getattr(settings, "ELEVENLABS_API_KEY", "") or getattr(settings, "GROQ_API_KEY", "")
+        getattr(settings, "ELEVENLABS_API_KEY", "") or getattr(settings, "OPENAI_API_KEY", "")
     )
 
 
@@ -457,7 +456,7 @@ def measure(obj):
                     words, engine = _elevenlabs(audio, text), "elevenlabs"
                 except AlignmentUnavailable as error:
                     errors.append(str(error))
-            if words is None and getattr(settings, "GROQ_API_KEY", ""):
+            if words is None and getattr(settings, "OPENAI_API_KEY", ""):
                 # Told what it should hear, Whisper comes back with the
                 # page's own wording — but the hint can also make it skip a
                 # sentence it thinks it already has. So listen both ways
@@ -465,13 +464,13 @@ def measure(obj):
                 heard = []
                 for hint in (text, ""):
                     try:
-                        heard.append(_groq(audio, hint=hint))
+                        heard.append(_transcribe(audio, hint=hint))
                     except AlignmentUnavailable as error:
                         errors.append(str(error))
                 heard = [attempt for attempt in heard if attempt]
                 if heard:
                     words = max(heard, key=lambda attempt: (_spoken_share(text, attempt), len(attempt)))
-                    engine = "groq"
+                    engine = "openai"
                 if words:
                     words = _recover_dropped(audio, words, runs, folder)
     except AlignmentUnavailable as error:
@@ -662,7 +661,7 @@ def _recover_dropped(audio, words, runs, folder):
                 capture_output=True, timeout=EXTRACT_TIMEOUT, check=True,
             )
             # No hint here: on a short clip it could be echoed back as words.
-            found = _groq(clip, hint="")
+            found = _transcribe(clip, hint="")
         except (AlignmentUnavailable, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
             continue
         found = [[text, round(word_start + begin, 3), round(word_end + begin, 3)]
@@ -796,29 +795,30 @@ def _elevenlabs(audio_path, text):
     return words
 
 
-def _groq(audio_path, hint=""):
+def _transcribe(audio_path, hint=""):
+    """OpenAI's Whisper, with a time for every word it hears."""
     fields = [
-        ("model", GROQ_MODEL),
+        ("model", settings.OPENAI_TRANSCRIBE_MODEL),
         ("response_format", "verbose_json"),
         ("timestamp_granularities[]", "word"),
         ("language", "en"),
         ("temperature", "0"),
     ]
     if hint:
-        # Whisper listens for these words in particular. Groq allows 896
-        # characters of context, so the opening of the text is sent, cut
-        # at a word so the last one isn't half a word.
-        opening = " ".join(hint.split())[:GROQ_PROMPT_LIMIT]
-        if len(opening) == GROQ_PROMPT_LIMIT and " " in opening:
+        # Whisper listens for these words in particular. The opening of
+        # the text is sent, cut at a word so the last one isn't half a word.
+        opening = " ".join(hint.split())[:OPENAI_PROMPT_LIMIT]
+        if len(opening) == OPENAI_PROMPT_LIMIT and " " in opening:
             opening = opening.rsplit(" ", 1)[0]
         fields.append(("prompt", opening))
     body, content_type, size = _multipart(fields, "file", audio_path)
-    if size > GROQ_MAX_BYTES:
-        raise AlignmentUnavailable("The recording is too long for Groq.")
-    data = _post(GROQ_URL, {"Authorization": f"Bearer {settings.GROQ_API_KEY}"}, body, content_type, "Groq")
+    if size > OPENAI_MAX_BYTES:
+        raise AlignmentUnavailable("The recording is too long to transcribe.")
+    data = _post(OPENAI_URL, {"Authorization": f"Bearer {settings.OPENAI_API_KEY}"},
+                 body, content_type, "OpenAI")
     words = _clean((w.get("word"), w.get("start"), w.get("end")) for w in data.get("words") or [])
     if not words:
-        raise AlignmentUnavailable("Groq returned no words.")
+        raise AlignmentUnavailable("OpenAI returned no words.")
     return words
 
 

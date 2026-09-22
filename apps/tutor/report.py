@@ -47,7 +47,7 @@ INSTRUCTIONAL = 0.90
 # The breath between sentences belongs to the reading too.
 BETWEEN_SENTENCES = 0.4
 
-API_URL = "https://api.groq.com/openai/v1/chat/completions"
+API_URL = "https://api.openai.com/v1/chat/completions"
 TIMEOUT_SECONDS = 15
 
 
@@ -205,10 +205,10 @@ def _facts(session):
 
 
 def _ask(facts):
-    if not settings.GROQ_API_KEY:
-        raise ValueError("No GROQ_API_KEY.")
+    if not settings.OPENAI_API_KEY:
+        raise ValueError("No OPENAI_API_KEY.")
     body = {
-        "model": settings.GROQ_MODEL,
+        "model": settings.OPENAI_MODEL,
         "temperature": 0.4,
         "max_completion_tokens": 700,
         "response_format": {"type": "json_object"},
@@ -217,11 +217,9 @@ def _ask(facts):
             {"role": "user", "content": json.dumps(facts, ensure_ascii=False)},
         ],
     }
-    if settings.GROQ_MODEL.startswith("openai/gpt-oss"):
-        body["reasoning_effort"] = "low"
     request = urllib.request.Request(
         API_URL, data=json.dumps(body).encode("utf-8"), method="POST",
-        headers={"Authorization": f"Bearer {settings.GROQ_API_KEY}", "Content-Type": "application/json",
+        headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}", "Content-Type": "application/json",
                  "User-Agent": "dictionmasters/1.0"},
     )
     with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:

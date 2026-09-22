@@ -427,15 +427,21 @@ PAYSTACK_PUBLIC_KEY = os.environ.get("PAYSTACK_PUBLIC_KEY", "")
 
 
 # ---------------------------------------------------------------------------
-# Quick Words — AI word look-up (Groq)
+# OpenAI — hearing a reading, and writing about it
 # ---------------------------------------------------------------------------
 
-# Without a key the look-up is simply switched off; searching the
-# existing library keeps working.
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-# gpt-oss-20b answers in well under a second. Set GROQ_MODEL to
-# "openai/gpt-oss-120b" for slightly richer definitions at ~2x the wait.
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
+# One key does all of it: the read-along timings and the live tutor's
+# listening (transcription), the tutor's feedback and the Quick Words
+# look-up (the chat model). Without a key those features are simply
+# switched off, and everything else works as usual.
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+# whisper-1 is the model that gives a time for every word, which is what
+# the read-along highlight and the tutor are built on. The newer
+# gpt-4o-transcribe models do not return word times.
+OPENAI_TRANSCRIBE_MODEL = os.environ.get("OPENAI_TRANSCRIBE_MODEL", "whisper-1")
+# For the tutor's feedback and Quick Words. gpt-4o-mini answers in about
+# a second; set OPENAI_MODEL to "gpt-4o" for richer writing, more slowly.
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
 # Pronunciation audio for newly looked-up words. Without a key and voice
 # the words are still saved, just without audio.
