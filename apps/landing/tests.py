@@ -53,6 +53,15 @@ class InstallableAppTests(TestCase):
     def test_the_offline_page(self):
         self.assertContains(self.client.get("/offline/"), "You're offline")
 
+    def test_every_page_has_the_floating_install_button(self):
+        for url in ("/", "/billing/plans/"):
+            page = self.client.get(url).content.decode()
+            self.assertIn("data-install-fab", page)
+            self.assertIn("Install app", page)
+            self.assertIn("data-install-hide", page)
+            # The steps are there once, not twice.
+            self.assertEqual(page.count('id="install-steps"'), 1)
+
     def test_pages_link_the_app_and_the_dashboard_offers_to_install_it(self):
         from django.contrib.auth import get_user_model
 
@@ -64,4 +73,4 @@ class InstallableAppTests(TestCase):
         dashboard = self.client.get("/accounts/dashboard/")
         self.assertContains(dashboard, "data-install-app")
         self.assertContains(dashboard, "Install the app")
-        self.assertContains(dashboard, 'id="install-steps"')
+        self.assertEqual(dashboard.content.decode().count('id="install-steps"'), 1)

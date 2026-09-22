@@ -1484,3 +1484,60 @@ html.qs-open { overflow: hidden; }
 .ui-sound--locked .ui-sound__symbol { filter: grayscale(1); opacity: 0.45; }
 .ui-sound--locked .ui-sound__name { color: var(--ink-40); }
 .ui-sound__lock { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; color: #a39e92; }
+
+/* ---------- "Install app": a round button by the scrollbar (static/js/pwa.js) ---------- */
+
+.install-fab {
+  position: fixed; z-index: 58;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  display: flex; align-items: flex-start; gap: 6px;
+  animation: ui-rise 0.5s 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.install-fab[hidden] { display: none; }
+.install-fab__btn {
+  display: inline-flex; align-items: center; gap: 0;
+  height: 56px; padding: 0 16px; border: 0; border-radius: 999px;
+  font: inherit; font-weight: 700; font-size: 0.92rem; line-height: 1;
+  color: #14213D; background: linear-gradient(135deg, #f3d38d, #c98f3a);
+  box-shadow: 0 10px 24px rgba(20, 33, 61, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  cursor: pointer; overflow: hidden;
+  transition: gap 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.install-fab__btn:hover, .install-fab__btn:focus-visible {
+  gap: 9px; transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(20, 33, 61, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  outline: none;
+}
+.install-fab__word {
+  max-width: 0; opacity: 0; white-space: nowrap;
+  transition: max-width 0.28s ease, opacity 0.2s ease;
+}
+.install-fab__btn:hover .install-fab__word, .install-fab__btn:focus-visible .install-fab__word { max-width: 120px; opacity: 1; }
+/* On a phone there is no hover, so the words are always there. */
+@media (hover: none) {
+  .install-fab__word { max-width: 120px; opacity: 1; margin-left: 9px; }
+  .install-fab { bottom: max(14px, env(safe-area-inset-bottom)); }
+  .install-fab__btn { height: 48px; font-size: 0.86rem; }
+}
+.install-fab__close {
+  width: 24px; height: 24px; border: 0; border-radius: 50%;
+  font: inherit; font-size: 1rem; line-height: 1;
+  color: var(--ink-40); background: rgba(255, 253, 248, 0.9);
+  box-shadow: 0 4px 10px rgba(20, 33, 61, 0.18); cursor: pointer;
+}
+.install-fab__close:hover { color: var(--ink); }
+
+/* The steps, for browsers without an install button of their own. */
+.install-steps { padding: 0; border: 0; border-radius: 24px; max-width: min(420px, calc(100vw - 32px)); background: transparent; }
+.install-steps::backdrop { background: rgba(20, 33, 61, 0.55); backdrop-filter: blur(3px); }
+.install-steps__card { padding: 30px 26px 24px; border-radius: 24px; text-align: center; color: var(--ink); background: #fffdf8; }
+.install-steps__icon { width: 64px; height: 64px; border-radius: 16px; box-shadow: 0 10px 22px rgba(20, 33, 61, 0.25); }
+.install-steps__title { margin: 14px 0 6px; font-family: var(--font-serif); font-size: 1.45rem; }
+.install-steps__lede { margin: 0 0 16px; color: var(--ink-70); font-size: 0.95rem; line-height: 1.5; }
+.install-steps__list { margin: 0 0 20px; padding: 14px 16px 14px 34px; border-radius: 16px; text-align: left; line-height: 1.6; background: rgba(20, 33, 61, 0.04); }
+.install-steps__list[hidden] { display: none; }
+.install-steps__done {
+  padding: 12px 26px; border: 0; border-radius: 14px; font: inherit; font-weight: 700;
+  color: #14213D; background: linear-gradient(135deg, #f0c878, #c98f3a); cursor: pointer;
+}

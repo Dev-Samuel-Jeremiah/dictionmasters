@@ -75,6 +75,8 @@
   window.addEventListener("appinstalled", function () {
     deferred = null;
     buttons.forEach(function (button) { button.hidden = true; });
+    var fab = document.querySelector("[data-install-fab]");
+    if (fab) fab.hidden = true;
   });
 
   function device() {
@@ -95,7 +97,26 @@
     else dialog.setAttribute("open", "");
   }
 
+  var HIDDEN_FOR = 30 * 24 * 60 * 60 * 1000;      // "not now" lasts a month
+
+  function putAway() {
+    try { localStorage.setItem("dm-install-hidden", String(Date.now())); } catch (error) { /* fine */ }
+  }
+
+  function putAwayRecently() {
+    try {
+      var when = Number(localStorage.getItem("dm-install-hidden") || 0);
+      return when && Date.now() - when < HIDDEN_FOR;
+    } catch (error) { return false; }
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
+    var fab = document.querySelector("[data-install-fab]");
+    if (fab) {
+      fab.hidden = standalone || putAwayRecently();
+      var close = fab.querySelector("[data-install-hide]");
+      if (close) close.addEventListener("click", function () { fab.hidden = true; putAway(); });
+    }
     buttons = Array.prototype.slice.call(document.querySelectorAll("[data-install-app]"));
     buttons.forEach(function (button) {
       // Already running as the app: nothing to install.
