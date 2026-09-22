@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ trick.name }} — {{ programme.name }}{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url programme.home %}">{{ programme.name }}</a></li>
+        <li><a href="{% url programme.list %}">{{ programme.list_title }}</a></li>
+        <li>{{ programme.lesson_word|capfirst }} {{ step.number }}</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128274;</span>
+          <div>
+            <p class="ui-hero__eyebrow">{{ programme.lesson_word|capfirst }} {{ step.number }} &middot; locked</p>
+            <h1 class="ui-hero__title">{{ trick.name }}</h1>
+            <p class="ui-hero__lede">The {{ programme.lessons_word }} open one at a time. Finish {{ programme.lesson_word|capfirst }} {{ blocker.number }} and pass its assessment to get here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+    <div class="tr-test">
+      <section class="tr-test__card">
+        <p class="tr-test__eyebrow">What to do next</p>
+        <h2 class="tr-test__title">{{ programme.lesson_word|capfirst }} {{ blocker.number }}: {{ blocker.trick.name }}</h2>
+        <p class="tr-test__note">
+          {% if blocker.waiting %}Your assessment is waiting for your teacher to mark it.
+          {% elif not blocker.finished %}Open the {{ blocker.tabs_left }} part{{ blocker.tabs_left|pluralize }} you haven't opened yet{% if blocker.assessment %}, then take the assessment{% endif %}.
+          {% else %}You've opened every part — now pass the assessment{% if blocker.best is not None %} (best so far {{ blocker.best }}%, you need {{ blocker.assessment.pass_mark }}%){% endif %}.{% endif %}
+        </p>
+        <div class="tr-test__actions">
+          <a href="{% if blocker.finished %}{% url programme.lesson_tab blocker.trick.slug 'assessment' %}{% else %}{% url programme.lesson blocker.trick.slug %}{% endif %}" class="ui-btn ui-btn--gold">Go to {{ programme.lesson_word|capfirst }} {{ blocker.number }} &rarr;</a>
+          <a href="{% url programme.list %}" class="ui-btn ui-btn--ghost">{{ programme.list_title }}</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

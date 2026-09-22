@@ -47,23 +47,35 @@
   <div class="wrap ui-body{% if section %} ui-stack{% endif %}">
     {% if section and programme.numbered %}
       {# Numbered programmes: one list, each leading straight to this section. #}
-      {% if lessons %}
+      {% if rows %}
       <ol class="ui-numlist">
-        {% for sound in lessons %}
+        {% for row in rows %}
+        {% with sound=row.sound step=row.step %}
         <li style="--i: {{ forloop.counter0 }}">
-          <a href="{% url programme.lesson_tab sound.slug section.slug %}" class="ui-numlist__item">
+          {% if not step or step.unlocked %}
+          <a href="{% url programme.lesson_tab sound.slug section.slug %}" class="ui-numlist__item{% if step %} ui-numlist__item--{{ step.state }}{% endif %}">
+          {% else %}
+          <div class="ui-numlist__item ui-numlist__item--locked" aria-disabled="true">
+          {% endif %}
             <span class="ui-numlist__num">{{ forloop.counter }}</span>
             <span class="ui-numlist__body">
               <span class="ui-numlist__name">{{ sound.name }}</span>
               <span class="ui-numlist__words">
-                {% if sound.items or sound.videos_here %}
+                {% if step and not step.unlocked %}Locked until {{ programme.lesson_word|capfirst }} {{ forloop.counter|add:"-1" }} is complete
+                {% elif sound.items or sound.videos_here %}
                   {% if section.slug == "lens" %}Ready{% else %}{{ sound.items }} item{{ sound.items|pluralize }}{% endif %}{% if sound.videos_here %} · {{ sound.videos_here }} video{{ sound.videos_here|pluralize }}{% endif %}
                 {% else %}Nothing here yet{% endif %}
               </span>
             </span>
+          {% if not step or step.unlocked %}
             <span class="ui-numlist__arrow" aria-hidden="true">&rarr;</span>
           </a>
+          {% else %}
+            <span class="ui-numlist__lock" aria-label="Locked"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" fill="currentColor"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+          </div>
+          {% endif %}
         </li>
+        {% endwith %}
         {% endfor %}
       </ol>
       {% else %}

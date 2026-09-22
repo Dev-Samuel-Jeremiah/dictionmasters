@@ -93,11 +93,8 @@ def lesson_groups(programme):
 
 def lesson_list(request, programme):
     """Every lesson of one programme — All 44 Sounds, or All Tricks."""
-    groups = lesson_groups(programme)
     return render(request, "book/academy.html", {
-        "groups": groups, "programme": programme_for(programme),
-        # One running list, in order, for programmes shown as a numbered list.
-        "lessons": [sound for group in groups for sound in group["sounds"]],
+        "groups": lesson_groups(programme), "programme": programme_for(programme),
     })
 
 
@@ -154,15 +151,18 @@ def phonemic_chart(request):
     return render(request, "book/phonemic_chart.html", context)
 
 
-def lesson_detail(request, programme, slug, tab="lens"):
+def lesson_detail(request, programme, slug, tab="lens", sound=None, extra_tabs=(), extra=None):
     """One lesson and its eight tabs, in either programme. A lesson is only
-    ever found in its own programme, so an address never crosses over."""
-    if tab not in TAB_SLUGS:
+    ever found in its own programme, so an address never crosses over.
+    A programme can add tabs of its own (`extra_tabs`, e.g. a trick's
+    Assessment) and what they show (`extra`)."""
+    if tab not in TAB_SLUGS and tab not in dict(extra_tabs):
         raise Http404("That tab doesn't exist.")
 
-    sound = get_object_or_404(
-        Sound.objects.in_programme(programme).select_related("category"), slug=slug, is_published=True
-    )
+    if sound is None:
+        sound = get_object_or_404(
+            Sound.objects.in_programme(programme).select_related("category"), slug=slug, is_published=True
+        )
 
     info = programme_for(programme)
     context = {
@@ -171,8 +171,9 @@ def lesson_detail(request, programme, slug, tab="lens"):
         # Tricks are numbered by their place in the list: Trick 1, Trick 2…
         "number": ([s.pk for group in lesson_groups(programme) for s in group["sounds"]].index(sound.pk) + 1
                    if info["numbered"] else None),
-        "tabs": TABS,
+        "tabs": [*TABS, *extra_tabs],
         "active_tab": tab,
+        **(extra or {}),
         # Any number of videos for this tab, in the order the admin set.
         "section_videos": list(sound.videos.filter(section=tab)),
     }
@@ -255,7 +256,7 @@ SECTION_COUNTS = {
 }
 
 
-def lesson_sections(request, programme, section=None):
+def lesson_sections(request, programme, section=None, steps=None):
     """A programme's lessons one section at a time: the eight sections, or
     — for one section — every lesson, so a learner can go straight to,
     say, the Word List of any of them."""
@@ -283,7 +284,10 @@ def lesson_sections(request, programme, section=None):
     current = next(one for one in sections if one["slug"] == section)
     return render(request, "book/sections.html", {
         "sections": sections, "section": current, "groups": groups, "programme": info,
-        "lessons": [sound for group in groups for sound in group["sounds"]],
+        # One running list for numbered programmes, with where the learner
+        # stands on each when they are taken in order.
+        "rows": [{"sound": sound, "step": (steps or {}).get(sound.pk)}
+                 for group in groups for sound in group["sounds"]],
     })
 
 

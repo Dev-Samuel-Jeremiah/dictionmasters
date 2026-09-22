@@ -22,6 +22,7 @@ delete and uploads all follow from it.
                hidden group every trick is filed in)
     limit      {field: filter} narrows a dropdown's choices
     labels     {field: (label, help)} to word a form's fields for this screen
+    required   fields the form insists on here, though the model allows blank
     name, singular   what to call the records, when the model's own words don't fit
 """
 
@@ -57,7 +58,7 @@ def lesson_screens(programme, prefix):
                         "order": ("Trick number", "Its place in the list: 1 is Trick 1. Leave at 0 to add it at the end."),
                         "symbol": ("Badge", 'Optional, e.g. "-age".'),
                         "is_published": ("Published", "Unpublished tricks are hidden from learners.")},
-             "children": tabs},
+             "children": [*tabs, "trick-assessments"]},
         ]
     else:
         first = [
@@ -89,6 +90,34 @@ def lesson_screens(programme, prefix):
         tab("twisters", "book.TongueTwister", ["text", "sound", "order"], ["text"]),
         tab("minimal-pairs", "book.MinimalPair", ["word_a", "word_b", "sound", "order"], ["word_a", "word_b"]),
         tab("links", "book.ExternalLink", ["title", "sound", "url", "order"], ["title", "url"]),
+        *(trick_assessment_screens() if programme == "tricks" else []),
+    ]
+
+
+def trick_assessment_screens():
+    """Each trick's assessment and its questions. Passing a trick's
+    assessment unlocks the next trick (apps/tricks/progress.py)."""
+    return [
+        {"key": "trick-assessments", "model": "assessments.Assessment", "name": "Trick assessments",
+         "singular": "trick assessment",
+         "columns": ["trick", "title", "kind", "pass_mark", "is_published"],
+         "order": ["trick__order", "title"], "search": ["title", "trick__name"],
+         "parent": ("trick", "trick-sounds"), "where": {"trick__isnull": False},
+         "required": ["trick"],
+         "children": ["trick-questions"],
+         "form": ["trick", "title", "kind", "instructions", "pass_mark", "max_attempts", "time_limit_minutes",
+                  "shuffle_questions", "is_published"],
+         "labels": {"trick": ("Trick", "Each trick has one assessment. Passing it unlocks the next trick."),
+                    "pass_mark": ("Pass mark (%)", "The score needed to unlock the next trick. 0 means taking it is enough."),
+                    "max_attempts": ("Attempts allowed", "0 means as many as they need — best for a test that unlocks the next trick."),
+                    "kind": ("Type", "A speaking assessment is marked by a teacher before the next trick opens.")}},
+        {"key": "trick-questions", "model": "assessments.Question", "name": "Assessment questions",
+         "singular": "question",
+         "columns": ["__str__", "assessment", "type", "points", "order"], "order": ["assessment", "order"],
+         "search": ["prompt", "word"], "parent": ("assessment", "trick-assessments"),
+         "where": {"assessment__trick__isnull": False}, "limit": {"assessment": {"trick__isnull": False}},
+         "form": ["assessment", "order", "type", "prompt", "word", "options", "answer", "explanation", "points",
+                  "audio_file", "audio_url", "image"]},
     ]
 
 
@@ -201,13 +230,18 @@ SECTIONS = [
         "slug": "assessments", "name": "Assessments", "icon": "📋", "tone": "#9b3550",
         "blurb": "Quizzes, timed tests, speaking assessments and results.",
         "screens": [
+            # A trick's own assessment lives under Tricks to Sound Fluent.
             {"key": "assessments", "model": "assessments.Assessment",
              "columns": ["title", "kind", "level", "pass_mark", "is_published"],
-             "search": ["title", "summary"], "children": ["questions"]},
+             "search": ["title", "summary"], "children": ["questions"],
+             "where": {"trick__isnull": True},
+             "form": ["title", "slug", "kind", "summary", "instructions", "level", "time_limit_minutes",
+                      "pass_mark", "max_attempts", "shuffle_questions", "order", "is_published"]},
             {"key": "questions", "model": "assessments.Question",
              "columns": ["__str__", "assessment", "type", "points", "order"],
              "search": ["prompt", "word"], "order": ["order"],
-             "parent": ("assessment", "assessments")},
+             "parent": ("assessment", "assessments"),
+             "where": {"assessment__trick__isnull": True}, "limit": {"assessment": {"trick__isnull": True}}},
             {"key": "attempts", "model": "assessments.Attempt",
              "columns": ["user", "assessment", "status", "percent", "submitted_at"],
              "search": ["user__email", "assessment__title"], "readonly": True},

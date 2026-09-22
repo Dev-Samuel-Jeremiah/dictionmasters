@@ -21,6 +21,7 @@
             <p class="ui-hero__lede">The little tricks that make English flow: each one a full lesson with the trick itself, a word list, sentence practice, a passage, a conversation, tongue twisters and more.</p>
             <div class="ui-hero__chips">
               <span class="ui-chip ui-chip--gold">{{ total_tricks }} trick{{ total_tricks|pluralize }}</span>
+              {% if total_tricks %}<span class="ui-chip">{{ done }} of {{ total_tricks }} complete</span>{% endif %}
             </div>
           </div>
         </div>
@@ -30,10 +31,18 @@
 
   <div class="wrap ui-body">
     <div class="ui-grid">
+      {% if current %}
+      <a href="{% url 'tricks:lesson' current.trick.slug %}" class="ui-card ui-lift" style="--tone: #b8863b; --i: 0">
+        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ current.number }}</span><span class="ui-status ui-status--current">Up next</span></span>
+        <span class="ui-card__name">Trick {{ current.number }}: {{ current.trick.name }}</span>
+        <span class="ui-card__desc">{% if current.waiting %}Your assessment is waiting for marking.{% elif current.finished and current.assessment %}You've opened every part — take the assessment to unlock the next trick.{% elif current.tabs_left %}{{ current.tabs_left }} part{{ current.tabs_left|pluralize }} to open, then the assessment.{% else %}Pick up where you left off.{% endif %}</span>
+        <span class="ui-card__cta">Carry on &rarr;</span>
+      </a>
+      {% endif %}
       <a href="{% url 'tricks:lessons' %}" class="ui-card ui-lift" style="--tone: #7A2438; --i: 0">
-        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#10024;</span><span class="ui-status ui-status--current">Start here</span></span>
+        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#10024;</span>{% if not current and not done %}<span class="ui-status ui-status--current">Start here</span>{% endif %}</span>
         <span class="ui-card__name">All Tricks</span>
-        <span class="ui-card__desc">{{ total_tricks }} trick{{ total_tricks|pluralize }}, each with its own lesson in eight parts.</span>
+        <span class="ui-card__desc">{{ total_tricks }} trick{{ total_tricks|pluralize }}, taken in order: finish each one and pass its assessment to unlock the next.</span>
         <span class="ui-card__cta">Open the tricks &rarr;</span>
       </a>
       <a href="{% url 'tricks:sections' %}" class="ui-card ui-lift" style="--tone: #2f5d8a; --i: 1">

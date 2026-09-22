@@ -18,10 +18,10 @@
           <div>
             <p class="ui-hero__eyebrow">{{ programme.name }}</p>
             <h1 class="ui-hero__title">{{ programme.list_title }}</h1>
-            <p class="ui-hero__lede">Tap a {{ programme.lesson_word }} to open its lesson: the trick, a word list, sentence practice and more.</p>
+            <p class="ui-hero__lede">{% if programme.numbered %}Take them in order: finish each {{ programme.lesson_word }}, pass its assessment, and the next one unlocks.{% else %}Tap a {{ programme.lesson_word }} to open its lesson: the trick, a word list, sentence practice and more.{% endif %}</p>
             <div class="ui-hero__chips">
               {% if programme.numbered %}
-              <span class="ui-chip ui-chip--gold">{{ lessons|length }} {% if lessons|length == 1 %}{{ programme.lesson_word }}{% else %}{{ programme.lessons_word }}{% endif %}</span>
+              <span class="ui-chip ui-chip--gold">{{ steps|length }} {% if steps|length == 1 %}{{ programme.lesson_word }}{% else %}{{ programme.lessons_word }}{% endif %}</span>
               {% else %}
               {% for group in groups %}<span class="ui-chip">{{ group.category.name }} &middot; {{ group.sounds|length }}</span>{% endfor %}
               {% endif %}
@@ -41,19 +41,33 @@
 
   <div class="wrap ui-body ui-stack">
     {% if programme.numbered %}
-    {# One numbered list: each name opens its lesson. #}
-    {% if lessons %}
+    {# One numbered list, taken in order: each trick unlocks the next. #}
+    {% if steps %}
     <ol class="ui-numlist">
-      {% for sound in lessons %}
+      {% for step in steps %}
       <li style="--i: {{ forloop.counter0 }}">
-        <a href="{% url programme.lesson sound.slug %}" class="ui-numlist__item">
-          <span class="ui-numlist__num">{{ forloop.counter }}</span>
+        {% if step.unlocked %}
+        <a href="{% url programme.lesson step.trick.slug %}" class="ui-numlist__item ui-numlist__item--{{ step.state }}">
+        {% else %}
+        <div class="ui-numlist__item ui-numlist__item--locked" aria-disabled="true">
+        {% endif %}
+          <span class="ui-numlist__num">{% if step.state == "done" %}&#10003;{% else %}{{ step.number }}{% endif %}</span>
           <span class="ui-numlist__body">
-            <span class="ui-numlist__name">{{ sound.name }}</span>
-            {% if sound.example_words %}<span class="ui-numlist__words">{{ sound.example_words }}</span>{% endif %}
+            <span class="ui-numlist__name">{{ step.trick.name }}</span>
+            <span class="ui-numlist__words">
+              {% if step.state == "done" %}{{ programme.lesson_word|capfirst }} {{ step.number }} &middot; complete{% if step.best is not None %} &middot; best {{ step.best }}%{% endif %}
+              {% elif step.state == "current" %}{% if step.waiting %}Assessment waiting for marking{% elif step.finished and step.assessment %}Ready for the assessment{% elif step.tabs_left %}{{ step.tabs_left }} tab{{ step.tabs_left|pluralize }} to go, then the assessment{% else %}{{ step.trick.example_words }}{% endif %}
+              {% else %}Pass {{ programme.lesson_word|capfirst }} {{ step.number|add:"-1" }}'s assessment to unlock{% endif %}
+            </span>
           </span>
+          {% if step.state == "current" %}<span class="ui-numlist__tag">Up next</span>{% endif %}
+          {% if step.unlocked %}
           <span class="ui-numlist__arrow" aria-hidden="true">&rarr;</span>
         </a>
+          {% else %}
+          <span class="ui-numlist__lock" aria-label="Locked"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" fill="currentColor"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+        </div>
+          {% endif %}
       </li>
       {% endfor %}
     </ol>

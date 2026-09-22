@@ -95,7 +95,7 @@ def _can_use_marking(user):
 @login_required
 def hub(request):
     counts = dict(
-        limit_to_levels(Assessment.objects.filter(is_published=True), request.user)
+        limit_to_levels(Assessment.objects.filter(is_published=True, trick__isnull=True), request.user)
         .values_list("kind").annotate(n=Count("pk")).values_list("kind", "n")
     )
     kinds = [
@@ -118,7 +118,7 @@ def kind_list(request, kind):
     if kind not in Assessment.Kind.values:
         raise Http404
     assessments = limit_to_levels(
-        Assessment.objects.filter(is_published=True, kind=kind), request.user
+        Assessment.objects.filter(is_published=True, kind=kind, trick__isnull=True), request.user
     ).annotate(question_count=Count("questions"))
     mine = (
         Attempt.objects.filter(user=request.user, assessment__in=assessments)
@@ -149,10 +149,30 @@ def kind_list(request, kind):
     })
 
 
+def _trick_gate(request, assessment):
+    """A trick's assessment is taken from the trick's own page, once the
+    trick is open to this learner and every part of it has been opened.
+    Returns where to send them instead, or None to carry on."""
+    if not assessment.trick_id:
+        return None
+    from apps.tricks import progress
+
+    trick = assessment.trick
+    if progress.locked_by(request.user, trick):
+        return redirect("tricks:lesson", slug=trick.slug)
+    step = progress.step_for(request.user, trick)
+    if step is None or not step["finished"]:
+        messages.info(request, "Open every part of the trick first, then take its assessment.")
+        return redirect("tricks:lesson_tab", slug=trick.slug, tab="assessment")
+    return None
+
+
 @login_required
 def detail(request, slug):
     assessment = get_object_or_404(Assessment, slug=slug, is_published=True)
     require_level(request.user, assessment.level)
+    if assessment.trick_id:
+        return _trick_gate(request, assessment) or redirect("tricks:lesson_tab", slug=assessment.trick.slug, tab="assessment")
     return render(request, "assessments/detail.html", {
         "assessment": assessment,
         "info": KIND_INFO[assessment.kind],
@@ -168,6 +188,9 @@ def detail(request, slug):
 def start(request, slug):
     assessment = get_object_or_404(Assessment, slug=slug, is_published=True)
     require_level(request.user, assessment.level)
+    blocked = _trick_gate(request, assessment)
+    if blocked:
+        return blocked
     if not assessment.questions.exists():
         messages.error(request, "This assessment has no questions yet.")
         return redirect("assessments:detail", slug=slug)
@@ -315,12 +338,20 @@ def result(request, attempt_id):
     if attempt.recommended_level:
         placement_level = Level.objects.filter(name=attempt.recommended_level, is_published=True).first()
 
+    trick_step = None
+    if attempt.assessment.trick_id and attempt.user_id == request.user.pk:
+        from apps.tricks import progress
+
+        trick_step = progress.step_for(request.user, attempt.assessment.trick)
+
     return render(request, "assessments/result.html", {
         "attempt": attempt,
         "assessment": attempt.assessment,
         "rows": rows,
         "placement_level": placement_level,
         "left": scoring.attempts_left(attempt.user, attempt.assessment),
+        # A trick's assessment: what passing it opened, or how to try again.
+        "trick_step": trick_step,
     })
 
 

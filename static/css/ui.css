@@ -794,6 +794,19 @@ a.ui-tab:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-2
 .ui-numlist__words { font-size: 0.85rem; color: var(--ink-40); }
 .ui-numlist__arrow { flex: 0 0 auto; font-size: 1.2rem; color: #b8863b; transition: transform 0.2s ease; }
 .ui-numlist__item:hover .ui-numlist__arrow { transform: translateX(4px); }
+/* Taken in order: done, up next, locked. */
+.ui-numlist__item--done .ui-numlist__num { background: linear-gradient(135deg, #3aa882, #237a5c); box-shadow: 0 8px 16px rgba(46, 154, 116, 0.28); }
+.ui-numlist__item--current { box-shadow: 0 0 0 2px rgba(224, 177, 92, 0.75), var(--ui-shadow); }
+.ui-numlist__tag {
+  flex: 0 0 auto; padding: 4px 10px; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #7a5518; background: rgba(224, 177, 92, 0.2);
+}
+.ui-numlist__item--locked { cursor: not-allowed; background: rgba(255, 253, 248, 0.6); box-shadow: none; border: 1px dashed rgba(20, 33, 61, 0.14); }
+.ui-numlist__item--locked:hover { transform: none; box-shadow: none; }
+.ui-numlist__item--locked .ui-numlist__num { background: #c9c4b8; box-shadow: none; }
+.ui-numlist__item--locked .ui-numlist__name { color: var(--ink-40); }
+.ui-numlist__lock { flex: 0 0 auto; color: #a39e92; }
 @media (max-width: 560px) {
   .ui-numlist__item { gap: 14px; padding: 14px 16px 14px 12px; }
   .ui-numlist__num { width: 40px; height: 40px; font-size: 1.15rem; border-radius: 12px; }
@@ -1404,4 +1417,33 @@ html.qs-open { overflow: hidden; }
 .ls__later:hover { color: #fff; }
 @media (prefers-reduced-motion: reduce) {
   .ls, .ls__icon { animation: none; }
+}
+
+/* ---------- A trick's Assessment tab (templates/tricks/_assessment.html) ---------- */
+.tr-test { display: grid; gap: 18px; max-width: 784px; margin: 0 auto; }
+.tr-test__card { padding: 24px 26px; border-radius: 20px; background: var(--ui-card); box-shadow: var(--ui-shadow); }
+.tr-test__card--waiting { opacity: 0.8; }
+.tr-test__eyebrow { margin: 0 0 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #9b6a1f; }
+.tr-test__title { margin: 0 0 12px; font-family: var(--font-serif); font-size: 1.4rem; color: var(--ink); }
+.tr-test__facts { margin: 0 0 10px; font-size: 0.9rem; font-weight: 600; color: var(--ink-70); }
+.tr-test__note { margin: 0 0 12px; color: var(--ink-70); line-height: 1.55; }
+.tr-test__retry { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; color: #7a3a14; background: rgba(201, 149, 63, 0.12); }
+.tr-test__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 6px; }
+.tr-test__actions form { margin: 0; }
+.tr-test__actions .ui-btn[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.tr-test__hint { font-size: 0.86rem; color: var(--ink-40); }
+.tr-check { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tr-check__item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(20, 33, 61, 0.03); }
+.tr-check__item a { flex: 1; font-weight: 600; color: var(--ink); text-decoration: none; }
+.tr-check__item a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.tr-check__mark { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 0.8rem; font-weight: 700; color: #fff; border: 2px solid rgba(20, 33, 61, 0.18); }
+.tr-check__item--done .tr-check__mark { background: #2e9a74; border-color: #2e9a74; }
+.tr-check__state { font-size: 0.8rem; color: var(--ink-40); }
+.tr-check__item--done .tr-check__state { color: #2e7d62; }
+.ui-tab__seen { color: #3aa882; font-weight: 700; }
+.ui-tab--active .ui-tab__seen { color: #14543f; }
+.ui-tab--test { border-style: dashed; }
+@media (max-width: 560px) {
+  .tr-test__card { padding: 18px; }
+  .tr-check__state { display: none; }
 }

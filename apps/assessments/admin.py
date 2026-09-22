@@ -19,12 +19,16 @@ class QuestionInline(admin.StackedInline):
 @admin.register(Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
     list_display = ["title", "kind", "level", "questions_count", "time_limit_minutes", "max_attempts", "attempts_count", "is_published"]
-    list_filter = ["kind", "level", "is_published"]
+    list_filter = ["kind", "level", "is_published", ("trick", admin.EmptyFieldListFilter)]
     search_fields = ["title", "summary"]
     prepopulated_fields = {"slug": ("title",)}
     inlines = [QuestionInline]
     fieldsets = [
         (None, {"fields": ["title", "slug", "kind", "summary", "is_published", "order"]}),
+        ("Tricks to Sound Fluent", {
+            "fields": ["trick"],
+            "description": "Link this to a trick to make it that trick's assessment: passing it unlocks the next trick.",
+        }),
         ("Rules", {
             "fields": [("time_limit_minutes", "pass_mark", "max_attempts"), "shuffle_questions", "level"],
             "description": "Timed tests need a time limit. Placement tests use each question's level instead of the one here.",

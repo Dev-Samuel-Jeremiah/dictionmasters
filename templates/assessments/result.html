@@ -12,7 +12,11 @@
 <div class="ui">
   <section class="ui-hero ui-hero--maroon">
     <div class="wrap">
+      {% if assessment.trick_id %}
+      <ol class="ui-crumbs"><li><a href="{% url 'tricks:home' %}">Tricks to Sound Fluent</a></li><li><a href="{% url 'tricks:lesson' assessment.trick.slug %}">{{ assessment.trick.name }}</a></li><li>Assessment</li></ol>
+      {% else %}
       <ol class="ui-crumbs"><li><a href="{% url 'assessments:hub' %}">Assessments</a></li><li><a href="{% url 'assessments:my_results' %}">My results</a></li><li>Result</li></ol>
+      {% endif %}
       <div class="ui-hero__inner">
         <div class="ui-hero__main">
           <span class="ui-hero__icon" aria-hidden="true">&#127942;</span>
@@ -49,6 +53,32 @@
           {{ attempt.score|floatformat:"-2" }} of {{ attempt.max_score|floatformat:"-2" }} marks &middot; pass mark {{ assessment.pass_mark }}%
         </p>
       </div>
+    </div>
+    {% endif %}
+
+    {% if trick_step %}
+    {# A trick's assessment: what it opened, or how to have another go. #}
+    <div class="as-placement">
+      {% if trick_step.passed %}
+        <p class="as-placement__label">Trick {{ trick_step.number }} complete</p>
+        {% if trick_step.next %}
+        <p class="as-placement__level">Trick {{ trick_step.next.number }} is unlocked</p>
+        <p class="as-placement__why">{{ trick_step.next.trick.name }} is ready for you.</p>
+        <a href="{% url 'tricks:lesson' trick_step.next.trick.slug %}" class="btn btn--maroon">Go to Trick {{ trick_step.next.number }} &rarr;</a>
+        {% else %}
+        <p class="as-placement__level">Every trick done</p>
+        <p class="as-placement__why">You've passed the last assessment in Tricks to Sound Fluent.</p>
+        <a href="{% url 'tricks:lessons' %}" class="btn btn--maroon">See all tricks</a>
+        {% endif %}
+      {% elif attempt.status == "awaiting" %}
+        <p class="as-placement__label">Trick {{ trick_step.number }}</p>
+        <p class="as-placement__why">{% if trick_step.next %}Trick {{ trick_step.next.number }} unlocks once your teacher has marked this and you've passed.{% else %}Your teacher will mark this soon.{% endif %}</p>
+      {% else %}
+        <p class="as-placement__label">Not passed yet</p>
+        <p class="as-placement__level">You need {{ assessment.pass_mark }}%</p>
+        <p class="as-placement__why">Look back over {{ assessment.trick.name }}, then try again{% if trick_step.next %} to unlock Trick {{ trick_step.next.number }}{% endif %}.</p>
+        <a href="{% url 'tricks:lesson_tab' assessment.trick.slug 'assessment' %}" class="btn btn--maroon">Back to the trick</a>
+      {% endif %}
     </div>
     {% endif %}
 

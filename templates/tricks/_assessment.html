@@ -1,0 +1,60 @@
+{# A trick's Assessment tab: finish the trick, then pass its test to unlock the next. #}
+<div class="tr-test">
+  <section class="tr-test__card">
+    <p class="tr-test__eyebrow">Step 1 &middot; Finish {{ programme.lesson_word }} {{ step.number }}</p>
+    <h2 class="tr-test__title">{% if step.finished %}Every part opened{% else %}Open every part of the {{ programme.lesson_word }}{% endif %}</h2>
+    {% if step.tabs %}
+    <ul class="tr-check">
+      {% for one in step.tabs %}
+      <li class="tr-check__item{% if one.seen %} tr-check__item--done{% endif %}">
+        <span class="tr-check__mark" aria-hidden="true">{% if one.seen %}&#10003;{% endif %}</span>
+        <a href="{% url programme.lesson_tab sound.slug one.slug %}">{{ one.label }}</a>
+        <span class="tr-check__state">{% if one.seen %}Opened{% else %}Not opened yet{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="tr-test__note">There's nothing to work through in this {{ programme.lesson_word }} yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="tr-test__card{% if not step.finished %} tr-test__card--waiting{% endif %}">
+    <p class="tr-test__eyebrow">Step 2 &middot; The assessment</p>
+    {% if not step.assessment %}
+      <h2 class="tr-test__title">No assessment for this {{ programme.lesson_word }} yet</h2>
+      <p class="tr-test__note">{% if step.finished %}You've finished it{% if step.next %}, so {{ programme.lesson_word|capfirst }} {{ step.next.number }} is open{% endif %}.{% else %}Open every part above{% if step.next %} to unlock {{ programme.lesson_word|capfirst }} {{ step.next.number }}{% endif %}.{% endif %}</p>
+    {% elif step.passed %}
+      <h2 class="tr-test__title">Passed{% if step.best is not None %} &middot; {{ step.best }}%{% endif %}</h2>
+      <p class="tr-test__note">{% if step.next %}{{ programme.lesson_word|capfirst }} {{ step.next.number }} is unlocked.{% else %}That was the last {{ programme.lesson_word }} — well done.{% endif %}</p>
+      <div class="tr-test__actions">
+        {% if step.next %}<a href="{% url programme.lesson step.next.trick.slug %}" class="ui-btn ui-btn--gold">Go to {{ programme.lesson_word|capfirst }} {{ step.next.number }}: {{ step.next.trick.name }} &rarr;</a>{% endif %}
+        {% if step.last %}<a href="{% url 'assessments:result' step.last.pk %}" class="ui-btn ui-btn--ghost">See my answers</a>{% endif %}
+      </div>
+    {% elif step.waiting %}
+      <h2 class="tr-test__title">Waiting for your teacher</h2>
+      <p class="tr-test__note">Your spoken answers are being marked. {% if step.next %}{{ programme.lesson_word|capfirst }} {{ step.next.number }} unlocks once you've passed.{% endif %}</p>
+      {% if step.last %}<div class="tr-test__actions"><a href="{% url 'assessments:result' step.last.pk %}" class="ui-btn ui-btn--ghost">See what I sent</a></div>{% endif %}
+    {% else %}
+      <h2 class="tr-test__title">{{ step.assessment.title }}</h2>
+      <p class="tr-test__facts">
+        {{ question_count }} question{{ question_count|pluralize }} &middot; pass mark {{ step.assessment.pass_mark }}%
+        {% if step.assessment.time_limit_minutes %} &middot; {{ step.assessment.time_limit_minutes }} minutes{% endif %}
+        {% if attempts_left is not None %} &middot; {{ attempts_left }} attempt{{ attempts_left|pluralize }} left{% endif %}
+      </p>
+      {% if step.assessment.instructions %}<p class="tr-test__note">{{ step.assessment.instructions|linebreaksbr }}</p>{% endif %}
+      {% if step.best is not None %}<p class="tr-test__retry">Your best so far is {{ step.best }}% — you need {{ step.assessment.pass_mark }}%{% if step.next %} to unlock {{ programme.lesson_word|capfirst }} {{ step.next.number }}{% endif %}.</p>{% endif %}
+      <div class="tr-test__actions">
+        {% if not step.finished %}
+          <button type="button" class="ui-btn ui-btn--gold" disabled>Start the assessment</button>
+          <span class="tr-test__hint">Open the {{ step.tabs_left }} part{{ step.tabs_left|pluralize }} left above first.</span>
+        {% elif attempts_left == 0 %}
+          <span class="tr-test__hint">You've used all your attempts. Ask your teacher to help you continue.</span>
+        {% else %}
+          <form method="post" action="{% url 'assessments:start' step.assessment.slug %}">{% csrf_token %}
+            <button type="submit" class="ui-btn ui-btn--gold">{% if open_attempt %}Carry on with the assessment{% elif step.best is not None %}Try again{% else %}Start the assessment{% endif %} &rarr;</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+</div>

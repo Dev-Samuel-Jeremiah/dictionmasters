@@ -323,6 +323,9 @@ def record_form(request, key, pk=None):
 
     FormClass = build_form(model, screen.get("form"), exclude_parent=parent_field if not pk else None)
     form = FormClass(request.POST or None, request.FILES or None, instance=obj)
+    for name in screen.get("required", []):
+        if name in form.fields:
+            form.fields[name].required = True
     for name, (label, help_text) in screen.get("labels", {}).items():
         if name in form.fields:
             form.fields[name].label, form.fields[name].help_text = label, help_text
