@@ -20,6 +20,7 @@ urlpatterns = [
     path("school/", include("apps.schools.urls")),
     path("learning-tools/", include("apps.learning_tools.urls")),
     path("book/", include("apps.book.urls")),
+    path("tricks/", include("apps.tricks.urls")),
     path("reference-library/", include("apps.reference_library.urls")),
     path("daily-practice/", include("apps.daily_practice.urls")),
     path("learning-modules/", include("apps.learning_modules.urls")),

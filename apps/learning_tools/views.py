@@ -35,6 +35,15 @@ def hub(request):
             "icon": "book",
         },
         {
+            "name": "Tricks to Sound Fluent",
+            "blurb": "The tricks that make English flow, each a full "
+                     "lesson: the trick, a word list, sentence practice, "
+                     "passages, conversations, twisters and minimal pairs.",
+            "url_name": "tricks:home",
+            "available": True,
+            "icon": "tricks",
+        },
+        {
             "name": "Reading Club",
             "blurb": "This term's reading book, chapter by chapter — "
                      "listen to the model reading, follow the text, and "

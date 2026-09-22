@@ -2,7 +2,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 
-from .models import SECTION_CHOICES, Sound, SoundCategory
+from .models import ACADEMY, SECTION_CHOICES, Sound, SoundCategory
+from .programmes import programme_for
 from . import phoneme_audio, read_along
 
 # The 44 sounds of British English, fixed — this is a linguistic
@@ -60,7 +61,7 @@ def _normalize_symbol(symbol):
 def _real_sounds_by_symbol():
     return {
         _normalize_symbol(s.symbol): s
-        for s in Sound.objects.filter(is_published=True).select_related("category")
+        for s in Sound.objects.in_programme(ACADEMY).filter(is_published=True).select_related("category")
     }
 
 
@@ -71,8 +72,8 @@ TAB_SLUGS = {slug for slug, _label in TABS}
 
 @login_required
 def home(request):
-    categories = SoundCategory.objects.order_by("order").prefetch_related("sounds")
-    total_sounds = Sound.objects.filter(is_published=True).count()
+    categories = SoundCategory.objects.filter(programme=ACADEMY).order_by("order").prefetch_related("sounds")
+    total_sounds = Sound.objects.in_programme(ACADEMY).filter(is_published=True).count()
     context = {
         "categories": categories,
         "total_sounds": total_sounds,
@@ -80,14 +81,26 @@ def home(request):
     return render(request, "book/home.html", context)
 
 
-@login_required
-def academy(request):
+def lesson_groups(programme):
+    """A programme's published lessons, group by group, in order."""
     groups = []
-    for category in SoundCategory.objects.order_by("order"):
+    for category in SoundCategory.objects.filter(programme=programme).order_by("order"):
         sounds = category.sounds.filter(is_published=True).order_by("order")
         if sounds:
             groups.append({"category": category, "sounds": sounds})
-    return render(request, "book/academy.html", {"groups": groups})
+    return groups
+
+
+def lesson_list(request, programme):
+    """Every lesson of one programme — All 44 Sounds, or All Tricks."""
+    return render(request, "book/academy.html", {
+        "groups": lesson_groups(programme), "programme": programme_for(programme),
+    })
+
+
+@login_required
+def academy(request):
+    return lesson_list(request, ACADEMY)
 
 
 @login_required
@@ -138,19 +151,22 @@ def phonemic_chart(request):
     return render(request, "book/phonemic_chart.html", context)
 
 
-@login_required
-def sound_detail(request, slug, tab="lens"):
+def lesson_detail(request, programme, slug, tab="lens"):
+    """One lesson and its eight tabs, in either programme. A lesson is only
+    ever found in its own programme, so an address never crosses over."""
     if tab not in TAB_SLUGS:
         raise Http404("That tab doesn't exist.")
 
     sound = get_object_or_404(
-        Sound.objects.select_related("category"), slug=slug, is_published=True
+        Sound.objects.in_programme(programme).select_related("category"), slug=slug, is_published=True
     )
 
     context = {
         "sound": sound,
+        "programme": programme_for(programme),
         "tabs": TABS,
         "active_tab": tab,
+        "active_tab_label": dict(TABS)[tab],
         # Any number of videos for this tab, in the order the admin set.
         "section_videos": list(sound.videos.filter(section=tab)),
     }
@@ -174,6 +190,11 @@ def sound_detail(request, slug, tab="lens"):
         context["entries"] = sound.external_links.all()
 
     return render(request, "book/sound_detail.html", context)
+
+
+@login_required
+def sound_detail(request, slug, tab="lens"):
+    return lesson_detail(request, ACADEMY, slug, tab)
 
 
 @login_required
@@ -206,14 +227,14 @@ def read_along_timing(request, token):
 
 # What each section of a sound's lesson is for, in a line.
 SECTION_BLURBS = {
-    "lens": "The trick to making each sound — how to shape your mouth, lips and tongue.",
-    "word-bank": "Words that carry the sound, grouped by how they are spelt.",
-    "sentence-practice": "Sentences packed with the sound, to say aloud.",
-    "passage": "Short passages to read aloud with the sound all through them.",
+    "lens": "The trick itself — how to shape your mouth, lips and tongue.",
+    "word-bank": "Words to practise it with, grouped by how they are spelt.",
+    "sentence-practice": "Sentences to say aloud, packed with it.",
+    "passage": "Short passages to read aloud.",
     "conversations": "Conversations to act out, one voice at a time.",
-    "twisters": "Tongue twisters that make each sound stick.",
+    "twisters": "Tongue twisters that make it stick.",
     "minimal-pairs": "Pairs of words one sound apart, to train your ear.",
-    "external-links": "More to watch and read about each sound.",
+    "external-links": "More to watch and read.",
 }
 SECTION_ICONS = {
     "lens": "\U0001F444", "word-bank": "\U0001F4DD", "sentence-practice": "\U0001F4AC",
@@ -228,22 +249,22 @@ SECTION_COUNTS = {
 }
 
 
-@login_required
-def tricks(request, section=None):
-    """Tricks to Sound Fluent: the eight sections of every sound's lesson,
-    and — for one section — every sound, so a learner can go straight to,
-    say, the Word List of any sound."""
+def lesson_sections(request, programme, section=None):
+    """A programme's lessons one section at a time: the eight sections, or
+    — for one section — every lesson, so a learner can go straight to,
+    say, the Word List of any of them."""
     from django.db.models import Count, Q
 
+    info = programme_for(programme)
     sections = [{"slug": slug, "label": label, "blurb": SECTION_BLURBS.get(slug, ""),
                  "icon": SECTION_ICONS.get(slug, "")} for slug, label in TABS]
     if section is None:
-        return render(request, "book/tricks.html", {"sections": sections})
+        return render(request, "book/sections.html", {"sections": sections, "programme": info})
     if section not in TAB_SLUGS:
         raise Http404("That section doesn't exist.")
 
     relation = SECTION_COUNTS[section]
-    sounds = (Sound.objects.filter(is_published=True)
+    sounds = (Sound.objects.in_programme(programme).filter(is_published=True)
               .select_related("category")
               .annotate(items=Count(relation, distinct=True),
                         videos_here=Count("videos", filter=Q(videos__section=section), distinct=True))
@@ -254,7 +275,13 @@ def tricks(request, section=None):
             groups.append({"category": sound.category, "sounds": []})
         groups[-1]["sounds"].append(sound)
     current = next(one for one in sections if one["slug"] == section)
-    return render(request, "book/tricks.html", {
-        "sections": sections, "section": current, "groups": groups,
-        "total": sum(len(group["sounds"]) for group in groups),
+    return render(request, "book/sections.html", {
+        "sections": sections, "section": current, "groups": groups, "programme": info,
     })
+
+
+def moved_to_tricks(request, section=None):
+    """/book/tricks/… was Tricks to Sound Fluent before it had a home of its own."""
+    from django.shortcuts import redirect
+
+    return redirect("tricks:section", section) if section else redirect("tricks:home")

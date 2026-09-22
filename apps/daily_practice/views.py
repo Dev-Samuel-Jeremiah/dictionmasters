@@ -13,7 +13,7 @@ from datetime import date
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
-from apps.book.models import Sound
+from apps.book.models import ACADEMY, Sound
 
 # (tab slug, label, related_name on Sound) — also doubles as the link
 # back into the matching tab of the sound's full lesson page.
@@ -44,7 +44,7 @@ def home(request):
 def _pick_activity_set(rng):
     """Shuffle the published sounds and return the first one that has
     at least one activity, with one random pick from each kind it has."""
-    sounds = list(Sound.objects.filter(is_published=True))
+    sounds = list(Sound.objects.in_programme(ACADEMY).filter(is_published=True))
     rng.shuffle(sounds)
 
     for sound in sounds:

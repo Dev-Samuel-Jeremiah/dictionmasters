@@ -16,7 +16,57 @@ delete and uploads all follow from it.
                be opened inside one Level
     children   keys of the things that live inside this one
     readonly   records the site writes itself: viewable, not editable
+    where      only the records matching this filter belong to the screen
+               (44 Academy and Tricks to Sound Fluent share their tables)
+    defaults   set on every record added here
+    limit      {field: filter} narrows a dropdown's choices
+    name, singular   what to call the records, when the model's own words don't fit
 """
+
+
+def lesson_screens(programme, prefix):
+    """The screens for one programme's lessons: its groups, its lessons,
+    and everything on a lesson's eight tabs. 44 Academy and Tricks to
+    Sound Fluent each get a set, over the same tables, each seeing only
+    its own records. `prefix` keeps their addresses apart."""
+    lesson = {"category__programme": programme}
+    inside = {"sound__category__programme": programme}
+
+    def tab(key, model, columns, search, **extra):
+        return {"key": prefix + key, "model": model, "columns": columns, "search": search,
+                "parent": ("sound", prefix + "sounds"), "where": inside,
+                "limit": {"sound": lesson}, **extra}
+
+    return [
+        {"key": prefix + "sound-groups", "model": "book.SoundCategory",
+         "name": "Trick groups" if prefix else None, "singular": "trick group" if prefix else None,
+         "columns": ["name", "order"], "search": ["name"], "children": [prefix + "sounds"],
+         "where": {"programme": programme}, "defaults": {"programme": programme},
+         "form": ["name", "order"]},
+        {"key": prefix + "sounds", "model": "book.Sound", "name": "Tricks" if prefix else None, "singular": "trick" if prefix else None,
+         "columns": ["symbol", "name", "category", "order", "is_published"],
+         "search": ["name", "symbol", "example_words"],
+         "parent": ("category", prefix + "sound-groups"),
+         "where": lesson, "limit": {"category": {"programme": programme}},
+         "children": [prefix + key for key in ("articulation", "tab-videos", "word-bank", "sentences",
+                                               "book-passages", "conversations", "twisters",
+                                               "minimal-pairs", "links")]},
+        tab("tab-videos", "book.SectionVideo", ["video_caption", "section", "sound", "order"],
+            ["video_caption", "sound__name"], order=["sound", "section", "order"],
+            # Where it goes first, then the video itself.
+            form=["sound", "section", "order", "video_caption", "video_file", "video_url",
+                  "video_duration_label", "video_poster"]),
+        tab("articulation", "book.Articulation", ["sound", "video_caption"], ["trap_text", "mouth_position_text"],
+            name="Trick tab" if prefix else None),
+        tab("word-bank", "book.WordBankEntry", ["word", "sound", "spelling_pattern", "order"], ["word"]),
+        tab("sentences", "book.SentencePractice", ["sentence", "sound", "order"], ["sentence"]),
+        tab("book-passages", "book.Passage", ["title", "sound", "order"], ["title", "body"]),
+        tab("conversations", "book.Conversation", ["title", "sound", "order"], ["title", "script"]),
+        tab("twisters", "book.TongueTwister", ["text", "sound", "order"], ["text"]),
+        tab("minimal-pairs", "book.MinimalPair", ["word_a", "word_b", "sound", "order"], ["word_a", "word_b"]),
+        tab("links", "book.ExternalLink", ["title", "sound", "url", "order"], ["title", "url"]),
+    ]
+
 
 SECTIONS = [
     {
@@ -89,49 +139,16 @@ SECTIONS = [
         "slug": "book", "name": "44 Academy", "icon": "📖", "tone": "#7A2438",
         "blurb": "The 44 Academy sounds, their lessons, and the phonemic chart audio.",
         "screens": [
-            {"key": "sound-groups", "model": "book.SoundCategory",
-             "columns": ["name", "order"], "search": ["name"], "children": ["sounds"]},
-            {"key": "sounds", "model": "book.Sound",
-             "columns": ["symbol", "name", "category", "order", "is_published"],
-             "search": ["name", "symbol", "example_words"],
-             "parent": ("category", "sound-groups"),
-             "children": ["articulation", "tab-videos", "word-bank", "sentences", "book-passages",
-                          "conversations", "twisters", "minimal-pairs", "links"]},
-            {"key": "tab-videos", "model": "book.SectionVideo",
-             "columns": ["video_caption", "section", "sound", "order"],
-             "search": ["video_caption", "sound__name"], "order": ["sound", "section", "order"],
-             "parent": ("sound", "sounds"),
-             # Where it goes first, then the video itself.
-             "form": ["sound", "section", "order", "video_caption", "video_file", "video_url",
-                      "video_duration_label", "video_poster"]},
-            {"key": "articulation", "model": "book.Articulation",
-             "columns": ["sound", "video_caption"], "search": ["trap_text", "mouth_position_text"],
-             "parent": ("sound", "sounds")},
-            {"key": "word-bank", "model": "book.WordBankEntry",
-             "columns": ["word", "sound", "spelling_pattern", "order"], "search": ["word"],
-             "parent": ("sound", "sounds")},
-            {"key": "sentences", "model": "book.SentencePractice",
-             "columns": ["sentence", "sound", "order"], "search": ["sentence"],
-             "parent": ("sound", "sounds")},
-            {"key": "book-passages", "model": "book.Passage",
-             "columns": ["title", "sound", "order"], "search": ["title", "body"],
-             "parent": ("sound", "sounds")},
-            {"key": "conversations", "model": "book.Conversation",
-             "columns": ["title", "sound", "order"], "search": ["title", "script"],
-             "parent": ("sound", "sounds")},
-            {"key": "twisters", "model": "book.TongueTwister",
-             "columns": ["text", "sound", "order"], "search": ["text"],
-             "parent": ("sound", "sounds")},
-            {"key": "minimal-pairs", "model": "book.MinimalPair",
-             "columns": ["word_a", "word_b", "sound", "order"], "search": ["word_a", "word_b"],
-             "parent": ("sound", "sounds")},
-            {"key": "links", "model": "book.ExternalLink",
-             "columns": ["title", "sound", "url", "order"], "search": ["title", "url"],
-             "parent": ("sound", "sounds")},
+            *lesson_screens("academy", ""),
             {"key": "chart-audio", "model": "book.PhonemeAudio",
              "columns": ["key", "symbol", "source", "spoken_text", "updated_at"],
              "search": ["key", "symbol", "spoken_text"]},
         ],
+    },
+    {
+        "slug": "tricks", "name": "Tricks to Sound Fluent", "icon": "✨", "tone": "#b8863b",
+        "blurb": "The tricks, their groups, and everything on each trick's eight tabs.",
+        "screens": lesson_screens("tricks", "trick-"),
     },
     {
         "slug": "tutor", "name": "AI Reading Tutor", "icon": "🎙️", "tone": "#1f6f5c",

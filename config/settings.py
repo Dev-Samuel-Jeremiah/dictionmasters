@@ -120,6 +120,7 @@ LOCAL_APPS = [
     "apps.schools",
     "apps.learning_tools",
     "apps.book",
+    "apps.tricks",
     "apps.reference_library",
     "apps.daily_practice",
     "apps.learning_modules",

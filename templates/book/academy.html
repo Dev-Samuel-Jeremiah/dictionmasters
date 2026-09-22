@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}All 44 Sounds — 44 Academy{% endblock %}
+{% block title %}{{ programme.list_title }} — {{ programme.name }}{% endblock %}
 
 {% block content %}
 <div class="ui">
@@ -9,23 +9,27 @@
     <div class="wrap">
       <ol class="ui-crumbs">
         <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
-        <li><a href="{% url 'book:home' %}">44 Academy</a></li>
-        <li>All 44 Sounds</li>
+        <li><a href="{% url programme.home %}">{{ programme.name }}</a></li>
+        <li>{{ programme.list_title }}</li>
       </ol>
       <div class="ui-hero__inner">
         <div class="ui-hero__main">
-          <span class="ui-hero__icon" aria-hidden="true">&#127891;</span>
+          <span class="ui-hero__icon" aria-hidden="true">{% if programme.sections %}{{ programme.icon }}{% else %}&#127891;{% endif %}</span>
           <div>
-            <p class="ui-hero__eyebrow">44 Academy</p>
-            <h1 class="ui-hero__title">All 44 Sounds</h1>
-            <p class="ui-hero__lede">Tap a sound to open its lesson: the trick, a word list, sentence practice and more.</p>
+            <p class="ui-hero__eyebrow">{{ programme.name }}</p>
+            <h1 class="ui-hero__title">{{ programme.list_title }}</h1>
+            <p class="ui-hero__lede">Tap a {{ programme.lesson_word }} to open its lesson: the trick, a word list, sentence practice and more.</p>
             <div class="ui-hero__chips">
               {% for group in groups %}<span class="ui-chip">{{ group.category.name }} &middot; {{ group.sounds|length }}</span>{% endfor %}
             </div>
           </div>
         </div>
         <div class="ui-hero__side">
+          {% if programme.sections %}
+          <a href="{% url programme.sections %}" class="ui-btn ui-btn--glass">Browse by section</a>
+          {% else %}
           <a href="{% url 'book:phonemic_chart' %}" class="ui-btn ui-btn--glass">iː Phonemic chart</a>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -37,12 +41,12 @@
     <section class="ui-panel">
       <header class="ui-section__head">
         <h2 class="ui-section__title"><span class="ui-section__num" style="background: {{ tone }}">{{ forloop.counter }}</span> {{ group.category.name }}</h2>
-        <p class="ui-section__aside">{{ group.sounds|length }} sound{{ group.sounds|length|pluralize }}</p>
+        <p class="ui-section__aside">{{ group.sounds|length }} {% if group.sounds|length == 1 %}{{ programme.lesson_word }}{% else %}{{ programme.lessons_word }}{% endif %}</p>
       </header>
       <div class="ui-sounds">
         {% for sound in group.sounds %}
-        <a href="{% url 'book:sound_detail' sound.slug %}" class="ui-sound ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
-          <span class="ui-sound__symbol">{{ sound.symbol }}</span>
+        <a href="{% url programme.lesson sound.slug %}" class="ui-sound ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
+          <span class="ui-sound__symbol">{{ sound.symbol|default:programme.icon }}</span>
           <span class="ui-sound__name">{{ sound.name }}</span>
           {% if sound.example_words %}<span class="ui-sound__words">{{ sound.example_words }}</span>{% endif %}
         </a>
@@ -50,7 +54,7 @@
       </div>
     </section>
     {% empty %}
-    <div class="ui-empty"><p>Sounds are being added. Check back soon.</p></div>
+    <div class="ui-empty"><p>{{ programme.lessons_word|capfirst }} are being added. Check back soon.</p></div>
     {% endfor %}
   </div>
 </div>

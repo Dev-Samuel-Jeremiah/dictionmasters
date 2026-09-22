@@ -2,7 +2,7 @@
 {% load static %}
 {% load read_along %}
 
-{% block title %}{{ sound.symbol }} {{ sound.name }} — 44 Academy{% endblock %}
+{% block title %}{% if sound.symbol %}{{ sound.symbol }} {% endif %}{{ sound.name }} — {{ programme.name }}{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
@@ -14,13 +14,13 @@
 <section class="ui-hero ui-hero--maroon">
   <div class="wrap">
     <ol class="ui-crumbs">
-      <li><a href="{% url 'book:home' %}">44 Academy</a></li>
-      <li><a href="{% url 'book:academy' %}">All 44 Sounds</a></li>
+      <li><a href="{% url programme.home %}">{{ programme.name }}</a></li>
+      <li><a href="{% url programme.list %}">{{ programme.list_title }}</a></li>
       <li>{{ sound.name }}</li>
     </ol>
     <div class="ui-hero__inner">
       <div class="ui-hero__main">
-        <span class="ui-hero__icon ui-hero__icon--big" aria-hidden="true"><span class="ui-hero__symbol">{{ sound.symbol }}</span></span>
+        <span class="ui-hero__icon ui-hero__icon--big" aria-hidden="true"><span class="ui-hero__symbol">{{ sound.symbol|default:programme.icon }}</span></span>
         <div>
           <p class="ui-hero__eyebrow">{{ sound.category.name }}</p>
           <h1 class="ui-hero__title">{{ sound.name }}</h1>
@@ -28,12 +28,16 @@
         </div>
       </div>
       <div class="ui-hero__side">
+        {% if programme.sections %}
+        <a href="{% url programme.section active_tab %}" class="ui-btn ui-btn--glass">Every {{ programme.lesson_word }}'s {{ active_tab_label|lower }}</a>
+        {% else %}
         <a href="{% url 'book:phonemic_chart' %}" class="ui-btn ui-btn--glass">iː Phonemic chart</a>
+        {% endif %}
       </div>
     </div>
     <nav class="ui-hero__tabs" aria-label="Lesson sections">
       {% for tab_slug, tab_label in tabs %}
-      <a href="{% url 'book:sound_detail_tab' sound.slug tab_slug %}"
+      <a href="{% url programme.lesson_tab sound.slug tab_slug %}"
          class="ui-tab{% if active_tab == tab_slug %} ui-tab--active{% endif %}"{% if active_tab == tab_slug %} aria-current="page"{% endif %}>{{ tab_label }}</a>
       {% endfor %}
     </nav>
@@ -104,7 +108,7 @@
       </div>
       {% endif %}
       {% elif not section_videos %}
-      <div class="ui-empty"><p>This sound's trick is being put together. Check back soon.</p></div>
+      <div class="ui-empty"><p>This {{ programme.lesson_word }}'s trick is being put together. Check back soon.</p></div>
       {% endif %}
 
     {% elif active_tab == "word-bank" %}

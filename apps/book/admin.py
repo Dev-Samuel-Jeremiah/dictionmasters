@@ -19,8 +19,9 @@ from .models import (
 
 @admin.register(SoundCategory)
 class SoundCategoryAdmin(admin.ModelAdmin):
-    list_display = ["name", "order", "sound_count"]
-    ordering = ["order"]
+    list_display = ["name", "programme", "order", "sound_count"]
+    list_filter = ["programme"]
+    ordering = ["programme", "order"]
 
     def sound_count(self, obj):
         return obj.sounds.count()
@@ -114,7 +115,7 @@ class SectionVideoAdmin(admin.ModelAdmin):
 @admin.register(Sound)
 class SoundAdmin(admin.ModelAdmin):
     list_display = ["symbol", "name", "category", "order", "is_published"]
-    list_filter = ["category", "is_published"]
+    list_filter = [("category__programme", admin.ChoicesFieldListFilter), "category", "is_published"]
     search_fields = ["name", "symbol", "example_words"]
     prepopulated_fields = {"slug": ("name",)}
     ordering = ["category__order", "order"]

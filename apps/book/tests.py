@@ -165,15 +165,20 @@ class TabVideoTests(TestCase):
 
 
 class TricksToSoundFluentTests(TestCase):
-    """The lesson one section at a time, reached from the dashboard."""
+    """Tricks to Sound Fluent: its own programme, with every page 44 Academy
+    has, and never mixed up with the 44 sounds."""
 
     def setUp(self):
-        from .models import Sound, SoundCategory, WordBankEntry
+        from .models import TRICKS, Sound, SoundCategory, WordBankEntry
 
-        category = SoundCategory.objects.create(name="Long vowels")
-        self.sound = Sound.objects.create(category=category, symbol="uː", name="Long OO",
+        sounds = SoundCategory.objects.create(name="Long vowels")
+        self.sound = Sound.objects.create(category=sounds, symbol="uː", name="Long OO",
                                           slug="long-oo-tricks", is_published=True)
         WordBankEntry.objects.create(sound=self.sound, word="moon")
+        tricks = SoundCategory.objects.create(name="Linking", programme=TRICKS)
+        self.trick = Sound.objects.create(category=tricks, symbol="⁀", name="Consonant to vowel",
+                                          slug="consonant-to-vowel", is_published=True)
+        WordBankEntry.objects.create(sound=self.trick, word="an apple")
         self.client.force_login(User.objects.create_user(
             email="fluent@example.com", password="pw-12345678", first_name="Ada", is_staff=True))
 
@@ -184,19 +189,72 @@ class TricksToSoundFluentTests(TestCase):
         self.assertNotContains(page, ">Lens</a>")
         self.assertNotContains(page, ">Word Bank</a>")
 
-    def test_the_dashboard_card_links_every_section(self):
+    def test_the_dashboard_card_opens_tricks_and_every_section(self):
         from .views import TABS
 
         page = self.client.get("/accounts/dashboard/")
-        self.assertContains(page, 'href="/book/tricks/"')
+        self.assertContains(page, 'href="/tricks/"')
+        self.assertNotContains(page, "Coming soon")
         for slug, _label in TABS:
-            self.assertContains(page, f'href="/book/tricks/{slug}/"', msg_prefix=slug)
+            self.assertContains(page, f'href="/tricks/sections/{slug}/"', msg_prefix=slug)
 
-    def test_a_section_lists_the_sounds_and_leads_into_each(self):
-        page = self.client.get("/book/tricks/word-bank/")
+    def test_tricks_has_its_own_pages(self):
+        home = self.client.get("/tricks/")
+        self.assertContains(home, "Tricks to Sound Fluent")
+        self.assertContains(home, "1 trick")
+        listing = self.client.get("/tricks/lessons/")
+        self.assertContains(listing, "Consonant to vowel")
+        self.assertNotContains(listing, "Long OO")
+        self.assertContains(listing, 'href="/tricks/lessons/consonant-to-vowel/"')
+        for tab in ("lens", "word-bank", "sentence-practice", "passage", "conversations",
+                    "twisters", "minimal-pairs", "external-links"):
+            page = self.client.get(f"/tricks/lessons/consonant-to-vowel/{tab}/")
+            self.assertEqual(page.status_code, 200, tab)
+            self.assertContains(page, 'href="/tricks/lessons/consonant-to-vowel/passage/"')
+            self.assertNotContains(page, "/book/44-academy/")
+        self.assertContains(self.client.get("/tricks/lessons/consonant-to-vowel/word-bank/"), "an apple")
+
+    def test_the_programmes_never_cross(self):
+        self.assertEqual(self.client.get(f"/tricks/lessons/{self.sound.slug}/").status_code, 404)
+        self.assertEqual(self.client.get(f"/book/44-academy/{self.trick.slug}/").status_code, 404)
+        academy = self.client.get("/book/44-academy/")
+        self.assertContains(academy, "Long OO")
+        self.assertNotContains(academy, "Consonant to vowel")
+        self.assertNotContains(self.client.get("/book/phonemic-chart/"), "Consonant to vowel")
+
+    def test_a_section_lists_the_tricks_and_leads_into_each(self):
+        page = self.client.get("/tricks/sections/word-bank/")
         self.assertContains(page, "Word List")
-        self.assertContains(page, f'href="/book/44-academy/{self.sound.slug}/word-bank/"')
+        self.assertContains(page, 'href="/tricks/lessons/consonant-to-vowel/word-bank/"')
+        self.assertNotContains(page, "Long OO")
         self.assertContains(page, "1 item")
 
-    def test_an_unknown_section_is_not_found(self):
-        self.assertEqual(self.client.get("/book/tricks/nonsense/").status_code, 404)
+    def test_an_unknown_section_or_tab_is_not_found(self):
+        self.assertEqual(self.client.get("/tricks/sections/nonsense/").status_code, 404)
+        self.assertEqual(self.client.get("/tricks/lessons/consonant-to-vowel/nonsense/").status_code, 404)
+
+    def test_the_old_addresses_move_to_tricks(self):
+        self.assertRedirects(self.client.get("/book/tricks/"), "/tricks/", fetch_redirect_response=False)
+        self.assertRedirects(self.client.get("/book/tricks/twisters/"), "/tricks/sections/twisters/",
+                             fetch_redirect_response=False)
+
+    def test_the_control_room_keeps_them_apart(self):
+        from .models import TRICKS, Sound, SoundCategory
+
+        academy = self.client.get("/manage/sounds/")
+        self.assertContains(academy, "Long OO")
+        self.assertNotContains(academy, "Consonant to vowel")
+        tricks = self.client.get("/manage/trick-sounds/")
+        self.assertContains(tricks, "Consonant to vowel")
+        self.assertNotContains(tricks, "Long OO")
+        self.assertEqual(self.client.get(f"/manage/sounds/{self.trick.pk}/").status_code, 404)
+        self.assertNotContains(self.client.get("/manage/trick-word-bank/"), "moon")
+
+        # A group added under Tricks is a trick group, and a trick's group
+        # can only be a trick group.
+        self.client.post("/manage/trick-sound-groups/new/", {"name": "Weak forms", "order": 2})
+        self.assertEqual(SoundCategory.objects.get(name="Weak forms").programme, TRICKS)
+        form = self.client.get("/manage/trick-sounds/new/")
+        self.assertContains(form, "Weak forms")
+        self.assertNotContains(form, ">Long vowels<")
+        self.assertTrue(Sound.objects.filter(pk=self.trick.pk).exists())

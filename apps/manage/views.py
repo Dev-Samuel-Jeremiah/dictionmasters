@@ -88,6 +88,12 @@ def _model_for(screen):
     return django_apps.get_model(screen["model"])
 
 
+def _rows_for(screen):
+    """The records that belong to a screen. Some screens share a table and
+    see only their part of it, e.g. 44 Academy's sounds and the tricks."""
+    return _model_for(screen).objects.filter(**screen.get("where", {}))
+
+
 def _search_condition(model, fields, query):
     """A search across the fields a model really has, so a rename in the
     models can never take a page down."""
@@ -115,7 +121,7 @@ def _title(screen):
 
 
 def _singular(screen):
-    return str(_model_for(screen)._meta.verbose_name)
+    return screen.get("singular") or str(_model_for(screen)._meta.verbose_name)
 
 
 def _cell(obj, column):
@@ -142,7 +148,7 @@ def _sections_for_nav(current_key=None):
             items.append({
                 "key": screen["key"],
                 "name": _title(screen),
-                "count": _model_for(screen).objects.count(),
+                "count": _rows_for(screen).count(),
                 "current": screen["key"] == current_key,
             })
         nav.append({**section, "items": items, "open": any(i["current"] for i in items)})
@@ -190,7 +196,7 @@ def home(request):
             rows.append({
                 "key": screen["key"],
                 "name": _title(screen),
-                "count": _model_for(screen).objects.count(),
+                "count": _rows_for(screen).count(),
                 "readonly": screen.get("readonly", False),
             })
         sections.append({**section, "rows": rows})
@@ -221,7 +227,7 @@ def search(request):
             condition = _search_condition(model, fields, query)
             if condition is None:
                 continue
-            found = list(model.objects.filter(condition)[:6])
+            found = list(_rows_for(screen).filter(condition)[:6])
             if found:
                 groups.append({
                     "key": key,
@@ -243,15 +249,14 @@ def search(request):
 def record_list(request, key):
     screen = _screen_or_404(key)
     model = _model_for(screen)
-    rows = model.objects.all()
+    rows = _rows_for(screen)
 
     # Opened from inside its parent, e.g. the groups of one level.
     parent_obj = None
     parent_key = None
     if screen.get("parent") and request.GET.get("in"):
         field, parent_key = screen["parent"]
-        parent_model = _model_for(_screen_or_404(parent_key))
-        parent_obj = parent_model.objects.filter(pk=request.GET["in"]).first()
+        parent_obj = _rows_for(_screen_or_404(parent_key)).filter(pk=request.GET["in"]).first()
         if parent_obj:
             rows = rows.filter(**{field: parent_obj})
 
@@ -295,7 +300,7 @@ def record_form(request, key, pk=None):
         messages.info(request, f"{_title(screen)} are written by the site itself, so they can only be viewed.")
         return redirect("manage:list", key=key)
 
-    obj = get_object_or_404(model, pk=pk) if pk else None
+    obj = get_object_or_404(_rows_for(screen), pk=pk) if pk else None
 
     # Adding something inside its parent: the link is set for you.
     parent_field = parent_obj = None
@@ -303,18 +308,24 @@ def record_form(request, key, pk=None):
         field, parent_key = screen["parent"]
         chosen = request.GET.get("in") or request.POST.get("_in")
         if chosen:
-            parent_model = _model_for(_screen_or_404(parent_key))
-            parent_obj = parent_model.objects.filter(pk=chosen).first()
+            parent_obj = _rows_for(_screen_or_404(parent_key)).filter(pk=chosen).first()
             if parent_obj:
                 parent_field = field
 
     FormClass = build_form(model, screen.get("form"), exclude_parent=parent_field if not pk else None)
     form = FormClass(request.POST or None, request.FILES or None, instance=obj)
+    # Dropdowns offer only what belongs here, e.g. a trick's group is a trick group.
+    for name, condition in screen.get("limit", {}).items():
+        if name in form.fields and hasattr(form.fields[name], "queryset"):
+            form.fields[name].queryset = form.fields[name].queryset.filter(**condition)
 
     if request.method == "POST" and form.is_valid():
         saved = form.save(commit=False)
         if parent_field and parent_obj and not pk:
             setattr(saved, parent_field, parent_obj)
+        if not pk:
+            for name, value in screen.get("defaults", {}).items():
+                setattr(saved, name, value)
         saved.save()
         form.save_m2m()
         _record(request, saved, CHANGE if pk else ADDITION, "Changed in the control room" if pk else "Added in the control room")
@@ -333,9 +344,8 @@ def record_form(request, key, pk=None):
             child = get_screen(child_key)
             if not child:
                 continue
-            child_model = _model_for(child)
             field = child["parent"][0]
-            found = child_model.objects.filter(**{field: obj})
+            found = _rows_for(child).filter(**{field: obj})
             if child.get("order"):
                 found = found.order_by(*child["order"])
             children.append({
@@ -359,7 +369,7 @@ def record_form(request, key, pk=None):
 def record_delete(request, key, pk):
     screen = _screen_or_404(key)
     model = _model_for(screen)
-    obj = get_object_or_404(model, pk=pk)
+    obj = get_object_or_404(_rows_for(screen), pk=pk)
     if screen.get("readonly"):
         messages.info(request, f"{_title(screen)} can only be viewed.")
         return redirect("manage:list", key=key)
@@ -397,6 +407,10 @@ def branding(request):
     obj = SiteBranding.load()
     FormClass = build_form(SiteBranding, ["logo", "show_name_with_logo", "favicon"])
     form = FormClass(request.POST or None, request.FILES or None, instance=obj)
+    # Dropdowns offer only what belongs here, e.g. a trick's group is a trick group.
+    for name, condition in screen.get("limit", {}).items():
+        if name in form.fields and hasattr(form.fields[name], "queryset"):
+            form.fields[name].queryset = form.fields[name].queryset.filter(**condition)
 
     if request.method == "POST" and form.is_valid():
         saved = form.save()

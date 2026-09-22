@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Tricks to Sound Fluent — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--maroon">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
+        <li>Tricks to Sound Fluent</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#10024;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Learning tools</p>
+            <h1 class="ui-hero__title">Tricks to Sound Fluent</h1>
+            <p class="ui-hero__lede">The little tricks that make English flow: each one a full lesson with the trick itself, a word list, sentence practice, a passage, a conversation, tongue twisters and more.</p>
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ total_tricks }} trick{{ total_tricks|pluralize }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+    <div class="ui-grid">
+      <a href="{% url 'tricks:lessons' %}" class="ui-card ui-lift" style="--tone: #7A2438; --i: 0">
+        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#10024;</span><span class="ui-status ui-status--current">Start here</span></span>
+        <span class="ui-card__name">All Tricks</span>
+        <span class="ui-card__desc">{{ total_tricks }} trick{{ total_tricks|pluralize }}, each with its own lesson in eight parts.</span>
+        <span class="ui-card__cta">Open the tricks &rarr;</span>
+      </a>
+      <a href="{% url 'tricks:sections' %}" class="ui-card ui-lift" style="--tone: #2f5d8a; --i: 1">
+        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#128450;</span></span>
+        <span class="ui-card__name">Browse by section</span>
+        <span class="ui-card__desc">Go straight to one part — {% for slug, label in sections %}{{ label }}{% if not forloop.last %}, {% endif %}{% endfor %} — of any trick.</span>
+        <span class="ui-card__cta">Choose a section &rarr;</span>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

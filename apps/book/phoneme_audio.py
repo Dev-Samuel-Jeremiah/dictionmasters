@@ -21,7 +21,7 @@ from django.core.files.base import ContentFile
 
 from apps.quick_words.speech import SpeechUnavailable, is_configured, speak
 
-from .models import PhonemeAudio, Sound
+from .models import ACADEMY, PhonemeAudio, Sound
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ def _lesson_for(symbol):
     from .views import _normalize_symbol
 
     target = _normalize_symbol(symbol)
-    for sound in Sound.objects.filter(is_published=True):
+    for sound in Sound.objects.in_programme(ACADEMY).filter(is_published=True):
         if _normalize_symbol(sound.symbol) == target:
             return sound
     return None

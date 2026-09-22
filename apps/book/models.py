@@ -18,6 +18,7 @@ filled in wins; see the `*_source` properties.
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models
+from django.urls import reverse
 from django.utils.text import slugify
 
 
@@ -82,10 +83,25 @@ class OrderedForSound(models.Model):
 # The 44 Academy: categories and sounds
 # ---------------------------------------------------------------------------
 
+# The programmes built on these lessons. 44 Academy teaches the 44 sounds;
+# Tricks to Sound Fluent is its sister programme, with lessons of its own
+# and the very same pages, tabs, videos and read-along — so every feature
+# of one is a feature of the other. A lesson belongs to a programme through
+# its group, and each programme lists only its own.
+ACADEMY = "academy"
+TRICKS = "tricks"
+PROGRAMME_CHOICES = [(ACADEMY, "44 Academy"), (TRICKS, "Tricks to Sound Fluent")]
+
+
 class SoundCategory(models.Model):
-    """e.g. Long Vowels, Short Vowels, Diphthongs, Consonants."""
+    """A group of lessons: in 44 Academy e.g. Long Vowels or Consonants; in
+    Tricks to Sound Fluent whatever the tricks are grouped by."""
 
     name = models.CharField(max_length=100)
+    programme = models.CharField(
+        max_length=20, choices=PROGRAMME_CHOICES, default=ACADEMY, db_index=True,
+        help_text="Which programme this group's lessons belong to.",
+    )
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -96,11 +112,21 @@ class SoundCategory(models.Model):
         return self.name
 
 
+class SoundQuerySet(models.QuerySet):
+    def in_programme(self, programme):
+        """Only the lessons of one programme — 44 Academy or Tricks."""
+        return self.filter(category__programme=programme)
+
+
 class Sound(models.Model):
-    """One of the 44 sounds of English, and the home of its lesson page."""
+    """One lesson page: in 44 Academy one of the 44 sounds of English, in
+    Tricks to Sound Fluent one trick."""
 
     category = models.ForeignKey(SoundCategory, on_delete=models.CASCADE, related_name="sounds")
-    symbol = models.CharField(max_length=20, help_text='e.g. "/i\u02d0/"')
+    symbol = models.CharField(
+        max_length=20,
+        help_text='The badge on the lesson\'s tile — a sound\'s symbol such as "/i\u02d0/", or a short mark for a trick.',
+    )
     name = models.CharField(max_length=100, help_text='e.g. "Long EE"')
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     example_words = models.CharField(
@@ -114,11 +140,22 @@ class Sound(models.Model):
         help_text="Unpublished sounds are hidden from the 44 Academy grid.",
     )
 
+    objects = SoundQuerySet.as_manager()
+
     class Meta:
         ordering = ["category__order", "order", "name"]
 
     def __str__(self):
         return f"{self.symbol} {self.name}"
+
+    @property
+    def programme(self):
+        return self.category.programme
+
+    def get_absolute_url(self):
+        from .programmes import programme_for
+
+        return reverse(programme_for(self.programme)["lesson"], args=[self.slug])
 
     def save(self, *args, **kwargs):
         if not self.slug:

@@ -26,6 +26,7 @@ from .models import BillingSettings, Plan, Subscription
 GATED_PREFIXES = (
     "/learning-tools/",
     "/book/",
+    "/tricks/",
     "/reference-library/",
     "/daily-practice/",
     "/learning-modules/",

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{% if section %}{{ section.label }} — {% endif %}Tricks to Sound Fluent — 44 Academy{% endblock %}
+{% block title %}{% if section %}{{ section.label }} — {% endif %}{{ programme.name }}{% endblock %}
 
 {% block content %}
 <div class="ui">
@@ -9,34 +9,35 @@
     <div class="wrap">
       <ol class="ui-crumbs">
         <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url programme.home %}">{{ programme.name }}</a></li>
         {% if section %}
-        <li><a href="{% url 'book:tricks' %}">Tricks to Sound Fluent</a></li>
+        <li><a href="{% url programme.sections %}">Browse by section</a></li>
         <li>{{ section.label }}</li>
         {% else %}
-        <li>Tricks to Sound Fluent</li>
+        <li>Browse by section</li>
         {% endif %}
       </ol>
       <div class="ui-hero__inner">
         <div class="ui-hero__main">
-          <span class="ui-hero__icon" aria-hidden="true">{% if section %}{{ section.icon }}{% else %}&#10024;{% endif %}</span>
+          <span class="ui-hero__icon" aria-hidden="true">{% if section %}{{ section.icon }}{% else %}{{ programme.icon }}{% endif %}</span>
           <div>
-            <p class="ui-hero__eyebrow">{% if section %}Tricks to Sound Fluent{% else %}44 Academy{% endif %}</p>
-            <h1 class="ui-hero__title">{% if section %}{{ section.label }}{% else %}Tricks to Sound Fluent{% endif %}</h1>
+            <p class="ui-hero__eyebrow">{{ programme.name }}</p>
+            <h1 class="ui-hero__title">{% if section %}{{ section.label }}{% else %}Browse by section{% endif %}</h1>
             <p class="ui-hero__lede">
-              {% if section %}{{ section.blurb }} Choose a sound to open its {{ section.label|lower }}.
-              {% else %}Every sound of English, practised eight ways. Pick a section, then the sound you want to work on.{% endif %}
+              {% if section %}{{ section.blurb }} Choose a {{ programme.lesson_word }} to open its {{ section.label|lower }}.
+              {% else %}Every {{ programme.lesson_word }}, practised eight ways. Pick a section, then the {{ programme.lesson_word }} you want to work on.{% endif %}
             </p>
           </div>
         </div>
         <div class="ui-hero__side">
-          <a href="{% url 'book:phonemic_chart' %}" class="ui-btn ui-btn--glass">iː Phonemic chart</a>
+          <a href="{% url programme.list %}" class="ui-btn ui-btn--glass">{{ programme.list_title }}</a>
         </div>
       </div>
       {% if section %}
       {# Move between sections without going back. #}
       <nav class="ui-hero__tabs" aria-label="Sections">
         {% for one in sections %}
-        <a href="{% url 'book:tricks_section' one.slug %}" class="ui-tab{% if one.slug == section.slug %} ui-tab--active{% endif %}"{% if one.slug == section.slug %} aria-current="page"{% endif %}>{{ one.label }}</a>
+        <a href="{% url programme.section one.slug %}" class="ui-tab{% if one.slug == section.slug %} ui-tab--active{% endif %}"{% if one.slug == section.slug %} aria-current="page"{% endif %}>{{ one.label }}</a>
         {% endfor %}
       </nav>
       {% endif %}
@@ -50,12 +51,12 @@
       <section class="ui-panel">
         <header class="ui-section__head">
           <h2 class="ui-section__title"><span class="ui-section__num" style="background: {{ tone }}">{{ forloop.counter }}</span> {{ group.category.name }}</h2>
-          <p class="ui-section__aside">{{ group.sounds|length }} sound{{ group.sounds|length|pluralize }}</p>
+          <p class="ui-section__aside">{{ group.sounds|length }} {% if group.sounds|length == 1 %}{{ programme.lesson_word }}{% else %}{{ programme.lessons_word }}{% endif %}</p>
         </header>
         <div class="ui-sounds">
           {% for sound in group.sounds %}
-          <a href="{% url 'book:sound_detail_tab' sound.slug section.slug %}" class="ui-sound ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
-            <span class="ui-sound__symbol">{{ sound.symbol }}</span>
+          <a href="{% url programme.lesson_tab sound.slug section.slug %}" class="ui-sound ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
+            <span class="ui-sound__symbol">{{ sound.symbol|default:programme.icon }}</span>
             <span class="ui-sound__name">{{ sound.name }}</span>
             <span class="ui-sound__words">
               {% if sound.items or sound.videos_here %}
@@ -67,17 +68,17 @@
         </div>
       </section>
       {% empty %}
-      <div class="ui-empty"><p>Sounds are being added. Check back soon.</p></div>
+      <div class="ui-empty"><p>{{ programme.lessons_word|capfirst }} are being added. Check back soon.</p></div>
       {% endfor %}
     {% else %}
       <div class="ui-grid">
         {% for one in sections %}
         {% cycle "#7A2438" "#2f5d8a" "#2e7d62" "#b8863b" as tone silent %}
-        <a href="{% url 'book:tricks_section' one.slug %}" class="ui-card ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
+        <a href="{% url programme.section one.slug %}" class="ui-card ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
           <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ one.icon }}</span></span>
           <span class="ui-card__name">{{ one.label }}</span>
           <span class="ui-card__desc">{{ one.blurb }}</span>
-          <span class="ui-card__cta">Choose a sound &rarr;</span>
+          <span class="ui-card__cta">Choose a {{ programme.lesson_word }} &rarr;</span>
         </a>
         {% endfor %}
       </div>
