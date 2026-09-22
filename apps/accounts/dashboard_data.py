@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.assessments.models import Attempt as AssessmentAttempt
+from apps.book.models import Sound
 from apps.clash.models import Match
 from apps.echospell.models import ActivityAttempt, CardPosition, Group, GroupProgress
 from apps.learning_modules.models import Day, DayProgress
@@ -210,6 +211,7 @@ def learner_dashboard(user):
         "week_total": sum(d["count"] for d in week),
         "echospell": _next_echospell(user),
         "modules": _next_module_day(user),
+        "academy_sounds": Sound.objects.filter(is_published=True).count(),
         "clash_best": clash["best"],
         "clash_games": matches.count(),
         "assessment_average": round(marked.aggregate(avg=Avg("percent"))["avg"] or 0) if marked.exists() else None,

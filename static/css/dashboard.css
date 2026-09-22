@@ -296,6 +296,19 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
   transform: translateZ(20px);
 }
 .dash-stat__value small { font-size: 1rem; color: var(--ink-40); font-weight: 500; }
+/* A section still being made: shown, but calmer, and not a link. */
+.dash-stat--soon { cursor: default; }
+.dash-stat--soon .dash-stat__icon { opacity: 0.75; }
+.dash-stat__value--soon {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.95rem !important;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--gold-deep, #8C6526);
+  background: rgba(184, 134, 59, 0.14);
+}
 .dash-stat__foot { margin: 0; font-size: 0.8rem; color: var(--ink-40); }
 
 .dash-row {
