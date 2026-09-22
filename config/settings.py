@@ -340,7 +340,9 @@ STORAGES = {
         "BACKEND": (
             "whitenoise.storage.CompressedManifestStaticFilesStorage"
             if PRODUCTION and not TESTING
-            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+            # In development: the plain files, with an address that changes
+            # whenever a file is saved, so no browser shows a stale stylesheet.
+            else "config.static_storage.FreshStaticFilesStorage"
         )
     },
 }

@@ -87,20 +87,34 @@
             <svg class="account-menu__chevron" viewBox="0 0 12 8" width="12" height="8" aria-hidden="true"><path d="m1 1.5 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </summary>
           <div class="account-menu__panel">
-            <p class="account-menu__who">
-              <strong>{{ user.get_full_name|default:user.first_name|default:"Signed in" }}</strong>
-              <small>{{ user.email }}</small>
-            </p>
-            <a href="{{ dashboard_url }}" class="account-menu__item"{% if request.path == '/accounts/dashboard/' or request.path == '/school/dashboard/' %} aria-current="page"{% endif %}>
-              <span aria-hidden="true">&#127968;</span> My dashboard
-            </a>
-            <a href="{% url 'learning_tools:hub' %}" class="account-menu__item"{% if '/learning-tools/' in request.path %} aria-current="page"{% endif %}>
-              <span aria-hidden="true">&#129520;</span> Learning tools
-            </a>
+            <div class="account-menu__who">
+              <span class="account-menu__avatar account-menu__avatar--big" aria-hidden="true">{{ user.first_name|default:user.email|slice:":1"|upper }}</span>
+              <span class="account-menu__identity">
+                <strong>{{ user.get_full_name|default:user.first_name|default:"Signed in" }}</strong>
+                <small>{{ user.email }}</small>
+              </span>
+            </div>
+            <nav class="account-menu__list" aria-label="Your account">
+              <a href="{{ dashboard_url }}" class="account-menu__item"{% if request.path == '/accounts/dashboard/' or request.path == '/school/dashboard/' %} aria-current="page"{% endif %}>
+                <span class="account-menu__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+                </span>
+                <span class="account-menu__text"><span>My dashboard</span><small>Your progress and next lesson</small></span>
+              </a>
+              <a href="{% url 'learning_tools:hub' %}" class="account-menu__item"{% if '/learning-tools/' in request.path %} aria-current="page"{% endif %}>
+                <span class="account-menu__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>
+                </span>
+                <span class="account-menu__text"><span>Learning tools</span><small>Every tool in one place</small></span>
+              </a>
+            </nav>
             <form method="post" action="{% url 'accounts:logout' %}" class="account-menu__logout">
               {% csrf_token %}
               <button type="submit" class="account-menu__item account-menu__item--out">
-                <span aria-hidden="true">&#8617;</span> Log out
+                <span class="account-menu__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l5-5-5-5"/><path d="M15 12H4"/></svg>
+                </span>
+                <span class="account-menu__text"><span>Log out</span></span>
               </button>
             </form>
           </div>
