@@ -72,7 +72,7 @@
 
   <div class="wrap dash-body">
 
-    {# ================= The four places to learn ================= #}
+    {# ================= The places to learn ================= #}
     <section class="dash-stats" aria-label="Where to learn">
       <a href="{% url 'echospell:hub' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-green)">
         <span class="dash-stat__icon" aria-hidden="true">&#127919;</span>
@@ -80,6 +80,16 @@
         <p class="dash-stat__value"><span class="dash-count" style="--to: {{ echospell.completed }}"></span><small> / {{ echospell.total }} groups</small></p>
         <p class="dash-stat__foot">{% if activity_average is not None %}{{ activities_done }} activit{{ activities_done|pluralize:"y,ies" }} · {{ activity_average }}% average{% else %}Spell, hear and say every word{% endif %}</p>
       </a>
+      {# The Etiquette Advantage: shown, but locked until its lessons are ready. #}
+      <div class="dash-stat dash-stat--locked" style="--accent: var(--dash-plum)" aria-disabled="true">
+        <span class="dash-stat__icon" aria-hidden="true">&#129309;</span>
+        <p class="dash-stat__label">The Etiquette Advantage</p>
+        <p class="dash-stat__value dash-stat__lock">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" fill="currentColor"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <small>Locked</small>
+        </p>
+        <p class="dash-stat__foot">Poise and polish for every conversation</p>
+      </div>
       <a href="{% url 'book:home' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-maroon)">
         <span class="dash-stat__icon" aria-hidden="true">&#128214;</span>
         <p class="dash-stat__label">44 Academy</p>
