@@ -17,10 +17,11 @@ page — so the voice service can't be used for anything else.
 import logging
 import re
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
@@ -85,10 +86,14 @@ def recommend(user, after=None):
 @login_required
 @require_GET
 def hub(request):
+    from .models import TutorVoice
+
     passages = sorted(_passages(request.user), key=lambda p: (p.level_rank, p.order, p.title))
     history = list(TutorSession.objects.filter(user=request.user, status=TutorSession.STATUS_DONE)[:8])
     return render(request, "tutor/hub.html", {
         "passages": passages,
+        "voices": list(TutorVoice.objects.filter(is_active=True)),
+        "chosen": voice.for_user(request.user),
         "history": history,
         "latest": history[0] if history else None,
         "suggested": recommend(request.user),
@@ -103,6 +108,7 @@ def read(request, pk):
     return render(request, "tutor/read.html", {
         "passage": passage,
         "sentences": sentences,
+        "chosen": voice.for_user(request.user),
         "first_name": (request.user.first_name or "").strip(),
     })
 
@@ -257,15 +263,16 @@ def say(request, session_id):
     else:
         text = parts[number]["text"]
 
-    found = voice.kept_url(text, single_word=single)
+    chosen = voice.for_user(request.user)
+    found = voice.kept_url(text, single_word=single, chosen=chosen)
     if found:
         return HttpResponseRedirect(found)
     if _limited(request.user, "say", SPEECH_PER_MINUTE):
         return HttpResponse(status=204)
-    audio = voice.make(text, single_word=single)
+    audio = voice.make(text, single_word=single, chosen=chosen)
     if not audio:
         return HttpResponse(status=204)
-    voice.keep_later(text, audio, single_word=single)
+    voice.keep_later(text, audio, single_word=single, chosen=chosen)
     return _audio_response(request, audio)
 
 
@@ -348,3 +355,41 @@ def report_page(request, session_id):
         "typical": report.TYPICAL_WCPM.get(session.passage_level),
         "next_passage": recommend(session.user, after=session),
     })
+
+
+# ---------------------------------------------------------------------------
+# Choosing who reads with you
+# ---------------------------------------------------------------------------
+
+@login_required
+@require_POST
+def choose_voice(request):
+    """The learner picks the voice and face that read with them."""
+    from .models import TutorChoice, TutorVoice
+
+    wanted = TutorVoice.objects.filter(pk=request.POST.get("voice"), is_active=True).first()
+    if wanted is None:
+        messages.error(request, "That voice isn't available.")
+        return redirect("tutor:hub")
+    TutorChoice.objects.update_or_create(user=request.user, defaults={"voice": wanted})
+    messages.success(request, f"{wanted.name} will read with you now.")
+    return redirect(request.POST.get("next") or "tutor:hub")
+
+
+@login_required
+@require_GET
+def voice_sample(request, pk):
+    """A few words in one voice, so a learner can hear it before choosing."""
+    from .models import TutorVoice
+
+    wanted = get_object_or_404(TutorVoice, pk=pk, is_active=True)
+    found = voice.kept_url(wanted.sample, chosen=wanted)
+    if found:
+        return HttpResponseRedirect(found)
+    if _limited(request.user, "sample", SPEECH_PER_MINUTE):
+        return HttpResponse(status=204)
+    audio = voice.make(wanted.sample, chosen=wanted)
+    if not audio:
+        return HttpResponse(status=204)
+    voice.keep_later(wanted.sample, audio, chosen=wanted)
+    return _audio_response(request, audio)

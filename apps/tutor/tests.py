@@ -255,7 +255,7 @@ class EndpointTests(TestCase):
         reply = self.client.get(say, {"sentence": 1, "word": 3})
         self.assertEqual(reply.status_code, 200)
         self.assertEqual(reply["Content-Type"], "audio/mpeg")
-        make.assert_called_with("three", single_word=True)
+        make.assert_called_with("three", single_word=True, chosen=mock.ANY)
         keep_later.assert_called_once()
         # Safari asks for a byte range.
         part = self.client.get(say, {"sentence": 1, "word": 3}, HTTP_RANGE="bytes=0-1")
@@ -273,3 +273,75 @@ class EndpointTests(TestCase):
     def test_finishing_needs_a_sentence(self):
         session = self.start()
         self.assertEqual(self.client.post(f"/tutor/session/{session}/finish/").status_code, 400)
+
+
+class TutorVoiceTests(TestCase):
+    """Choosing who reads with you: the voice, and the face that speaks."""
+
+    def setUp(self):
+        from apps.tutor.models import TutorVoice
+
+        self.user = User.objects.create_user(email="pick@example.com", password="pw-12345678", first_name="Ada")
+        self.client.force_login(self.user)
+        self.yela = TutorVoice.objects.filter(name="Yela").first() or TutorVoice.objects.create(
+            name="Yela", gender="female", avatar="yela", is_default=True)
+        self.kayode = TutorVoice.objects.filter(name="Kayode").first() or TutorVoice.objects.create(
+            name="Kayode", gender="male", avatar="kayode")
+
+    def test_the_hub_offers_every_voice_with_its_face(self):
+        page = self.client.get("/tutor/")
+        self.assertContains(page, "Who reads with you")
+        self.assertContains(page, "Yela")
+        self.assertContains(page, "Kayode")
+        self.assertContains(page, 'class="av av--kayode"')
+        self.assertContains(page, "data-gender=\"male\"")
+        self.assertContains(page, f'/tutor/voice/{self.kayode.pk}/sample/')
+
+    def test_a_learner_chooses_and_it_is_remembered(self):
+        from apps.tutor.models import TutorChoice
+        from apps.tutor.voice import for_user
+
+        self.assertEqual(for_user(self.user), self.yela)           # the default to begin with
+        self.client.post("/tutor/voice/", {"voice": self.kayode.pk})
+        self.assertEqual(TutorChoice.objects.get(user=self.user).voice, self.kayode)
+        self.assertEqual(for_user(self.user), self.kayode)
+        passage = TutorPassage.objects.filter(is_published=True).first()
+        if passage:
+            page = self.client.get(f"/tutor/read/{passage.pk}/")
+            self.assertContains(page, "av--kayode")
+            self.assertContains(page, "Kayode")
+
+    def test_a_voice_that_is_off_is_not_offered_or_chosen(self):
+        self.kayode.is_active = False
+        self.kayode.save()
+        self.assertNotContains(self.client.get("/tutor/"), "av--kayode")
+        self.client.post("/tutor/voice/", {"voice": self.kayode.pk})
+        from apps.tutor.voice import for_user
+
+        self.assertEqual(for_user(self.user), self.yela)
+
+    def test_each_voice_keeps_its_own_recordings(self):
+        from apps.tutor.models import TutorSpeech
+
+        one = TutorSpeech.key_for("the village", "voice-a")
+        two = TutorSpeech.key_for("the village", "voice-b")
+        self.assertNotEqual(one, two)
+        self.assertEqual(one, TutorSpeech.key_for("The  Village", "voice-a"))
+
+    def test_only_one_voice_is_the_default(self):
+        from apps.tutor.models import TutorVoice
+
+        self.kayode.is_default = True
+        self.kayode.save()
+        self.yela.refresh_from_db()
+        self.assertFalse(self.yela.is_default)
+        self.assertEqual(TutorVoice.objects.filter(is_default=True).count(), 1)
+
+    def test_staff_manage_voices_in_the_control_room(self):
+        staff = User.objects.create_user(email="sam@example.com", password="pw-12345678", first_name="Sam",
+                                         is_staff=True, is_superuser=True)
+        self.client.force_login(staff)
+        listing = self.client.get("/manage/tutor-voices/")
+        self.assertContains(listing, "Yela")
+        form = self.client.get("/manage/tutor-voices/new/")
+        self.assertContains(form, "ElevenLabs voice id")

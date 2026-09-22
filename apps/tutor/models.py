@@ -120,6 +120,95 @@ class TutorSession(models.Model):
         return round(self.accuracy * 100) if self.accuracy is not None else None
 
 
+class TutorVoice(models.Model):
+    """One voice a learner can choose for Yela, with the face that goes
+    with it. Admins add them in the control room; the voice itself is an
+    ElevenLabs voice, and the face is one of the drawn avatars."""
+
+    FEMALE = "female"
+    MALE = "male"
+    GENDER_CHOICES = [(FEMALE, "Female"), (MALE, "Male")]
+    AVATAR_CHOICES = [
+        ("yela", "Yela — braids, gold hoops"),
+        ("ada", "Ada — short curls, glasses"),
+        ("nia", "Nia — headwrap"),
+        ("kayode", "Kayode — short hair, beard"),
+        ("tobi", "Tobi — fade, warm smile"),
+        ("orb", "No face — a listening orb"),
+    ]
+
+    name = models.CharField(max_length=60, help_text='What the learner sees, e.g. "Yela".')
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, default=FEMALE)
+    avatar = models.CharField(max_length=20, choices=AVATAR_CHOICES, default="yela",
+                              help_text="The face shown while this voice speaks.")
+    description = models.CharField(max_length=120, blank=True,
+                                   help_text='One line, e.g. "Warm and steady, British English".')
+    voice_id = models.CharField(
+        max_length=64, blank=True,
+        help_text="The ElevenLabs voice. Leave blank to use the site's own voice.",
+    )
+    sample_text = models.CharField(
+        max_length=200, blank=True,
+        help_text="What this voice says when a learner presses Hear me. Blank uses a standard line.",
+    )
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False, help_text="The one new learners start with.")
+
+    class Meta:
+        ordering = ["order", "name"]
+        verbose_name = "tutor voice"
+
+    def __str__(self):
+        return f"{self.name} ({self.get_gender_display()})"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.is_default:
+            TutorVoice.objects.exclude(pk=self.pk).filter(is_default=True).update(is_default=False)
+
+    @property
+    def sample(self):
+        return self.sample_text or f"Hello, I'm {self.name}. Read with me, and I'll help you with every word."
+
+    @property
+    def eleven_id(self):
+        from django.conf import settings
+
+        return self.voice_id or getattr(settings, "ELEVENLABS_VOICE_ID", "")
+
+    @classmethod
+    def fallback(cls):
+        """The voice a learner gets before they have chosen one."""
+        return (cls.objects.filter(is_active=True, is_default=True).first()
+                or cls.objects.filter(is_active=True).first())
+
+
+class TutorChoice(models.Model):
+    """The voice and face one learner has chosen."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tutor_choice")
+    voice = models.ForeignKey(TutorVoice, on_delete=models.SET_NULL, null=True, blank=True, related_name="chosen_by")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "chosen tutor voice"
+        verbose_name_plural = "chosen tutor voices"
+
+    def __str__(self):
+        return f"{self.user} — {self.voice or 'the usual voice'}"
+
+    @classmethod
+    def voice_for(cls, user):
+        """The voice this learner hears: their own choice, or the default."""
+        if not getattr(user, "is_authenticated", False):
+            return TutorVoice.fallback()
+        chosen = cls.objects.filter(user=user).select_related("voice").first()
+        if chosen and chosen.voice and chosen.voice.is_active:
+            return chosen.voice
+        return TutorVoice.fallback()
+
+
 class TutorSpeech(models.Model):
     key = models.CharField(max_length=64, unique=True)
     text = models.CharField(max_length=600)
@@ -134,5 +223,6 @@ class TutorSpeech(models.Model):
         return self.text[:80]
 
     @staticmethod
-    def key_for(text):
-        return hashlib.sha256(" ".join(str(text).split()).lower().encode("utf-8")).hexdigest()
+    def key_for(text, voice_id=""):
+        spoken = " ".join(str(text).split()).lower()
+        return hashlib.sha256(f"{voice_id}|{spoken}".encode("utf-8")).hexdigest()

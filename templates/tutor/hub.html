@@ -5,6 +5,7 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/tutor.css' %}">
+  <link rel="stylesheet" href="{% static 'css/avatar.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -45,6 +46,37 @@
     </a>
     {% endif %}
 
+    {# Who reads with you: the voice and the face. #}
+    <h2 class="tt-h2">Who reads with you</h2>
+    <form method="post" action="{% url 'tutor:choose_voice' %}" class="tt-voices" data-voice-picker>
+      {% csrf_token %}
+      <div class="tt-voices__filter" role="group" aria-label="Show">
+        <button type="button" class="tt-filter is-on" data-filter="all">Everyone</button>
+        <button type="button" class="tt-filter" data-filter="female">Female voices</button>
+        <button type="button" class="tt-filter" data-filter="male">Male voices</button>
+      </div>
+      <div class="tt-voices__grid">
+        {% for one in voices %}
+        <label class="tt-voice{% if chosen.pk == one.pk %} is-chosen{% endif %}" data-voice-card data-gender="{{ one.gender }}">
+          <input type="radio" name="voice" value="{{ one.pk }}"{% if chosen.pk == one.pk %} checked{% endif %}>
+          {% include "tutor/_avatar.html" with avatar=one.avatar name=one.name size=104 suffix=one.pk %}
+          <span class="tt-voice__name">{{ one.name }}</span>
+          <span class="tt-voice__note">{{ one.description|default:one.get_gender_display }}</span>
+          <button type="button" class="tt-voice__hear" data-voice-sample="{% url 'tutor:voice_sample' one.pk %}">&#9654; Hear me</button>
+          <span class="tt-voice__tick" aria-hidden="true">&#10003;</span>
+        </label>
+        {% empty %}
+        <p class="tt-empty">Voices are being set up. Yela will read with you until then.</p>
+        {% endfor %}
+      </div>
+      {% if voices %}
+      <div class="tt-voices__save">
+        <button type="submit" class="tt-btn">Save my tutor</button>
+        <span class="tt-voices__now">Reading with you now: <strong>{{ chosen.name|default:"Yela" }}</strong></span>
+      </div>
+      {% endif %}
+    </form>
+
     <h2 class="tt-h2">Choose a passage</h2>
     <div class="tt-cards">
       {% for passage in passages %}
@@ -77,4 +109,8 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/tutor_avatar.js' %}" defer></script>
 {% endblock %}

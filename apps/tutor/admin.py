@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import TutorPassage, TutorSession, TutorSpeech
+from .models import TutorChoice, TutorPassage, TutorSession, TutorSpeech, TutorVoice
 
 
 @admin.register(TutorPassage)
@@ -22,3 +22,19 @@ class TutorSessionAdmin(admin.ModelAdmin):
 class TutorSpeechAdmin(admin.ModelAdmin):
     list_display = ("text", "created_at")
     search_fields = ("text",)
+
+
+@admin.register(TutorVoice)
+class TutorVoiceAdmin(admin.ModelAdmin):
+    list_display = ["name", "gender", "avatar", "voice_id", "is_default", "is_active", "order"]
+    list_filter = ["gender", "is_active"]
+    search_fields = ["name", "description"]
+    fields = ["name", "gender", "avatar", "description", "voice_id", "sample_text",
+              ("order", "is_default", "is_active")]
+
+
+@admin.register(TutorChoice)
+class TutorChoiceAdmin(admin.ModelAdmin):
+    list_display = ["user", "voice", "updated_at"]
+    search_fields = ["user__email", "voice__name"]
+    readonly_fields = ["user", "updated_at"]

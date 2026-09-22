@@ -5,6 +5,7 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/tutor.css' %}">
+  <link rel="stylesheet" href="{% static 'css/avatar.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -37,11 +38,10 @@
   <aside class="tt-dock" aria-live="polite">
     <div class="wrap tt-dock__inner">
       <div class="tt-coach">
-        <div class="tt-avatar" data-avatar aria-hidden="true">
-          <svg viewBox="0 0 48 48" width="44" height="44"><circle cx="24" cy="24" r="22" fill="currentColor" opacity=".12"/><rect x="18" y="10" width="12" height="20" rx="6" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M13 23a11 11 0 0 0 22 0M24 34v5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
-        </div>
+        {# The face that reads with you, chosen on the tutor's home page. #}
+        {% include "tutor/_avatar.html" with avatar=chosen.avatar name=chosen.name size=76 %}
         <div class="tt-coach__text">
-          <p class="tt-coach__title" data-say-title>Your reading tutor</p>
+          <p class="tt-coach__title" data-say-title>{{ chosen.name|default:"Your reading tutor" }}</p>
           <p class="tt-coach__line" data-say-line>Press start, allow the microphone, and read each highlighted sentence aloud.</p>
         </div>
       </div>
@@ -80,4 +80,5 @@
 
 {% block extra_js %}
   <script src="{% static 'js/tutor.js' %}" defer></script>
+  <script src="{% static 'js/tutor_avatar.js' %}" defer></script>
 {% endblock %}

@@ -1,0 +1,83 @@
+/* The tutor's face (templates/tutor/_avatar.html). It blinks on its own,
+   and its mouth moves while the tutor is speaking — static/js/tutor_avatar.js
+   adds "is-speaking". */
+
+.av {
+  --av-size: 132px;
+  --skin: #b06a3c; --skin-shade: #8c4f2a;
+  --hair: #241a17; --cloth: #23355a;
+  --bg-from: #f6e4c3; --bg-to: #e3b87a;
+  position: relative; display: grid; place-items: center;
+  width: var(--av-size); height: var(--av-size); margin: 0;
+}
+.av__art { width: 100%; height: 100%; display: block; }
+.av__bg-from { stop-color: var(--bg-from); }
+.av__bg-to { stop-color: var(--bg-to); }
+.av__ring { fill: none; stroke: rgba(20, 33, 61, 0.12); stroke-width: 2; }
+.av__skin { fill: var(--skin); }
+.av__ear { fill: var(--skin-shade); }
+.av__clothes { fill: var(--cloth); }
+.av__hair, .av__curls circle, .av__fade { fill: var(--hair); }
+.av__braids path { fill: none; stroke: var(--hair); stroke-width: 7; stroke-linecap: round; }
+.av__beard { fill: var(--hair); opacity: 0.92; }
+.av__hoop { fill: none; stroke: #e8bd6a; stroke-width: 2.6; }
+.av__wrap { fill: #b8324f; }
+.av__wrap--knot { fill: #d1476a; }
+.av__glasses circle, .av__glasses path { fill: none; stroke: #2a2320; stroke-width: 2.4; }
+.av__white { fill: #fffdf8; }
+.av__pupil { fill: #2a1f1a; }
+.av__spark { fill: #fff; }
+.av__brows path { fill: none; stroke: var(--hair); stroke-width: 3.4; stroke-linecap: round; }
+.av__nose { fill: none; stroke: var(--skin-shade); stroke-width: 2.4; stroke-linecap: round; opacity: 0.8; }
+.av__blush { fill: #d8735c; opacity: 0.25; }
+.av__lips { fill: #7d2b33; }
+.av__teeth { fill: #fffdf8; opacity: 0.9; }
+
+/* Colours per face, so each one is its own person. */
+.av--ada { --skin: #8d5230; --skin-shade: #6f3f24; --hair: #1c1411; --cloth: #2e7d62; --bg-from: #e8f0e6; --bg-to: #bcd9c8; }
+.av--nia { --skin: #c07a49; --skin-shade: #9c5f36; --hair: #2a1d18; --cloth: #7a2438; --bg-from: #fbe6d8; --bg-to: #f0bfa1; }
+.av--kayode { --skin: #7a4526; --skin-shade: #5e341b; --hair: #17100d; --cloth: #2f5d8a; --bg-from: #dfe8f4; --bg-to: #b3c8e3; }
+.av--tobi { --skin: #a4612f; --skin-shade: #85491f; --hair: #1f1613; --cloth: #b8863b; --bg-from: #fdf0d8; --bg-to: #f2cd90; }
+.av--orb { --bg-from: #dfe8f4; --bg-to: #9db6d8; }
+.av__orb { fill: rgba(20, 33, 61, 0.85); }
+.av__orb-inner { fill: rgba(240, 200, 120, 0.25); }
+.av__wave rect { fill: #f0c878; transform-box: fill-box; transform-origin: center; }
+
+/* Blinking, always. */
+.av__lids ellipse { fill: var(--skin); transform-box: fill-box; transform-origin: center; transform: scaleY(0); animation: av-blink 6.5s infinite; }
+.av__lids ellipse:nth-child(2) { animation-delay: 0.06s; }
+@keyframes av-blink { 0%, 92%, 100% { transform: scaleY(0); } 94%, 97% { transform: scaleY(1); } }
+
+/* Speaking: the mouth opens and closes, the head moves a little, and
+   three little bars show sound is coming out. */
+.av__mouth { transform-box: fill-box; transform-origin: center top; }
+.av.is-speaking .av__mouth { animation: av-talk 0.46s infinite ease-in-out; }
+.av.is-speaking .av__art { animation: av-bob 2.4s infinite ease-in-out; }
+.av.is-speaking .av__brows path { animation: av-brows 1.8s infinite ease-in-out; }
+.av.is-speaking .av__wave rect { animation: av-wave 0.7s infinite ease-in-out; }
+.av.is-speaking .av__wave rect:nth-child(2) { animation-delay: 0.12s; }
+.av.is-speaking .av__wave rect:nth-child(3) { animation-delay: 0.24s; }
+.av.is-speaking .av__wave rect:nth-child(4) { animation-delay: 0.36s; }
+@keyframes av-talk {
+  0%, 100% { transform: scaleY(0.45) scaleX(1.02); }
+  35% { transform: scaleY(1.35) scaleX(0.92); }
+  60% { transform: scaleY(0.8) scaleX(1); }
+  80% { transform: scaleY(1.15) scaleX(0.96); }
+}
+@keyframes av-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-2px) rotate(-0.6deg); } }
+@keyframes av-brows { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes av-wave { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1.4); } }
+
+/* The three bars beneath, for a face and for the orb alike. */
+.av__sound { position: absolute; bottom: 4px; display: flex; gap: 3px; opacity: 0; transition: opacity 0.2s ease; }
+.av.is-speaking .av__sound { opacity: 1; }
+.av__sound i { width: 4px; height: 10px; border-radius: 999px; background: #14213D; opacity: 0.75; animation: av-bars 0.8s infinite ease-in-out; }
+.av__sound i:nth-child(2) { animation-delay: 0.15s; }
+.av__sound i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes av-bars { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1.5); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .av__lids ellipse, .av.is-speaking .av__mouth, .av.is-speaking .av__art,
+  .av.is-speaking .av__brows path, .av__sound i, .av.is-speaking .av__wave rect { animation: none; }
+  .av.is-speaking .av__mouth { transform: scaleY(1.1); }
+}

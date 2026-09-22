@@ -172,7 +172,11 @@
       if (voice) utterance.voice = voice;
       utterance.lang = voice ? voice.lang : "en-GB";      // never en-US
       utterance.rate = slow ? 0.8 : 0.92;
-      utterance.onend = utterance.onerror = function () { resolve(); };
+      function mouth(on) {
+        document.dispatchEvent(new CustomEvent("dm-tutor-speaking", { detail: { on: on } }));
+      }
+      utterance.onstart = function () { mouth(true); };
+      utterance.onend = utterance.onerror = function () { mouth(false); resolve(); };
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
       setTimeout(resolve, 8000 + text.length * 90);
@@ -199,6 +203,8 @@
       audio.addEventListener("error", failed);
       var slow = setTimeout(function () { if (audio.paused) { audio.pause(); done(false); } }, 6000);
       try { audio.currentTime = 0; } catch (error) { /* not loaded yet */ }
+      // The face moves while this is heard (static/js/tutor_avatar.js).
+      document.dispatchEvent(new CustomEvent("dm-tutor-audio", { detail: { audio: audio } }));
       var playing = audio.play();
       if (playing && playing.then) {
         playing.then(function () {

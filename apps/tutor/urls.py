@@ -6,6 +6,8 @@ app_name = "tutor"
 
 urlpatterns = [
     path("", views.hub, name="hub"),
+    path("voice/", views.choose_voice, name="choose_voice"),
+    path("voice/<int:pk>/sample/", views.voice_sample, name="voice_sample"),
     path("read/<int:pk>/", views.read, name="read"),
     path("read/<int:pk>/start/", views.start, name="start"),
     path("session/<int:session_id>/piece/", views.piece, name="piece"),

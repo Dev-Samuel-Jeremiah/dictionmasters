@@ -225,3 +225,41 @@
   .tt-avatar.is-speaking, .tt-read[data-state="idle"] .tt-mic, .tt-read[data-state="checking"] .tt-mic svg { animation: none; }
   .tt-mic__ring { transition: none; }
 }
+
+/* ---------- Who reads with you: the voice and the face ---------- */
+.tt-voices { margin: 0 0 34px; }
+.tt-voices__filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.tt-filter {
+  padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(20, 33, 61, 0.12);
+  font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--ink, #14213D);
+  background: rgba(20, 33, 61, 0.04); cursor: pointer;
+}
+.tt-filter.is-on { color: #fffdf8; background: #14213D; border-color: transparent; }
+.tt-voices__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 14px; }
+.tt-voice {
+  position: relative; display: grid; justify-items: center; gap: 6px;
+  padding: 18px 14px 16px; border-radius: 20px; cursor: pointer; text-align: center;
+  background: #fffdf8; border: 2px solid transparent;
+  box-shadow: 0 10px 24px rgba(20, 33, 61, 0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.tt-voice:hover { transform: translateY(-3px); box-shadow: 0 16px 30px rgba(20, 33, 61, 0.14); }
+.tt-voice input { position: absolute; opacity: 0; pointer-events: none; }
+.tt-voice.is-chosen, .tt-voice:has(input:checked) { border-color: #c98f3a; box-shadow: 0 0 0 4px rgba(224, 177, 92, 0.22), 0 14px 28px rgba(20, 33, 61, 0.12); }
+.tt-voice[hidden] { display: none; }
+.tt-voice__name { font-family: var(--font-serif, Fraunces, serif); font-size: 1.15rem; font-weight: 600; color: var(--ink, #14213D); }
+.tt-voice__note { font-size: 0.8rem; line-height: 1.4; color: var(--ink-40, #6b7280); }
+.tt-voice__hear {
+  margin-top: 4px; padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(20, 33, 61, 0.14);
+  font: inherit; font-size: 0.78rem; font-weight: 700; color: #14213D; background: rgba(240, 200, 120, 0.22); cursor: pointer;
+}
+.tt-voice__hear:hover { background: rgba(240, 200, 120, 0.4); }
+.tt-voice__hear.is-playing { color: #fffdf8; background: #2e7d62; border-color: transparent; }
+.tt-voice__tick {
+  position: absolute; top: 10px; right: 10px; display: grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%; font-size: 0.8rem; font-weight: 700;
+  color: #fff; background: #2e9a74; opacity: 0; transform: scale(0.6); transition: all 0.18s ease;
+}
+.tt-voice.is-chosen .tt-voice__tick, .tt-voice:has(input:checked) .tt-voice__tick { opacity: 1; transform: scale(1); }
+.tt-voices__save { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 16px; }
+.tt-voices__now { font-size: 0.88rem; color: var(--ink-40, #6b7280); }
