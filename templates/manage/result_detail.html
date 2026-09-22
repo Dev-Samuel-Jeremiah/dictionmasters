@@ -1,0 +1,98 @@
+{% extends "manage/base.html" %}
+
+{% block title %}{{ row.learner }} — {{ row.what }} — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#9997;&#65039; <a href="{% url 'manage:results' %}{% if row.waiting %}?show=to-mark{% endif %}">Results &amp; marking</a> &middot; {{ spec.icon }} {{ row.where }}</p>
+    <h1 class="cr-pagehead__title">{{ row.what }}</h1>
+    <p class="cr-pagehead__note">{{ row.learner }}{% if row.learner != row.email %} ({{ row.email }}){% endif %} &middot; {{ row.type }} &middot; {{ row.when|date:"j M Y, H:i" }}</p>
+  </div>
+</header>
+
+<section class="cr-card cr-score">
+  {% if row.waiting %}
+  <p class="cr-score__big cr-score__big--wait">To mark</p>
+  <p class="cr-help">{% if source == "assessment" %}Score each spoken answer below.{% else %}Listen to each recording and mark it below.{% endif %}{% if attempt.max_score %} Marked automatically so far: {{ attempt.score|floatformat:"-2" }} of {{ attempt.max_score|floatformat:"-2" }}.{% endif %}</p>
+  {% else %}
+  <p class="cr-score__big {% if row.passed %}cr-score__big--good{% else %}cr-score__big--bad{% endif %}">{{ row.percent }}%</p>
+  <p class="cr-help">{{ row.status }}{% if row.passed %} &middot; passed{% else %} &middot; not passed{% endif %}
+    {% if source == "assessment" %} &middot; pass mark {{ attempt.assessment.pass_mark }}%{% if attempt.marked_by %} &middot; marked by {{ attempt.marked_by.get_full_name|default:attempt.marked_by.email }}{% endif %}
+    {% else %} &middot; pass mark {{ attempt.activity.pass_mark }}%{% endif %}</p>
+  {% endif %}
+</section>
+
+{% if errors %}<ul class="cr-errors">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+
+<form method="post" class="cr-form cr-marking">
+  {% csrf_token %}
+
+  {% if source == "assessment" %}
+  {% for one in answers %}
+  <section class="cr-card cr-answer{% if one.spoken %} cr-answer--spoken{% endif %}">
+    <p class="cr-answer__num">Question {{ one.number }}{% if one.spoken %} &middot; spoken{% endif %}{% if one.answer.points_awarded is not None %} &middot; {{ one.answer.points_awarded|floatformat:"-2" }} / {{ one.question.points }}{% endif %}</p>
+    <p class="cr-answer__prompt">{{ one.question.prompt }}{% if one.question.word %} <strong>{{ one.question.word }}</strong>{% endif %}</p>
+    {% if one.answer.recording %}<audio controls preload="none" src="{{ one.answer.recording.url }}" class="cr-answer__audio"></audio>
+    {% elif one.answer.given %}<p class="cr-answer__given">Answered: <strong>{{ one.answer.given }}</strong>
+      {% if one.answer.is_correct %}<span class="cr-pill cr-pill--good">Right</span>{% elif one.answer.is_correct is False %}<span class="cr-pill cr-pill--bad">Wrong</span>{% endif %}</p>
+      {% if one.answer.is_correct is False and one.question.first_answer %}<p class="cr-help">The answer: {{ one.question.first_answer }}</p>{% endif %}
+    {% else %}<p class="cr-dim">No answer given.</p>{% endif %}
+
+    {% if one.spoken and can_mark %}
+    <div class="cr-rubric">
+      {% for score in one.scores %}
+      <fieldset class="cr-rubric__row">
+        <legend>{{ score.label }}</legend>
+        {% for n in scale %}
+        <label class="cr-rubric__pick"><input type="radio" name="{{ one.answer.pk }}-{{ score.field }}" value="{{ n }}"{% if score.value == n %} checked{% endif %} required><span>{{ n }}</span></label>
+        {% endfor %}
+      </fieldset>
+      {% endfor %}
+      <label class="cr-field"><span>Comment on this answer</span>
+        <textarea name="{{ one.answer.pk }}-comment" rows="2" class="cr-input cr-textarea">{{ one.answer.comment }}</textarea></label>
+    </div>
+    {% endif %}
+  </section>
+  {% endfor %}
+  {% if can_mark %}
+  <section class="cr-card">
+    <label class="cr-field"><span>Feedback for the learner</span>
+      <textarea name="feedback" rows="3" class="cr-input cr-textarea">{{ attempt.feedback }}</textarea></label>
+    <p class="cr-help">Scores from 1 (needs a lot of work) to 5 (excellent). Each spoken answer earns its points in proportion to its rubric total.</p>
+    <div class="cr-formactions"><button type="submit" class="cr-btn cr-btn--gold">{% if row.waiting %}Save marks{% else %}Update marks{% endif %}</button></div>
+  </section>
+  {% endif %}
+
+  {% else %}
+  {% for one in answers %}
+  <section class="cr-card cr-answer{% if one.is_recording %} cr-answer--spoken{% endif %}">
+    <p class="cr-answer__num">Question {{ forloop.counter }}{% if one.is_recording %} &middot; recording{% endif %}</p>
+    {% if one.item.prompt %}<p class="cr-answer__prompt">{{ one.item.prompt }}</p>{% endif %}
+    {% if one.item.audio_source %}<p class="cr-help">The learner heard: <audio controls preload="none" src="{{ one.item.audio_source }}" class="cr-answer__audio cr-answer__audio--small"></audio></p>{% endif %}
+    {% if one.response.recording %}<audio controls preload="none" src="{{ one.response.recording.url }}" class="cr-answer__audio"></audio>
+    {% elif one.is_recording %}<p class="cr-dim">No recording was sent for this one.</p>
+    {% elif one.response.given %}<p class="cr-answer__given">Answered: <strong>{{ one.response.given }}</strong>
+      {% if one.response.is_correct %}<span class="cr-pill cr-pill--good">Right</span>{% elif one.response.is_correct is False %}<span class="cr-pill cr-pill--bad">Wrong</span>{% endif %}</p>
+      {% if one.response.is_correct is False and one.item.first_answer %}<p class="cr-help">The answer: {{ one.item.first_answer }}</p>{% endif %}
+    {% else %}<p class="cr-dim">No answer given.</p>{% endif %}
+
+    {% if one.is_recording %}
+    <div class="cr-verdict" role="radiogroup" aria-label="Mark this recording">
+      <label class="cr-verdict__pick cr-verdict__pick--good"><input type="radio" name="verdict-{{ one.response.pk }}" value="good"{% if one.response.is_correct %} checked{% endif %} required><span>&#10003; Good</span></label>
+      <label class="cr-verdict__pick cr-verdict__pick--work"><input type="radio" name="verdict-{{ one.response.pk }}" value="work"{% if one.response.is_correct is False %} checked{% endif %}><span>&#8635; Needs work</span></label>
+    </div>
+    {% endif %}
+  </section>
+  {% endfor %}
+  {% if can_mark %}
+  <section class="cr-card">
+    <label class="cr-field"><span>Feedback for the learner</span>
+      <textarea name="feedback" rows="3" class="cr-input cr-textarea">{{ attempt.teacher_feedback }}</textarea></label>
+    <p class="cr-help">The score is the share of answers marked right or Good. The learner sees it, with your feedback, on their result.</p>
+    <div class="cr-formactions"><button type="submit" class="cr-btn cr-btn--gold">{% if row.waiting %}Save marks{% else %}Update marks{% endif %}</button></div>
+  </section>
+  {% endif %}
+  {% endif %}
+</form>
+{% endblock %}

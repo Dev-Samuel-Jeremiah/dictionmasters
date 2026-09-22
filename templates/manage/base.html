@@ -41,6 +41,7 @@
       <a href="{% url 'manage:home' %}" class="cr-side__home {% if not current_key %}is-on{% endif %}">&#127968; Control room home</a>
       <a href="{% url 'manage:branding' %}" class="cr-side__home {% if current_key == 'branding' %}is-on{% endif %}">&#127912; Logo &amp; favicon</a>
       <a href="{% url 'manage:billing_settings' %}" class="cr-side__home {% if current_key == 'billing-settings' %}is-on{% endif %}">&#128179; Billing settings</a>
+      <a href="{% url 'manage:results' %}{% if to_mark %}?show=to-mark{% endif %}" class="cr-side__home {% if current_key == 'results' %}is-on{% endif %}">&#9997;&#65039; Results &amp; marking{% if to_mark %}<span class="cr-side__badge">{{ to_mark }}</span>{% endif %}</a>
       <a href="{% url 'manage:read_along' %}" class="cr-side__home {% if current_key == 'read-along' %}is-on{% endif %}">&#127911; Read-along timings</a>
       <a href="{% url 'manage:echospell_import' %}" class="cr-side__home {% if current_key == 'echospell-import' %}is-on{% endif %}">&#128218; Import an Echospell level</a>
       {% for section in nav %}

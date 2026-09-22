@@ -23,6 +23,8 @@ delete and uploads all follow from it.
     limit      {field: filter} narrows a dropdown's choices
     labels     {field: (label, help)} to word a form's fields for this screen
     name, singular   what to call the records, when the model's own words don't fit
+    view             a results source ("assessment", "echospell", "trick"): each
+                     row opens that attempt in Results & marking
     kind_fields      "activity" or "item": show only the fields the activity type
                      needs (apps/manage/kind_fields.py)
 """
@@ -118,7 +120,7 @@ def trick_assessment_screens():
          "kind_fields": "item"},
         {"key": "trick-activity-attempts", "model": "tricks.TrickActivityAttempt", "name": "Activity results",
          "columns": ["user", "activity", "percent", "status", "created_at"],
-         "search": ["user__email", "activity__title"], "readonly": True},
+         "search": ["user__email", "activity__title"], "readonly": True, "view": "trick"},
     ]
 
 
@@ -161,7 +163,7 @@ SECTIONS = [
              "order": ["order"], "parent": ("activity", "activities")},
             {"key": "activity-attempts", "model": "echospell.ActivityAttempt",
              "columns": ["user", "activity", "percent", "status", "created_at"],
-             "search": ["user__email", "activity__title"], "readonly": True},
+             "search": ["user__email", "activity__title"], "readonly": True, "view": "echospell"},
         ],
     },
     {
@@ -240,7 +242,7 @@ SECTIONS = [
              "parent": ("assessment", "assessments")},
             {"key": "attempts", "model": "assessments.Attempt",
              "columns": ["user", "assessment", "status", "percent", "submitted_at"],
-             "search": ["user__email", "assessment__title"], "readonly": True},
+             "search": ["user__email", "assessment__title"], "readonly": True, "view": "assessment"},
         ],
     },
     {

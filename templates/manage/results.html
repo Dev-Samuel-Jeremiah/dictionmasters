@@ -1,0 +1,75 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Results &amp; marking — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#9997;&#65039; Results &amp; marking</p>
+    <h1 class="cr-pagehead__title">{% if show == "to-mark" %}To mark{% else %}All results{% endif %}</h1>
+    <p class="cr-pagehead__note">
+      {% if show == "to-mark" %}Recordings and spoken answers waiting for a person to grade them, oldest first.
+      {% else %}Every attempt at an assessment or activity, newest first.{% endif %}
+    </p>
+  </div>
+</header>
+
+<nav class="cr-tabs" aria-label="Results">
+  <a href="?show=to-mark{% if source %}&from={{ source }}{% endif %}" class="cr-tab{% if show == 'to-mark' %} is-on{% endif %}">To mark{% if to_mark %} <span class="cr-tab__count">{{ to_mark }}</span>{% endif %}</a>
+  <a href="?show=all{% if source %}&from={{ source }}{% endif %}" class="cr-tab{% if show == 'all' %} is-on{% endif %}">All results</a>
+</nav>
+
+<form method="get" class="cr-filter">
+  <input type="hidden" name="show" value="{{ show }}">
+  <select name="from" class="cr-input cr-select cr-filter__from" aria-label="From">
+    <option value="">Everywhere</option>
+    {% for one in sources %}<option value="{{ one.key }}"{% if source == one.key %} selected{% endif %}>{{ one.icon }} {{ one.label }}</option>{% endfor %}
+  </select>
+  <input type="search" name="q" value="{{ query }}" placeholder="Search by learner or activity…" class="cr-input">
+  <button type="submit" class="cr-btn cr-btn--ghost">Search</button>
+  {% if query or source %}<a href="?show={{ show }}" class="cr-link">Clear</a>{% endif %}
+</form>
+
+{% if page.object_list %}
+<div class="cr-card cr-card--flush">
+  <div class="cr-tablewrap">
+    <table class="cr-table cr-table--rows">
+      <thead>
+        <tr><th>Learner</th><th>What</th><th>Where</th><th>Result</th><th>When</th><th class="cr-table__end"></th></tr>
+      </thead>
+      <tbody>
+        {% for row in page.object_list %}
+        <tr>
+          <td><strong>{{ row.learner }}</strong>{% if row.learner != row.email %}<br><small class="cr-dim">{{ row.email }}</small>{% endif %}</td>
+          <td>{{ row.what }}<br><small class="cr-dim">{{ row.type }}</small></td>
+          <td>{{ row.where }}</td>
+          <td>
+            {% if row.waiting %}<span class="cr-pill cr-pill--wait">To mark</span>
+            {% elif row.passed %}<span class="cr-pill cr-pill--good">Passed &middot; {{ row.percent }}%</span>
+            {% else %}<span class="cr-pill cr-pill--bad">{{ row.percent }}%</span>{% endif %}
+          </td>
+          <td>{{ row.when|date:"j M Y, H:i" }}</td>
+          <td class="cr-table__end">
+            <a href="{% url 'manage:result' row.source row.pk %}" class="cr-btn {% if row.waiting %}cr-btn--gold{% else %}cr-btn--ghost{% endif %} cr-btn--small">{% if row.waiting %}Mark{% else %}View{% endif %}</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if page.has_other_pages %}
+<nav class="cr-pages" aria-label="Pages">
+  {% if page.has_previous %}<a href="?show={{ show }}&page={{ page.previous_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if source %}&from={{ source }}{% endif %}" class="cr-btn cr-btn--ghost cr-btn--small">&larr; Back</a>{% endif %}
+  <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?show={{ show }}&page={{ page.next_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if source %}&from={{ source }}{% endif %}" class="cr-btn cr-btn--ghost cr-btn--small">Next &rarr;</a>{% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="cr-empty cr-empty--big">
+  <p>{% if show == "to-mark" %}Nothing waiting to be marked{% else %}No results yet{% endif %}{% if query %} for “{{ query }}”{% endif %}.</p>
+</div>
+{% endif %}
+{% endblock %}

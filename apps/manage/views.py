@@ -39,6 +39,7 @@ from apps.billing.models import BillingSettings
 from apps.landing.models import SiteBranding
 
 from .forms import ControlLoginForm, build_form
+from . import results
 from .kind_fields import guide
 from .registry import QUICK_ADDS, SECTIONS, get_screen, screens
 
@@ -182,6 +183,7 @@ def _base_context(request, current_key=None, **extra):
     return {
         "nav": _sections_for_nav(current_key),
         "current_key": current_key,
+        "to_mark": results.to_mark_count(),
         **extra,
     }
 
@@ -640,3 +642,58 @@ def _import_level(request, found, quiet=False):
     if level is None and not quiet:
         messages.error(request, f"There is no {name} yet. Tick “create it” or choose another level.")
     return level
+
+
+# ---------------------------------------------------------------------------
+# Results & marking: every attempt, and grading what a person has to judge
+# ---------------------------------------------------------------------------
+
+@staff_only
+def results_list(request):
+    show = "to-mark" if request.GET.get("show") == "to-mark" else "all"
+    source = request.GET.get("from") if request.GET.get("from") in results.SOURCES else None
+    query = request.GET.get("q", "").strip()
+    found = results.rows(show=show, source=source, query=query)
+    page = Paginator(found, PER_PAGE).get_page(request.GET.get("page"))
+    return render(request, "manage/results.html", _base_context(
+        request, "results", page=page, show=show, source=source, query=query,
+        sources=[{"key": key, **spec} for key, spec in results.SOURCES.items()], total=len(found),
+    ))
+
+
+@staff_only
+def result_detail(request, source, pk):
+    attempt = results.get_attempt(source, pk)
+    if attempt is None:
+        raise Http404("No such attempt.")
+    errors = []
+
+    if request.method == "POST":
+        if source == "assessment":
+            errors = results.mark_assessment(attempt, request.user, request.POST)
+        else:
+            verdicts = {}
+            for response in attempt.responses.all():
+                choice = request.POST.get(f"verdict-{response.pk}")
+                if choice in ("good", "work"):
+                    verdicts[response.pk] = choice == "good"
+            if results.mark_activity(attempt, verdicts, request.POST.get("feedback", "")):
+                errors = ["Mark every recording Good or Needs work."]
+        if not errors:
+            _record(request, attempt, CHANGE, "Marked in the control room")
+            messages.success(request, f"Marks saved. {results.learner_name(attempt.user)} can see them on their result.")
+            nxt = results.rows(show="to-mark")
+            if nxt:
+                return redirect("manage:result", source=nxt[0]["source"], pk=nxt[0]["pk"])
+            return redirect(f"{reverse('manage:results')}?show=to-mark")
+
+    context = {"source": source, "spec": results.SOURCES[source], "attempt": attempt,
+               "row": results.summarise(source, attempt), "errors": errors, "posted": request.POST}
+    if source == "assessment":
+        context.update(answers=results.assessment_answers(attempt), scale=["1", "2", "3", "4", "5"],
+                       can_mark=attempt.status != attempt.Status.IN_PROGRESS
+                       and any(not a.question.is_objective for a in attempt.answers.select_related("question")))
+    else:
+        answers = results.activity_answers(attempt)
+        context.update(answers=answers, can_mark=any(a["is_recording"] for a in answers))
+    return render(request, "manage/result_detail.html", _base_context(request, "results", **context))

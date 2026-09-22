@@ -46,7 +46,9 @@
           </td>
           {% endfor %}
           <td class="cr-table__end">
-            {% if readonly %}
+            {% if screen.view %}
+            <a href="{% url 'manage:result' screen.view row.pk %}" class="cr-btn cr-btn--ghost cr-btn--small">View</a>
+            {% elif readonly %}
             <span class="cr-blank">view only</span>
             {% else %}
             <a href="{% url 'manage:edit' screen.key row.pk %}" class="cr-btn cr-btn--ghost cr-btn--small">Edit</a>
