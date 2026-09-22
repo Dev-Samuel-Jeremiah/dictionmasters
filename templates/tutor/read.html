@@ -14,6 +14,7 @@
      data-piece-url="{% url 'tutor:piece' 0 %}"
      data-check-url="{% url 'tutor:check' 0 %}"
      data-say-url="{% url 'tutor:say' 0 %}"
+     data-hear-passage-url="{% url 'tutor:hear_passage' passage.pk %}"
      data-finish-url="{% url 'tutor:finish' 0 %}"
      data-name="{{ first_name }}">
   {% csrf_token %}
@@ -39,10 +40,10 @@
     <div class="wrap tt-dock__inner">
       <div class="tt-coach">
         {# The face that reads with you, chosen on the tutor's home page. #}
-        {% include "tutor/_avatar.html" with avatar=chosen.avatar name=chosen.name size=76 %}
+        {% include "tutor/_avatar.html" with avatar=chosen.avatar portrait=chosen.face name=chosen.name size=76 %}
         <div class="tt-coach__text">
           <p class="tt-coach__title" data-say-title>{{ chosen.name|default:"Your reading tutor" }}</p>
-          <p class="tt-coach__line" data-say-line>Press start, allow the microphone, and read each highlighted sentence aloud.</p>
+          <p class="tt-coach__line" data-say-line>Hear the story first if you like, then press start and read each highlighted sentence aloud.</p>
         </div>
       </div>
 
@@ -64,6 +65,8 @@
           <span class="tt-mic__label" data-mic-label>Start</span>
         </button>
         <div class="tt-controls__side">
+          {# The tutor reads the whole story first, so a learner hears it before trying. #}
+          <button type="button" class="tt-link tt-link--listen" data-listen>&#9654; Hear the story first</button>
           <button type="button" class="tt-link" data-hear disabled>Hear this sentence</button>
           <button type="button" class="tt-link tt-link--toggle" data-british-toggle aria-pressed="true"
                   title="Practise the words Americans say differently">British check</button>

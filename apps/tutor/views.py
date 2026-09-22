@@ -393,3 +393,29 @@ def voice_sample(request, pk):
         return HttpResponse(status=204)
     voice.keep_later(wanted.sample, audio, chosen=wanted)
     return _audio_response(request, audio)
+
+
+@login_required
+@require_GET
+def hear_passage(request, pk):
+    """The tutor reading one sentence of a passage aloud, before anyone
+    has started reading it. The whole story is heard this way, sentence
+    by sentence, so a learner knows how it should sound first."""
+    passage = get_object_or_404(_passages(request.user), pk=pk)
+    parts = listen.sentences(passage.body)
+    number = _index(request.GET.get("sentence"), len(parts))
+    if number is None:
+        raise Http404
+    text = parts[number]["text"]
+
+    chosen = voice.for_user(request.user)
+    found = voice.kept_url(text, chosen=chosen)
+    if found:
+        return HttpResponseRedirect(found)
+    if _limited(request.user, "hear", SPEECH_PER_MINUTE):
+        return HttpResponse(status=204)
+    audio = voice.make(text, chosen=chosen)
+    if not audio:
+        return HttpResponse(status=204)
+    voice.keep_later(text, audio, chosen=chosen)
+    return _audio_response(request, audio)

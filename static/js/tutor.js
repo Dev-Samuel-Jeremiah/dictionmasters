@@ -52,6 +52,7 @@
     focusTip: root.querySelector("[data-focus-tip]"),
     focusPlay: root.querySelector("[data-focus-play]"),
     hear: root.querySelector("[data-hear]"),
+    listen: root.querySelector("[data-listen]"),
     skip: root.querySelector("[data-skip]"),
     finish: root.querySelector("[data-finish]"),
     british: root.querySelector("[data-british-toggle]"),
@@ -584,6 +585,56 @@
       .catch(function () { say("Connection trouble", "Press Finish to try again.", "warn"); el.finish.disabled = false; });
   }
 
+  /* ---- the tutor reads the story first -------------------------------
+     Before anyone reads, the whole passage can be heard sentence by
+     sentence, each one highlighted as it is spoken. Reading over the
+     top of it is not possible: starting stops the story.               */
+
+  var storyAudio = null, storyOn = false;
+
+  function stopStory() {
+    storyOn = false;
+    if (storyAudio) { try { storyAudio.pause(); } catch (error) { /* already gone */ } }
+    storyAudio = null;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (el.listen) el.listen.textContent = "\u25B6 Hear the story first";
+    document.dispatchEvent(new CustomEvent("dm-tutor-speaking", { detail: { on: false } }));
+  }
+
+  function readStory() {
+    if (storyOn) { stopStory(); say("Ready when you are", "Press start and read it yourself.", ""); return; }
+    if (!root.dataset.hearPassageUrl) return;
+    storyOn = true;
+    el.listen.textContent = "\u25A0 Stop listening";
+    say("Listen first", "I'll read the whole story. Follow the words as I go.", "think");
+
+    function next(index) {
+      if (!storyOn || index >= sentences.length) {
+        stopStory();
+        if (index >= sentences.length) {
+          focusSentence(0);
+          say("Your turn", "Press start and read it aloud. I'll help with any word.", "happy");
+        }
+        return;
+      }
+      focusSentence(index);
+      var audio = new Audio(root.dataset.hearPassageUrl + "?sentence=" + index);
+      audio.preload = "auto";
+      storyAudio = audio;
+      playVoice(audio).then(function (played) {
+        if (!storyOn) return;
+        if (played) return wait(320);
+        // No recording to be had: the browser reads it instead.
+        return speakText(sentences[index].text, false).then(function () { return wait(200); });
+      }).then(function () {
+        if (storyOn) next(index + 1);
+      });
+    }
+    next(0);
+  }
+
+  if (el.listen) el.listen.addEventListener("click", readStory);
+
   /* ---- controls ----------------------------------------------------- */
 
   el.mic.addEventListener("click", function () {
@@ -595,6 +646,8 @@
   });
 
   function begin() {
+    stopStory();                       // never both at once
+    if (el.listen) el.listen.disabled = true;
     state("checking");
     say("Getting ready", "Please allow the microphone when your browser asks.", "think");
     openMic().then(function () {

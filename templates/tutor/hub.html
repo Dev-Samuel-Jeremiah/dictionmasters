@@ -59,7 +59,7 @@
         {% for one in voices %}
         <label class="tt-voice{% if chosen.pk == one.pk %} is-chosen{% endif %}" data-voice-card data-gender="{{ one.gender }}">
           <input type="radio" name="voice" value="{{ one.pk }}"{% if chosen.pk == one.pk %} checked{% endif %}>
-          {% include "tutor/_avatar.html" with avatar=one.avatar name=one.name size=104 suffix=one.pk %}
+          {% include "tutor/_avatar.html" with avatar=one.avatar portrait=one.face name=one.name size=104 suffix=one.pk %}
           <span class="tt-voice__name">{{ one.name }}</span>
           <span class="tt-voice__note">{{ one.description|default:one.get_gender_display }}</span>
           <button type="button" class="tt-voice__hear" data-voice-sample="{% url 'tutor:voice_sample' one.pk %}">&#9654; Hear me</button>

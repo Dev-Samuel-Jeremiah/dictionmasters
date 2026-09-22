@@ -143,6 +143,11 @@ class TutorVoice(models.Model):
                               help_text="The face shown while this voice speaks.")
     description = models.CharField(max_length=120, blank=True,
                                    help_text='One line, e.g. "Warm and steady, British English".')
+    portrait = models.ImageField(
+        upload_to="tutor/faces/%Y/%m/", blank=True,
+        help_text="A picture of this tutor — a 3D character portrait looks best. Square, 512×512 or larger. "
+                  "Leave empty to use the drawn face above.",
+    )
     voice_id = models.CharField(
         max_length=64, blank=True,
         help_text="The ElevenLabs voice. Leave blank to use the site's own voice.",
@@ -170,6 +175,14 @@ class TutorVoice(models.Model):
     @property
     def sample(self):
         return self.sample_text or f"Hello, I'm {self.name}. Read with me, and I'll help you with every word."
+
+    @property
+    def face(self):
+        """The picture to show: an uploaded portrait, or the drawn face."""
+        try:
+            return self.portrait.url if self.portrait else ""
+        except ValueError:
+            return ""
 
     @property
     def eleven_id(self):

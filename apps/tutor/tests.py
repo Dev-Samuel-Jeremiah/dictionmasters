@@ -345,3 +345,68 @@ class TutorVoiceTests(TestCase):
         self.assertContains(listing, "Yela")
         form = self.client.get("/manage/tutor-voices/new/")
         self.assertContains(form, "ElevenLabs voice id")
+
+
+class StoryFirstTests(TestCase):
+    """The tutor reads the whole story before the learner tries it."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email="listen@example.com", password="pw-12345678", first_name="Ada")
+        self.client.force_login(self.user)
+        self.passage = TutorPassage.objects.filter(is_published=True).first() or TutorPassage.objects.create(
+            title="My Red Hat", level="Pre-Level", body="I have a red hat. My hat is on the bed.")
+
+    def test_the_reading_page_offers_it(self):
+        page = self.client.get(f"/tutor/read/{self.passage.pk}/")
+        self.assertContains(page, "Hear the story first")
+        self.assertContains(page, f"/tutor/read/{self.passage.pk}/hear/")
+
+    @mock.patch("apps.tutor.voice.keep_later")
+    @mock.patch("apps.tutor.voice.make", return_value=b"ID3" + b"\x00" * 900)
+    def test_each_sentence_can_be_heard_before_starting(self, make, keep_later):
+        url = f"/tutor/read/{self.passage.pk}/hear/"
+        answer = self.client.get(url, {"sentence": 0})
+        self.assertEqual(answer.status_code, 200)
+        self.assertEqual(answer["Content-Type"], "audio/mpeg")
+        spoken = make.call_args.args[0]
+        self.assertIn(spoken.split(".")[0], self.passage.body)
+        # Nothing outside the passage, and nobody else's passage.
+        self.assertEqual(self.client.get(url, {"sentence": 99}).status_code, 404)
+        self.client.logout()
+        self.assertEqual(self.client.get(url, {"sentence": 0}).status_code, 302)
+
+
+class AvatarTests(TestCase):
+    """The face: drawn by default, or a portrait an admin uploads."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email="face@example.com", password="pw-12345678", first_name="Ada")
+        self.client.force_login(self.user)
+
+    @override_settings(STORAGES={"default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+                                 "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}})
+    def test_a_portrait_is_shown_instead_of_the_drawn_face(self):
+        from apps.tutor.models import TutorVoice
+
+        one_pixel = (b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00"
+                     b"\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00"
+                     b"\x00\x00IEND\xaeB`\x82")
+        voice = TutorVoice.objects.create(
+            name="Zara", gender="female", avatar="yela", is_default=True,
+            portrait=SimpleUploadedFile("zara.png", one_pixel, content_type="image/png"))
+        self.assertTrue(voice.face)
+        page = self.client.get("/tutor/")
+        self.assertContains(page, "av--photo")
+        self.assertContains(page, "av__photo")
+        self.assertContains(page, 'alt="Zara"')
+
+    def test_the_drawn_face_is_used_when_there_is_no_portrait(self):
+        from apps.tutor.models import TutorVoice
+
+        TutorVoice.objects.create(name="Plain", gender="male", avatar="tobi", is_default=True)
+        page = self.client.get("/tutor/")
+        self.assertContains(page, "av--tobi")
+        self.assertNotContains(page, "av__photo")
+        # Shaded, not flat: the face is drawn with light and shadow.
+        self.assertContains(page, "av-skin-tobi")
+        self.assertContains(page, "av__rim")
