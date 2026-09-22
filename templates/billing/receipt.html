@@ -31,6 +31,10 @@
         <div><dt>Account</dt><dd>{{ payment.account_name }}</dd></div>
         <div><dt>Email</dt><dd>{{ payment.email }}</dd></div>
         <div><dt>Plan</dt><dd>{{ payment.plan_name }} &middot; {{ payment.duration_days }} day{{ payment.duration_days|pluralize }}</dd></div>
+        {% if payment.discount %}
+        <div><dt>Full price</dt><dd>{{ payment.full_price_naira|naira }}</dd></div>
+        <div><dt>Promo code</dt><dd>{{ payment.promo_code }} &middot; {{ payment.discount_naira|naira }} off</dd></div>
+        {% endif %}
         {% if payment.period_start %}<div><dt>Access</dt><dd>{{ payment.period_start|date:"j M Y" }} – {{ payment.period_end|date:"j M Y" }}</dd></div>{% endif %}
         {% if payment.channel %}<div><dt>Paid by</dt><dd>{{ payment.channel_display }}</dd></div>{% endif %}
       </dl>

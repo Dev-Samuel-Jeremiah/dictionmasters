@@ -330,6 +330,19 @@ SECTIONS = [
              "columns": ["__str__", "plan", "trial_ends_at", "paid_until"],
              "search": ["user__email", "school__name"], "order": ["-updated_at"],
              "form": ["plan", "trial_ends_at", "paid_until"]},
+            {"key": "promo-codes", "model": "billing.PromoCode", "name": "Promo codes",
+             "columns": ["code", "discount_label", "state", "used", "max_uses", "expires_at"],
+             "search": ["code", "note"], "order": ["-created_at"],
+             "children": ["promo-uses"],
+             "form": ["code", "note", "kind", "value", "max_uses", "once_per_account",
+                      "starts_at", "expires_at", "plans", "is_active"],
+             "labels": {"code": ("Code", 'What people type, e.g. "JDM201". Leave blank and one is made for you.'),
+                        "max_uses": ("How many accounts may use it", "0 means no limit."),
+                        "value": ("How much off", "A percentage (e.g. 25) or an amount in naira — whichever you chose above.")}},
+            {"key": "promo-uses", "model": "billing.PromoRedemption", "name": "Promo code uses",
+             "columns": ["promo", "user", "amount_off", "created_at"],
+             "search": ["promo__code", "user__email"], "order": ["-created_at"],
+             "parent": ("promo", "promo-codes"), "readonly": True},
             {"key": "payments", "model": "billing.Payment",
              "columns": ["reference", "account_name", "plan_name", "amount_display", "status", "channel", "paid_at"],
              "search": ["reference", "email", "account_name"], "order": ["-created_at"], "readonly": True},
@@ -351,6 +364,7 @@ QUICK_ADDS = [
     ("schools", "School", "🏫"),
     ("users", "User", "👤"),
     ("plans", "Billing plan", "💳"),
+    ("promo-codes", "Promo code", "🏷️"),
 ]
 
 

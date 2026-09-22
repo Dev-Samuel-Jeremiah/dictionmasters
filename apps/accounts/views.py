@@ -52,7 +52,8 @@ def register_school(request):
                 f"{user.school.name} is set up. Your school code is {user.school.code} — "
                 "teachers join with codes you make, and students sign up with this school code.",
             )
-            return redirect(begin_access(request, user, form.cleaned_data.get("start"), _chosen_plan(form, Plan.AUDIENCE_SCHOOL)))
+            return redirect(begin_access(request, user, form.cleaned_data.get("start"), _chosen_plan(form, Plan.AUDIENCE_SCHOOL),
+                                          form.cleaned_data.get("promo_code", "")))
     else:
         form = SchoolRegistrationForm()
     return render(request, "accounts/register_school.html", {"form": form})
@@ -65,7 +66,8 @@ def register_individual(request):
             user = form.save()
             auth_login(request, user)
             messages.success(request, "Welcome to Diction Masters!")
-            return redirect(begin_access(request, user, form.cleaned_data.get("start"), _chosen_plan(form, Plan.AUDIENCE_INDIVIDUAL)))
+            return redirect(begin_access(request, user, form.cleaned_data.get("start"), _chosen_plan(form, Plan.AUDIENCE_INDIVIDUAL),
+                                          form.cleaned_data.get("promo_code", "")))
     else:
         form = IndividualRegistrationForm()
     return render(request, "accounts/register_individual.html", {"form": form})
@@ -78,7 +80,8 @@ def register_student(request):
             user = form.save()
             auth_login(request, user)
             messages.success(request, f"Welcome, {user.first_name}! You're now part of {user.school.name}.")
-            return redirect(begin_access(request, user, form.cleaned_data.get("start"), form.chosen_plan(user)))
+            return redirect(begin_access(request, user, form.cleaned_data.get("start"), form.chosen_plan(user),
+                                          form.cleaned_data.get("promo_code", "")))
     else:
         form = StudentRegistrationForm(initial={"school_code": request.GET.get("school", "")})
     return render(request, "accounts/register_student.html", {"form": form})

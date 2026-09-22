@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import BillingSettings, Payment, Plan, Subscription
+from .models import BillingSettings, Payment, Plan, PromoCode, PromoRedemption, Subscription
 
 
 @admin.register(Plan)
@@ -31,3 +31,33 @@ class PaymentAdmin(admin.ModelAdmin):
 
 
 admin.site.register(BillingSettings)
+
+
+@admin.register(PromoCode)
+class PromoCodeAdmin(admin.ModelAdmin):
+    list_display = ["code", "discount_label", "state", "used", "max_uses", "starts_at", "expires_at", "is_active"]
+    list_filter = ["kind", "is_active"]
+    search_fields = ["code", "note"]
+    filter_horizontal = ["plans"]
+    readonly_fields = ["created_at"]
+    fieldsets = [
+        (None, {"fields": ["code", "note", "is_active"],
+                "description": "Leave the code blank and one is made for you, in the house style (JDM201)."}),
+        ("How much off", {"fields": [("kind", "value")]}),
+        ("Limits", {"fields": ["max_uses", "once_per_account", ("starts_at", "expires_at"), "plans"]}),
+        ("History", {"fields": ["created_at"]}),
+    ]
+
+    @admin.display(description="Uses")
+    def used(self, obj):
+        return obj.used
+
+
+@admin.register(PromoRedemption)
+class PromoRedemptionAdmin(admin.ModelAdmin):
+    list_display = ["promo", "user", "amount_off", "payment", "created_at"]
+    search_fields = ["promo__code", "user__email"]
+    readonly_fields = ["promo", "user", "payment", "amount_off", "created_at"]
+
+    def has_add_permission(self, request):
+        return False

@@ -117,6 +117,19 @@
       <p class="ui-panel__lede">School plans are priced by how many teachers you have. Pick the tier that fits, termly or yearly.</p>
       {% include "billing/_price_table.html" with table=table unit_heading="Teachers" buy=configured %}
       {% else %}
+      {# A promo code takes money off whichever plan they choose. #}
+      <form method="post" action="{% url 'billing:promo' %}" class="bl-promo">
+        {% csrf_token %}
+        {% if promo %}
+        <p class="bl-promo__on"><strong>{{ promo.code }}</strong> applied &middot; {{ promo.discount_label }}{% if promo.expires_at %} &middot; until {{ promo.expires_at|date:"j M Y" }}{% endif %}</p>
+        <button type="submit" name="remove" value="1" class="ui-btn ui-btn--ghost ui-btn--small">Remove</button>
+        {% else %}
+        <label for="promo-code" class="bl-promo__label">Have a promo code?</label>
+        <input type="text" id="promo-code" name="code" class="field-input bl-promo__input" placeholder="e.g. JDM201" autocomplete="off" autocapitalize="characters">
+        <button type="submit" class="ui-btn ui-btn--ghost">Apply</button>
+        {% endif %}
+      </form>
+
       <div class="bl-plans">
         {% for plan in cards %}
           {% include "billing/_plan_card.html" with buy=configured|yesno:"1," %}

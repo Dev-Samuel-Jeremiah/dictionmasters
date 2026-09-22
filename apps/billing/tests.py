@@ -14,7 +14,7 @@ from apps.schools.models import AccessCode, School
 
 from . import services
 from .access import has_access, plans_for, start_trial, subscription_for
-from .models import BillingSettings, Payment, Plan, Subscription
+from .models import BillingSettings, Payment, Plan, PromoCode, Subscription
 
 SECRET = "sk_test_unit"
 PASSWORD = "x-Strong-pass-1"
@@ -299,3 +299,154 @@ class BillingTests(TestCase):
         for name in ("register_individual", "register_school", "register_student"):
             self.client.logout()
             self.assertContains(self.client.get(reverse(f"accounts:{name}")), "How would you like to start?")
+
+
+@override_settings(PAYSTACK_SECRET_KEY=SECRET, PAYSTACK_PUBLIC_KEY="pk_test_unit")
+class PromoCodeTests(TestCase):
+    """Codes like JDM201: how much they take off, and the limits on them."""
+
+    def setUp(self):
+        BillingSettings.objects.update_or_create(pk=1, defaults={"trial_days": 7, "paywall_enabled": True})
+        Plan.objects.all().delete()
+        self.monthly = Plan.objects.create(name="Monthly", audience="individual", price=Decimal("2500"), duration_days=30)
+        self.yearly = Plan.objects.create(name="Yearly", audience="individual", price=Decimal("24000"), duration_days=365)
+        self.code = PromoCode.objects.create(code="JDM201", kind=PromoCode.PERCENT, value=Decimal("25"), max_uses=2)
+        self.adult = make_user("adult@example.com", User.Role.INDIVIDUAL)
+        start_trial(self.adult)
+
+    def buy(self, user, plan, promo=None):
+        with mock.patch("apps.billing.paystack.initialize", return_value=PAYSTACK_PAGE) as init:
+            payment = services.start_checkout(user, plan, promo=promo, callback_url="x", cancel_url="y")
+        return payment, init
+
+    def test_a_code_is_made_in_the_house_style(self):
+        made = PromoCode.objects.create(value=Decimal("10"))
+        self.assertRegex(made.code, r"^JDM\d{3}$")
+        self.assertNotEqual(made.code, self.code.code)
+        # A typed code is tidied up.
+        typed = PromoCode.objects.create(code=" jdm-flyer ", value=Decimal("10"))
+        self.assertEqual(typed.code, "JDM-FLYER")
+
+    def test_a_percentage_and_a_flat_amount_come_off(self):
+        self.assertEqual(self.code.discount_kobo(250000), 62500)
+        self.assertEqual(self.code.price_after(250000), 187500)
+        flat = PromoCode.objects.create(code="JDM500", kind=PromoCode.AMOUNT, value=Decimal("500"))
+        self.assertEqual(flat.price_after(250000), 200000)
+        # Never more than the price.
+        self.assertEqual(PromoCode.objects.create(code="BIG", kind=PromoCode.AMOUNT,
+                                                  value=Decimal("9000")).price_after(250000), 0)
+
+    def test_paying_with_a_code_charges_the_lower_price(self):
+        payment, init = self.buy(self.adult, self.monthly, self.code)
+        self.assertEqual(init.call_args.kwargs["amount_kobo"], 187500)
+        self.assertEqual((payment.amount, payment.discount, payment.promo_code), (187500, 62500, "JDM201"))
+        services.fulfil(payment.reference, verified(payment))
+        self.assertTrue(has_access(self.adult))
+        self.assertEqual(self.code.used, 1)
+
+    def test_the_number_of_uses_runs_out(self):
+        self.buy(self.adult, self.monthly, self.code)
+        second = make_user("two@example.com", User.Role.INDIVIDUAL)
+        start_trial(second)
+        self.buy(second, self.monthly, self.code)
+        third = make_user("three@example.com", User.Role.INDIVIDUAL)
+        start_trial(third)
+        self.assertEqual(self.code.uses_left, 0)
+        self.assertEqual(self.code.state, "All used")
+        with self.assertRaises(services.CheckoutError):
+            self.buy(third, self.monthly, self.code)
+        _, refusal = services.find_promo("JDM201", third, self.monthly)
+        self.assertEqual(refusal, "That code has been used up.")
+
+    def test_an_account_uses_a_code_once(self):
+        self.buy(self.adult, self.monthly, self.code)
+        _, refusal = services.find_promo("JDM201", self.adult, self.monthly)
+        self.assertEqual(refusal, "You've already used that code.")
+
+    def test_dates_and_plans_and_the_off_switch(self):
+        later = PromoCode.objects.create(code="SOON", value=Decimal("10"),
+                                         starts_at=timezone.now() + timedelta(days=1))
+        self.assertEqual(services.find_promo("SOON", self.adult, self.monthly)[1], "That code isn't active yet.")
+        gone = PromoCode.objects.create(code="GONE", value=Decimal("10"),
+                                        expires_at=timezone.now() - timedelta(minutes=1))
+        self.assertEqual(services.find_promo("GONE", self.adult, self.monthly)[1], "That code has expired.")
+        self.assertEqual(gone.state, "Expired")
+        off = PromoCode.objects.create(code="OFF", value=Decimal("10"), is_active=False)
+        self.assertEqual(services.find_promo("OFF", self.adult, self.monthly)[1], "That code isn't available.")
+        only_yearly = PromoCode.objects.create(code="YEAR", value=Decimal("10"))
+        only_yearly.plans.add(self.yearly)
+        self.assertEqual(services.find_promo("YEAR", self.adult, self.monthly)[1],
+                         "That code doesn't apply to this plan.")
+        self.assertIsNone(services.find_promo("YEAR", self.adult, self.yearly)[1])
+        self.assertEqual(services.find_promo("NOPE", self.adult, self.monthly)[1],
+                         "We don't know that code. Please check it and try again.")
+        self.assertEqual(later.uses_left, None)
+
+    def test_a_code_that_covers_the_whole_price_needs_no_payment(self):
+        free = PromoCode.objects.create(code="JDMFREE", kind=PromoCode.PERCENT, value=Decimal("100"))
+        with mock.patch("apps.billing.paystack.initialize") as init:
+            payment = services.start_checkout(self.adult, self.monthly, promo=free,
+                                              callback_url="x", cancel_url="y")
+        init.assert_not_called()
+        self.assertTrue(payment.is_paid)
+        self.assertEqual((payment.amount, payment.discount, payment.channel), (0, 250000, "promo"))
+        self.assertTrue(has_access(self.adult))
+        self.assertAlmostEqual(subscription_for(self.adult).paid_until, timezone.now() + timedelta(days=30),
+                               delta=timedelta(minutes=1))
+
+    def test_a_payment_that_never_completes_frees_the_code_again(self):
+        payment, _ = self.buy(self.adult, self.monthly, self.code)
+        self.assertEqual(self.code.used, 1)
+        services.fulfil(payment.reference, verified(payment, status="abandoned"))
+        self.assertEqual(self.code.used, 0)
+
+    def test_registering_with_a_code(self):
+        form = {"first_name": "Ada", "email": "new@example.com", "password1": PASSWORD, "password2": PASSWORD,
+                "start": "pay", "plan": self.monthly.slug, "promo_code": "jdm201"}
+        with mock.patch("apps.billing.paystack.initialize", return_value=PAYSTACK_PAGE) as init:
+            response = self.client.post(reverse("accounts:register_individual"), form)
+        self.assertRedirects(response, PAYSTACK_PAGE["authorization_url"], fetch_redirect_response=False)
+        self.assertEqual(init.call_args.kwargs["amount_kobo"], 187500)
+        self.assertEqual(Payment.objects.get(email="new@example.com").promo_code, "JDM201")
+
+    def test_registering_with_a_code_that_is_wrong(self):
+        form = {"first_name": "Ada", "email": "new@example.com", "password1": PASSWORD, "password2": PASSWORD,
+                "start": "pay", "plan": self.monthly.slug, "promo_code": "NOPE"}
+        response = self.client.post(reverse("accounts:register_individual"), form)
+        self.assertContains(response, "We don&#x27;t know that code")
+        self.assertFalse(User.objects.filter(email="new@example.com").exists())
+
+    def test_applying_a_code_on_the_billing_page_then_paying(self):
+        self.client.force_login(self.adult)
+        response = self.client.post(reverse("billing:promo"), {"code": "jdm201"}, follow=True)
+        self.assertContains(response, "JDM201 applied")
+        page = self.client.get(reverse("billing:account"))
+        self.assertContains(page, "₦1,875")                       # 25% off ₦2,500
+        with mock.patch("apps.billing.paystack.initialize", return_value=PAYSTACK_PAGE) as init:
+            self.client.post(reverse("billing:checkout", args=[self.monthly.slug]))
+        self.assertEqual(init.call_args.kwargs["amount_kobo"], 187500)
+        # The code is spent, so the page goes back to full price.
+        self.assertNotContains(self.client.get(reverse("billing:account")), "JDM201 applied")
+
+    def test_taking_a_code_off_again(self):
+        self.client.force_login(self.adult)
+        self.client.post(reverse("billing:promo"), {"code": "JDM201"})
+        response = self.client.post(reverse("billing:promo"), {"remove": "1"}, follow=True)
+        self.assertContains(response, "Promo code removed")
+        self.assertNotContains(self.client.get(reverse("billing:account")), "JDM201 applied")
+
+    def test_the_control_room_makes_and_lists_codes(self):
+        staff = make_user("staff@example.com", User.Role.INDIVIDUAL, is_staff=True, is_superuser=True)
+        self.client.force_login(staff)
+        listing = self.client.get("/manage/promo-codes/")
+        self.assertContains(listing, "JDM201")
+        self.assertContains(listing, "25% off")
+        self.client.post("/manage/promo-codes/new/", {
+            "code": "", "note": "School fair", "kind": "amount", "value": "1000",
+            "max_uses": 50, "once_per_account": "on", "is_active": "on",
+        })
+        made = PromoCode.objects.exclude(pk=self.code.pk).get()
+        self.assertRegex(made.code, r"^JDM\d{3}$")
+        self.assertEqual((made.kind, made.value, made.max_uses), ("amount", Decimal("1000"), 50))
+        self.buy(self.adult, self.monthly, self.code)
+        self.assertContains(self.client.get("/manage/promo-uses/"), "JDM201")

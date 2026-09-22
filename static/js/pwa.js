@@ -14,10 +14,12 @@
 
   // ---------------------------------------------------------------- updates
   if ("serviceWorker" in navigator) {
-    var reloading = false;
+    // Only a version the person asked for reloads the page. The worker
+    // taking charge for the first time must not interrupt them.
+    var updating = false;
     navigator.serviceWorker.addEventListener("controllerchange", function () {
-      if (reloading) return;
-      reloading = true;
+      if (!updating) return;
+      updating = false;
       window.location.reload();
     });
 
@@ -56,6 +58,7 @@
     bar.querySelector(".app-update__go").addEventListener("click", function () {
       this.disabled = true;
       this.textContent = "Updating…";
+      updating = true;
       worker.postMessage("update-now");
     });
     bar.querySelector(".app-update__later").addEventListener("click", function () { bar.remove(); });

@@ -17,7 +17,7 @@ from django.utils.dateparse import parse_datetime
 
 from . import paystack
 from .access import purchasable, start_trial, subscription_for
-from .models import Payment, Subscription
+from .models import Payment, PromoCode, PromoRedemption, Subscription
 
 logger = logging.getLogger(__name__)
 
@@ -26,19 +26,47 @@ class CheckoutError(Exception):
     """This person can't buy this plan right now; the message says why."""
 
 
+def find_promo(code, user=None, plan=None):
+    """A promo code by what someone typed: (code, why it can't be used).
+    Either may be None — a code that works comes back with no reason."""
+    typed = (code or "").strip().upper().replace(" ", "")
+    if not typed:
+        return None, None
+    promo = PromoCode.objects.filter(code__iexact=typed).first()
+    if promo is None:
+        return None, "We don't know that code. Please check it and try again."
+    problem = promo.problem_for(user, plan)
+    return (None, problem) if problem else (promo, None)
+
+
 def new_reference():
     return f"DM-{uuid.uuid4().hex[:20].upper()}"
 
 
-def start_checkout(user, plan, *, callback_url, cancel_url):
+def start_checkout(user, plan, *, callback_url, cancel_url, promo=None):
     """Record a pending payment and ask Paystack for its checkout page.
-    Returns the Payment, with authorization_url to send the customer to."""
+    Returns the Payment, with authorization_url to send the customer to.
+
+    A promo code takes its cut off first; one that covers the whole price
+    grants the period there and then, and the Payment comes back paid,
+    with nothing to pay on Paystack."""
     problem = purchasable(user, plan)
     if problem:
         raise CheckoutError(problem)
     subscription = subscription_for(user)
     if subscription is None:
         raise CheckoutError("There's no account to pay for yet.")
+
+    amount, discount = plan.amount_kobo, 0
+    if promo is not None:
+        refusal = promo.problem_for(user, plan)
+        if refusal:
+            raise CheckoutError(refusal)
+        discount = promo.discount_kobo(amount)
+        amount -= discount
+
+    if promo is not None and amount <= 0:
+        return grant_free_period(user, plan, promo, discount)
 
     payment = Payment.objects.create(
         reference=new_reference(),
@@ -49,8 +77,14 @@ def start_checkout(user, plan, *, callback_url, cancel_url):
         email=user.email,
         plan_name=(f"{plan.name} · {plan.band_label}" if plan.band_label else plan.name)[:80],
         duration_days=plan.duration_days,
-        amount=plan.amount_kobo,
+        amount=amount,
+        discount=discount,
+        promo_code=promo.code if promo else "",
     )
+    if promo is not None:
+        # Held now so a limited code can't be spent twice over; released
+        # again if the payment doesn't go through.
+        PromoRedemption.objects.create(promo=promo, user=user, payment=payment, amount_off=discount)
     try:
         data = paystack.initialize(
             email=user.email,
@@ -80,7 +114,47 @@ def start_checkout(user, plan, *, callback_url, cancel_url):
     return payment
 
 
-def begin_access(request, user, start, plan):
+@transaction.atomic
+def grant_free_period(user, plan, promo, discount):
+    """A code that covers the whole price: the plan starts at once, with
+    a paid Payment of zero recorded so the history and receipt still read
+    the same way."""
+    subscription = subscription_for(user)
+    now = timezone.now()
+    start = subscription.next_period_start(now)
+    end = start + timedelta(days=plan.duration_days)
+
+    payment = Payment.objects.create(
+        reference=new_reference(),
+        subscription=subscription,
+        plan=plan,
+        payer=user,
+        account_name=str(subscription),
+        email=user.email,
+        plan_name=(f"{plan.name} · {plan.band_label}" if plan.band_label else plan.name)[:80],
+        duration_days=plan.duration_days,
+        amount=0,
+        discount=discount,
+        promo_code=promo.code,
+        status=Payment.STATUS_SUCCESS,
+        channel="promo",
+        gateway_response=f"Paid in full by promo code {promo.code}",
+        paid_at=now,
+        period_start=start,
+        period_end=end,
+    )
+    PromoRedemption.objects.create(promo=promo, user=user, payment=payment, amount_off=discount)
+
+    subscription.paid_until = end
+    if subscription.trial_ends_at and subscription.trial_ends_at > now:
+        subscription.trial_ends_at = now
+    subscription.plan = plan
+    subscription.save(update_fields=["paid_until", "trial_ends_at", "plan", "updated_at"])
+    logger.info("Promo code %s gave %s %s until %s", promo.code, subscription, plan, end)
+    return payment
+
+
+def begin_access(request, user, start, plan, promo_code=""):
     """Straight after registering. The free trial is already running (see
     access.subscription_for), so "Pay now" can never leave someone with no
     access: they go to Paystack, and if the payment doesn't go through the
@@ -93,11 +167,14 @@ def begin_access(request, user, start, plan):
 
     subscription_for(user)                       # starts the trial
     days = BillingSettings.load().trial_days
+    promo, refusal = find_promo(promo_code, user, plan)
+    if refusal:
+        messages.warning(request, refusal)
     home = "schools:dashboard" if user.role == user.Role.SCHOOL_ADMIN else "accounts:dashboard"
     if start == "pay" and plan is not None:
         try:
             payment = start_checkout(
-                user, plan,
+                user, plan, promo=promo,
                 callback_url=request.build_absolute_uri(reverse("billing:callback")),
                 cancel_url=request.build_absolute_uri(reverse("billing:callback") + "?cancelled=1"),
             )
@@ -108,8 +185,21 @@ def begin_access(request, user, start, plan):
                 "You can pay any time from Plans & billing.",
             )
             return reverse(home)
+        if payment.is_paid:
+            messages.success(
+                request,
+                f"Promo code {payment.promo_code} covered the whole price — your {payment.plan_name} plan is on.",
+            )
+            return reverse(home)
         return payment.authorization_url
 
+    if promo is not None:
+        messages.info(
+            request,
+            f"Your {days}-day free trial has started. Promo code {promo.code} ({promo.discount_label}) "
+            "is still yours to use when you pay from Plans & billing.",
+        )
+        return reverse(home)
     if days:
         messages.success(request, f"Your {days}-day free trial has started. Enjoy exploring!")
     return reverse(home)
@@ -150,6 +240,8 @@ def fulfil(reference, data):
         elif status == "abandoned":
             payment.status = Payment.STATUS_ABANDONED
         payment.save()
+        if payment.status in (Payment.STATUS_FAILED, Payment.STATUS_ABANDONED):
+            PromoRedemption.objects.filter(payment=payment).delete()
         return payment
 
     # Paid — but for exactly what we asked? A tampered or mismatched
@@ -162,6 +254,7 @@ def fulfil(reference, data):
         payment.status = Payment.STATUS_FAILED
         payment.gateway_response = "Amount didn't match the plan. Contact support."
         payment.save()
+        PromoRedemption.objects.filter(payment=payment).delete()
         return payment
 
     if payment.subscription_id is None:

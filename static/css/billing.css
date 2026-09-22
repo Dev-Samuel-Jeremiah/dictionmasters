@@ -174,3 +174,13 @@
 .bl-renew__hint { font-size: 0.9rem; color: var(--ink-70); }
 .bl-renew[open] .bl-renew__summary { margin-bottom: 8px; }
 .bl-renew__summary .ui-section__title { font-family: var(--font-serif); font-size: 1.3rem; font-weight: 600; color: var(--ink); }
+
+/* ---------- Promo codes ---------- */
+.bl-promo { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; padding: 14px 16px; border-radius: 16px; background: rgba(224, 177, 92, 0.12); border: 1px solid rgba(224, 177, 92, 0.3); }
+.bl-promo__label { font-weight: 600; font-size: 0.92rem; }
+.bl-promo__input { max-width: 190px; text-transform: uppercase; }
+.bl-promo__on { margin: 0; flex: 1; font-size: 0.95rem; color: #7a5518; }
+.bl-plan__was { margin-right: 6px; font-size: 1.3rem; color: var(--ink-40); text-decoration-thickness: 2px; }
+.bl-plan__promo { margin: 0 0 4px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #2e7d62; }
+.bl-start__promo { margin-top: 14px; }
+.bl-start__promo .field-input { max-width: 260px; text-transform: uppercase; }

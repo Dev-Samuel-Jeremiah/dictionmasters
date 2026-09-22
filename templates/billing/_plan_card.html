@@ -3,7 +3,12 @@
 <article class="bl-plan{% if plan.is_featured %} bl-plan--featured{% endif %}">
   {% if plan.is_featured %}<p class="bl-plan__flag">Most popular</p>{% endif %}
   <h3 class="bl-plan__name">{{ plan.name }}</h3>
+  {% if plan.promo_price is not None %}
+  <p class="bl-plan__price"><s class="bl-plan__was">{{ plan.price|naira }}</s> {{ plan.promo_price|naira }}<span class="bl-plan__period"> {{ plan.period_text }}</span></p>
+  <p class="bl-plan__promo">{{ promo.code }} applied</p>
+  {% else %}
   <p class="bl-plan__price">{{ plan.price|naira }}<span class="bl-plan__period"> {{ plan.period_text }}</span></p>
+  {% endif %}
   {% if plan.description %}<p class="bl-plan__desc">{{ plan.description }}</p>{% endif %}
   <ul class="bl-plan__features">
     <li>{{ plan.duration_days }} day{{ plan.duration_days|pluralize }} of full access</li>
@@ -13,7 +18,7 @@
   {% if buy %}
   <form method="post" action="{% url 'billing:checkout' plan.slug %}" class="bl-plan__form" data-pay-form>
     {% csrf_token %}
-    <button type="submit" class="ui-btn {% if plan.is_featured %}ui-btn--gold{% else %}ui-btn--green{% endif %} ui-btn--full">Pay {{ plan.price|naira }}</button>
+    <button type="submit" class="ui-btn {% if plan.is_featured %}ui-btn--gold{% else %}ui-btn--green{% endif %} ui-btn--full">{% if plan.promo_price is not None %}{% if plan.promo_price %}Pay {{ plan.promo_price|naira }}{% else %}Get it free{% endif %}{% else %}Pay {{ plan.price|naira }}{% endif %}</button>
   </form>
   {% elif cta_url %}
   <a href="{{ cta_url }}" class="ui-btn {% if plan.is_featured %}ui-btn--gold{% else %}ui-btn--ghost{% endif %} ui-btn--full">{{ cta_label }}</a>

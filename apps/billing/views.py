@@ -1,5 +1,6 @@
 import json
 import logging
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -15,7 +16,7 @@ from .access import (
     is_exempt, plans_for, price_table, status_for, student_count, student_plans_for_count, subscription_for, teacher_count,
 )
 from .models import BillingSettings, Payment, Plan
-from .services import CheckoutError, confirm, fulfil, start_checkout
+from .services import CheckoutError, confirm, find_promo, fulfil, start_checkout
 from .templatetags.billing import naira
 
 logger = logging.getLogger(__name__)
@@ -56,8 +57,12 @@ def account(request):
     school = user.school if user.school_id else None
     offered = plans_for(user) if (status.get("can_pay") or is_exempt(user)) else []
 
+    held, refusal = _promo_in_hand(request)
+    if refusal:
+        messages.info(request, refusal)
     context = {
         "status": status,
+        "promo": held,
         "payments": subscription.payments.all()[:30] if subscription else [],
         "next_url": next_url or request.session.get(NEXT_KEY, ""),
         "configured": paystack.is_configured(),
@@ -70,6 +75,10 @@ def account(request):
                                        {plan.pk: (ok, why) for plan, ok, why in offered})
     else:
         context["cards"] = [plan for plan, ok, _why in offered if ok]
+        for plan in context["cards"]:
+            # What the code in hand makes this plan cost, for its card.
+            plan.promo_price = (Decimal(held.price_after(plan.amount_kobo)) / 100
+                                if held is not None and held.problem_for(user, plan) is None else None)
     if user.role == user.Role.STUDENT and school:
         context["children"] = student_count(school)
     return render(request, "billing/account.html", context)
@@ -92,19 +101,59 @@ def student_prices(request):
     })
 
 
+PROMO_KEY = "promo-code"
+
+
+def _promo_in_hand(request, plan=None):
+    """The promo code this person has entered, if it still works. One that
+    has since expired or been used up is quietly put down."""
+    found, refusal = find_promo(request.session.get(PROMO_KEY, ""), request.user, plan)
+    if refusal:
+        request.session.pop(PROMO_KEY, None)
+        return None, refusal
+    return found, None
+
+
+@login_required
+@require_POST
+def promo(request):
+    """Enter a promo code, or take it off again."""
+    if request.POST.get("remove"):
+        request.session.pop(PROMO_KEY, None)
+        messages.info(request, "Promo code removed.")
+        return redirect("billing:account")
+
+    found, refusal = find_promo(request.POST.get("code", ""), request.user)
+    if refusal:
+        messages.error(request, refusal)
+    elif found is None:
+        messages.error(request, "Enter the code you were given.")
+    else:
+        request.session[PROMO_KEY] = found.code
+        messages.success(request, f"Promo code {found.code} applied — {found.discount_label} on your next payment.")
+    return redirect("billing:account")
+
+
 @login_required
 @require_POST
 def checkout(request, slug):
     plan = get_object_or_404(Plan, slug=slug)
+    held, refusal = _promo_in_hand(request, plan)
+    if refusal:
+        messages.warning(request, refusal)
     try:
         payment = start_checkout(
-            request.user, plan,
+            request.user, plan, promo=held,
             callback_url=request.build_absolute_uri(reverse("billing:callback")),
             cancel_url=request.build_absolute_uri(reverse("billing:account")),
         )
     except CheckoutError as error:
         messages.error(request, str(error))
         return redirect("billing:account")
+    request.session.pop(PROMO_KEY, None)
+    if payment.is_paid:
+        messages.success(request, f"Promo code {payment.promo_code} covered the whole price. You're all set.")
+        return redirect("billing:receipt", reference=payment.reference)
     return redirect(payment.authorization_url)
 
 

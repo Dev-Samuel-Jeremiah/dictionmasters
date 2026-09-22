@@ -30,6 +30,14 @@
     {% if form.plan.errors %}<ul class="field-errors">{% for error in form.plan.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
     <p class="field-help"><a href="{% url 'billing:pricing' %}" target="_blank" rel="noopener">See all prices</a></p>
   </div>
+
+  {# A promo code takes money off the plan (apps/billing/models.py). #}
+  <div class="field bl-start__promo{% if form.promo_code.errors %} has-error{% endif %}">
+    <label for="{{ form.promo_code.id_for_label }}">{{ form.promo_code.label }}</label>
+    {{ form.promo_code }}
+    <p class="field-help">Got a code from your school or a Diction Masters event? Enter it and the price comes down at checkout.</p>
+    {% if form.promo_code.errors %}<ul class="field-errors">{% for error in form.promo_code.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+  </div>
 </fieldset>
 <script>
   // The plan list only matters when paying now.

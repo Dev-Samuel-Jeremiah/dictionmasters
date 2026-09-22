@@ -56,7 +56,7 @@ class StartChoiceMixin:
     (value, label) pairs. `start` and `plan` are left out of
     account_fields, so the template can lay the choice out on its own."""
 
-    START_FIELDS = ("start", "plan")
+    START_FIELDS = ("start", "plan", "promo_code")
 
     def _add_start_fields(self, plan_choices, plan_label="Plan"):
         from apps.billing.models import BillingSettings
@@ -75,6 +75,12 @@ class StartChoiceMixin:
             choices=[("", "Choose a plan")] + list(plan_choices), required=False, label=plan_label,
         )
         self.fields["plan"].widget.attrs["class"] = "field-input"
+        # A promo code takes money off the plan at checkout (apps/billing).
+        self.fields["promo_code"] = forms.CharField(
+            required=False, max_length=20, label="Promo code (optional)",
+            widget=forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. JDM201",
+                                          "autocapitalize": "characters", "autocomplete": "off"}),
+        )
 
     @property
     def account_fields(self):
@@ -83,6 +89,16 @@ class StartChoiceMixin:
     def _clean_start(self, cleaned):
         if cleaned.get("start") == "pay" and not cleaned.get("plan"):
             self.add_error("plan", "Choose the plan you'd like to pay for.")
+        code = (cleaned.get("promo_code") or "").strip().upper()
+        if code:
+            from apps.billing.models import Plan
+            from apps.billing.services import find_promo
+
+            cleaned["promo_code"] = code
+            plan = Plan.objects.filter(slug=cleaned.get("plan")).first() if cleaned.get("plan") else None
+            _, refusal = find_promo(code, plan=plan)
+            if refusal:
+                self.add_error("promo_code", refusal)
         if not self.fields["start"].choices:
             cleaned["start"] = "trial"
         return cleaned

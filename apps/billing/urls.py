@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.account, name="account"),
     path("plans/", views.pricing, name="pricing"),
     path("student-prices/", views.student_prices, name="student_prices"),
+    path("promo/", views.promo, name="promo"),
     path("checkout/<slug:slug>/", views.checkout, name="checkout"),
     path("callback/", views.callback, name="callback"),
     path("webhook/paystack/", views.webhook, name="webhook"),

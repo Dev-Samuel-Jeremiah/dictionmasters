@@ -31,6 +31,7 @@ Everything a customer sees — plan names, prices, lengths, what's
 included, the trial length — is set in the control room.
 """
 
+import uuid
 from datetime import timedelta
 from decimal import Decimal
 
@@ -277,6 +278,8 @@ class Payment(models.Model):
     plan_name = models.CharField(max_length=80)
     duration_days = models.PositiveIntegerField()
     amount = models.PositiveBigIntegerField(help_text="In kobo.")
+    discount = models.PositiveBigIntegerField(default=0, help_text="Taken off by a promo code, in kobo.")
+    promo_code = models.CharField(max_length=20, blank=True, help_text="The code used, as it was typed.")
     currency = models.CharField(max_length=3, default="NGN")
 
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_PENDING)
@@ -306,6 +309,14 @@ class Payment(models.Model):
 
         return naira(self.amount_naira)
 
+    @property
+    def full_price_naira(self):
+        return Decimal(self.amount + self.discount) / 100
+
+    @property
+    def discount_naira(self):
+        return Decimal(self.discount) / 100
+
     CHANNEL_NAMES = {
         "card": "Card", "bank": "Bank account", "bank_transfer": "Bank transfer", "ussd": "USSD",
         "qr": "QR code", "mobile_money": "Mobile money", "apple_pay": "Apple Pay", "eft": "EFT",
@@ -323,3 +334,170 @@ class Payment(models.Model):
     def expires_soon(self):
         """A checkout link Paystack has probably closed, for display only."""
         return self.status == self.STATUS_PENDING and timezone.now() - self.created_at > timedelta(hours=1)
+
+
+class PromoCode(models.Model):
+    """A code like JDM201 that takes money off a plan at checkout.
+
+    Each code carries its own limits: how many accounts may use it, when
+    it stops working, which plans it applies to, and how much it takes
+    off (a percentage, or a flat sum in naira). A code that takes the
+    whole price off gives the plan free — the account is granted its
+    period without going to Paystack at all.
+    """
+
+    PERCENT = "percent"
+    AMOUNT = "amount"
+    KIND_CHOICES = [(PERCENT, "Percentage off"), (AMOUNT, "Naira off")]
+
+    code = models.CharField(
+        max_length=20, unique=True, blank=True,
+        help_text='What people type, e.g. "JDM201". Leave blank and one is made for you.',
+    )
+    note = models.CharField(
+        max_length=150, blank=True, help_text="For your own records, e.g. “September school fair”. Never shown.",
+    )
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES, default=PERCENT)
+    value = models.DecimalField(
+        max_digits=9, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))],
+        help_text="How much off: a percentage (e.g. 25 for 25% off), or an amount in naira.",
+    )
+    max_uses = models.PositiveIntegerField(
+        default=0, help_text="How many accounts may use it. 0 means no limit.",
+    )
+    once_per_account = models.BooleanField(
+        default=True, help_text="An account can use this code only once.",
+    )
+    starts_at = models.DateTimeField(null=True, blank=True, help_text="Leave blank to start straight away.")
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="Leave blank for no end date.")
+    plans = models.ManyToManyField(
+        Plan, blank=True, related_name="promo_codes",
+        help_text="The plans it works on. Choose none for every plan.",
+    )
+    is_active = models.BooleanField(default=True, help_text="Turn off to stop it working at once.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "promo code"
+
+    def __str__(self):
+        return self.code
+
+    def save(self, *args, **kwargs):
+        self.code = (self.code or "").strip().upper().replace(" ", "")
+        if not self.code:
+            self.code = self.make_code()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def make_code(prefix="JDM"):
+        """A fresh code in the house style: JDM201, JDM874…"""
+        import random
+
+        for _ in range(200):
+            code = f"{prefix}{random.randint(100, 999)}"
+            if not PromoCode.objects.filter(code=code).exists():
+                return code
+        return f"{prefix}{uuid.uuid4().hex[:5].upper()}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.kind == self.PERCENT and self.value > 100:
+            raise ValidationError({"value": "A percentage can't be more than 100."})
+        if self.starts_at and self.expires_at and self.expires_at <= self.starts_at:
+            raise ValidationError({"expires_at": "The end date must come after the start date."})
+
+    # ---------------------------------------------------------------- limits
+
+    @property
+    def used(self):
+        return self.redemptions.count()
+
+    @property
+    def uses_left(self):
+        """None when there is no limit."""
+        return None if not self.max_uses else max(self.max_uses - self.used, 0)
+
+    @property
+    def has_started(self):
+        return not self.starts_at or self.starts_at <= timezone.now()
+
+    @property
+    def has_expired(self):
+        return bool(self.expires_at and self.expires_at <= timezone.now())
+
+    @property
+    def is_live(self):
+        return self.is_active and self.has_started and not self.has_expired and self.uses_left != 0
+
+    @property
+    def state(self):
+        if not self.is_active:
+            return "Turned off"
+        if not self.has_started:
+            return "Not started"
+        if self.has_expired:
+            return "Expired"
+        if self.uses_left == 0:
+            return "All used"
+        return "Live"
+
+    @property
+    def discount_label(self):
+        if self.kind == self.PERCENT:
+            return f"{self.value.normalize():f}% off".replace(".0%", "%")
+        from .templatetags.billing import naira
+
+        return f"{naira(self.value)} off"
+
+    def problem_for(self, user, plan):
+        """Why this code can't be used now, or None if it can."""
+        if not self.is_active:
+            return "That code isn't available."
+        if not self.has_started:
+            return "That code isn't active yet."
+        if self.has_expired:
+            return "That code has expired."
+        if self.uses_left == 0:
+            return "That code has been used up."
+        if plan is not None and self.plans.exists() and not self.plans.filter(pk=plan.pk).exists():
+            return "That code doesn't apply to this plan."
+        if user is not None and self.once_per_account and self.redemptions.filter(user=user).exists():
+            return "You've already used that code."
+        return None
+
+    # ---------------------------------------------------------------- money
+
+    def discount_kobo(self, amount_kobo):
+        """How much this code takes off, never more than the price."""
+        if self.kind == self.PERCENT:
+            off = (Decimal(amount_kobo) * self.value / 100).quantize(Decimal("1"))
+        else:
+            off = (self.value * 100).quantize(Decimal("1"))
+        return min(int(off), int(amount_kobo))
+
+    def price_after(self, amount_kobo):
+        return int(amount_kobo) - self.discount_kobo(amount_kobo)
+
+
+class PromoRedemption(models.Model):
+    """One account's use of a code, kept so limits can be counted and a
+    code's history read back."""
+
+    promo = models.ForeignKey(PromoCode, on_delete=models.CASCADE, related_name="redemptions")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="promo_uses")
+    payment = models.OneToOneField(
+        "billing.Payment", on_delete=models.CASCADE, null=True, blank=True, related_name="redemption",
+    )
+    amount_off = models.PositiveBigIntegerField(default=0, help_text="In kobo.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "promo code use"
+        verbose_name_plural = "promo code uses"
+
+    def __str__(self):
+        return f"{self.promo} — {self.user}"
