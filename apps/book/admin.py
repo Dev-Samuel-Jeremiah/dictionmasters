@@ -100,7 +100,7 @@ class SectionVideoInline(admin.StackedInline):
     fields = [("section", "order"), "video_caption", ("video_file", "video_url"),
               "video_duration_label", "video_poster"]
     verbose_name = "video"
-    verbose_name_plural = "Videos on the lesson's tabs (Lens, Word Bank, Passage …)"
+    verbose_name_plural = "Videos on the lesson's tabs (Trick, Word List, Passage …)"
 
 
 @admin.register(SectionVideo)

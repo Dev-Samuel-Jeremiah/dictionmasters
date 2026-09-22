@@ -162,3 +162,41 @@ class TabVideoTests(TestCase):
         body = self.client.get(self.url("passage")).content.decode()
         self.assertIn('preload="metadata"', body)
         self.assertNotIn('preload="auto"', body)
+
+
+class TricksToSoundFluentTests(TestCase):
+    """The lesson one section at a time, reached from the dashboard."""
+
+    def setUp(self):
+        from .models import Sound, SoundCategory, WordBankEntry
+
+        category = SoundCategory.objects.create(name="Long vowels")
+        self.sound = Sound.objects.create(category=category, symbol="uː", name="Long OO",
+                                          slug="long-oo-tricks", is_published=True)
+        WordBankEntry.objects.create(sound=self.sound, word="moon")
+        self.client.force_login(User.objects.create_user(
+            email="fluent@example.com", password="pw-12345678", first_name="Ada", is_staff=True))
+
+    def test_the_tabs_are_called_trick_and_word_list(self):
+        page = self.client.get(f"/book/44-academy/{self.sound.slug}/lens/")
+        self.assertContains(page, ">Trick</a>")
+        self.assertContains(page, ">Word List</a>")
+        self.assertNotContains(page, ">Lens</a>")
+        self.assertNotContains(page, ">Word Bank</a>")
+
+    def test_the_dashboard_card_links_every_section(self):
+        from .views import TABS
+
+        page = self.client.get("/accounts/dashboard/")
+        self.assertContains(page, 'href="/book/tricks/"')
+        for slug, _label in TABS:
+            self.assertContains(page, f'href="/book/tricks/{slug}/"', msg_prefix=slug)
+
+    def test_a_section_lists_the_sounds_and_leads_into_each(self):
+        page = self.client.get("/book/tricks/word-bank/")
+        self.assertContains(page, "Word List")
+        self.assertContains(page, f'href="/book/44-academy/{self.sound.slug}/word-bank/"')
+        self.assertContains(page, "1 item")
+
+    def test_an_unknown_section_is_not_found(self):
+        self.assertEqual(self.client.get("/book/tricks/nonsense/").status_code, 404)

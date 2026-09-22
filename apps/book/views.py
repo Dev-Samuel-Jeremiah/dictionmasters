@@ -198,3 +198,63 @@ def read_along_timing(request, token):
     })
     response["Cache-Control"] = "private, no-cache"
     return response
+
+
+# ---------------------------------------------------------------------------
+# Tricks to Sound Fluent — the lesson, one section at a time
+# ---------------------------------------------------------------------------
+
+# What each section of a sound's lesson is for, in a line.
+SECTION_BLURBS = {
+    "lens": "The trick to making each sound — how to shape your mouth, lips and tongue.",
+    "word-bank": "Words that carry the sound, grouped by how they are spelt.",
+    "sentence-practice": "Sentences packed with the sound, to say aloud.",
+    "passage": "Short passages to read aloud with the sound all through them.",
+    "conversations": "Conversations to act out, one voice at a time.",
+    "twisters": "Tongue twisters that make each sound stick.",
+    "minimal-pairs": "Pairs of words one sound apart, to train your ear.",
+    "external-links": "More to watch and read about each sound.",
+}
+SECTION_ICONS = {
+    "lens": "\U0001F444", "word-bank": "\U0001F4DD", "sentence-practice": "\U0001F4AC",
+    "passage": "\U0001F4D6", "conversations": "\U0001F5E3", "twisters": "\U0001F32A",
+    "minimal-pairs": "\U0001F442", "external-links": "\U0001F517",
+}
+# How to count a sound's content in each section.
+SECTION_COUNTS = {
+    "lens": "articulation", "word-bank": "word_bank_entries", "sentence-practice": "sentence_practices",
+    "passage": "passages", "conversations": "conversations", "twisters": "tongue_twisters",
+    "minimal-pairs": "minimal_pairs", "external-links": "external_links",
+}
+
+
+@login_required
+def tricks(request, section=None):
+    """Tricks to Sound Fluent: the eight sections of every sound's lesson,
+    and — for one section — every sound, so a learner can go straight to,
+    say, the Word List of any sound."""
+    from django.db.models import Count, Q
+
+    sections = [{"slug": slug, "label": label, "blurb": SECTION_BLURBS.get(slug, ""),
+                 "icon": SECTION_ICONS.get(slug, "")} for slug, label in TABS]
+    if section is None:
+        return render(request, "book/tricks.html", {"sections": sections})
+    if section not in TAB_SLUGS:
+        raise Http404("That section doesn't exist.")
+
+    relation = SECTION_COUNTS[section]
+    sounds = (Sound.objects.filter(is_published=True)
+              .select_related("category")
+              .annotate(items=Count(relation, distinct=True),
+                        videos_here=Count("videos", filter=Q(videos__section=section), distinct=True))
+              .order_by("category__order", "order"))
+    groups = []
+    for sound in sounds:
+        if not groups or groups[-1]["category"] != sound.category:
+            groups.append({"category": sound.category, "sounds": []})
+        groups[-1]["sounds"].append(sound)
+    current = next(one for one in sections if one["slug"] == section)
+    return render(request, "book/tricks.html", {
+        "sections": sections, "section": current, "groups": groups,
+        "total": sum(len(group["sounds"]) for group in groups),
+    })

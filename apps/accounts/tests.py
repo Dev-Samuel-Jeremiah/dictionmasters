@@ -69,3 +69,25 @@ class NamingTests(TestCase):
             page = self.client.get(url)
             self.assertContains(page, "44 Academy", msg_prefix=url)
             self.assertNotContains(page, "Book of Conversation", msg_prefix=url)
+
+
+class TemplateHygieneTests(TestCase):
+    def test_no_comment_spills_onto_the_page(self):
+        """Django's {# … #} comment only works on one line. Spread over two,
+        it is printed on the page as text — which has happened twice. Longer
+        notes belong in {% comment %} … {% endcomment %}."""
+        import pathlib
+        import re
+
+        from django.conf import settings
+
+        spilled = []
+        for folder in settings.TEMPLATES[0]["DIRS"]:
+            for path in pathlib.Path(folder).rglob("*.html"):
+                text = path.read_text()
+                for match in re.finditer(r"\{#", text):
+                    rest = text[match.start():]
+                    close = rest.find("#}")
+                    if close < 0 or "\n" in rest[:close]:
+                        spilled.append(f"{path.name}:{text[:match.start()].count(chr(10)) + 1}")
+        self.assertEqual(spilled, [], "Multi-line {# #} comments show up on the page")

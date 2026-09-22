@@ -86,12 +86,15 @@
         <p class="dash-stat__value"><span class="dash-count" style="--to: {{ academy_sounds }}"></span><small> sound{{ academy_sounds|pluralize }}</small></p>
         <p class="dash-stat__foot">A full lesson for every sound of English</p>
       </a>
-      {# A section on its way: shown so learners know it's coming, but not a link yet. #}
-      <div class="dash-stat dash-stat--soon" style="--accent: var(--dash-gold)" aria-label="Tricks to Sound Fluent — coming soon">
+      {# Tricks to Sound Fluent: the title opens the sections; each chip goes straight to one. #}
+      <div class="dash-stat dash-stat--sections dash-tilt" data-tilt style="--accent: var(--dash-gold)">
         <span class="dash-stat__icon" aria-hidden="true">&#10024;</span>
-        <p class="dash-stat__label">Tricks to Sound Fluent</p>
-        <p class="dash-stat__value dash-stat__value--soon">Coming soon</p>
-        <p class="dash-stat__foot">Shortcuts to smooth, natural speech</p>
+        <p class="dash-stat__label"><a href="{% url 'book:tricks' %}" class="dash-stat__link">Tricks to Sound Fluent</a></p>
+        <ul class="dash-chips" aria-label="Sections">
+          {% for slug, label in trick_sections %}
+          <li><a href="{% url 'book:tricks_section' slug %}">{{ label }}</a></li>
+          {% endfor %}
+        </ul>
       </div>
       <a href="{% url 'learning_modules:hub' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-blue)">
         <span class="dash-stat__icon" aria-hidden="true">&#127891;</span>

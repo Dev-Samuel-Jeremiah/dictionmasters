@@ -1,7 +1,6 @@
 {% extends "admin/change_form.html" %}
 
-{# Which fields each activity kind uses, read by echospell_activity_admin.js
-   to grey out the ones the chosen kind has no use for. #}
+{# Which fields each activity kind uses, read by echospell_activity_admin.js to grey out the rest. #}
 {% block content %}
 {{ block.super }}
 {{ kind_field_map|json_script:"echospell-kind-fields" }}

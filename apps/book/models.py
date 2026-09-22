@@ -2,12 +2,12 @@
 44 Academy is Diction Masters' first Learning Tool.
 Inside it, the 44 Academy is one lesson per sound of English: a
 child taps a sound on the chart and lands on a page with several
-tabs — Lens (articulation), Word Bank, Sentence Practice, Passage,
+tabs — Trick (articulation), Word List, Sentence Practice, Passage,
 Conversations, Twisters, Minimal Pairs, and External Links.
 
 Everything here is meant to be filled in from the Django admin —
 a SoundCategory holds Sounds, and a Sound holds one Articulation
-(its "Lens" tab) plus any number of entries in each other tab, so a
+(its "Trick" tab) plus any number of entries in each other tab, so a
 teacher building the library never touches code, only the admin.
 
 Media (video/audio) can either be uploaded straight into the admin
@@ -137,7 +137,7 @@ class Sound(models.Model):
 
 
 # ---------------------------------------------------------------------------
-# Lens tab — articulation (one per sound)
+# Trick tab — articulation (one per sound)
 # ---------------------------------------------------------------------------
 
 class Articulation(VideoContent):
@@ -158,8 +158,8 @@ class Articulation(VideoContent):
     qr_label = models.CharField(max_length=150, blank=True, editable=False)
 
     class Meta:
-        verbose_name = "Articulation (Lens tab)"
-        verbose_name_plural = "Articulation (Lens tab)"
+        verbose_name = "Articulation (Trick tab)"
+        verbose_name_plural = "Articulation (Trick tab)"
 
     def __str__(self):
         return f"Articulation — {self.sound}"
@@ -184,8 +184,8 @@ class Articulation(VideoContent):
 # (book.views.TABS) is built from this, so a video can only ever be filed
 # under a tab that exists.
 SECTION_CHOICES = [
-    ("lens", "Lens"),
-    ("word-bank", "Word Bank"),
+    ("lens", "Trick"),
+    ("word-bank", "Word List"),
     ("sentence-practice", "Sentence Practice"),
     ("passage", "Passage"),
     ("conversations", "Conversations"),
@@ -197,7 +197,7 @@ SECTION_CHOICES = [
 
 class SectionVideo(VideoContent):
     """A video on one tab of a sound's lesson. A tab can have as many as it
-    needs, shown in order at the top of the tab. The Lens tab's own
+    needs, shown in order at the top of the tab. The Trick tab's own
     demonstration video (Articulation) stays first; these follow it."""
 
     sound = models.ForeignKey(Sound, on_delete=models.CASCADE, related_name="videos")
@@ -218,7 +218,7 @@ class SectionVideo(VideoContent):
 
 
 # ---------------------------------------------------------------------------
-# Word Bank tab
+# Word List tab
 # ---------------------------------------------------------------------------
 
 class WordBankEntry(AudioContent, OrderedForSound):
@@ -230,7 +230,8 @@ class WordBankEntry(AudioContent, OrderedForSound):
 
     class Meta(OrderedForSound.Meta):
         abstract = False
-        verbose_name_plural = "Word bank entries"
+        verbose_name = "word list entry"
+        verbose_name_plural = "Word list entries"
 
     def __str__(self):
         return self.word
