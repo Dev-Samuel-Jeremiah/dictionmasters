@@ -223,6 +223,15 @@ class TricksToSoundFluentTests(TestCase):
             self.assertNotContains(page, "/book/44-academy/")
         self.assertContains(self.client.get("/tricks/lessons/consonant-to-vowel/word-bank/"), "an apple")
 
+    def test_all_tricks_is_a_numbered_list_and_all_sounds_stays_as_tiles(self):
+        tricks = self.client.get("/tricks/lessons/")
+        self.assertContains(tricks, 'class="ui-numlist"')
+        self.assertContains(tricks, '<span class="ui-numlist__num">1</span>')
+        self.assertNotContains(tricks, 'class="ui-sound ')
+        sounds = self.client.get("/book/44-academy/")
+        self.assertContains(sounds, 'class="ui-sound ')
+        self.assertNotContains(sounds, 'class="ui-numlist"')
+
     def test_the_programmes_never_cross(self):
         self.assertEqual(self.client.get(f"/tricks/lessons/{self.sound.slug}/").status_code, 404)
         self.assertEqual(self.client.get(f"/book/44-academy/{self.trick.slug}/").status_code, 404)

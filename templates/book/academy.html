@@ -20,7 +20,11 @@
             <h1 class="ui-hero__title">{{ programme.list_title }}</h1>
             <p class="ui-hero__lede">Tap a {{ programme.lesson_word }} to open its lesson: the trick, a word list, sentence practice and more.</p>
             <div class="ui-hero__chips">
+              {% if programme.numbered %}
+              <span class="ui-chip ui-chip--gold">{{ lessons|length }} {% if lessons|length == 1 %}{{ programme.lesson_word }}{% else %}{{ programme.lessons_word }}{% endif %}</span>
+              {% else %}
               {% for group in groups %}<span class="ui-chip">{{ group.category.name }} &middot; {{ group.sounds|length }}</span>{% endfor %}
+              {% endif %}
             </div>
           </div>
         </div>
@@ -36,6 +40,27 @@
   </section>
 
   <div class="wrap ui-body ui-stack">
+    {% if programme.numbered %}
+    {# One numbered list: each name opens its lesson. #}
+    {% if lessons %}
+    <ol class="ui-numlist">
+      {% for sound in lessons %}
+      <li style="--i: {{ forloop.counter0 }}">
+        <a href="{% url programme.lesson sound.slug %}" class="ui-numlist__item">
+          <span class="ui-numlist__num">{{ forloop.counter }}</span>
+          <span class="ui-numlist__body">
+            <span class="ui-numlist__name">{{ sound.name }}</span>
+            {% if sound.example_words %}<span class="ui-numlist__words">{{ sound.example_words }}</span>{% endif %}
+          </span>
+          <span class="ui-numlist__arrow" aria-hidden="true">&rarr;</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <div class="ui-empty"><p>{{ programme.lessons_word|capfirst }} are being added. Check back soon.</p></div>
+    {% endif %}
+    {% else %}
     {% for group in groups %}
     {% cycle "#7A2438" "#2f5d8a" "#2e7d62" "#b8863b" as tone silent %}
     <section class="ui-panel">
@@ -56,6 +81,7 @@
     {% empty %}
     <div class="ui-empty"><p>{{ programme.lessons_word|capfirst }} are being added. Check back soon.</p></div>
     {% endfor %}
+    {% endif %}
   </div>
 </div>
 {% endblock %}

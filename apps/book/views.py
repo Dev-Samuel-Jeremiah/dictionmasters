@@ -93,8 +93,11 @@ def lesson_groups(programme):
 
 def lesson_list(request, programme):
     """Every lesson of one programme — All 44 Sounds, or All Tricks."""
+    groups = lesson_groups(programme)
     return render(request, "book/academy.html", {
-        "groups": lesson_groups(programme), "programme": programme_for(programme),
+        "groups": groups, "programme": programme_for(programme),
+        # One running list, in order, for programmes shown as a numbered list.
+        "lessons": [sound for group in groups for sound in group["sounds"]],
     })
 
 
