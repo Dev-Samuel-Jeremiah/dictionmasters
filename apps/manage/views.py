@@ -39,6 +39,7 @@ from apps.billing.models import BillingSettings
 from apps.landing.models import SiteBranding
 
 from .forms import ControlLoginForm, build_form
+from .kind_fields import guide
 from .registry import QUICK_ADDS, SECTIONS, get_screen, screens
 
 PER_PAGE = 25
@@ -330,6 +331,8 @@ def record_form(request, key, pk=None):
     for name, condition in screen.get("limit", {}).items():
         if name in form.fields and hasattr(form.fields[name], "queryset"):
             form.fields[name].queryset = form.fields[name].queryset.filter(**condition)
+    # Activities: only the fields their type needs (apps/manage/kind_fields.py).
+    kind_guide = guide(screen, form, obj=obj, parent_obj=parent_obj)
 
     if request.method == "POST" and form.is_valid():
         saved = form.save(commit=False)
@@ -374,6 +377,7 @@ def record_form(request, key, pk=None):
         request, key,
         screen=screen, form=form, obj=obj, title=_title(screen), singular=_singular(screen),
         parent_obj=parent_obj, children=children,
+        kind_guide=kind_guide,
     ))
 
 
@@ -419,10 +423,6 @@ def branding(request):
     obj = SiteBranding.load()
     FormClass = build_form(SiteBranding, ["logo", "show_name_with_logo", "favicon"])
     form = FormClass(request.POST or None, request.FILES or None, instance=obj)
-    # Dropdowns offer only what belongs here, e.g. a trick's group is a trick group.
-    for name, condition in screen.get("limit", {}).items():
-        if name in form.fields and hasattr(form.fields[name], "queryset"):
-            form.fields[name].queryset = form.fields[name].queryset.filter(**condition)
 
     if request.method == "POST" and form.is_valid():
         saved = form.save()

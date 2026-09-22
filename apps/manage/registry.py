@@ -23,6 +23,8 @@ delete and uploads all follow from it.
     limit      {field: filter} narrows a dropdown's choices
     labels     {field: (label, help)} to word a form's fields for this screen
     name, singular   what to call the records, when the model's own words don't fit
+    kind_fields      "activity" or "item": show only the fields the activity type
+                     needs (apps/manage/kind_fields.py)
 """
 
 
@@ -103,8 +105,8 @@ def trick_assessment_screens():
          "columns": ["title", "trick", "kind", "pass_mark", "is_published"],
          "order": ["trick__order", "order", "id"], "search": ["title", "trick__name"],
          "parent": ("trick", "trick-sounds"), "children": ["trick-activity-items"],
-         "form": ["trick", "kind", "title", "instructions", "buckets", "pass_mark", "order", "is_published",
-                  "audio_file", "audio_url", "video_file", "video_url"],
+         "form": ["trick", "kind", "title", "instructions", "buckets", "pass_mark", "order", "is_published"],
+         "kind_fields": "activity",
          "labels": {"kind": ("Activity type", "The same types as EchoSpell activities: what the learner does, "
                                               "and how it is marked."),
                     "pass_mark": ("Pass mark (%)", "The score needed to pass. Recorded activities count once sent.")}},
@@ -112,7 +114,8 @@ def trick_assessment_screens():
          "singular": "question",
          "columns": ["__str__", "activity", "order"], "order": ["activity", "order"],
          "search": ["prompt", "answer"], "parent": ("activity", "trick-activities"),
-         "form": ["activity", "order", "prompt", "answer", "options", "hint", "audio_file", "audio_url", "image"]},
+         "form": ["activity", "order", "prompt", "answer", "options", "hint", "audio_file", "audio_url", "image"],
+         "kind_fields": "item"},
         {"key": "trick-activity-attempts", "model": "tricks.TrickActivityAttempt", "name": "Activity results",
          "columns": ["user", "activity", "percent", "status", "created_at"],
          "search": ["user__email", "activity__title"], "readonly": True},

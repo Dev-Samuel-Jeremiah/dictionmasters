@@ -152,3 +152,56 @@ class TrickUnlockTests(TestCase):
         })
         self.assertEqual(TrickActivity.objects.get(title="Hear the difference").trick, self.two)
         self.assertFalse(Assessment.objects.exists())
+
+    def test_the_question_form_shows_only_what_the_activity_type_needs(self):
+        self.client.force_login(User.objects.create_user(
+            email="admin2@example.com", password="pw-12345678", first_name="Sam", is_staff=True, is_superuser=True))
+        # Word stress is multiple choice: prompt, answer and options, no audio or picture.
+        page = self.client.get(f"/manage/trick-activity-items/new/?in={self.test.pk}").content.decode()
+        for name in ("prompt", "answer", "options", "hint"):
+            self.assertIn(f'name="{name}"', page)
+        for name in ("audio_file", "audio_url", "image"):
+            self.assertNotIn(f'name="{name}"', page)
+        self.assertIn("The stressed syllable", page)
+
+        # Dictation: the audio is the question, so no prompt and no options.
+        dictation = TrickActivity.objects.create(trick=self.one, kind="dictation", title="Hear and spell")
+        page = self.client.get(f"/manage/trick-activity-items/new/?in={dictation.pk}").content.decode()
+        self.assertIn('name="audio_file"', page)
+        self.assertNotIn('name="prompt"', page)
+        self.assertNotIn('name="options"', page)
+
+        # Read aloud: nothing to mark against, so no answer.
+        aloud = TrickActivity.objects.create(trick=self.one, kind="read-aloud", title="Say it")
+        page = self.client.get(f"/manage/trick-activity-items/new/?in={aloud.pk}").content.decode()
+        self.assertIn('name="prompt"', page)
+        self.assertNotIn('name="answer"', page)
+
+        # Saving still works with the fields left out.
+        self.client.post(f"/manage/trick-activity-items/new/?in={aloud.pk}",
+                         {"_in": aloud.pk, "order": 1, "prompt": "Our cottage is in the village."})
+        self.assertTrue(aloud.items.filter(prompt__startswith="Our cottage").exists())
+
+    def test_the_activity_form_follows_the_type_chosen(self):
+        self.client.force_login(User.objects.create_user(
+            email="admin3@example.com", password="pw-12345678", first_name="Sam", is_staff=True, is_superuser=True))
+        page = self.client.get(f"/manage/trick-activities/new/?in={self.one.pk}")
+        self.assertContains(page, 'id="kind-guide"')
+        self.assertContains(page, "manage_kind_fields.js")
+        guide = page.context["kind_guide"]
+        self.assertEqual(guide["by_value"]["sound-sort"]["fields"], ["buckets"])
+        self.assertEqual(guide["by_value"]["transcription"]["fields"], [])
+        # Video and audio on the activity itself are never shown to learners.
+        self.assertNotContains(page, 'name="video_file"')
+
+    def test_a_sound_sort_question_picks_its_box(self):
+        self.client.force_login(User.objects.create_user(
+            email="admin4@example.com", password="pw-12345678", first_name="Sam", is_staff=True, is_superuser=True))
+        sort = TrickActivity.objects.create(trick=self.one, kind="sound-sort", title="Sort",
+                                            buckets="/ɪdʒ/ as in village\n/eɪdʒ/ as in page")
+        page = self.client.get(f"/manage/trick-activity-items/new/?in={sort.pk}")
+        self.assertContains(page, '<option value="/ɪdʒ/ as in village">')
+        self.client.post(f"/manage/trick-activity-items/new/?in={sort.pk}",
+                         {"_in": sort.pk, "order": 1, "prompt": "cottage", "answer": "/ɪdʒ/ as in village"})
+        self.assertEqual(sort.items.get(prompt="cottage").answer, "/ɪdʒ/ as in village")
+
