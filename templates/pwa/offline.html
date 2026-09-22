@@ -1,0 +1,28 @@
+{% load static %}<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14213D">
+  <title>You're offline — Diction Masters</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; box-sizing: border-box;
+           font-family: "Work Sans", system-ui, sans-serif; color: #14213D; background: #F4EFE2; text-align: center; }
+    .card { max-width: 380px; padding: 36px 28px; border-radius: 24px; background: #fffdf8;
+            box-shadow: 0 20px 44px rgba(20, 33, 61, .12); }
+    img { width: 72px; height: 72px; border-radius: 18px; }
+    h1 { margin: 18px 0 8px; font-family: Fraunces, Georgia, serif; font-size: 1.6rem; }
+    p { margin: 0 0 22px; line-height: 1.55; color: #4a5470; }
+    button { padding: 13px 26px; border: 0; border-radius: 14px; font: inherit; font-weight: 700; color: #14213D;
+             background: linear-gradient(135deg, #f0c878, #c98f3a); cursor: pointer; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img src="{% static 'pwa/icon-192.png' %}" alt="">
+    <h1>You're offline</h1>
+    <p>Diction Masters needs the internet for your lessons and recordings. Check your connection, then try again.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </main>
+</body>
+</html>

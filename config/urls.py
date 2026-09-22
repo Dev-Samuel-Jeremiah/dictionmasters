@@ -11,10 +11,16 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.landing import pwa
+
 urlpatterns = [
     path("manage/", include("apps.manage.urls")),
     path("admin/console/", include("apps.console.urls")),
     path("admin/", admin.site.urls),
+    # Installing Diction Masters as an app (apps/landing/pwa.py).
+    path("manifest.webmanifest", pwa.manifest, name="pwa_manifest"),
+    path("sw.js", pwa.service_worker, name="pwa_worker"),
+    path("offline/", pwa.offline, name="pwa_offline"),
     path("", include("apps.landing.urls")),
     path("accounts/", include("apps.accounts.urls")),
     path("school/", include("apps.schools.urls")),

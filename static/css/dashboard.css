@@ -569,3 +569,17 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
   .dash *, .dash *::before, .dash *::after { animation: none !important; transition: none !important; }
   .dash-tilt { transform: none; }
 }
+
+/* ---------- Install the app (static/js/pwa.js) ---------- */
+.dash-btn--install { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(243, 211, 141, 0.55); color: #f3d38d; background: rgba(243, 211, 141, 0.1); cursor: pointer; font: inherit; }
+.dash-btn--install:hover { background: rgba(243, 211, 141, 0.2); }
+.dash-btn--install[hidden] { display: none; }
+.install-steps { padding: 0; border: 0; border-radius: 24px; max-width: min(420px, calc(100vw - 32px)); background: transparent; }
+.install-steps::backdrop { background: rgba(20, 33, 61, 0.55); backdrop-filter: blur(3px); }
+.install-steps__card { padding: 30px 26px 24px; border-radius: 24px; text-align: center; color: var(--ink); background: #fffdf8; }
+.install-steps__icon { width: 64px; height: 64px; border-radius: 16px; box-shadow: 0 10px 22px rgba(20, 33, 61, 0.25); }
+.install-steps__title { margin: 14px 0 6px; font-family: var(--font-serif); font-size: 1.45rem; }
+.install-steps__lede { margin: 0 0 16px; color: var(--ink-70); font-size: 0.95rem; line-height: 1.5; }
+.install-steps__list { margin: 0 0 20px; padding: 14px 16px 14px 34px; border-radius: 16px; text-align: left; line-height: 1.6; background: rgba(20, 33, 61, 0.04); }
+.install-steps__list[hidden] { display: none; }
+.install-steps__done { border: 0; cursor: pointer; font: inherit; }

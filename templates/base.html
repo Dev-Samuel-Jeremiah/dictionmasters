@@ -6,7 +6,15 @@
   <title>{% block title %}Diction Masters — a private English tutor for every child{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Diction Masters is a private British English tutor for adults, students and schools: video lessons, audio drills, speaking practice and progress you can see. Start with a free trial.{% endblock %}">
 
-  {% if branding.favicon %}<link rel="icon" href="{{ branding.favicon.url }}">{% endif %}
+  {% if branding.favicon %}<link rel="icon" href="{{ branding.favicon.url }}">{% else %}<link rel="icon" type="image/png" href="{% static 'pwa/favicon-32.png' %}">{% endif %}
+  {# Installing it as an app (apps/landing/pwa.py). #}
+  <link rel="manifest" href="{% url 'pwa_manifest' %}">
+  <meta name="theme-color" content="#14213D">
+  <link rel="apple-touch-icon" href="{% static 'pwa/apple-touch-icon.png' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Diction Masters">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,6 +41,7 @@
   <script src="{% static 'js/password_toggle.js' %}" defer></script>
   <script src="{% static 'js/password_strength.js' %}" defer></script>
   <script src="{% static 'js/upload_progress.js' %}" defer></script>
+  <script src="{% static 'js/pwa.js' %}" defer></script>
   <script src="{% static 'js/qr_scanner.js' %}" defer></script>
   <script src="{% static 'js/media_guard.js' %}" defer></script>
   <script src="{% static 'js/lesson_start.js' %}" defer></script>
