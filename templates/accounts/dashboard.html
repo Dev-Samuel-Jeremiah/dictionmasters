@@ -79,14 +79,16 @@
 
     {# ================= The places to learn ================= #}
     <section class="dash-stats" aria-label="Where to learn">
-      <a href="{% url 'echospell:hub' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-green)">
+      <a href="{% url 'echospell:hub' %}" class="dash-stat dash-tilt{% if dashboard_card_images.progress_echospell %} dash-stat--image{% endif %}" data-tilt style="--accent: var(--dash-green)">
+        {% if dashboard_card_images.progress_echospell %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_echospell }}" alt="" aria-hidden="true">{% endif %}
         <span class="dash-stat__icon" aria-hidden="true">&#127919;</span>
         <p class="dash-stat__label">EchoSpell</p>
         <p class="dash-stat__value"><span class="dash-count" style="--to: {{ echospell.completed }}"></span><small> / {{ echospell.total }} groups</small></p>
         <p class="dash-stat__foot">{% if activity_average is not None %}{{ activities_done }} activit{{ activities_done|pluralize:"y,ies" }} · {{ activity_average }}% average{% else %}Spell, hear and say every word{% endif %}</p>
       </a>
       {# The Etiquette Advantage: shown, but locked until its lessons are ready. #}
-      <div class="dash-stat dash-stat--locked" style="--accent: var(--dash-plum)" aria-disabled="true">
+      <div class="dash-stat dash-stat--locked{% if dashboard_card_images.progress_etiquette %} dash-stat--image{% endif %}" style="--accent: var(--dash-plum)" aria-disabled="true">
+        {% if dashboard_card_images.progress_etiquette %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_etiquette }}" alt="" aria-hidden="true">{% endif %}
         <span class="dash-stat__icon" aria-hidden="true">&#129309;</span>
         <p class="dash-stat__label">The Etiquette Advantage</p>
         <p class="dash-stat__value dash-stat__lock">
@@ -95,20 +97,23 @@
         </p>
         <p class="dash-stat__foot">Poise and polish for every conversation</p>
       </div>
-      <a href="{% url 'book:home' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-maroon)">
+      <a href="{% url 'book:home' %}" class="dash-stat dash-tilt{% if dashboard_card_images.progress_academy %} dash-stat--image{% endif %}" data-tilt style="--accent: var(--dash-maroon)">
+        {% if dashboard_card_images.progress_academy %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_academy }}" alt="" aria-hidden="true">{% endif %}
         <span class="dash-stat__icon" aria-hidden="true">&#128214;</span>
         <p class="dash-stat__label">44 Academy</p>
         <p class="dash-stat__value"><span class="dash-count" style="--to: {{ academy_sounds }}"></span><small> sound{{ academy_sounds|pluralize }}</small></p>
         <p class="dash-stat__foot">{% if academy_sounds %}{{ academy_done }} of {{ academy_sounds }} complete{% else %}A full lesson for every sound of English{% endif %}</p>
       </a>
-      <a href="{% url 'tricks:home' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-gold)">
+      <a href="{% url 'tricks:home' %}" class="dash-stat dash-tilt{% if dashboard_card_images.progress_tricks %} dash-stat--image{% endif %}" data-tilt style="--accent: var(--dash-gold)">
+        {% if dashboard_card_images.progress_tricks %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_tricks }}" alt="" aria-hidden="true">{% endif %}
         <span class="dash-stat__icon" aria-hidden="true">&#10024;</span>
         <p class="dash-stat__label">Tricks to Sound Fluent</p>
         <p class="dash-stat__value"><span class="dash-count" style="--to: {{ tricks_count }}"></span><small> trick{{ tricks_count|pluralize }}</small></p>
         <p class="dash-stat__foot">{% if tricks_count %}{{ tricks_done }} of {{ tricks_count }} complete{% else %}The little tricks that make English flow{% endif %}</p>
       </a>
       {# Yela: the live reading tutor. #}
-      <a href="{% url 'tutor:hub' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-teal)">
+      <a href="{% url 'tutor:hub' %}" class="dash-stat dash-tilt{% if dashboard_card_images.progress_tutor %} dash-stat--image{% endif %}" data-tilt style="--accent: var(--dash-teal)">
+        {% if dashboard_card_images.progress_tutor %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_tutor }}" alt="" aria-hidden="true">{% endif %}
         <span class="dash-stat__icon" aria-hidden="true">&#127908;</span>
         <p class="dash-stat__label">Yela &middot; your AI Diction Assistant</p>
         <p class="dash-stat__value">
@@ -117,7 +122,8 @@
         </p>
         <p class="dash-stat__foot">{% if tutor.level %}Last reading: {{ tutor.level }}{% if tutor.accuracy %} &middot; {{ tutor.accuracy }}% accurate{% endif %}{% else %}Reads with you and helps with every word{% endif %}</p>
       </a>
-      <a href="{% url 'learning_modules:hub' %}" class="dash-stat dash-tilt" data-tilt style="--accent: var(--dash-blue)">
+      <a href="{% url 'learning_modules:hub' %}" class="dash-stat dash-tilt{% if dashboard_card_images.progress_modules %} dash-stat--image{% endif %}" data-tilt style="--accent: var(--dash-blue)">
+        {% if dashboard_card_images.progress_modules %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_modules }}" alt="" aria-hidden="true">{% endif %}
         <span class="dash-stat__icon" aria-hidden="true">&#127891;</span>
         <p class="dash-stat__label">My Modules</p>
         <p class="dash-stat__value"><span class="dash-count" style="--to: {{ modules.completed }}"></span><small> / {{ modules.total }} days</small></p>
@@ -182,39 +188,85 @@
     {# ================= Tools ================= #}
     <section class="dash-tools-section">
       <header class="dash-section-head">
-        <h2 class="dash-section-head__title">Your learning tools</h2>
-        <a href="{% url 'learning_tools:hub' %}" class="dash-link">All learning tools &rarr;</a>
+        <h2 class="dash-section-head__title">My learning tools</h2>
       </header>
       <div class="dash-tools">
-        <a href="{% url 'learning_modules:hub' %}" class="dash-tool dash-tilt" data-tilt style="--tool: #2f5d8a; --tool-2: #14213D">
+        <a href="{% url 'learning_modules:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_learning_modules %} dash-tool--image{% endif %}" data-tilt style="--tool: #2f5d8a; --tool-2: #14213D">
+          {% if dashboard_card_images.tool_learning_modules %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_learning_modules }}" alt="" aria-hidden="true">{% endif %}
           <span class="dash-tool__plate" aria-hidden="true">&#127891;</span>
           <span class="dash-tool__name">Learning Modules</span>
           <span class="dash-tool__body">Term-by-term courses, week by week, Monday to Friday.</span>
           <span class="dash-tool__cta">Open &rarr;</span>
         </a>
-        <a href="{% url 'echospell:hub' %}" class="dash-tool dash-tilt" data-tilt style="--tool: #2e7d62; --tool-2: #172F29">
+        <a href="{% url 'echospell:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_echospell %} dash-tool--image{% endif %}" data-tilt style="--tool: #2e7d62; --tool-2: #172F29">
+          {% if dashboard_card_images.tool_echospell %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_echospell }}" alt="" aria-hidden="true">{% endif %}
           <span class="dash-tool__plate" aria-hidden="true">&#128266;</span>
           <span class="dash-tool__name">EchoSpell</span>
           <span class="dash-tool__body">Spelling and phonics by level, with scored activities.</span>
           <span class="dash-tool__cta">Open &rarr;</span>
         </a>
-        <a href="{% url 'quick_words:hub' %}" class="dash-tool dash-tilt" data-tilt style="--tool: #b8863b; --tool-2: #6e4b17">
+        <a href="{% url 'quick_words:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_quick_words %} dash-tool--image{% endif %}" data-tilt style="--tool: #b8863b; --tool-2: #6e4b17">
+          {% if dashboard_card_images.tool_quick_words %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_quick_words }}" alt="" aria-hidden="true">{% endif %}
           <span class="dash-tool__plate" aria-hidden="true">&#128269;</span>
           <span class="dash-tool__name">Quick Words</span>
           <span class="dash-tool__body">Hear any word, see its meaning and save it to your lists.</span>
           <span class="dash-tool__cta">Open &rarr;</span>
         </a>
-        <a href="{% url 'assessments:hub' %}" class="dash-tool dash-tilt" data-tilt style="--tool: #9b3550; --tool-2: #4d1522">
+        <a href="{% url 'assessments:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_assessments %} dash-tool--image{% endif %}" data-tilt style="--tool: #9b3550; --tool-2: #4d1522">
+          {% if dashboard_card_images.tool_assessments %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_assessments }}" alt="" aria-hidden="true">{% endif %}
           <span class="dash-tool__plate" aria-hidden="true">&#128203;</span>
           <span class="dash-tool__name">Assessments</span>
           <span class="dash-tool__body">Practice quizzes, timed tests, speaking and placement.</span>
           <span class="dash-tool__cta">Open &rarr;</span>
         </a>
-        <a href="{% url 'clash:hub' %}" class="dash-tool dash-tool--featured dash-tilt" data-tilt style="--tool: #e0b15c; --tool-2: #0b1427">
+        <a href="{% url 'clash:hub' %}" class="dash-tool dash-tool--featured dash-tilt{% if dashboard_card_images.tool_clash %} dash-tool--image{% endif %}" data-tilt style="--tool: #e0b15c; --tool-2: #0b1427">
+          {% if dashboard_card_images.tool_clash %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_clash }}" alt="" aria-hidden="true">{% endif %}
           <span class="dash-tool__plate" aria-hidden="true">&#9876;&#65039;</span>
           <span class="dash-tool__name">Diction Clash</span>
           <span class="dash-tool__body">Race the clock on meanings, spellings and sounds.</span>
           <span class="dash-tool__cta">Play &rarr;</span>
+        </a>
+        <a href="{% url 'tutor:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_tutor %} dash-tool--image{% endif %}" data-tilt style="--tool: #1f6f5c; --tool-2: #172F29">
+          {% if dashboard_card_images.tool_tutor %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_tutor }}" alt="" aria-hidden="true">{% endif %}
+          <span class="dash-tool__plate" aria-hidden="true">&#127908;</span>
+          <span class="dash-tool__name">AI Reading Tutor</span>
+          <span class="dash-tool__body">Read a passage aloud to a live tutor and get your reading level and feedback.</span>
+          <span class="dash-tool__cta">Open &rarr;</span>
+        </a>
+        <a href="{% url 'daily_practice:home' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_daily_practice %} dash-tool--image{% endif %}" data-tilt style="--tool: #2e7d62; --tool-2: #172F29">
+          {% if dashboard_card_images.tool_daily_practice %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_daily_practice }}" alt="" aria-hidden="true">{% endif %}
+          <span class="dash-tool__plate" aria-hidden="true">&#128197;</span>
+          <span class="dash-tool__name">Daily Practice</span>
+          <span class="dash-tool__body">Fresh pronunciation drills from the 44 Academy each day.</span>
+          <span class="dash-tool__cta">Open &rarr;</span>
+        </a>
+        <a href="{% url 'book:home' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_academy %} dash-tool--image{% endif %}" data-tilt style="--tool: #7A2438; --tool-2: #4d1522">
+          {% if dashboard_card_images.tool_academy %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_academy }}" alt="" aria-hidden="true">{% endif %}
+          <span class="dash-tool__plate" aria-hidden="true">&#128214;</span>
+          <span class="dash-tool__name">44 Academy</span>
+          <span class="dash-tool__body">A full lesson for every English sound, with guided practice and audio.</span>
+          <span class="dash-tool__cta">Open &rarr;</span>
+        </a>
+        <a href="{% url 'tricks:home' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_tricks %} dash-tool--image{% endif %}" data-tilt style="--tool: #b8863b; --tool-2: #6e4b17">
+          {% if dashboard_card_images.tool_tricks %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_tricks }}" alt="" aria-hidden="true">{% endif %}
+          <span class="dash-tool__plate" aria-hidden="true">&#10024;</span>
+          <span class="dash-tool__name">Tricks to Sound Fluent</span>
+          <span class="dash-tool__body">Learn the tricks that make English flow, with practice for every lesson.</span>
+          <span class="dash-tool__cta">Open &rarr;</span>
+        </a>
+        <a href="{% url 'reading_club:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_reading_club %} dash-tool--image{% endif %}" data-tilt style="--tool: #2f5d8a; --tool-2: #14213D">
+          {% if dashboard_card_images.tool_reading_club %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_reading_club }}" alt="" aria-hidden="true">{% endif %}
+          <span class="dash-tool__plate" aria-hidden="true">&#128218;</span>
+          <span class="dash-tool__name">Reading Club</span>
+          <span class="dash-tool__body">Read this term's book, chapter by chapter, with model audio.</span>
+          <span class="dash-tool__cta">Open &rarr;</span>
+        </a>
+        <a href="{% url 'reference_library:home' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_reference_library %} dash-tool--image{% endif %}" data-tilt style="--tool: #b8863b; --tool-2: #6e4b17">
+          {% if dashboard_card_images.tool_reference_library %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_reference_library }}" alt="" aria-hidden="true">{% endif %}
+          <span class="dash-tool__plate" aria-hidden="true">&#128269;</span>
+          <span class="dash-tool__name">Reference Library</span>
+          <span class="dash-tool__body">Look up grammar, spelling rules, word origins and more.</span>
+          <span class="dash-tool__cta">Open &rarr;</span>
         </a>
       </div>
     </section>
@@ -264,10 +316,6 @@
           <a href="{% url 'assessments:hub' %}" class="dash-shortcut">
             <span class="dash-shortcut__icon" aria-hidden="true">&#129517;</span>
             <span><strong>Find my level</strong><small>Take a placement test</small></span>
-          </a>
-          <a href="{% url 'learning_tools:hub' %}" class="dash-shortcut">
-            <span class="dash-shortcut__icon" aria-hidden="true">&#129520;</span>
-            <span><strong>Learning tools</strong><small>Everything you can practise with</small></span>
           </a>
         </div>
       </section>

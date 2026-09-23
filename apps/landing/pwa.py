@@ -7,15 +7,20 @@ Diction Masters as an app you can install (a Progressive Web App).
   /offline/              what shows when there is no connection
 
 Keeping the installed app up to date is the point of how the service
-worker is built (templates/pwa/sw.js). Pages always come from the server,
-so a new feature is there the moment it is released. Only the site's own
-stylesheets, scripts and pictures are kept on the device, and their
-addresses change whenever they do, so nothing old is ever shown.
+worker is built (templates/pwa/sw.js). A page is always tried from the
+server first, so a new feature is there the moment it is released — and
+only kept for offline use once it has actually answered, so a learner
+never has to remember to "save" a page before going offline. Pages under
+a sensitive path (accounts, billing, the control room, a test result, a
+live Clash score) are never kept, and logging out clears everything that
+was, so a shared school device doesn't show one learner's page to the
+next while offline. Static files (stylesheets, scripts, pictures) are
+kept the same way as before, and their addresses change whenever they
+do, so nothing old is ever shown there.
 
 The worker carries a version made from those files; when a release
 changes any of them, the browser sees a new worker, and the page offers
-the update (static/js/pwa.js). Nothing a learner has written is ever
-stored on the device.
+the update (static/js/pwa.js).
 """
 
 import hashlib
@@ -25,6 +30,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
+from django.urls import reverse
 from django.shortcuts import render
 from django.templatetags.static import static
 from django.views.decorators.cache import cache_control
@@ -32,6 +38,92 @@ from django.views.decorators.cache import cache_control
 NAME = "Diction Masters"
 NAVY = "#14213D"
 PARCHMENT = "#F4EFE2"
+
+_MIME_BY_EXT = {
+    "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+    "webp": "image/webp", "ico": "image/x-icon",
+}
+
+
+def _uploaded_icon():
+    """Return the configured brand image and a cache-busting version."""
+    from apps.landing.models import SiteBranding
+
+    branding = SiteBranding.load()
+    upload = branding.logo or branding.favicon
+    if not upload:
+        return None
+    try:
+        # Accessing .name is safe even when a FileField has no file.
+        name = upload.name
+    except ValueError:
+        return None
+    if not name:
+        return None
+    updated = getattr(branding, "updated_at", None)
+    version = str(int(updated.timestamp())) if updated else name
+    return upload, version
+
+
+def _icons():
+    """Install icons made from the uploaded brand artwork when available."""
+    configured = _uploaded_icon()
+    if configured:
+        _, version = configured
+        icons = []
+        for size in (192, 512):
+            icons.append({
+                "src": f"{reverse('pwa_icon', args=[size, 'any'])}?v={version}",
+                "sizes": f"{size}x{size}", "type": "image/png", "purpose": "any",
+            })
+        for size in (192, 512):
+            icons.append({
+                "src": f"{reverse('pwa_icon', args=[size, 'maskable'])}?v={version}",
+                "sizes": f"{size}x{size}", "type": "image/png", "purpose": "maskable",
+            })
+        return icons
+    return [
+        {"src": static("pwa/icon-192.png"), "sizes": "192x192", "type": "image/png", "purpose": "any"},
+        {"src": static("pwa/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any"},
+        {"src": static("pwa/maskable-192.png"), "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+        {"src": static("pwa/maskable-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    ]
+
+
+def app_icon(request, size, purpose="any"):
+    """Make a correctly sized PNG install icon from the site's uploaded logo."""
+    from io import BytesIO
+    from PIL import Image, ImageOps
+    from apps.landing.models import SiteBranding
+
+    if size not in {180, 192, 512} or purpose not in {"any", "maskable"}:
+        return HttpResponse(status=404)
+    branding = SiteBranding.load()
+    upload = branding.logo or branding.favicon
+    if not upload:
+        return HttpResponse(status=404)
+    try:
+        upload.open("rb")
+        with Image.open(upload) as original:
+            source = ImageOps.exif_transpose(original).convert("RGBA")
+            source.load()
+    except (OSError, ValueError):
+        return HttpResponse(status=404)
+    finally:
+        upload.close()
+
+    # Keep the full logo visible on a square app tile. Maskable icons get a
+    # wider safe margin so launchers can crop their corners without clipping it.
+    margin = 0.20 if purpose == "maskable" else 0.08
+    inner = int(size * (1 - margin * 2))
+    source.thumbnail((inner, inner), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", (size, size), (244, 239, 226, 255))
+    canvas.alpha_composite(source, ((size - source.width) // 2, (size - source.height) // 2))
+    output = BytesIO()
+    canvas.save(output, format="PNG", optimize=True)
+    response = HttpResponse(output.getvalue(), content_type="image/png")
+    response["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
 
 
 @lru_cache(maxsize=1)
@@ -60,7 +152,7 @@ def app_version():
     return hashlib.sha256(worker + files.encode()).hexdigest()[:12]
 
 
-@cache_control(max_age=3600, public=True)
+@cache_control(max_age=60, public=True)
 def manifest(request):
     return JsonResponse({
         "name": NAME,
@@ -74,12 +166,7 @@ def manifest(request):
         "background_color": PARCHMENT,
         "theme_color": NAVY,
         "categories": ["education"],
-        "icons": [
-            {"src": static("pwa/icon-192.png"), "sizes": "192x192", "type": "image/png", "purpose": "any"},
-            {"src": static("pwa/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any"},
-            {"src": static("pwa/maskable-192.png"), "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
-            {"src": static("pwa/maskable-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
-        ],
+        "icons": _icons(),
         "shortcuts": [
             {"name": "My dashboard", "url": "/accounts/dashboard/"},
             {"name": "EchoSpell", "url": "/echospell/"},

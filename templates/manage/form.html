@@ -12,8 +12,15 @@
     </p>
     <h1 class="cr-pagehead__title">{% if obj %}{{ obj }}{% else %}New {{ singular }}{% endif %}</h1>
   </div>
-  {% if obj %}<a href="{% url 'manage:delete' screen.key obj.pk %}" class="cr-btn cr-btn--danger">Delete</a>{% endif %}
+  {% if obj and not screen.no_delete %}<a href="{% url 'manage:delete' screen.key obj.pk %}" class="cr-btn cr-btn--danger">Delete</a>{% endif %}
 </header>
+
+{% if screen.key == "dashboard-card-images" and obj.image %}
+<section class="cr-card" aria-label="Current card background">
+  <p class="cr-help">Current background preview</p>
+  <img src="{{ obj.image.url }}" alt="Current background for {{ obj.label }}" style="display:block; width:min(100%, 440px); max-height:220px; object-fit:cover; border-radius:14px;">
+</section>
+{% endif %}
 
 <form method="post" enctype="multipart/form-data" class="cr-card cr-form">
   {% csrf_token %}

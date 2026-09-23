@@ -213,6 +213,7 @@ class Attempt(models.Model):
     )
     marked_at = models.DateTimeField(null=True, blank=True)
     feedback = models.TextField(blank=True)
+    teacher_audio_feedback = models.FileField(upload_to="teacher-feedback/%Y/%m/", blank=True)
 
     class Meta:
         ordering = ["-started_at"]

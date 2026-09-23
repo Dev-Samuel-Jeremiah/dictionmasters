@@ -271,6 +271,7 @@
     var removeButton = box.querySelector("[data-offline-remove]");
     var state = box.querySelector("[data-offline-state]");
     var progress = box.querySelector("[data-offline-progress]");
+    var figure = box.querySelector("[data-offline-figure]");
     if (!keepButton) return;
 
     var entry = {
@@ -284,6 +285,12 @@
       state.hidden = !text;
       state.textContent = text || "";
       state.className = "vid__state" + (tone ? " vid__state--" + tone : "");
+    }
+
+    function showProgress(percent) {
+      progress.hidden = false;
+      progress.firstElementChild.style.width = Math.max(percent, 2) + "%";
+      if (figure) figure.textContent = percent + "%";
     }
 
     function show() {
@@ -303,18 +310,20 @@
 
     keepButton.addEventListener("click", function () {
       keepButton.disabled = true;
-      progress.hidden = false;
-      progress.firstElementChild.style.width = "2%";
-      say("Preparing for offline viewing…");
+      keepButton.lastChild.textContent = " Saving…";
+      showProgress(0);
+      say("Getting your copy ready…", "working");
       save(entry, function (percent) {
-        progress.firstElementChild.style.width = percent + "%";
-        say("Preparing for offline viewing… " + percent + "%");
+        showProgress(percent);
+        say("Saving for offline — " + percent + "% done", "working");
       }).then(function (made) {
+        keepButton.lastChild.textContent = " Save for offline";
         record = made;
         keepButton.disabled = false;
         show();
       }).catch(function (error) {
         keepButton.disabled = false;
+        keepButton.lastChild.textContent = " Save for offline";
         progress.hidden = true;
         say(error.message || "That didn't work. Please try again.", "bad");
       });
@@ -345,7 +354,7 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  function start() {
     var boxes = document.querySelectorAll("[data-video][data-ticket]");
     if (!boxes.length && !document.querySelector("[data-offline-list]")) return;
     refresh().then(function () {
@@ -353,7 +362,17 @@
       var list = document.querySelector("[data-offline-list]");
       if (list) fillList(list);
     });
-  });
+  }
+
+  // boot.js injects this file only on pages with a video. Dynamically
+  // inserted scripts can finish loading after DOMContentLoaded, in which
+  // case a listener registered here would never run and no buttons receive
+  // their handlers.
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
 
   // The "Offline videos" page: what this device is holding.
   function fillList(list) {

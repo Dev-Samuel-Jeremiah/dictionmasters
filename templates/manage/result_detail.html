@@ -25,7 +25,7 @@
 
 {% if errors %}<ul class="cr-errors">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
 
-<form method="post" class="cr-form cr-marking">
+<form method="post" enctype="multipart/form-data" class="cr-form cr-marking">
   {% csrf_token %}
 
   {% if source == "assessment" %}
@@ -59,6 +59,8 @@
   <section class="cr-card">
     <label class="cr-field"><span>Feedback for the learner</span>
       <textarea name="feedback" rows="3" class="cr-input cr-textarea">{{ attempt.feedback }}</textarea></label>
+    {% if attempt.teacher_audio_feedback %}<p class="cr-field"><span>Current audio feedback</span><audio controls preload="none" src="{{ attempt.teacher_audio_feedback.url }}"></audio></p>{% endif %}
+    {% include "manage/_audio_feedback_recorder.html" %}
     <p class="cr-help">Scores from 1 (needs a lot of work) to 5 (excellent). Each spoken answer earns its points in proportion to its rubric total.</p>
     <div class="cr-formactions"><button type="submit" class="cr-btn cr-btn--gold">{% if row.waiting %}Save marks{% else %}Update marks{% endif %}</button></div>
   </section>
@@ -89,6 +91,8 @@
   <section class="cr-card">
     <label class="cr-field"><span>Feedback for the learner</span>
       <textarea name="feedback" rows="3" class="cr-input cr-textarea">{{ attempt.teacher_feedback }}</textarea></label>
+    {% if attempt.teacher_audio_feedback %}<p class="cr-field"><span>Current audio feedback</span><audio controls preload="none" src="{{ attempt.teacher_audio_feedback.url }}"></audio></p>{% endif %}
+    {% include "manage/_audio_feedback_recorder.html" %}
     <p class="cr-help">The score is the share of answers marked right or Good. The learner sees it, with your feedback, on their result.</p>
     <div class="cr-formactions"><button type="submit" class="cr-btn cr-btn--gold">{% if row.waiting %}Save marks{% else %}Update marks{% endif %}</button></div>
   </section>

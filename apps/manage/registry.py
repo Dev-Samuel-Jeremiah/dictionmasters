@@ -16,6 +16,7 @@ delete and uploads all follow from it.
                be opened inside one Level
     children   keys of the things that live inside this one
     readonly   records the site writes itself: viewable, not editable
+    no_add, no_delete  fixed records: editable, but cannot be created or removed
     where      only the records matching this filter belong to the screen
                (44 Academy and Tricks to Sound Fluent share their tables)
     defaults   set on every record added here ("book.tricks_group" = the
@@ -134,6 +135,17 @@ def assessment_screens(programme, lessons_key, key_prefix, lesson_word):
 
 
 SECTIONS = [
+    {
+        "slug": "dashboard", "name": "Dashboard appearance", "icon": "🖼️", "tone": "#7A2438",
+        "blurb": "Upload a separate background image for every learner dashboard card.",
+        "screens": [
+            {"key": "dashboard-card-images", "model": "accounts.DashboardCardImage",
+             "name": "Dashboard card images", "singular": "dashboard card image",
+             "columns": ["label", "image"], "search": ["key"], "form": ["image"],
+             "no_add": True, "no_delete": True,
+             "labels": {"image": ("Background image", "Upload a photo or illustration from this device. Leave empty to use the built-in card colors.")}},
+        ],
+    },
     {
         "slug": "echospell", "name": "EchoSpell", "icon": "🔊", "tone": "#2e7d62",
         "blurb": "Levels, groups, card lessons and scored activities.",

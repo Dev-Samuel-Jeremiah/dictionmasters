@@ -43,6 +43,10 @@ class QuickWord(AudioContent):
     example_sentence = models.TextField(
         blank=True, help_text="The word used in a full sentence.",
     )
+    synonyms = models.CharField(
+        max_length=200, blank=True,
+        help_text="Comma-separated everyday synonyms, e.g. \"happy, glad, pleased\".",
+    )
     level = models.CharField(
         max_length=100, choices=LEVEL_NAME_CHOICES, blank=True,
         help_text="The level this word suits. Optional.",

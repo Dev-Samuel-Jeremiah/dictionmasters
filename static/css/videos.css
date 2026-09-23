@@ -3,26 +3,75 @@
 
 .vid { display: grid; gap: 10px; }
 .vid__player { width: 100%; border-radius: 14px; background: #14213D; display: block; }
-.vid__bar { display: grid; gap: 8px; }
-.vid__actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.vid__btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 15px; border-radius: 11px;
-  font: inherit; font-size: 0.86rem; font-weight: 600; line-height: 1;
-  color: var(--ink); background: rgba(20, 33, 61, 0.06);
-  border: 1px solid rgba(20, 33, 61, 0.1); cursor: pointer; text-decoration: none;
-  transition: background 0.15s ease, transform 0.15s ease;
+
+/* The offline strip under a video: what it can do, and what it is doing.
+   It sits on dark video cards and on light pages alike, so it carries its
+   own background and light text. */
+.vid__bar {
+  display: grid; gap: 10px;
+  padding: 12px 14px; border-radius: 14px;
+  color: #fffdf8; background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
-.vid__btn:hover { background: rgba(20, 33, 61, 0.1); transform: translateY(-1px); }
-.vid__btn[disabled] { opacity: 0.55; cursor: progress; transform: none; }
-.vid__btn--keep { color: #14213D; background: linear-gradient(135deg, #f0c878, #c98f3a); border-color: transparent; }
-.vid__btn--watch { color: #fff; background: #2e7d62; border-color: transparent; }
-.vid__btn--remove { color: #9b3550; background: transparent; border-color: rgba(155, 53, 80, 0.3); }
-.vid__state { margin: 0; font-size: 0.84rem; font-weight: 600; color: var(--ink-70); }
-.vid__state--good { color: #2e7d62; }
-.vid__state--bad { color: #9b3550; }
-.vid__progress { height: 6px; border-radius: 999px; background: rgba(20, 33, 61, 0.1); overflow: hidden; }
-.vid__progress > span { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #f0c878, #c98f3a); transition: width 0.25s ease; }
+.vid__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.vid__btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 42px; padding: 10px 18px; border-radius: 12px;
+  font: inherit; font-size: 0.9rem; font-weight: 700; line-height: 1;
+  border: 1.5px solid transparent; cursor: pointer; text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.vid__btn:hover { transform: translateY(-1px); }
+.vid__btn:focus-visible { outline: 3px solid #f0c878; outline-offset: 2px; }
+.vid__btn[disabled] { opacity: 0.75; cursor: progress; transform: none; }
+
+/* Save: the one to reach for, so it is the brightest thing here. */
+.vid__btn--keep { color: #14213D; background: linear-gradient(135deg, #f7d68f, #d99b36); box-shadow: 0 6px 16px rgba(217, 155, 54, 0.45); }
+.vid__btn--keep:hover { box-shadow: 0 10px 22px rgba(217, 155, 54, 0.55); }
+.vid__btn--watch { color: #fffdf8; background: linear-gradient(135deg, #3aa882, #237a5c); box-shadow: 0 6px 16px rgba(35, 122, 92, 0.4); }
+.vid__btn--remove { color: #ffd9e0; background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 217, 224, 0.45); }
+.vid__btn--remove:hover { color: #fff; background: rgba(214, 74, 104, 0.35); }
+
+/* What it is doing, said plainly and in a colour that shows. */
+.vid__state { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 600; color: #fffdf8; }
+.vid__state--good { color: #9ff0cf; }
+.vid__state--bad { color: #ffc2cd; }
+.vid__state--working::before {
+  content: ""; width: 15px; height: 15px; border-radius: 50%;
+  border: 2.5px solid rgba(255, 253, 248, 0.35); border-top-color: #f7d68f;
+  animation: vid-spin 0.8s linear infinite;
+}
+@keyframes vid-spin { to { transform: rotate(360deg); } }
+
+/* The bar itself: tall enough to see across a room, with the number on it. */
+.vid__progress {
+  position: relative; height: 22px; border-radius: 999px; overflow: hidden;
+  background: rgba(255, 253, 248, 0.18);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.vid__progress > span {
+  display: block; height: 100%; width: 0; border-radius: 999px;
+  background: linear-gradient(90deg, #f7d68f, #d99b36);
+  background-size: 28px 28px;
+  transition: width 0.3s ease;
+  animation: vid-stripes 0.9s linear infinite;
+  background-image: linear-gradient(90deg, #f7d68f, #d99b36),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.28) 0 8px, rgba(255, 255, 255, 0) 8px 16px);
+  background-blend-mode: overlay;
+}
+.vid__progress__figure {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 0.78rem; font-weight: 800; color: #14213D; letter-spacing: 0.02em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+@keyframes vid-stripes { from { background-position: 0 0, 0 0; } to { background-position: 0 0, 32px 0; } }
+
+/* On a light page (the Offline videos list) the strip turns dark-on-light. */
+.vid-kept .vid__bar, .ui-body > .vid .vid__bar {
+  color: var(--ink); background: rgba(20, 33, 61, 0.05); border-color: rgba(20, 33, 61, 0.1);
+}
+.vid-kept .vid__state, .ui-body > .vid .vid__state { color: var(--ink); }
+.vid-kept .vid__btn--remove, .ui-body > .vid .vid__btn--remove { color: #9b3550; border-color: rgba(155, 53, 80, 0.35); background: transparent; }
 
 /* The Offline videos page */
 .vid-keptlist, .vid-devices { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }

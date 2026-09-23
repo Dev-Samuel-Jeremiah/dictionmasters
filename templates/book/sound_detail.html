@@ -30,6 +30,9 @@
       </div>
       <div class="ui-hero__side">
         {% if programme.sections %}
+        {% url programme.list as back_fallback %}{% include "includes/history_back.html" %}
+        {% endif %}
+        {% if programme.sections %}
         <a href="{% url programme.section active_tab %}" class="ui-btn ui-btn--glass">Browse by section</a>
         {% else %}
         <a href="{% url 'book:phonemic_chart' %}" class="ui-btn ui-btn--glass">iː Phonemic chart</a>

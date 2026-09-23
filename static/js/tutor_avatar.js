@@ -36,23 +36,10 @@
     if (event.detail && event.detail.on) started(); else stopped();
   });
 
-  // Showing only female or only male voices in the picker.
+  // Choosing a face marks it at once, before the form is saved.
   document.addEventListener("DOMContentLoaded", function () {
     var picker = document.querySelector("[data-voice-picker]");
     if (!picker) return;
-    var buttons = picker.querySelectorAll("[data-filter]");
-    Array.prototype.forEach.call(buttons, function (button) {
-      button.addEventListener("click", function () {
-        var wanted = button.dataset.filter;
-        Array.prototype.forEach.call(buttons, function (other) {
-          other.classList.toggle("is-on", other === button);
-        });
-        Array.prototype.forEach.call(picker.querySelectorAll("[data-voice-card]"), function (card) {
-          card.hidden = wanted !== "all" && card.dataset.gender !== wanted;
-        });
-      });
-    });
-    // Choosing a face marks it at once, before the form is saved.
     picker.addEventListener("change", function (event) {
       if (event.target.name !== "voice") return;
       Array.prototype.forEach.call(picker.querySelectorAll("[data-voice-card]"), function (card) {
@@ -74,11 +61,18 @@
         }
         audio = new Audio(button.dataset.voiceSample);
         button.classList.add("is-playing");
+        button.textContent = "Speaking…";
+        button.setAttribute("aria-pressed", "true");
         function stop() {
           button.classList.remove("is-playing");
+          button.textContent = "▶ Hear me";
+          button.setAttribute("aria-pressed", "false");
           if (face) face.classList.remove("is-speaking");
         }
-        audio.addEventListener("playing", function () { if (face) face.classList.add("is-speaking"); });
+        audio.addEventListener("playing", function () {
+          button.textContent = "Speaking…";
+          if (face) face.classList.add("is-speaking");
+        });
         audio.addEventListener("ended", stop);
         audio.addEventListener("pause", stop);
         audio.addEventListener("error", function () {

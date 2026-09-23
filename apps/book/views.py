@@ -69,6 +69,12 @@ def _real_sounds_by_symbol():
 TABS = SECTION_CHOICES
 TAB_SLUGS = {slug for slug, _label in TABS}
 
+def programme_tabs(info):
+    """Use each programme's name for its first lesson tab."""
+    if info["numbered"]:
+        return TABS
+    return [(slug, "Sound" if slug == "lens" else label) for slug, label in TABS]
+
 
 @login_required
 def home(request):
@@ -180,7 +186,7 @@ def lesson_detail(request, programme, slug, tab="lens", sound=None, extra_tabs=(
         # Tricks are numbered by their place in the list: Trick 1, Trick 2…
         "number": ([s.pk for group in lesson_groups(programme) for s in group["sounds"]].index(sound.pk) + 1
                    if info["numbered"] else None),
-        "tabs": [*TABS, *extra_tabs],
+        "tabs": [*programme_tabs(info), *extra_tabs],
         "active_tab": tab,
         **(extra or {}),
         # Any number of videos for this tab, in the order the admin set.
@@ -291,7 +297,7 @@ def lesson_sections(request, programme, section=None, steps=None):
 
     info = programme_for(programme)
     sections = [{"slug": slug, "label": label, "blurb": SECTION_BLURBS.get(slug, ""),
-                 "icon": SECTION_ICONS.get(slug, "")} for slug, label in TABS]
+                 "icon": SECTION_ICONS.get(slug, "")} for slug, label in programme_tabs(info)]
     if section is None:
         return render(request, "book/sections.html", {"sections": sections, "programme": info})
     if section not in TAB_SLUGS:

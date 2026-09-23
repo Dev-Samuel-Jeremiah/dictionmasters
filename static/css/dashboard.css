@@ -260,6 +260,7 @@
   margin-bottom: 22px;
 }
 .dash-stat {
+  position: relative;
   padding: 20px 20px 18px;
   border-radius: 18px;
   background: var(--dash-card);
@@ -274,6 +275,21 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
 .dash-stat:nth-child(4) { animation-delay: 0.18s; }
 .dash-stat:nth-child(5) { animation-delay: 0.24s; }
 .dash-stat:nth-child(6) { animation-delay: 0.3s; }
+.dash-stat__background {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; filter: brightness(0.43); pointer-events: none;
+}
+.dash-stat--image { color: #fffdf8; }
+.dash-stat--image .dash-stat__label,
+.dash-stat--image .dash-stat__value,
+.dash-stat--image .dash-stat__foot { position: relative; z-index: 2; }
+.dash-stat--image .dash-stat__icon { z-index: 2; }
+.dash-stat--image::before { z-index: 1; }
+.dash-stat--image .dash-stat__label,
+.dash-stat--image .dash-stat__value,
+.dash-stat--image .dash-stat__foot { color: #fffdf8; }
+.dash-stat--image .dash-stat__value small { color: rgba(255, 253, 248, 0.78); }
+.dash-stat--image .dash-stat__icon { background: rgba(255, 255, 255, 0.18); color: #fffdf8; }
 .dash-stat::before {
   content: "";
   position: absolute; left: 0; right: 0; top: 0; height: 4px;
@@ -440,6 +456,14 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
     radial-gradient(circle at 85% 0%, rgba(255, 255, 255, 0.22), transparent 45%),
     linear-gradient(160deg, var(--tool), var(--tool-2));
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, var(--dash-shadow);
+}
+.dash-tool--image {
+  isolation: isolate;
+}
+.dash-tool--image > :not(.dash-tool__background) { position: relative; z-index: 1; }
+.dash-tool__background {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; filter: brightness(0.43); pointer-events: none; z-index: 0;
 }
 .dash-tool::before {                     /* deep background shape */
   content: "";

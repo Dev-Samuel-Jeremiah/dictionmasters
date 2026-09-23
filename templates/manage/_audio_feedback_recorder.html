@@ -1,0 +1,10 @@
+<div class="cr-field cr-feedback-recorder" data-recorder>
+  <span>Record audio feedback</span>
+  <div class="cr-formactions">
+    <button type="button" class="cr-btn cr-btn--ghost" data-record-start>&#9679; Record</button>
+    <button type="button" class="cr-btn cr-btn--ghost" data-record-stop hidden>&#9632; Stop</button>
+    <span data-record-status aria-live="polite"></span>
+  </div>
+  <audio controls preload="none" data-record-playback hidden></audio>
+  <label class="cr-help">Or choose an audio file <input type="file" name="teacher_audio_feedback" accept="audio/*" data-record-file></label>
+</div>

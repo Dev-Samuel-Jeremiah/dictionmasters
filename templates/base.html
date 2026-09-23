@@ -10,7 +10,7 @@
   {# Installing it as an app (apps/landing/pwa.py). #}
   <link rel="manifest" href="{% url 'pwa_manifest' %}">
   <meta name="theme-color" content="#14213D">
-  <link rel="apple-touch-icon" href="{% static 'pwa/apple-touch-icon.png' %}">
+  <link rel="apple-touch-icon" href="{% if branding.logo or branding.favicon %}{% url 'pwa_icon' 180 'any' %}?v={{ branding.updated_at|date:'U' }}{% else %}{% static 'pwa/apple-touch-icon.png' %}{% endif %}">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Diction Masters">
@@ -55,7 +55,7 @@
   {# The steps, for browsers with no install button of their own. #}
   <dialog class="install-steps" id="install-steps" aria-labelledby="install-fab-title">
     <div class="install-steps__card">
-      <img src="{% static 'pwa/icon-192.png' %}" alt="" class="install-steps__icon">
+      <img src="{% if branding.logo or branding.favicon %}{% url 'pwa_icon' 192 'any' %}?v={{ branding.updated_at|date:'U' }}{% else %}{% static 'pwa/icon-192.png' %}{% endif %}" alt="" class="install-steps__icon">
       <h2 id="install-fab-title" class="install-steps__title">Install Diction Masters</h2>
       <p class="install-steps__lede">Open it from your home screen like any app, full screen, and always up to date.</p>
       <ol class="install-steps__list" data-for="ios">
@@ -79,6 +79,7 @@
   {% if user.is_authenticated %}<script src="{% static 'js/quick_tools.js' %}" defer></script>
   <script src="{% static 'js/account_menu.js' %}" defer></script>{% endif %}
   <script src="{% static 'js/pwa.js' %}" defer></script>
+  <script src="{% static 'js/history_back.js' %}" defer></script>
   {% comment %}The rest are fetched only by the pages that use them
   (static/js/boot.js), each by its real address so hashed names work.{% endcomment %}
   <script type="application/json" id="page-scripts">{

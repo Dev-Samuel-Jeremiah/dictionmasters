@@ -41,6 +41,11 @@
     </div>
   </div>
 </section>
+{% if programme.sections %}
+<div class="wrap" style="margin-top: 14px;">
+  {% with back_fallback=back_url %}{% include "includes/history_back.html" %}{% endwith %}
+</div>
+{% endif %}
 
 <section>
   <div class="wrap es-body es-body--narrow">

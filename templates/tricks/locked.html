@@ -20,6 +20,9 @@
             <p class="ui-hero__lede">The {{ programme.lessons_word }} open one at a time. Finish {{ programme.lesson_word|capfirst }} {{ blocker.number }} and pass its assessment to get here.</p>
           </div>
         </div>
+        <div class="ui-hero__side">
+          {% url programme.list as back_fallback %}{% include "includes/history_back.html" %}
+        </div>
       </div>
     </div>
   </section>

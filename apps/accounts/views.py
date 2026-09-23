@@ -16,7 +16,7 @@ from .forms import (
     SchoolRegistrationForm,
     StudentRegistrationForm,
 )
-from .models import User
+from .models import DashboardCardImage, User
 
 
 def _post_login_redirect(user):
@@ -122,4 +122,10 @@ def dashboard(request):
     carry on, and the tools themselves."""
     if request.user.role == User.Role.SCHOOL_ADMIN:
         return redirect("schools:dashboard")
-    return render(request, "accounts/dashboard.html", learner_dashboard(request.user))
+    dashboard = learner_dashboard(request.user)
+    dashboard["dashboard_card_images"] = {
+        card.key.replace("-", "_"): card.image.url
+        for card in DashboardCardImage.objects.exclude(image="")
+        if card.image
+    }
+    return render(request, "accounts/dashboard.html", dashboard)

@@ -140,8 +140,14 @@ def _cell(obj, column):
     value = getattr(obj, column, "")
     if callable(value):
         value = value()
-    if hasattr(value, "url") and hasattr(value, "name"):      # a file or image
-        return {"kind": "file", "text": value.name.rsplit("/", 1)[-1] if value else "", "url": value.url if value else ""}
+    if hasattr(value, "name") and hasattr(value, "storage"):  # a file or image
+        if not value or not value.name:
+            return {"kind": "blank"}
+        try:
+            url = value.url
+        except ValueError:  # a cleared or otherwise empty FileField
+            return {"kind": "blank"}
+        return {"kind": "file", "text": value.name.rsplit("/", 1)[-1], "url": url}
     if isinstance(value, bool):
         return {"kind": "bool", "on": value}
     if value is None or value == "":
@@ -311,6 +317,9 @@ def record_form(request, key, pk=None):
     if screen.get("readonly"):
         messages.info(request, f"{_title(screen)} are written by the site itself, so they can only be viewed.")
         return redirect("manage:list", key=key)
+    if screen.get("no_add") and not pk:
+        messages.info(request, f"These { _title(screen).lower()} are fixed; use the existing records.")
+        return redirect("manage:list", key=key)
 
     obj = get_object_or_404(_rows_for(screen), pk=pk) if pk else None
 
@@ -388,8 +397,8 @@ def record_delete(request, key, pk):
     screen = _screen_or_404(key)
     model = _model_for(screen)
     obj = get_object_or_404(_rows_for(screen), pk=pk)
-    if screen.get("readonly"):
-        messages.info(request, f"{_title(screen)} can only be viewed.")
+    if screen.get("readonly") or screen.get("no_delete"):
+        messages.info(request, f"{_title(screen)} cannot be deleted.")
         return redirect("manage:list", key=key)
 
     if request.method == "POST":
@@ -680,6 +689,12 @@ def result_detail(request, source, pk):
             if results.mark_activity(attempt, verdicts, request.POST.get("feedback", "")):
                 errors = ["Mark every recording Good or Needs work."]
         if not errors:
+            audio_feedback = request.FILES.get("teacher_audio_feedback")
+            if audio_feedback:
+                if attempt.teacher_audio_feedback:
+                    attempt.teacher_audio_feedback.delete(save=False)
+                attempt.teacher_audio_feedback = audio_feedback
+                attempt.save(update_fields=["teacher_audio_feedback"])
             _record(request, attempt, CHANGE, "Marked in the control room")
             messages.success(request, f"Marks saved. {results.learner_name(attempt.user)} can see them on their result.")
             nxt = results.rows(show="to-mark")

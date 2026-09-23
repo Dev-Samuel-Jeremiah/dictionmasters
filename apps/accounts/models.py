@@ -11,6 +11,7 @@ will all naturally type.
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
+from django.core.validators import FileExtensionValidator
 from django.db import models
 
 
@@ -114,3 +115,52 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_individual(self):
         return self.role == self.Role.INDIVIDUAL
+
+
+class DashboardCardImage(models.Model):
+    """Optional image backgrounds for individual learner dashboard cards."""
+
+    CARD_KEYS = (
+        ("progress-echospell", "EchoSpell progress card"),
+        ("progress-etiquette", "Etiquette Advantage progress card"),
+        ("progress-academy", "44 Academy progress card"),
+        ("progress-tricks", "Tricks to Sound Fluent progress card"),
+        ("progress-tutor", "AI Reading Tutor progress card"),
+        ("progress-modules", "My Modules progress card"),
+        ("tool-learning-modules", "Learning Modules tool card"),
+        ("tool-echospell", "EchoSpell tool card"),
+        ("tool-quick-words", "Quick Words tool card"),
+        ("tool-assessments", "Assessments tool card"),
+        ("tool-clash", "Diction Clash tool card"),
+        ("tool-tutor", "AI Reading Tutor tool card"),
+        ("tool-daily-practice", "Daily Practice tool card"),
+        ("tool-academy", "44 Academy tool card"),
+        ("tool-tricks", "Tricks to Sound Fluent tool card"),
+        ("tool-reading-club", "Reading Club tool card"),
+        ("tool-reference-library", "Reference Library tool card"),
+    )
+
+    key = models.CharField(max_length=40, primary_key=True, choices=CARD_KEYS, editable=False)
+    image = models.ImageField(
+        upload_to="dashboard/cards/", blank=True,
+        validators=[FileExtensionValidator(["png", "jpg", "jpeg", "webp"])],
+        help_text="Upload an image from this device. Wide images work best. Leave empty to use the card's built-in colors.",
+    )
+
+    class Meta:
+        ordering = ["key"]
+        verbose_name = "dashboard card image"
+        verbose_name_plural = "dashboard card images"
+
+    @property
+    def label(self):
+        return self.get_key_display()
+
+    def __str__(self):
+        return self.get_key_display()
+
+    def save(self, *args, **kwargs):
+        previous = type(self).objects.filter(pk=self.pk).first() if self.pk else None
+        super().save(*args, **kwargs)
+        if previous and previous.image and previous.image.name != (self.image.name if self.image else ""):
+            previous.image.storage.delete(previous.image.name)

@@ -19,7 +19,7 @@
 </head>
 <body>
   <main class="card">
-    <img src="{% static 'pwa/icon-192.png' %}" alt="">
+    <img src="{% if branding.logo %}{{ branding.logo.url }}{% elif branding.favicon %}{{ branding.favicon.url }}{% else %}{% static 'pwa/icon-192.png' %}{% endif %}" alt="">
     <h1>You're offline</h1>
     <p>Diction Masters needs the internet for your lessons and recordings. Check your connection, then try again.</p>
     <button type="button" onclick="location.reload()">Try again</button>

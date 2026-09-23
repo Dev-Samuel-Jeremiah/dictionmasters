@@ -61,10 +61,11 @@
     </div>
     {% endif %}
 
-    {% if attempt.feedback %}
+    {% if attempt.feedback or attempt.teacher_audio_feedback %}
     <div class="as-teacher">
       <p class="as-teacher__label">Feedback{% if attempt.marked_by %} from {{ attempt.marked_by.get_full_name|default:"your teacher" }}{% endif %}</p>
-      <p class="as-teacher__body">{{ attempt.feedback|linebreaksbr }}</p>
+      {% if attempt.feedback %}<p class="as-teacher__body">{{ attempt.feedback|linebreaksbr }}</p>{% endif %}
+      {% if attempt.teacher_audio_feedback %}<audio controls preload="none" src="{{ attempt.teacher_audio_feedback.url }}" class="as-review__audio">Your browser can't play this audio.</audio>{% endif %}
     </div>
     {% endif %}
 

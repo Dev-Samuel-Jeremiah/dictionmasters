@@ -30,6 +30,9 @@
           </div>
         </div>
         <div class="ui-hero__side">
+          {% if programme.sections %}
+          {% url programme.home as back_fallback %}{% include "includes/history_back.html" %}
+          {% endif %}
           <a href="{% url programme.list %}" class="ui-btn ui-btn--glass">{{ programme.list_title }}</a>
         </div>
       </div>

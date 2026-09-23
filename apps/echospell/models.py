@@ -461,6 +461,10 @@ class ActivityAttemptBase(models.Model):
     passed = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_MARKED)
     teacher_feedback = models.TextField(blank=True)
+    teacher_audio_feedback = models.FileField(
+        upload_to="teacher-feedback/%Y/%m/", blank=True,
+        help_text="Audio feedback recorded by the teacher.",
+    )
     teacher_score = models.PositiveIntegerField(
         null=True, blank=True, help_text="Out of 100, for recorded activities.",
     )

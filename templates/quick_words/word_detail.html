@@ -63,6 +63,13 @@
         <p class="qw-block__example">&ldquo;{{ word.example_sentence }}&rdquo;</p>
       </section>
       {% endif %}
+
+      {% if word.synonyms %}
+      <section class="qk-panel qw-block">
+        <p class="qk-panel__label qw-block__label">Similar words</p>
+        <p class="qw-block__body">{{ word.synonyms }}</p>
+      </section>
+      {% endif %}
     </div>
 
     <aside class="qk-word__side">

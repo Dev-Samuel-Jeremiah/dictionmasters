@@ -38,6 +38,9 @@
   </section>
 
   <div class="wrap es-body es-body--narrow">
+    {% if programme.sections %}
+    {% with back_fallback=back_url %}{% include "includes/history_back.html" %}{% endwith %}
+    {% endif %}
 
     {% if attempt.status == "awaiting" %}
     <section class="es-panel es-score es-score--wait">
@@ -63,11 +66,12 @@
 
     {% if after_result %}{% include after_result %}{% endif %}
 
-    {% if attempt.teacher_feedback or attempt.teacher_score is not None %}
+    {% if attempt.teacher_feedback or attempt.teacher_audio_feedback or attempt.teacher_score is not None %}
     <section class="es-panel content-card teacher-note">
       <p class="teacher-note__label">Your teacher says</p>
       {% if attempt.teacher_score is not None %}<p class="teacher-note__score">{{ attempt.teacher_score }}/100</p>{% endif %}
       {% if attempt.teacher_feedback %}<p class="teacher-note__body">{{ attempt.teacher_feedback }}</p>{% endif %}
+      {% if attempt.teacher_audio_feedback %}<audio controls preload="none" src="{{ attempt.teacher_audio_feedback.url }}" class="result-item__audio">Your browser can't play this audio.</audio>{% endif %}
     </section>
     {% endif %}
 

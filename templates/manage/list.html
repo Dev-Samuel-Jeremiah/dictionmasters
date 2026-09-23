@@ -12,7 +12,7 @@
     <h1 class="cr-pagehead__title">{{ title }}</h1>
     <p class="cr-pagehead__note">{{ total }} item{{ total|pluralize }}{% if query %} matching “{{ query }}”{% endif %}</p>
   </div>
-  {% if not readonly %}
+  {% if not readonly and not screen.no_add %}
   <a href="{% url 'manage:add' screen.key %}{% if parent_obj %}?in={{ parent_obj.pk }}{% endif %}" class="cr-btn cr-btn--gold">+ Add {{ singular }}</a>
   {% endif %}
 </header>
@@ -52,7 +52,7 @@
             <span class="cr-blank">view only</span>
             {% else %}
             <a href="{% url 'manage:edit' screen.key row.pk %}" class="cr-btn cr-btn--ghost cr-btn--small">Edit</a>
-            <a href="{% url 'manage:delete' screen.key row.pk %}" class="cr-btn cr-btn--danger cr-btn--small">Delete</a>
+            {% if not screen.no_delete %}<a href="{% url 'manage:delete' screen.key row.pk %}" class="cr-btn cr-btn--danger cr-btn--small">Delete</a>{% endif %}
             {% endif %}
           </td>
         </tr>
@@ -73,7 +73,7 @@
 {% else %}
 <div class="cr-empty cr-empty--big">
   <p>Nothing here yet{% if query %} for “{{ query }}”{% endif %}.</p>
-  {% if not readonly %}<a href="{% url 'manage:add' screen.key %}{% if parent_obj %}?in={{ parent_obj.pk }}{% endif %}" class="cr-btn cr-btn--gold">+ Add the first {{ singular }}</a>{% endif %}
+  {% if not readonly and not screen.no_add %}<a href="{% url 'manage:add' screen.key %}{% if parent_obj %}?in={{ parent_obj.pk }}{% endif %}" class="cr-btn cr-btn--gold">+ Add the first {{ singular }}</a>{% endif %}
 </div>
 {% endif %}
 {% endblock %}

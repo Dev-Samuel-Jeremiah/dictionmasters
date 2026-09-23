@@ -12,7 +12,9 @@
   {% if ticket %}
   <div class="vid__bar" data-offline-bar>
     <p class="vid__state" data-offline-state hidden></p>
-    <div class="vid__progress" data-offline-progress hidden><span></span></div>
+    <div class="vid__progress" data-offline-progress hidden>
+      <span></span><b class="vid__progress__figure" data-offline-figure>0%</b>
+    </div>
     <div class="vid__actions">
       <button type="button" class="vid__btn vid__btn--keep" data-offline-keep>
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 18.5h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
