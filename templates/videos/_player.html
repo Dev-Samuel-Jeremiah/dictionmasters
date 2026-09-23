@@ -12,6 +12,7 @@
   {% if ticket %}
   <div class="vid__bar" data-offline-bar>
     <p class="vid__state" data-offline-state hidden></p>
+    <a class="vid__manage-devices" data-manage-devices href="{% url 'videos:offline' %}#devices" hidden>Manage devices</a>
     <div class="vid__progress" data-offline-progress hidden>
       <span></span><b class="vid__progress__figure" data-offline-figure>0%</b>
     </div>

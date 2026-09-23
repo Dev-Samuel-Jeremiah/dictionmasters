@@ -110,13 +110,34 @@
         headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
         body: JSON.stringify({ ticket: entry.ticket, device: device, device_name: deviceName(), title: entry.title })
       }).then(readJson).then(function (allowed) {
-        if (!allowed.ok) throw new Error(allowed.error || "That copy isn't allowed.");
+        if (!allowed.ok) {
+          var denied = new Error(allowed.error || "That copy isn't allowed.");
+          denied.code = allowed.code || "";
+          throw denied;
+        }
         record = {
           id: entry.ticketId, licence: allowed.id, title: allowed.title, size: allowed.size,
           type: allowed.content_type, expires: allowed.expires_at, watch: allowed.watch_url,
           page: location.pathname, pieces: 0, device: device
         };
-        return stream(allowed.url, secret, record, onProgress);
+        return stream(allowed.url, secret, record, onProgress).catch(function (error) {
+          // Prepare reserves a licence before bytes arrive. If the transfer
+          // fails, release it and remove any partial encrypted chunks.
+          return ask("pieces", "getAll").catch(function () { return []; }).then(function (pieces) {
+            var cleanup = Promise.resolve();
+            (pieces || []).forEach(function (piece) {
+              if (piece.id === record.id) {
+                cleanup = cleanup.then(function () { return ask("pieces", "delete", [piece.id, piece.n]); });
+              }
+            });
+            return cleanup.catch(function () { /* still release the server licence */ });
+          }).then(function () {
+            return fetch("/videos/release/", {
+              method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+              body: JSON.stringify({ id: record.licence, device: record.device })
+            }).catch(function () { /* Django can clean it up on the next attempt */ });
+          }).then(function () { throw error; });
+        });
       });
     }).then(function () {
       return ask("videos", "put", record).then(function () { return record; });
@@ -299,6 +320,8 @@
       watchButton.hidden = !kept;
       removeButton.hidden = !kept;
       progress.hidden = true;
+      var manageDevices = box.querySelector("[data-manage-devices]");
+      if (manageDevices) manageDevices.hidden = true;
       if (kept) say("✓ Saved on this device · until " + when(record.expires), "good");
       else say("");
     }
@@ -326,6 +349,8 @@
         keepButton.lastChild.textContent = " Save for offline";
         progress.hidden = true;
         say(error.message || "That didn't work. Please try again.", "bad");
+        var manageDevices = box.querySelector("[data-manage-devices]");
+        if (manageDevices) manageDevices.hidden = error.code !== "device_limit";
       });
     });
 

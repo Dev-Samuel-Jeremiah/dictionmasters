@@ -15,11 +15,12 @@ the ticket in a link only works for the account it was made for.
 
 import json
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError, transaction
 from django.http import Http404, HttpResponseRedirect, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
@@ -132,7 +133,9 @@ def prepare(request):
 
     device, problem = _device_for(request.user, device_id, str(body.get("device_name") or "")[:MAX_DEVICE_NAME])
     if problem:
-        return JsonResponse({"ok": False, "error": problem, "devices": _devices(request.user)}, status=409)
+        code = "device_limit" if problem.startswith("You can keep lessons") else "device_inactive"
+        return JsonResponse({"ok": False, "code": code, "error": problem,
+                             "devices": _devices(request.user)}, status=409)
 
     content_type = ContentType.objects.get_for_model(video)
     title = str(body.get("title") or getattr(video, "video_caption", "") or "Lesson video")[:200]
@@ -171,7 +174,13 @@ def _device_for(user, device_id, name):
         return device, None
 
     limit = device_limit()
-    if StudentDevice.objects.filter(student=user, is_active=True).count() >= limit:
+    # Only devices with a current offline copy use a place. Empty records can
+    # remain after a learner removes their last video or a download is interrupted.
+    holding = StudentDevice.objects.filter(
+        student=user, is_active=True, licenses__is_active=True,
+        licenses__revoked_at__isnull=True, licenses__expires_at__gt=timezone.now(),
+    ).distinct().count()
+    if holding >= limit:
         return None, (f"You can keep lessons on {limit} device{'s' if limit != 1 else ''}. "
                       "Remove one in My devices to use this one.")
     return StudentDevice.objects.create(student=user, device_identifier=device_id, name=name), None
@@ -247,6 +256,9 @@ def deactivate_device(request, pk):
     device.is_active = False
     device.save(update_fields=["is_active", "last_seen_at"])
     device.licenses.update(is_active=False, revoked_at=timezone.now())
+    if "text/html" in request.headers.get("Accept", ""):
+        messages.success(request, f"{device.name or 'Device'} removed. You can now save lessons on another device.")
+        return redirect("videos:offline")
     return JsonResponse({"ok": True, "devices": _devices(request.user)})
 
 

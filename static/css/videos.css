@@ -35,6 +35,8 @@
 /* What it is doing, said plainly and in a colour that shows. */
 .vid__state { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 600; color: #fffdf8; }
 .vid__state--good { color: #9ff0cf; }
+.vid__manage-devices { width: fit-content; color: #f7d68f; font-size: 0.88rem; font-weight: 700; }
+.vid__manage-devices[hidden] { display: none; }
 .vid__state--bad { color: #ffc2cd; }
 .vid__state--working::before {
   content: ""; width: 15px; height: 15px; border-radius: 50%;
@@ -71,6 +73,7 @@
   color: var(--ink); background: rgba(20, 33, 61, 0.05); border-color: rgba(20, 33, 61, 0.1);
 }
 .vid-kept .vid__state, .ui-body > .vid .vid__state { color: var(--ink); }
+.ui-body > .vid .vid__manage-devices { color: var(--maroon); }
 .vid-kept .vid__btn--remove, .ui-body > .vid .vid__btn--remove { color: #9b3550; border-color: rgba(155, 53, 80, 0.35); background: transparent; }
 
 /* The Offline videos page */
