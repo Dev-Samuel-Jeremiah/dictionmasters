@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Diction Library — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui"><section class="ui-hero ui-hero--blue"><div class="wrap">
+  <ol class="ui-crumbs"><li><a href="{% url 'schools:dashboard' %}">School dashboard</a></li><li>Diction Library</li></ol>
+  <div class="ui-hero__inner"><div class="ui-hero__main"><span class="ui-hero__icon" aria-hidden="true">&#128218;</span><div><p class="ui-hero__eyebrow">{{ user.school.name }}</p><h1 class="ui-hero__title">Your school library</h1><p class="ui-hero__lede">Items you publish here are visible only to members of your school.</p></div></div><div class="ui-hero__side"><a class="ui-btn ui-btn--gold" href="{% url 'diction_library:add' %}">Add library item</a><a class="ui-btn ui-btn--glass" href="{% url 'diction_library:hub' %}">Browse library</a></div></div>
+</div></section>
+<div class="wrap ui-body">
+  {% if items %}<div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Title</th><th>Type</th><th>Status</th><th>Added</th><th>Actions</th></tr></thead><tbody>
+  {% for item in items %}<tr><td>{{ item.title }}</td><td>{{ item.get_kind_display }}</td><td>{% if item.is_published %}Published{% else %}Draft{% endif %}</td><td>{{ item.created_at|date:"d M Y" }}</td><td><a href="{% url 'diction_library:detail' item.slug %}">View</a> &middot; <a href="{% url 'diction_library:edit' item.pk %}">Edit</a> <form method="post" action="{% url 'diction_library:delete' item.pk %}" style="display:inline" onsubmit="return confirm('Delete this library item?')">{% csrf_token %}<button type="submit" class="link-quiet">Delete</button></form></td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="ui-empty"><p>Your school has not added any library items yet.</p><a class="ui-btn ui-btn--gold" href="{% url 'diction_library:add' %}">Add the first item</a></div>{% endif %}
+</div></div>
+{% endblock %}

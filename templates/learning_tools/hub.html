@@ -35,6 +35,8 @@
         {% elif tool.icon == "book" %}{% firstof "#7A2438" as tone %}{% firstof "📖" as icon %}
         {% elif tool.icon == "tricks" %}{% firstof "#b8863b" as tone %}{% firstof "✨" as icon %}
         {% elif tool.icon == "reading-club" %}{% firstof "#2f5d8a" as tone %}{% firstof "📚" as icon %}
+        {% elif tool.icon == "diction-library" %}{% firstof "#236b65" as tone %}{% firstof "🏛️" as icon %}
+        {% elif tool.icon == "diction-radio" %}{% firstof "#7A2438" as tone %}{% firstof "📻" as icon %}
         {% else %}{% firstof "#b8863b" as tone %}{% firstof "🔎" as icon %}{% endif %}
         {% if tool.available %}
         <a href="{% url tool.url_name %}" class="ui-card ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">

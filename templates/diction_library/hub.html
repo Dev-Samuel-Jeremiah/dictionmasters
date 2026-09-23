@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Diction Library — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--blue">
+    <div class="wrap">
+      <ol class="ui-crumbs"><li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li><li>Diction Library</li></ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main"><span class="ui-hero__icon" aria-hidden="true">&#128218;</span><div>
+          <p class="ui-hero__eyebrow">Diction Library</p>
+          <h1 class="ui-hero__title">A library to read, watch and listen</h1>
+          <p class="ui-hero__lede">Browse books, stories, audio and video shared by Diction Masters{% if user.school %} and {{ user.school.name }}{% endif %}.</p>
+        </div></div>
+        {% if user.is_school_admin %}<div class="ui-hero__side"><a class="ui-btn ui-btn--gold" href="{% url 'diction_library:manage' %}">Manage school content</a></div>{% endif %}
+      </div>
+    </div>
+  </section>
+  <div class="wrap ui-body">
+    <form method="get" class="ui-panel" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:200px"><label for="library-search">Search the library</label><input id="library-search" type="search" name="q" value="{{ query }}" placeholder="Title or description"></div>
+      <div class="field"><label for="library-kind">Type</label><select id="library-kind" name="kind"><option value="">Everything</option>{% for value,label in kinds %}<option value="{{ value }}"{% if selected_kind == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <button class="ui-btn ui-btn--gold" type="submit">Search</button>
+    </form>
+    {% if items %}<div class="ui-grid">
+      {% for item in items %}<a class="ui-card ui-lift" href="{% url 'diction_library:detail' item.slug %}" style="--tone:#236b65;--i:{{ forloop.counter0 }}">
+        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{% if item.kind == 'book' %}&#128214;{% elif item.kind == 'story' %}&#128214;{% elif item.kind == 'audio' %}&#127925;{% elif item.kind == 'video' %}&#127916;{% else %}&#128196;{% endif %}</span><span class="ui-status">{{ item.get_kind_display }}</span></span>
+        <span class="ui-card__name">{{ item.title }}</span><span class="ui-card__desc">{{ item.summary|default:item.description|truncatewords:24 }}</span>
+        <span class="ui-card__cta">{% if item.school %}{{ item.school.name }}{% else %}Diction Masters{% endif %} &middot; Open &rarr;</span>
+      </a>{% endfor %}
+    </div>{% else %}<div class="ui-empty"><p>No library items match your search yet.</p></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

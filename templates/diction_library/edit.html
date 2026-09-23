@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block title %}{% if item %}Edit{% else %}Add{% endif %} library item — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui"><section class="ui-hero ui-hero--blue"><div class="wrap"><ol class="ui-crumbs"><li><a href="{% url 'schools:dashboard' %}">School dashboard</a></li><li><a href="{% url 'diction_library:manage' %}">Your school library</a></li><li>{% if item %}Edit item{% else %}Add item{% endif %}</li></ol><div class="ui-hero__inner"><div class="ui-hero__main"><span class="ui-hero__icon" aria-hidden="true">&#128218;</span><div><p class="ui-hero__eyebrow">{{ user.school.name }}</p><h1 class="ui-hero__title">{% if item %}Edit library item{% else %}Add library item{% endif %}</h1><p class="ui-hero__lede">Books, stories, audio and video uploaded here are shared with your school only.</p></div></div></div></div></section>
+<div class="wrap ui-body"><section class="ui-panel"><form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}{% if form.non_field_errors %}<ul class="non-field-errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}{% include "includes/form_fields.html" %}<button type="submit" class="ui-btn ui-btn--gold">Save library item</button> <a class="ui-btn ui-btn--glass" href="{% url 'diction_library:manage' %}">Cancel</a></form></section></div></div>
+{% endblock %}

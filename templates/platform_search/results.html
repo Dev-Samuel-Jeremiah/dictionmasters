@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if query %}Search: {{ query }}{% else %}Search Diction Masters{% endif %} — Diction Masters{% endblock %}
+{% block content %}
+<section class="search-page">
+  <div class="wrap search-page__inner">
+    <p class="search-page__eyebrow">Diction Masters</p>
+    <h1>Search the platform</h1>
+    <p class="search-page__lede">Find learning tools, lessons, books, reference articles and media.</p>
+    <form class="search-page__form" data-search-autocomplete="{% url 'platform_search:suggest' %}" role="search" method="get" action="{% url 'platform_search:results' %}">
+      <label class="sr-only" for="search-results-query">Search the platform</label>
+      <input id="search-results-query" type="search" name="q" value="{{ query }}" placeholder="What would you like to learn?" autofocus>
+      <button type="submit">Search</button>
+    </form>
+    {% if minimum_length %}
+      <div class="search-page__empty"><h2>What are you looking for?</h2><p>Enter at least two letters to search across platform features and published content.</p></div>
+    {% elif items %}
+      <p class="search-page__count">{{ items|length }} result{{ items|length|pluralize }} for <strong>“{{ query }}”</strong></p>
+      <div class="search-results">
+        {% for item in items %}
+          <a class="search-result" href="{{ item.url }}">
+            <span class="search-result__section">{{ item.section }}</span>
+            <strong>{{ item.title }}</strong>
+            {% if item.summary %}<span class="search-result__summary">{{ item.summary|truncatechars:220 }}</span>{% endif %}
+            <span class="search-result__action">Open <span aria-hidden="true">→</span></span>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="search-page__empty"><h2>No results for “{{ query }}”</h2><p>Try a shorter phrase or search for a topic such as pronunciation, reading, stories or vocabulary.</p></div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

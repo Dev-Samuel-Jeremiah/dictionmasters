@@ -20,6 +20,8 @@ from apps.learning_modules.models import LearningModule, LessonItem
 from apps.quick_words.models import QuickWord
 from apps.reading_club.models import Book, Chapter
 from apps.reference_library.models import LibraryArticle
+from apps.diction_library.models import LibraryItem
+from apps.diction_radio.models import RadioProgram, RadioEpisode
 from apps.schools.models import School
 
 from . import jobs
@@ -42,6 +44,9 @@ SEARCHES = [
     (Book, ["title", "author"], lambda o: o.author),
     (Chapter, ["title", "summary"], lambda o: str(o.term) if hasattr(o, "term") else ""),
     (LibraryArticle, ["title", "summary"], lambda o: o.category.name),
+    (LibraryItem, ["title", "summary", "description"], lambda o: o.visibility_label),
+    (RadioProgram, ["title", "tagline", "presenter", "description"], lambda o: f"{o.episodes.filter(is_published=True).count()} published episodes"),
+    (RadioEpisode, ["title", "description", "program__title"], lambda o: o.program.title),
 ]
 
 

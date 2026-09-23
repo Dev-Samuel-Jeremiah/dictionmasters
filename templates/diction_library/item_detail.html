@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.title }} — Diction Library{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--blue"><div class="wrap">
+    <ol class="ui-crumbs"><li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li><li><a href="{% url 'diction_library:hub' %}">Diction Library</a></li><li>{{ item.title }}</li></ol>
+    <div class="ui-hero__inner"><div class="ui-hero__main"><span class="ui-hero__icon" aria-hidden="true">&#128218;</span><div><p class="ui-hero__eyebrow">{{ item.get_kind_display }} &middot; {% if item.school %}{{ item.school.name }}{% else %}Diction Masters{% endif %}</p><h1 class="ui-hero__title">{{ item.title }}</h1>{% if item.summary %}<p class="ui-hero__lede">{{ item.summary }}</p>{% endif %}</div></div></div>
+  </div></section>
+  <div class="wrap ui-body"><article class="ui-panel">
+    {% if item.kind == "audio" and item.file %}<audio controls preload="metadata" style="width:100%"><source src="{{ item.file.url }}">Your browser does not support audio playback.</audio>{% endif %}
+    {% if item.kind == "video" and item.file %}<video controls preload="metadata" style="width:100%;max-height:70vh"><source src="{{ item.file.url }}">Your browser does not support video playback.</video>{% endif %}
+    {% if item.description %}<div class="ui-panel__lede" style="white-space:pre-line">{{ item.description }}</div>{% endif %}
+    {% if item.file and item.kind != "audio" and item.kind != "video" %}<p><a class="ui-btn ui-btn--gold" href="{{ item.file.url }}" target="_blank" rel="noopener">Open or download {{ item.get_kind_display|lower }}</a></p>{% endif %}
+    {% if item.external_url %}<p><a class="ui-btn ui-btn--glass" href="{{ item.external_url }}" target="_blank" rel="noopener">Open linked resource</a></p>{% endif %}
+  </article></div>
+</div>
+{% endblock %}

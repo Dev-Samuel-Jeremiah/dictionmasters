@@ -26,6 +26,7 @@
         </div>
         <div class="ui-hero__side">
           <a href="{% url 'learning_tools:hub' %}" class="ui-btn ui-btn--glass">&#129520; Browse the learning tools</a>
+          <a href="{% url 'diction_library:manage' %}" class="ui-btn ui-btn--glass">&#128218; Manage Diction Library</a>
           <a href="{% url 'billing:account' %}" class="ui-btn ui-btn--gold">&#128179; {% if billing.state == "active" %}School plan{% else %}Plans &amp; billing{% endif %}</a>
         </div>
       </div>
@@ -94,7 +95,7 @@
               </tbody>
             </table>
           </div>
-          <p class="ui-panel__lede" style="margin: 14px 0 0;">Diction Masters is where your teachers and students watch, listen and practise. Your school only ever views what they've done; content is published by Diction Masters, not uploaded by schools.</p>
+          <p class="ui-panel__lede" style="margin: 14px 0 0;">Browse Diction Masters resources and upload books, stories, audio or video for your school in the Diction Library. School uploads are only visible to members of {{ school.name }}.</p>
         </section>
 
         <section class="ui-panel">

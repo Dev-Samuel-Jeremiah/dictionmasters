@@ -594,3 +594,11 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
 .dash-btn--install { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(243, 211, 141, 0.55); color: #f3d38d; background: rgba(243, 211, 141, 0.1); cursor: pointer; font: inherit; }
 .dash-btn--install:hover { background: rgba(243, 211, 141, 0.2); }
 .dash-btn--install[hidden] { display: none; }
+
+.dash-search { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 0 0 28px; padding: 22px 26px; border: 1px solid rgba(20,33,61,.1); border-radius: 20px; background: rgba(255,253,248,.96); box-shadow: 0 14px 36px rgba(20,33,61,.08); }
+.dash-search h2 { margin: 0; color: #14213d; font-family: Fraunces, Georgia, serif; font-size: clamp(1.3rem, 2vw, 1.8rem); }
+.dash-search form { display: flex; flex: 1; max-width: 590px; gap: 8px; padding: 5px; border: 1px solid rgba(20,33,61,.13); border-radius: 999px; background: #fff; }
+.dash-search input { height: 44px; padding: 0 14px; border: 0; background: transparent; }
+.dash-search button { display: flex; align-items: center; gap: 12px; padding: 0 20px; white-space: nowrap; }
+@media (max-width: 760px) { .dash-search { align-items: stretch; flex-direction: column; gap: 14px; padding: 18px; } .dash-search form { max-width: none; } }
+@media (max-width: 480px) { .dash-search form { border-radius: 16px; } .dash-search input { font-size: .85rem; } .dash-search button { padding: 0 13px; } }

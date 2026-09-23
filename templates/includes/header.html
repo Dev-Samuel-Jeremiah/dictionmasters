@@ -17,6 +17,12 @@
       {% if not branding.logo or branding.show_name_with_logo %}<span class="brand__name">Diction Masters</span>{% endif %}
     </a>
 
+    <form class="site-search" data-search-autocomplete="{% url 'platform_search:suggest' %}" role="search" method="get" action="{% url 'platform_search:results' %}">
+      <label class="site-search__label" for="site-search-global">Search the platform</label>
+      <input id="site-search-global" type="search" name="q" value="{% if request.resolver_match.namespace == 'platform_search' %}{{ request.GET.q|default:'' }}{% endif %}" placeholder="Search lessons, tools, books…" autocomplete="off">
+      <button type="submit" aria-label="Search">⌕</button>
+    </form>
+
     {% if not user.is_authenticated %}
     <nav class="main-nav" aria-label="Primary">
         <a href="{% url 'landing:home' %}#how-it-works">How it works</a>

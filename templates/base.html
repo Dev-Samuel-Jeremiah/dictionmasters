@@ -24,6 +24,7 @@
   <script>if (window.self !== window.top) document.documentElement.classList.add("is-embedded");</script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'css/ui.css' %}">
+  <link rel="stylesheet" href="{% static 'css/platform_search.css' %}">
   <link rel="stylesheet" href="{% static 'css/upload_progress.css' %}">
   <link rel="stylesheet" href="{% static 'css/videos.css' %}">
   {% block extra_css %}{% endblock %}
@@ -80,6 +81,7 @@
   <script src="{% static 'js/account_menu.js' %}" defer></script>{% endif %}
   <script src="{% static 'js/pwa.js' %}" defer></script>
   <script src="{% static 'js/history_back.js' %}" defer></script>
+  <script src="{% static 'js/platform_search.js' %}" defer></script>
   {% comment %}The rest are fetched only by the pages that use them
   (static/js/boot.js), each by its real address so hashed names work.{% endcomment %}
   <script type="application/json" id="page-scripts">{

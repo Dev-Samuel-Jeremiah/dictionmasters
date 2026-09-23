@@ -76,6 +76,17 @@
   </section>
 
   <div class="wrap dash-body">
+    <section class="dash-search" aria-labelledby="dash-search-title">
+      <div>
+        <p class="dash-search__eyebrow">Find your next lesson</p>
+        <h2 id="dash-search-title">Search Diction Masters</h2>
+      </div>
+      <form data-search-autocomplete="{% url 'platform_search:suggest' %}" role="search" method="get" action="{% url 'platform_search:results' %}">
+        <label class="sr-only" for="dashboard-search">Search tools, lessons and resources</label>
+        <input id="dashboard-search" type="search" name="q" placeholder="Try “vocabulary”, “story” or “pronunciation”…" autocomplete="off">
+        <button type="submit">Search <span aria-hidden="true">→</span></button>
+      </form>
+    </section>
 
     {# ================= The places to learn ================= #}
     <section class="dash-stats" aria-label="Where to learn">
@@ -259,6 +270,18 @@
           <span class="dash-tool__plate" aria-hidden="true">&#128218;</span>
           <span class="dash-tool__name">Reading Club</span>
           <span class="dash-tool__body">Read this term's book, chapter by chapter, with model audio.</span>
+          <span class="dash-tool__cta">Open &rarr;</span>
+        </a>
+        <a href="{% url 'diction_radio:home' %}" class="dash-tool dash-tilt" data-tilt style="--tool: #7A2438; --tool-2: #4d1522">
+          <span class="dash-tool__plate" aria-hidden="true">&#128251;</span>
+          <span class="dash-tool__name">Diction Radio</span>
+          <span class="dash-tool__body">Listen to curated diction, pronunciation and storytelling programmes.</span>
+          <span class="dash-tool__cta">Tune in &rarr;</span>
+        </a>
+        <a href="{% url 'diction_library:hub' %}" class="dash-tool dash-tilt" data-tilt style="--tool: #236b65; --tool-2: #174642">
+          <span class="dash-tool__plate" aria-hidden="true">&#128218;</span>
+          <span class="dash-tool__name">Diction Library</span>
+          <span class="dash-tool__body">Books, stories, audio and video from Diction Masters and your school.</span>
           <span class="dash-tool__cta">Open &rarr;</span>
         </a>
         <a href="{% url 'reference_library:home' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_reference_library %} dash-tool--image{% endif %}" data-tilt style="--tool: #b8863b; --tool-2: #6e4b17">
