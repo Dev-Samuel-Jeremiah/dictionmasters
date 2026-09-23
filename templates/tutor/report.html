@@ -134,7 +134,6 @@
       var button = event.target.closest("[data-play]");
       if (!button) return;
       button.disabled = true;
-      var text = button.parentElement.querySelector("strong").textContent;
       var audio = new Audio(root.dataset.sayUrl + "?sentence=" + button.dataset.sentence + "&word=" + button.dataset.word);
       new Promise(function (done) {
         audio.onended = function () { done(true); };
@@ -142,10 +141,9 @@
         audio.play().catch(function () { done(false); });
       })
         .then(function (played) {
-          if (played || !window.speechSynthesis) return;
-          var u = new SpeechSynthesisUtterance(text); u.lang = "en-GB"; u.rate = 0.8; speechSynthesis.speak(u);
-        })
-        .then(function () { button.disabled = false; });
+          if (!played) button.title = "Tutor audio unavailable. Reconnect and try again.";
+          button.disabled = false;
+        });
     });
   })();
 </script>

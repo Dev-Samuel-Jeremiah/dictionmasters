@@ -26,10 +26,10 @@ class TutorSpeechAdmin(admin.ModelAdmin):
 
 @admin.register(TutorVoice)
 class TutorVoiceAdmin(admin.ModelAdmin):
-    list_display = ["name", "gender", "avatar", "voice_id", "is_default", "is_active", "order"]
+    list_display = ["name", "gender", "avatar", "is_default", "is_active", "order"]
     list_filter = ["gender", "is_active"]
     search_fields = ["name", "description"]
-    fields = ["name", "gender", "portrait", "avatar", "description", "voice_id", "sample_text",
+    fields = ["name", "gender", "portrait", "avatar", "description", "sample_text",
               ("order", "is_default", "is_active")]
 
 

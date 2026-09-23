@@ -263,16 +263,15 @@ def say(request, session_id):
     else:
         text = parts[number]["text"]
 
-    chosen = voice.for_user(request.user)
-    found = voice.kept_url(text, single_word=single, chosen=chosen)
+    found = voice.kept_url(text, single_word=single)
     if found:
         return HttpResponseRedirect(found)
     if _limited(request.user, "say", SPEECH_PER_MINUTE):
         return HttpResponse(status=204)
-    audio = voice.make(text, single_word=single, chosen=chosen)
+    audio = voice.make(text, single_word=single)
     if not audio:
         return HttpResponse(status=204)
-    voice.keep_later(text, audio, single_word=single, chosen=chosen)
+    voice.keep_later(text, audio, single_word=single)
     return _audio_response(request, audio)
 
 
@@ -383,15 +382,15 @@ def voice_sample(request, pk):
     from .models import TutorVoice
 
     wanted = get_object_or_404(TutorVoice, pk=pk, is_active=True)
-    found = voice.kept_url(wanted.sample, chosen=wanted)
+    found = voice.kept_url(wanted.sample)
     if found:
         return HttpResponseRedirect(found)
     if _limited(request.user, "sample", SPEECH_PER_MINUTE):
         return HttpResponse(status=204)
-    audio = voice.make(wanted.sample, chosen=wanted)
+    audio = voice.make(wanted.sample)
     if not audio:
         return HttpResponse(status=204)
-    voice.keep_later(wanted.sample, audio, chosen=wanted)
+    voice.keep_later(wanted.sample, audio)
     return _audio_response(request, audio)
 
 
@@ -408,14 +407,13 @@ def hear_passage(request, pk):
         raise Http404
     text = parts[number]["text"]
 
-    chosen = voice.for_user(request.user)
-    found = voice.kept_url(text, chosen=chosen)
+    found = voice.kept_url(text)
     if found:
         return HttpResponseRedirect(found)
     if _limited(request.user, "hear", SPEECH_PER_MINUTE):
         return HttpResponse(status=204)
-    audio = voice.make(text, chosen=chosen)
+    audio = voice.make(text)
     if not audio:
         return HttpResponse(status=204)
-    voice.keep_later(text, audio, chosen=chosen)
+    voice.keep_later(text, audio)
     return _audio_response(request, audio)

@@ -234,11 +234,9 @@ SECTIONS = [
             {"key": "tutor-voices", "model": "tutor.TutorVoice", "name": "Tutor voices",
              "columns": ["name", "gender", "avatar", "is_default", "is_active", "order"],
              "search": ["name", "description"], "order": ["order", "name"],
-             "form": ["name", "gender", "portrait", "avatar", "description", "voice_id", "sample_text",
+             "form": ["name", "gender", "portrait", "avatar", "description", "sample_text",
                       "order", "is_default", "is_active"],
-             "labels": {"voice_id": ("ElevenLabs voice id",
-                                     "Paste the voice's id from ElevenLabs. Leave blank to use the site's own voice."),
-                        "portrait": ("Portrait (optional)",
+             "labels": {"portrait": ("Portrait (optional)",
                                      "A picture of this tutor — a 3D character portrait looks best. "
                                      "Leave empty to use one of the drawn faces."),
                         "avatar": ("Drawn face", "Used when there is no portrait, and as the small face in the corner."),

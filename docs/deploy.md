@@ -183,9 +183,28 @@ cd /srv/dictionmasters
 git pull
 venv/bin/pip install -r requirements.txt
 venv/bin/python manage.py migrate
+venv/bin/python manage.py sync_quickword_ipa
 venv/bin/python manage.py collectstatic --noinput
 sudo systemctl restart dictionmasters
 ```
+
+The `sync_quickword_ipa` command is idempotent and should run after every
+release so saved Quick Words use the bundled en_UK dictionary. The Procfile
+release phase runs it automatically after migrations on platforms that use
+that phase.
+
+After the release containing the unified ElevenLabs voice, run these once on
+the production server so refreshed audio is saved to production media storage:
+
+```bash
+venv/bin/python manage.py regenerate_quickword_audio
+venv/bin/python manage.py generate_phoneme_audio --replace
+venv/bin/python manage.py revoice_tutor_cache
+```
+
+The audio commands require production's `ELEVENLABS_API_KEY`,
+`ELEVENLABS_VOICE_ID`, and media storage settings. They regenerate generated
+clips only; uploaded recordings and external audio URLs are preserved.
 
 ## Backups
 

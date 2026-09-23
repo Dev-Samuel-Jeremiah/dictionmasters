@@ -121,9 +121,8 @@ class TutorSession(models.Model):
 
 
 class TutorVoice(models.Model):
-    """One voice a learner can choose for Yela, with the face that goes
-    with it. Admins add them in the control room; the voice itself is an
-    ElevenLabs voice, and the face is one of the drawn avatars."""
+    """One tutor avatar a learner can choose. All avatars use the same
+    project-wide ElevenLabs voice; only their name and face differ."""
 
     FEMALE = "female"
     MALE = "male"
@@ -150,7 +149,7 @@ class TutorVoice(models.Model):
     )
     voice_id = models.CharField(
         max_length=64, blank=True,
-        help_text="The ElevenLabs voice. Leave blank to use the site's own voice.",
+        help_text="Legacy field; generated tutor audio always uses the project-wide voice.",
     )
     sample_text = models.CharField(
         max_length=200, blank=True,
@@ -183,12 +182,6 @@ class TutorVoice(models.Model):
             return self.portrait.url if self.portrait else ""
         except ValueError:
             return ""
-
-    @property
-    def eleven_id(self):
-        from django.conf import settings
-
-        return self.voice_id or getattr(settings, "ELEVENLABS_VOICE_ID", "")
 
     @classmethod
     def fallback(cls):

@@ -1,17 +1,8 @@
-"""
-The tutor's voice: how a word or sentence should sound.
+"""Tutor narration and pronunciation, using the project-wide ElevenLabs voice.
 
-  1. A word already in Quick Words with its own recording is played from
-     there — the same pronunciation the learner meets everywhere else.
-  2. A word or sentence the tutor has said before is played from where it
-     was kept (TutorSpeech), so it's only ever paid for once.
-  3. Otherwise it's spoken by the site's ElevenLabs voice, using the fast
-     model, and played straight away; it's kept in the background, since
-     saving to storage takes longer than making it.
-  4. If none of that works, the page uses the browser's own voice rather
-     than leave the learner without a model.
+Cached recordings are keyed by that voice ID; different tutor avatars retain
+separate faces and names but share one pronunciation voice.
 """
-
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -20,7 +11,6 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import IntegrityError, close_old_connections
 
-from apps.quick_words.models import QuickWord
 from apps.quick_words.speech import SpeechUnavailable, is_configured, speak, synthesise
 
 from .models import TutorChoice, TutorSpeech, TutorVoice
@@ -32,14 +22,6 @@ _keeper = ThreadPoolExecutor(max_workers=2, thread_name_prefix="tutor-voice")
 
 def bare(word):
     return re.sub(r"^[^\w]+|[^\w]+$", "", str(word or ""))
-
-
-def library_word(word):
-    """The Quick Words entry for `word`, if there is one."""
-    word = bare(word)
-    if not word:
-        return None
-    return QuickWord.objects.filter(is_published=True, word__iexact=word).first()
 
 
 def _tidy(text, single_word):
@@ -59,35 +41,29 @@ def for_user(user):
     return TutorChoice.voice_for(user)
 
 
-def _voice_id(chosen):
-    return chosen.eleven_id if chosen else getattr(settings, "ELEVENLABS_VOICE_ID", "")
+def _voice_id():
+    """All tutor avatars use the single project ElevenLabs voice."""
+    return getattr(settings, "ELEVENLABS_VOICE_ID", "")
 
 
-def kept_url(text, single_word=False, chosen=None):
+def kept_url(text, single_word=False):
     """Where a recording of `text` in this voice already lives, or ""."""
     text = _tidy(text, single_word)
     if not text:
         return ""
-    # A word from the library is only the right model in the site's own
-    # voice; a learner who picked another voice hears that one instead.
-    if single_word and chosen is None:
-        entry = library_word(text)
-        if entry and entry.audio_source:
-            return entry.audio_source
-    kept = TutorSpeech.objects.filter(key=TutorSpeech.key_for(text, _voice_id(chosen))).first()
+    kept = TutorSpeech.objects.filter(key=TutorSpeech.key_for(text, _voice_id())).first()
     return _url(kept.audio) if kept else ""
 
 
-def make(text, single_word=False, chosen=None):
+def make(text, single_word=False):
     """Fresh MP3 bytes of `text` spoken, or None if the voice is unavailable."""
     text = _tidy(text, single_word)
     if not text or not is_configured():
         return None
     model = getattr(settings, "TUTOR_VOICE_MODEL_ID", None)
-    voice_id = _voice_id(chosen) or None
     try:
-        return (synthesise(text, model_id=model, voice_id=voice_id) if single_word
-                else speak(text, model_id=model, voice_id=voice_id))
+        return (synthesise(text, model_id=model) if single_word
+                else speak(text, model_id=model))
     except SpeechUnavailable as error:
         logger.warning("Tutor voice unavailable: %s", error)
         return None
@@ -109,5 +85,5 @@ def _keep(text, audio, voice_id=""):
         close_old_connections()
 
 
-def keep_later(text, audio, single_word=False, chosen=None):
-    _keeper.submit(_keep, _tidy(text, single_word), audio, _voice_id(chosen))
+def keep_later(text, audio, single_word=False):
+    _keeper.submit(_keep, _tidy(text, single_word), audio, _voice_id())

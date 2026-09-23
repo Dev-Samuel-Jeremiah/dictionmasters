@@ -143,51 +143,8 @@
     return voiceCache[key];
   }
 
-  // If the tutor's own recording can't be played, the browser speaks — but
-  // only in a British voice. An American voice is never used to model a
-  // word: it would teach the accent the tutor is there to correct. Other
-  // British Isles voices come next, and an American one is refused.
-  var bestVoice = null, lookedForVoice = false;
-  function browserVoice() {
-    if (lookedForVoice || !window.speechSynthesis) return bestVoice;
-    var voices = window.speechSynthesis.getVoices() || [];
-    if (!voices.length) return null;                 // not loaded yet; ask again later
-    lookedForVoice = true;
-    function tagged(pattern, fancy) {
-      return voices.find(function (v) {
-        var lang = (v.lang || "").replace("_", "-");
-        if (!pattern.test(lang) && !pattern.test(v.name || "")) return false;
-        return fancy ? /natural|google|premium|enhanced|siri/i.test(v.name || "") : true;
-      });
-    }
-    bestVoice = tagged(/^en-GB|British|United Kingdom/i, true) || tagged(/^en-GB|British|United Kingdom/i, false)
-      || tagged(/^en-(IE|NG|ZA|IN|AU|NZ)/i, false) || null;
-    return bestVoice;
-  }
-
-  function speakText(text, slow) {
-    return new Promise(function (resolve) {
-      if (!window.speechSynthesis) { resolve(); return; }
-      var utterance = new SpeechSynthesisUtterance(text);
-      var voice = browserVoice();
-      if (voice) utterance.voice = voice;
-      utterance.lang = voice ? voice.lang : "en-GB";      // never en-US
-      utterance.rate = slow ? 0.8 : 0.92;
-      function mouth(on) {
-        document.dispatchEvent(new CustomEvent("dm-tutor-speaking", { detail: { on: on } }));
-      }
-      utterance.onstart = function () { mouth(true); };
-      utterance.onend = utterance.onerror = function () { mouth(false); resolve(); };
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-      setTimeout(resolve, 8000 + text.length * 90);
-    });
-  }
-
   function playVoice(audio) {
-    // Resolves true once it has played, false if it couldn't (no voice
-    // available, or it didn't start in time) so the browser's voice can
-    // step in.
+    // Resolves true once the configured ElevenLabs audio has played.
     return new Promise(function (resolve) {
       var settled = false;
       function done(ok) {
@@ -216,19 +173,15 @@
     });
   }
 
-  function model(sentence, word, text) {
-    // The tutor says it: the site's voice if there is one, otherwise the
-    // browser's own.
+  function model(sentence, word) {
     state("speaking");
     el.avatar.classList.add("is-speaking");
     return playVoice(voiceFor(sentence, word)).then(function (played) {
+      el.avatar.classList.remove("is-speaking");
       if (!played) {
         delete voiceCache[sentence + ":" + (word === undefined ? "" : word)];
-        return speakText(text, word !== undefined);
+        say("Tutor audio unavailable", "Reconnect and try again to hear the configured tutor voice.", "think");
       }
-      return null;
-    }).then(function () {
-      el.avatar.classList.remove("is-speaking");
     });
   }
 
@@ -410,7 +363,7 @@
     }
     if (result.again && attempt === 1) {
       say("Let's hear it first", "Listen to the whole sentence, then read it again.", "teach");
-      return model(index, undefined, sentences[index].text).then(function () {
+      return model(index, undefined).then(function () {
         if (!alive(id)) return null;
         return readSentence(id, index, 2);
       });
@@ -464,8 +417,8 @@
               ". Americans say " + word.british.american + ".");
     el.focus.dataset.british = "1";
     say("The British way", "Listen to “" + text + "”, then say it after me.", "teach");
-    focusAudio = function () { return model(index, at, text); };
-    return model(index, at, text).then(function () {
+    focusAudio = function () { return model(index, at); };
+    return model(index, at).then(function () {
       if (!alive(id)) return null;
       state("listening");
       say("Now you say it", "“" + text + "” the British way.", "listen");
@@ -501,8 +454,8 @@
       : verdict.status === "missed" ? "This word was left out." : verdict.heard ? "It sounded like “" + verdict.heard + "”." : "";
     showFocus(text, verdict.ipa || "", attempt === 1 ? tip : "Listen once more, closely.");
     say(attempt === 1 ? "Listen carefully" : "Once more", "This is how we say “" + text + "”.", "teach");
-    focusAudio = function () { return model(index, at, text); };
-    return model(index, at, text).then(function () {
+    focusAudio = function () { return model(index, at); };
+    return model(index, at).then(function () {
       if (!alive(id)) return null;
       state("listening");
       say("Now you say it", "Say “" + text + "” clearly.", "listen");
@@ -555,7 +508,6 @@
     paused = true;
     runId += 1;
     if (stopListening) stopListening(false);
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
     el.avatar.classList.remove("is-speaking");
     root.classList.remove("is-hearing");
     hideFocus();
@@ -596,7 +548,6 @@
     storyOn = false;
     if (storyAudio) { try { storyAudio.pause(); } catch (error) { /* already gone */ } }
     storyAudio = null;
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (el.listen) el.listen.textContent = "\u25B6 Hear the story first";
     document.dispatchEvent(new CustomEvent("dm-tutor-speaking", { detail: { on: false } }));
   }
@@ -624,8 +575,8 @@
       playVoice(audio).then(function (played) {
         if (!storyOn) return;
         if (played) return wait(320);
-        // No recording to be had: the browser reads it instead.
-        return speakText(sentences[index].text, false).then(function () { return wait(200); });
+        stopStory();
+        say("Tutor audio unavailable", "Reconnect and try again to hear the configured tutor voice.", "think");
       }).then(function () {
         if (storyOn) next(index + 1);
       });
@@ -654,7 +605,6 @@
       return fetch(root.dataset.startUrl, { method: "POST", credentials: "same-origin", headers: { "X-CSRFToken": csrf } });
     }).then(function (r) { return r.json(); }).then(function (data) {
       session = data.session;
-      if (window.speechSynthesis) window.speechSynthesis.getVoices();
       say("Hello" + (name ? " " + name : "") + "!", "Read each highlighted sentence aloud. I'll stop you if a word needs work.", "happy");
       return wait(700);
     }).then(function () {
@@ -677,7 +627,7 @@
     if (!session || current >= sentences.length) return;
     pause();
     say("Listen", "Here is the sentence. Press the microphone when you're ready to read it.", "teach");
-    model(current, undefined, sentences[current].text).then(function () { state("paused"); });
+    model(current, undefined).then(function () { state("paused"); });
   });
 
   el.skip.addEventListener("click", function () {
@@ -718,7 +668,7 @@
     var w = Number(node.dataset.w);
     // Any word already read, and any word marked British, can be heard.
     if (s >= current && !node.hasAttribute("data-british")) return;
-    model(s, w, bareWord(node.textContent)).then(function () { if (paused) state("paused"); });
+    model(s, w).then(function () { if (paused) state("paused"); });
   });
 
   window.addEventListener("beforeunload", function () {
