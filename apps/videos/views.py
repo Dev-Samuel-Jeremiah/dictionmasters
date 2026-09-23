@@ -18,7 +18,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError, transaction
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
@@ -50,10 +50,21 @@ def _video_for(request, raw, purpose):
 @login_required
 @require_GET
 def play(request, ticket):
-    """The player's own address for a video."""
+    """The player's own address for a video.
+
+    Django checks who is asking, then hands the player a link straight to
+    storage that lasts minutes — so the bytes come from Cloudflare, not
+    through this server, and seeking stays quick. Where storage has no
+    such links (a local folder in development) the bytes are passed
+    through instead."""
     if not _may_watch(request.user):
         raise Http404("That video isn't available on your plan.")
     video = _video_for(request, ticket, links.WATCH)
+    short_lived = streaming.brief_link(video.video_file)
+    if short_lived:
+        response = HttpResponseRedirect(short_lived)
+        response["Cache-Control"] = "private, max-age=0, no-store"
+        return response
     return streaming.serve(request, video.video_file, content_type=_type_of(video))
 
 

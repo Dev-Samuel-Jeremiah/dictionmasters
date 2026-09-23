@@ -17,7 +17,8 @@ questions never shut learners out. Staff see every lesson open, to check
 the content.
 """
 
-from django.db.models import Count
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.db.models import Count, Exists, OuterRef, Q, Value
 
 from apps.book.models import SECTION_CHOICES, Sound, SectionVideo
 
@@ -41,17 +42,47 @@ def lessons_in_order(programme):
 
 
 def _tabs_with_content(lessons):
-    """{lesson id: the tabs that have something in them}, one query per tab."""
+    """{lesson id: the tabs that have something in them}.
+
+    One query for all of it: the database answers "is there anything on
+    this tab?" for every tab of every lesson at once, which matters on a
+    page that shows a whole programme."""
     ids = [lesson.pk for lesson in lessons]
-    filled = {pk: set() for pk in ids}
+    if not ids:
+        return {}
+    marks = {}
     for tab, relation in TAB_CONTENT.items():
         field = Sound._meta.get_field(relation)
         model, link = field.related_model, field.field.name
-        for pk in model.objects.filter(**{f"{link}__in": ids}).values_list(link, flat=True).distinct():
-            filled[pk].add(tab)
-    for pk, section in SectionVideo.objects.filter(sound__in=ids).values_list("sound", "section").distinct():
-        filled[pk].add(section)
-    return {pk: [tab for tab, _ in SECTION_CHOICES if tab in tabs] for pk, tabs in filled.items()}
+        marks[f"has_{tab.replace('-', '_')}"] = Exists(
+            model.objects.filter(**{link: OuterRef("pk")}).values("pk")[:1]
+        )
+    # A tab also counts as filled when a video has been added to it.
+    # Postgres can gather those in the same query; other databases ask
+    # once more below.
+    if _postgres():
+        marks["video_tabs"] = ArrayAgg(
+            "videos__section", distinct=True, filter=Q(videos__isnull=False), default=Value([]),
+        )
+
+    filled = {}
+    for row in Sound.objects.filter(pk__in=ids).annotate(**marks).values("pk", *marks.keys()):
+        tabs = {tab for tab, _ in SECTION_CHOICES if row.get(f"has_{tab.replace('-', '_')}")}
+        tabs.update(row.get("video_tabs") or [])
+        filled[row["pk"]] = [tab for tab, _ in SECTION_CHOICES if tab in tabs]
+
+    if not _postgres():
+        # Other databases have no list-gathering: one more small query.
+        for pk, section in SectionVideo.objects.filter(sound__in=ids).values_list("sound", "section").distinct():
+            tabs = set(filled.get(pk, [])) | {section}
+            filled[pk] = [tab for tab, _ in SECTION_CHOICES if tab in tabs]
+    return filled
+
+
+def _postgres():
+    from django.db import connection
+
+    return connection.vendor == "postgresql"
 
 
 def _activities_by_lesson(lessons):
@@ -145,3 +176,33 @@ class Standing:
     @property
     def current(self):
         return next((step for step in self.steps if step["state"] == "current"), None)
+
+
+def done_counts(user, programmes):
+    """How many lessons of each programme this learner has completed, in
+    one pass over all of them — the dashboard asks about both at once."""
+    lessons = [lesson for programme in programmes for lesson in lessons_in_order(programme)]
+    if not lessons:
+        return {programme: 0 for programme in programmes}
+    needed_by_lesson = _tabs_with_content(lessons)
+    seen = dict(LessonProgress.objects.filter(user=user, lesson__in=lessons).values_list("lesson_id", "tabs_seen"))
+    activities = _activities_by_lesson(lessons)
+    passed_ids = set(
+        LessonActivityAttempt.objects.filter(user=user, activity__lesson__in=lessons, passed=True)
+        .values_list("activity_id", flat=True)
+    )
+    sent_ids = set(
+        LessonActivityAttempt.objects.filter(user=user, activity__lesson__in=lessons,
+                                             status=LessonActivityAttempt.STATUS_AWAITING)
+        .values_list("activity_id", flat=True)
+    )
+    counts = {programme: 0 for programme in programmes}
+    for lesson in lessons:
+        needed = needed_by_lesson.get(lesson.pk, [])
+        opened = seen.get(lesson.pk)
+        if opened is None or any(tab not in opened for tab in needed):
+            continue
+        tests = activities.get(lesson.pk, [])
+        if all(a.pk in passed_ids or (a.mode == "record" and a.pk in sent_ids) for a in tests):
+            counts[lesson.category.programme] = counts.get(lesson.category.programme, 0) + 1
+    return counts

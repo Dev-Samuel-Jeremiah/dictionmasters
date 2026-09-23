@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'css/ui.css' %}">
   <link rel="stylesheet" href="{% static 'css/upload_progress.css' %}">
+  <link rel="stylesheet" href="{% static 'css/videos.css' %}">
   {% block extra_css %}{% endblock %}
   {% block extra_head %}{% endblock %}
 </head>
@@ -77,14 +78,18 @@
   </dialog>
   {% if user.is_authenticated %}<script src="{% static 'js/quick_tools.js' %}" defer></script>
   <script src="{% static 'js/account_menu.js' %}" defer></script>{% endif %}
-  <script src="{% static 'js/password_toggle.js' %}" defer></script>
-  <script src="{% static 'js/password_strength.js' %}" defer></script>
-  <script src="{% static 'js/upload_progress.js' %}" defer></script>
   <script src="{% static 'js/pwa.js' %}" defer></script>
-  <script src="{% static 'js/qr_scanner.js' %}" defer></script>
-  <script src="{% static 'js/media_guard.js' %}" defer></script>
-  <script src="{% static 'js/offline_video.js' %}" defer></script>
-  <script src="{% static 'js/lesson_start.js' %}" defer></script>
+  {% comment %}The rest are fetched only by the pages that use them
+  (static/js/boot.js), each by its real address so hashed names work.{% endcomment %}
+  <script type="application/json" id="page-scripts">{
+    "password": ["{% static 'js/password_toggle.js' %}", "{% static 'js/password_strength.js' %}"],
+    "upload": ["{% static 'js/upload_progress.js' %}"],
+    "scan": ["{% static 'js/qr_scanner.js' %}"],
+    "media": ["{% static 'js/media_guard.js' %}"],
+    "offline": ["{% static 'js/offline_video.js' %}"],
+    "lesson": ["{% static 'js/lesson_start.js' %}"]
+  }</script>
+  <script src="{% static 'js/boot.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

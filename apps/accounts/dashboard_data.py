@@ -213,9 +213,8 @@ def learner_dashboard(user):
         "modules": _next_module_day(user),
         "academy_sounds": Sound.objects.in_programme(ACADEMY).filter(is_published=True).count(),
         "tricks_count": Sound.objects.in_programme(TRICKS).filter(is_published=True).count(),
-        "tricks_done": _lessons_done(user, TRICKS),
+        **_lessons_done(user),
         "tutor": _tutor(user),
-        "academy_done": _lessons_done(user, ACADEMY),
         "clash_best": clash["best"],
         "clash_games": matches.count(),
         "assessment_average": round(marked.aggregate(avg=Avg("percent"))["avg"] or 0) if marked.exists() else None,
@@ -231,12 +230,14 @@ def learner_dashboard(user):
     }
 
 
-def _lessons_done(user, programme):
-    """How many of a programme's lessons this learner has completed —
-    worked through and passed the assessment of."""
-    from apps.tricks.progress import Standing
+def _lessons_done(user):
+    """How many lessons of each programme this learner has completed —
+    worked through, and passed the assessment of. Both programmes are
+    counted in one pass, since the dashboard shows them side by side."""
+    from apps.tricks.progress import done_counts
 
-    return Standing(user, programme).done
+    counts = done_counts(user, [ACADEMY, TRICKS])
+    return {"academy_done": counts.get(ACADEMY, 0), "tricks_done": counts.get(TRICKS, 0)}
 
 
 def _tutor(user):

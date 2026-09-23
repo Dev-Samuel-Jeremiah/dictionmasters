@@ -7,12 +7,35 @@ for and sends it on, so seeking works exactly as it would from a normal
 address, while the real one stays out of the browser.
 """
 
+import logging
 import re
 
+from django.conf import settings
 from django.http import FileResponse, HttpResponse, HttpResponseNotModified, StreamingHttpResponse
+
+logger = logging.getLogger(__name__)
 
 CHUNK = 512 * 1024
 RANGE = re.compile(r"bytes=(\d*)-(\d*)")
+
+
+def brief_link(field):
+    """A link straight to storage that stops working in minutes, or "" if
+    this storage has no such thing (a local folder, say).
+
+    The page itself never carries this: it is handed out one request at a
+    time, after Django has checked who is asking."""
+    storage = field.storage
+    if getattr(storage, "bucket", None) is None:
+        return ""
+    seconds = int(getattr(settings, "VIDEO_LINK_SECONDS", 15 * 60))
+    try:
+        return storage.url(field.name, expire=seconds)
+    except TypeError:                     # a storage that doesn't take an expiry
+        return storage.url(field.name)
+    except Exception:                     # storage trouble: fall back to passing it through
+        logger.exception("Couldn't sign a link for %s", field.name)
+        return ""
 
 
 def _key_in_bucket(storage, name):
