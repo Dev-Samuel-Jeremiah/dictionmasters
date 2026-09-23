@@ -295,9 +295,7 @@ def toggle_complete(request, module_slug, term_slug, week_slug, day_name):
     week = get_object_or_404(term.weeks, slug=week_slug)
     day = get_object_or_404(week.days, day_name=day_name)
 
-    progress, created = DayProgress.objects.get_or_create(user=request.user, day=day)
-    if not created:
-        progress.delete()
+    DayProgress.objects.get_or_create(user=request.user, day=day)
 
     return redirect(
         "learning_modules:day_detail",

@@ -3,7 +3,7 @@
   <div class="wrap site-header__inner">
     <a href="{% url 'landing:home' %}" class="brand">
       {% if branding.logo %}
-      <img src="{{ branding.logo.url }}" alt="{% if not branding.show_name_with_logo %}Diction Masters{% endif %}" class="brand__logo">
+      <img src="{% url 'pwa_brand_asset' 'logo' %}?v={{ branding.updated_at|date:'U' }}" alt="{% if not branding.show_name_with_logo %}Diction Masters{% endif %}" class="brand__logo">
       {% else %}
         <span class="brand__mark" aria-hidden="true">
           <svg viewBox="0 0 40 40" width="34" height="34">

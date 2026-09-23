@@ -6,7 +6,7 @@
   <title>{% block title %}Diction Masters — a private English tutor for every child{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Diction Masters is a private British English tutor for adults, students and schools: video lessons, audio drills, speaking practice and progress you can see. Start with a free trial.{% endblock %}">
 
-  {% if branding.favicon %}<link rel="icon" href="{{ branding.favicon.url }}">{% else %}<link rel="icon" type="image/png" href="{% static 'pwa/favicon-32.png' %}">{% endif %}
+  {% if branding.favicon %}<link rel="icon" href="{% url 'pwa_brand_asset' 'favicon' %}?v={{ branding.updated_at|date:'U' }}">{% else %}<link rel="icon" type="image/png" href="{% static 'pwa/favicon-32.png' %}">{% endif %}
   {# Installing it as an app (apps/landing/pwa.py). #}
   <link rel="manifest" href="{% url 'pwa_manifest' %}">
   <meta name="theme-color" content="#14213D">

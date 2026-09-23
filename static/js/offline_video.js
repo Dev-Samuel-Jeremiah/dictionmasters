@@ -300,7 +300,8 @@
       title: box.dataset.title || "Lesson video",
       ticketId: box.dataset.videoId                       // which lesson video this is
     };
-    var record = null, playing = false;
+    var record = null, playing = false, recordLoaded = false;
+    keepButton.disabled = true;
 
     function say(text, tone) {
       state.hidden = !text;
@@ -316,7 +317,11 @@
 
     function show() {
       var kept = !!record;
-      keepButton.hidden = kept;
+      keepButton.hidden = false;
+      keepButton.disabled = kept || !recordLoaded;
+      keepButton.lastChild.textContent = kept ? " ✓ Already downloaded" : " Save for offline";
+      keepButton.setAttribute("aria-label", kept ? "Already downloaded on this device" : "Save for offline");
+      keepButton.classList.toggle("vid__btn--saved", kept);
       watchButton.hidden = !kept;
       removeButton.hidden = !kept;
       progress.hidden = true;
@@ -328,10 +333,19 @@
 
     ask("videos", "get", entry.ticketId).then(function (found) {
       record = found || null;
+      recordLoaded = true;
+      show();
+    }).catch(function () {
+      recordLoaded = true;
       show();
     });
 
     keepButton.addEventListener("click", function () {
+      if (!recordLoaded) return;
+      if (record) {
+        say("✓ Already downloaded on this device", "good");
+        return;
+      }
       keepButton.disabled = true;
       keepButton.lastChild.textContent = " Saving…";
       showProgress(0);

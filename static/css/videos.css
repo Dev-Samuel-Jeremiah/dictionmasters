@@ -28,6 +28,7 @@
 /* Save: the one to reach for, so it is the brightest thing here. */
 .vid__btn--keep { color: #14213D; background: linear-gradient(135deg, #f7d68f, #d99b36); box-shadow: 0 6px 16px rgba(217, 155, 54, 0.45); }
 .vid__btn--keep:hover { box-shadow: 0 10px 22px rgba(217, 155, 54, 0.55); }
+.vid__btn--keep.vid__btn--saved, .vid__btn--keep.vid__btn--saved:hover { color: #fffdf8; background: linear-gradient(135deg, #16815f, #075f49); box-shadow: 0 6px 16px rgba(7, 95, 73, 0.25); cursor: default; }
 .vid__btn--watch { color: #fffdf8; background: linear-gradient(135deg, #3aa882, #237a5c); box-shadow: 0 6px 16px rgba(35, 122, 92, 0.4); }
 .vid__btn--remove { color: #ffd9e0; background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 217, 224, 0.45); }
 .vid__btn--remove:hover { color: #fff; background: rgba(214, 74, 104, 0.35); }

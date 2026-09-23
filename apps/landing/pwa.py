@@ -7,16 +7,13 @@ Diction Masters as an app you can install (a Progressive Web App).
   /offline/              what shows when there is no connection
 
 Keeping the installed app up to date is the point of how the service
-worker is built (templates/pwa/sw.js). A page is always tried from the
-server first, so a new feature is there the moment it is released — and
-only kept for offline use once it has actually answered, so a learner
-never has to remember to "save" a page before going offline. Pages under
-a sensitive path (accounts, billing, the control room, a test result, a
-live Clash score) are never kept, and logging out clears everything that
-was, so a shared school device doesn't show one learner's page to the
-next while offline. Static files (stylesheets, scripts, pictures) are
-kept the same way as before, and their addresses change whenever they
-do, so nothing old is ever shown there.
+worker is built (templates/pwa/sw.js). Pages are tried from the server first
+and successful learner pages are kept on this browser for offline study.
+Account-entry, billing and staff pages are excluded. Logging out clears the
+learner page and media caches and queued progress so another learner on a
+shared device cannot see the previous learner's offline data. Static files
+(stylesheets, scripts, pictures) are kept the same way as before, and their
+addresses change whenever they do, so nothing old is ever shown there.
 
 The worker carries a version made from those files; when a release
 changes any of them, the browser sees a new worker, and the page offers
@@ -25,11 +22,12 @@ the update (static/js/pwa.js).
 
 import hashlib
 import json
+import mimetypes
 from functools import lru_cache
 from pathlib import Path
 
 from django.conf import settings
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.urls import reverse
 from django.shortcuts import render
 from django.templatetags.static import static
@@ -126,6 +124,24 @@ def app_icon(request, size, purpose="any"):
     return response
 
 
+def brand_asset(request, kind):
+    """Serve the public uploaded logo or favicon through this origin."""
+    from apps.landing.models import SiteBranding
+
+    if kind not in {"logo", "favicon"}:
+        return HttpResponse(status=404)
+    upload = getattr(SiteBranding.load(), kind)
+    if not upload:
+        return HttpResponse(status=404)
+    try:
+        handle = upload.open("rb")
+    except (OSError, ValueError):
+        return HttpResponse(status=404)
+    response = FileResponse(handle, content_type=mimetypes.guess_type(upload.name)[0] or "application/octet-stream")
+    response["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
+
+
 @lru_cache(maxsize=1)
 def _released_version():
     """In production: a fingerprint of this release's static files, the
@@ -178,11 +194,19 @@ def manifest(request):
 # Never cached: the browser must see a new worker as soon as there is one.
 @cache_control(no_cache=True, no_store=True, must_revalidate=True, max_age=0)
 def service_worker(request):
+    precache = ["/offline/", static("pwa/icon-192.png"), static("css/base.css"), static("css/ui.css")]
+    from apps.landing.models import SiteBranding
+
+    branding = SiteBranding.load()
+    version = str(int(branding.updated_at.timestamp())) if branding.updated_at else ""
+    for kind in ("logo", "favicon"):
+        if getattr(branding, kind):
+            precache.append(f"{reverse('pwa_brand_asset', args=[kind])}?v={version}")
     body = render(request, "pwa/sw.js", {
         "version": app_version(),
         "offline_url": "/offline/",
         "static_prefix": "/" + settings.STATIC_URL.strip("/") + "/",
-        "precache": json.dumps(["/offline/", static("pwa/icon-192.png"), static("css/base.css"), static("css/ui.css")]),
+        "precache": json.dumps(precache + [static("js/offline_pages.js"), static("js/offline_video.js")]),
     }).content
     response = HttpResponse(body, content_type="application/javascript; charset=utf-8")
     response["Service-Worker-Allowed"] = "/"
@@ -190,4 +214,6 @@ def service_worker(request):
 
 
 def offline(request):
-    return render(request, "pwa/offline.html")
+    from apps.landing.models import SiteBranding
+
+    return render(request, "pwa/offline.html", {"branding": SiteBranding.load()})

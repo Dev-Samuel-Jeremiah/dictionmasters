@@ -20,6 +20,7 @@ urlpatterns = [
     # Installing Diction Masters as an app (apps/landing/pwa.py).
     path("manifest.webmanifest", pwa.manifest, name="pwa_manifest"),
     path("pwa/icons/<int:size>/<str:purpose>.png", pwa.app_icon, name="pwa_icon"),
+    path("site-branding/<str:kind>/", pwa.brand_asset, name="pwa_brand_asset"),
     path("sw.js", pwa.service_worker, name="pwa_worker"),
     path("offline/", pwa.offline, name="pwa_offline"),
     path("", include("apps.landing.urls")),

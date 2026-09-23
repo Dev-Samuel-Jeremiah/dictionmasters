@@ -3,9 +3,8 @@
  *
  * 1. Registers the service worker, and checks for a new version whenever
  *    the app is opened or comes back to the front.
- * 2. When a release is waiting, shows a small bar: "A new version is
- *    ready — Update". Updating reloads the page onto it. (Pages always
- *    come fresh from the server anyway; this brings the rest along.)
+ * 2. New releases activate automatically and reload the page onto the new
+ *    version. The first service-worker installation does not interrupt it.
  * 3. Any [data-install-app] button installs the app: the browser's own
  *    prompt where there is one, otherwise the steps for that device.
  */
@@ -14,29 +13,31 @@
 
   // ---------------------------------------------------------------- updates
   if ("serviceWorker" in navigator) {
-    // Only a version the person asked for reloads the page. The worker
-    // taking charge for the first time must not interrupt them.
-    var updating = false;
+    var hadController = !!navigator.serviceWorker.controller;
+    var reloadingForUpdate = false;
     navigator.serviceWorker.addEventListener("controllerchange", function () {
-      if (!updating) return;
-      updating = false;
+      if (!hadController) {
+        hadController = true;
+        return;
+      }
+      if (reloadingForUpdate) return;
+      reloadingForUpdate = true;
       window.location.reload();
     });
 
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(function (registration) {
-        function offer(worker) {
-          if (worker && navigator.serviceWorker.controller) showUpdateBar(worker);
-        }
-        offer(registration.waiting);
+        // Also activates an update already waiting under an older worker.
+        if (registration.waiting) registration.waiting.postMessage("update-now");
         registration.addEventListener("updatefound", function () {
           var worker = registration.installing;
           if (!worker) return;
           worker.addEventListener("statechange", function () {
-            if (worker.state === "installed") offer(worker);
+            if (worker.state === "installed" && registration.waiting) {
+              registration.waiting.postMessage("update-now");
+            }
           });
         });
-        // Look for a new release whenever the app comes back to the front.
         document.addEventListener("visibilitychange", function () {
           if (document.visibilityState === "visible") registration.update().catch(function () {});
         });
@@ -45,23 +46,29 @@
     });
   }
 
-  function showUpdateBar(worker) {
-    if (document.getElementById("app-update")) return;
-    var bar = document.createElement("div");
-    bar.id = "app-update";
-    bar.className = "app-update";
-    bar.setAttribute("role", "status");
-    bar.innerHTML = '<span class="app-update__text">&#10024; A new version of Diction Masters is ready.</span>' +
-      '<button type="button" class="app-update__go">Update</button>' +
-      '<button type="button" class="app-update__later" aria-label="Later">&times;</button>';
-    document.body.appendChild(bar);
-    bar.querySelector(".app-update__go").addEventListener("click", function () {
-      this.disabled = true;
-      this.textContent = "Updating…";
-      updating = true;
-      worker.postMessage("update-now");
+  // Sync the small, safe progress queue when a signed-in learner reconnects.
+  function syncLearningProgress() {
+    if (!navigator.onLine || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.ready.then(function (registration) {
+      if (registration.sync) registration.sync.register("dm-learning-sync").catch(function () {});
+      if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage("sync-learning");
+    }).catch(function () {});
+  }
+  window.addEventListener("online", syncLearningProgress);
+  window.addEventListener("load", function () { window.setTimeout(syncLearningProgress, 800); });
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", function (event) {
+      var data = event.data || {};
+      if (data.type !== "learning-sync" || (!data.synced && !data.pending)) return;
+      var note = document.createElement("div");
+      note.setAttribute("role", "status");
+      note.style.cssText = "position:fixed;left:16px;right:16px;bottom:20px;z-index:10000;margin:auto;max-width:520px;padding:14px 18px;border-radius:14px;background:#14213d;color:#fffdf8;box-shadow:0 10px 30px rgba(0,0,0,.2);font:600 15px system-ui;text-align:center";
+      note.textContent = data.synced
+        ? data.synced + " offline progress item" + (data.synced === 1 ? "" : "s") + " synced."
+        : data.pending + " progress item" + (data.pending === 1 ? " is" : "s are") + " waiting to sync. Stay signed in and reconnect.";
+      document.body.appendChild(note);
+      window.setTimeout(function () { note.remove(); }, 7000);
     });
-    bar.querySelector(".app-update__later").addEventListener("click", function () { bar.remove(); });
   }
 
   // ---------------------------------------------------------------- install

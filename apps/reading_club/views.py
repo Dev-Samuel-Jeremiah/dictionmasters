@@ -187,9 +187,7 @@ def toggle_complete(request, book_slug, term_slug, chapter_slug):
     term = get_object_or_404(book.terms, slug=term_slug)
     chapter = get_object_or_404(term.chapters, slug=chapter_slug)
 
-    progress, created = ChapterProgress.objects.get_or_create(user=request.user, chapter=chapter)
-    if not created:
-        progress.delete()
+    ChapterProgress.objects.get_or_create(user=request.user, chapter=chapter)
 
     return redirect(
         "reading_club:chapter_detail", book_slug=book_slug, term_slug=term_slug, chapter_slug=chapter_slug

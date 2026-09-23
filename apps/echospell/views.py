@@ -329,9 +329,7 @@ def toggle_complete(request, level_slug, group_slug):
     require_level(request.user, level.name)
     group = get_object_or_404(level.groups, slug=group_slug)
 
-    progress, created = GroupProgress.objects.get_or_create(user=request.user, group=group)
-    if not created:
-        progress.delete()
+    GroupProgress.objects.get_or_create(user=request.user, group=group)
 
     return redirect("echospell:group_detail", level_slug=level_slug, group_slug=group_slug)
 
