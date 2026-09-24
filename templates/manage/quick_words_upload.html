@@ -1,0 +1,72 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Quick Words audio ZIP — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow"><a href="{% url 'manage:list' 'words' %}">Quick Words</a></p>
+    <h1 class="cr-pagehead__title">Upload word audio ZIP</h1>
+    <p class="cr-pagehead__note">Each audio filename becomes the word, for example about.mp3 becomes about.</p>
+  </div>
+</header>
+
+{% if job %}
+<section class="cr-card">
+  <h2 class="cr-card__title">Import {{ job.status }}</h2>
+  {% if job.status == "queued" or job.status == "running" %}
+  <p class="cr-help">Processed {{ job.completed_files }} of {{ job.total_files }} audio files. New words are looked up one at a time; this page refreshes while the import runs.</p>
+  <progress value="{{ job.completed_files }}" max="{{ job.total_files }}" style="width:100%; height:1rem"></progress>
+  {% elif job.status == "complete" %}
+  <p class="cr-help">Finished: {{ job.created_words }} new word{{ job.created_words|pluralize }}, {{ job.updated_words }} existing word{{ job.updated_words|pluralize }} updated, {{ job.skipped_files }} skipped, {{ job.failed_files }} failed.</p>
+  {% else %}
+  <p class="cr-errors">{{ job.error|default:"The import could not be completed." }}</p>
+  <p class="cr-help">Completed {{ job.completed_files }} of {{ job.total_files }} audio files before stopping.</p>
+  {% endif %}
+</section>
+
+{% if job.results %}
+<section class="cr-card cr-card--flush">
+  <div class="cr-tablewrap">
+    <table class="cr-table cr-table--rows">
+      <thead><tr><th>Audio file</th><th>Word</th><th>Status</th><th>Details</th></tr></thead>
+      <tbody>
+        {% for result in job.results %}
+        <tr><td>{{ result.filename }}</td><td>{{ result.word }}</td><td>{{ result.status|title }}</td><td>{{ result.message }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if job.status == "queued" or job.status == "running" %}
+<script>window.setTimeout(function () { window.location.reload(); }, 3000);</script>
+{% else %}
+<div class="cr-pagehead__actions">
+  <a href="{% url 'manage:quick_words_audio_upload' %}" class="cr-btn cr-btn--gold">Upload another ZIP</a>
+  <a href="{% url 'manage:list' 'words' %}" class="cr-btn cr-btn--ghost">Back to Quick Words</a>
+</div>
+{% endif %}
+
+{% else %}
+<section class="cr-card">
+  <p class="cr-help">Upload one ZIP containing up to 300 audio files (200 MB ZIP maximum). Supported audio: MP3, M4A, AAC, WAV, OGG, OPUS, FLAC and WEBM. Files inside folders are supported; the folder names are ignored.</p>
+  <p class="cr-help">New words must have a UK IPA-Dict entry. Their IPA comes from IPA-Dict UK, and OpenAI supplies the definition, example, synonyms and level. Existing words keep their details and get the new audio; their IPA is refreshed from IPA-Dict when available. A newly uploaded clip replaces the existing audio clip or URL.</p>
+  <form method="post" enctype="multipart/form-data" class="cr-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<ul class="cr-errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    <div class="cr-field {% if form.audio_zip.errors %}has-error{% endif %}">
+      <label for="{{ form.audio_zip.id_for_label }}">{{ form.audio_zip.label }} <span class="cr-req">required</span></label>
+      {{ form.audio_zip }}
+      {% if form.audio_zip.help_text %}<p class="cr-help">{{ form.audio_zip.help_text }}</p>{% endif %}
+      {% if form.audio_zip.errors %}<ul class="cr-errors">{% for error in form.audio_zip.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+    <div class="cr-formactions">
+      <button type="submit" class="cr-btn cr-btn--gold">Upload and import words</button>
+      <a href="{% url 'manage:list' 'words' %}" class="cr-link">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

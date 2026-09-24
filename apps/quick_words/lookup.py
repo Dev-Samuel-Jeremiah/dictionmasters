@@ -36,8 +36,8 @@ API_URL = "https://api.openai.com/v1/chat/completions"
 TIMEOUT_SECONDS = 12
 
 # A single word: letters, with an apostrophe or hyphen inside (don't,
-# well-known). No spaces, digits or punctuation, 2-40 characters.
-WORD_RE = re.compile(r"^[A-Za-z](?:[A-Za-z'-]{0,38}[A-Za-z])$")
+# well-known). No spaces, digits or punctuation, 1-40 characters.
+WORD_RE = re.compile(r"^[A-Za-z](?:[A-Za-z'-]{0,38}[A-Za-z])?$")
 
 VALID_LEVELS = {value for value, _ in LEVEL_NAME_CHOICES}
 

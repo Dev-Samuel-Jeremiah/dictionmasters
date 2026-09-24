@@ -13,6 +13,7 @@
     <h1 class="cr-pagehead__title">{% if obj %}{{ obj }}{% else %}New {{ singular }}{% endif %}</h1>
   </div>
   <div class="cr-pagehead__actions">
+    {% if screen.key == "words" %}<a href="{% url 'manage:quick_words_audio_upload' %}" class="cr-btn cr-btn--gold">Upload audio ZIP</a>{% endif %}
     {% if bulk_url %}<a href="{{ bulk_url }}" class="cr-btn cr-btn--gold">+ Add multiple questions</a>{% endif %}
     {% if obj and not screen.no_delete %}<a href="{% url 'manage:delete' screen.key obj.pk %}" class="cr-btn cr-btn--danger">Delete</a>{% endif %}
   </div>

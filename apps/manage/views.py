@@ -38,8 +38,10 @@ from apps.book import read_along as book_read_along
 from apps.book.models import ReadAlongTiming
 from apps.billing.models import BillingSettings
 from apps.landing.models import SiteBranding
+from apps.quick_words.audio_zip import start_audio_zip_import
+from apps.quick_words.models import QuickWordAudioImportJob
 
-from .forms import ControlLoginForm, build_form
+from .forms import ControlLoginForm, QuickWordAudioZipForm, build_form
 from .bulk_questions import question_formset
 from . import results
 from .kind_fields import guide
@@ -258,6 +260,35 @@ def search(request):
                 })
     return render(request, "manage/search.html", _base_context(
         request, query=query, groups=groups, total=sum(len(g["rows"]) for g in groups)
+    ))
+
+
+# ---------------------------------------------------------------------------
+# Quick Words: bulk audio upload
+# ---------------------------------------------------------------------------
+
+@staff_only
+def quick_words_audio_upload(request):
+    form = QuickWordAudioZipForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and form.is_valid():
+        job = QuickWordAudioImportJob.objects.create(
+            uploaded_by=request.user,
+            archive=form.cleaned_data["audio_zip"],
+            total_files=form.audio_count,
+        )
+        start_audio_zip_import(job.pk)
+        return redirect("manage:quick_words_audio_import", job_id=job.pk)
+
+    return render(request, "manage/quick_words_upload.html", _base_context(
+        request, "words", form=form,
+    ))
+
+
+@staff_only
+def quick_words_audio_import(request, job_id):
+    job = get_object_or_404(QuickWordAudioImportJob, pk=job_id, uploaded_by=request.user)
+    return render(request, "manage/quick_words_upload.html", _base_context(
+        request, "words", job=job,
     ))
 
 

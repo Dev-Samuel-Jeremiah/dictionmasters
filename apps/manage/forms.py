@@ -12,6 +12,8 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import models
 
+from apps.quick_words.audio_zip import AudioZipError, inspect_audio_zip
+
 
 class ControlFormMixin:
     """Consistent styling and sensible widgets for every field."""
@@ -80,3 +82,23 @@ class ControlLoginForm(ControlFormMixin, AuthenticationForm):
                 "That account isn't an admin account. Learners sign in on the main site.",
                 code="not_staff",
             )
+
+
+class QuickWordAudioZipForm(forms.Form):
+    audio_zip = forms.FileField(
+        label="ZIP file of word audio",
+        help_text=(
+            "Each audio filename must be one word, such as about.mp3. "
+            "Supported formats: MP3, M4A, AAC, WAV, OGG, OPUS, FLAC and WEBM. "
+            "New words get IPA from IPA-Dict UK and definitions from OpenAI."
+        ),
+        widget=forms.ClearableFileInput(attrs={"accept": ".zip,application/zip", "class": "cr-file"}),
+    )
+
+    def clean_audio_zip(self):
+        upload = self.cleaned_data["audio_zip"]
+        try:
+            self.audio_count = inspect_audio_zip(upload)
+        except AudioZipError as error:
+            raise forms.ValidationError(str(error)) from error
+        return upload

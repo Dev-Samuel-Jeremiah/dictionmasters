@@ -12,6 +12,8 @@ selection, e.g. "Class 6A Spelling", built by adding words as they
 browse.
 """
 
+import uuid
+
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
@@ -69,6 +71,40 @@ class QuickWord(AudioContent):
                 slug = f"{base}-{i}"
             self.slug = slug
         super().save(*args, **kwargs)
+
+
+class QuickWordAudioImportJob(models.Model):
+    class Status(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        RUNNING = "running", "Running"
+        COMPLETE = "complete", "Complete"
+        FAILED = "failed", "Failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="quick_word_audio_imports",
+    )
+    archive = models.FileField(upload_to="quick-words/import-zips/%Y/%m/")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.QUEUED)
+    total_files = models.PositiveIntegerField(default=0)
+    completed_files = models.PositiveIntegerField(default=0)
+    created_words = models.PositiveIntegerField(default=0)
+    updated_words = models.PositiveIntegerField(default=0)
+    skipped_files = models.PositiveIntegerField(default=0)
+    failed_files = models.PositiveIntegerField(default=0)
+    results = models.JSONField(default=list, blank=True)
+    error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Quick Words audio import {self.id} ({self.status})"
 
 
 class WordList(models.Model):

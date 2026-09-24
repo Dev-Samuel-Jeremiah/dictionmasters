@@ -14,6 +14,7 @@
   </div>
   {% if not readonly and not screen.no_add %}
   <div class="cr-pagehead__actions">
+    {% if screen.key == "words" %}<a href="{% url 'manage:quick_words_audio_upload' %}" class="cr-btn cr-btn--gold">Upload audio ZIP</a>{% endif %}
     {% if bulk_url %}<a href="{{ bulk_url }}" class="cr-btn cr-btn--gold">+ Add multiple questions</a>{% endif %}
     <a href="{% url 'manage:add' screen.key %}{% if parent_obj %}?in={{ parent_obj.pk }}{% endif %}" class="cr-btn {% if bulk_url %}cr-btn--ghost{% else %}cr-btn--gold{% endif %}">+ Add {{ singular }}</a>
   </div>
