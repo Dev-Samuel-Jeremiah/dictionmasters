@@ -80,10 +80,15 @@
     {% else %}<p class="cr-dim">No answer given.</p>{% endif %}
 
     {% if one.is_recording %}
-    <div class="cr-verdict" role="radiogroup" aria-label="Mark this recording">
-      <label class="cr-verdict__pick cr-verdict__pick--good"><input type="radio" name="verdict-{{ one.response.pk }}" value="good"{% if one.response.is_correct %} checked{% endif %} required><span>&#10003; Good</span></label>
-      <label class="cr-verdict__pick cr-verdict__pick--work"><input type="radio" name="verdict-{{ one.response.pk }}" value="work"{% if one.response.is_correct is False %} checked{% endif %}><span>&#8635; Needs work</span></label>
-    </div>
+    <label class="cr-mark-award">
+      <span>Mark to award</span>
+      <select name="verdict-{{ one.response.pk }}" class="cr-input cr-select" required>
+        <option value="">Choose a mark</option>
+        {% for mark, label in recording_marks %}
+        <option value="{{ mark }}"{% if one.selected_mark == mark %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
     {% endif %}
   </section>
   {% endfor %}
@@ -93,7 +98,7 @@
       <textarea name="feedback" rows="3" class="cr-input cr-textarea">{{ attempt.teacher_feedback }}</textarea></label>
     {% if attempt.teacher_audio_feedback %}<p class="cr-field"><span>Current audio feedback</span><audio controls preload="none" src="{{ attempt.teacher_audio_feedback.url }}"></audio></p>{% endif %}
     {% include "manage/_audio_feedback_recorder.html" %}
-    <p class="cr-help">The score is the share of answers marked right or Good. The learner sees it, with your feedback, on their result.</p>
+    <p class="cr-help">Award each recording from 0 to 5 marks. The learner's final percentage uses marks earned out of the available total.</p>
     <div class="cr-formactions"><button type="submit" class="cr-btn cr-btn--gold">{% if row.waiting %}Save marks{% else %}Update marks{% endif %}</button></div>
   </section>
   {% endif %}

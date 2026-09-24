@@ -74,12 +74,14 @@
   // ---------------------------------------------------------------- install
   var deferred = null;
   var buttons = [];
+  var installed = standalone;
 
   window.addEventListener("beforeinstallprompt", function (event) {
     event.preventDefault();
     deferred = event;
   });
   window.addEventListener("appinstalled", function () {
+    installed = true;
     deferred = null;
     buttons.forEach(function (button) { button.hidden = true; });
     var fab = document.querySelector("[data-install-fab]");
@@ -97,11 +99,64 @@
     var dialog = document.getElementById("install-steps");
     if (!dialog) return;
     var which = device();
+    var secureNote = dialog.querySelector("[data-install-insecure]");
+    var secureIntro = dialog.querySelector("[data-install-secure]");
+    if (secureNote) secureNote.hidden = window.isSecureContext;
+    if (secureIntro) secureIntro.hidden = !window.isSecureContext;
     dialog.querySelectorAll("[data-for]").forEach(function (part) {
-      part.hidden = part.getAttribute("data-for") !== which;
+      part.hidden = !window.isSecureContext || part.getAttribute("data-for") !== which;
     });
     if (typeof dialog.showModal === "function") dialog.showModal();
     else dialog.setAttribute("open", "");
+  }
+
+  function hideInstallButtons() {
+    buttons.forEach(function (button) { button.hidden = true; });
+    var fab = document.querySelector("[data-install-fab]");
+    if (fab) fab.hidden = true;
+  }
+
+  function requestInstall() {
+    if (installed) return;
+    if (!deferred) {
+      showSteps();
+      return;
+    }
+
+    // Call prompt synchronously in the click handler: browsers require the
+    // user's activation to still be active when the native prompt is opened.
+    var installEvent = deferred;
+    deferred = null;
+    var promptResult;
+    try {
+      promptResult = installEvent.prompt();
+    } catch (error) {
+      showSteps();
+      return;
+    }
+
+    function recordChoice(choice) {
+      if (choice && choice.outcome === "accepted") {
+        installed = true;
+        hideInstallButtons();
+      }
+    }
+
+    // Some implementations return the choice from prompt(); Chromium also
+    // exposes userChoice. Handle either form, and retain a useful fallback if
+    // the browser rejects the native prompt.
+    function handlePromptResult(result) {
+      if (result && result.outcome) {
+        recordChoice(result);
+      } else if (installEvent.userChoice && typeof installEvent.userChoice.then === "function") {
+        installEvent.userChoice.then(recordChoice).catch(showSteps);
+      }
+    }
+    if (promptResult && typeof promptResult.then === "function") {
+      promptResult.then(handlePromptResult).catch(showSteps);
+    } else if (installEvent.userChoice && typeof installEvent.userChoice.then === "function") {
+      installEvent.userChoice.then(recordChoice).catch(showSteps);
+    }
   }
 
   var HIDDEN_FOR = 30 * 24 * 60 * 60 * 1000;      // "not now" lasts a month
@@ -127,16 +182,10 @@
     buttons = Array.prototype.slice.call(document.querySelectorAll("[data-install-app]"));
     buttons.forEach(function (button) {
       // Already running as the app: nothing to install.
-      button.hidden = standalone;
-      button.addEventListener("click", function () {
-        if (deferred) {
-          deferred.prompt();
-          deferred.userChoice.finally(function () { deferred = null; });
-        } else {
-          showSteps();
-        }
-      });
+      button.hidden = installed;
+      button.addEventListener("click", requestInstall);
     });
+    if (installed) hideInstallButtons();
     var dialog = document.getElementById("install-steps");
     if (dialog) {
       dialog.addEventListener("click", function (event) {

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}My results — Assessments{% endblock %}
+{% block title %}My assessment results — Diction Masters{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
@@ -12,56 +12,118 @@
 <div class="ui">
   <section class="ui-hero ui-hero--maroon">
     <div class="wrap">
-      <ol class="ui-crumbs"><li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li><li><a href="{% url 'assessments:hub' %}">Assessments</a></li><li>My results</li></ol>
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url 'assessments:hub' %}">Assessments</a></li>
+        <li>My results</li>
+      </ol>
       <div class="ui-hero__inner">
         <div class="ui-hero__main">
           <span class="ui-hero__icon" aria-hidden="true">&#128202;</span>
           <div>
-            <p class="ui-hero__eyebrow">Assessments</p>
-            <h1 class="ui-hero__title">My results</h1>
-            
-            <div class="ui-hero__chips"><span class="ui-chip ui-chip--gold">{{ finished|length }} finished</span>{% if in_progress %}<span class="ui-chip">{{ in_progress|length }} in progress</span>{% endif %}</div>
+            <p class="ui-hero__eyebrow">Your learning record</p>
+            <h1 class="ui-hero__title">My assessment results</h1>
+            <p class="ui-hero__lede">Review scores, teacher feedback and answers from across your learning programmes.</p>
+            <div class="ui-hero__actions">
+              <a href="{% url 'assessments:hub' %}" class="ui-btn ui-btn--glass ui-btn--small">Browse assessments</a>
+            </div>
           </div>
         </div>
-        
       </div>
     </div>
   </section>
 
+  <section>
+    <div class="wrap ui-body as-results">
+      <div class="as-results__summary" aria-label="Assessment summary">
+        <article class="as-results__metric">
+          <span class="as-results__metric-label">Attempts</span>
+          <strong>{{ total_attempts }}</strong>
+          <span>across all programmes</span>
+        </article>
+        <article class="as-results__metric as-results__metric--green">
+          <span class="as-results__metric-label">Passed</span>
+          <strong>{{ passed_count }}</strong>
+          <span>assessments passed</span>
+        </article>
+        <article class="as-results__metric as-results__metric--gold">
+          <span class="as-results__metric-label">Average score</span>
+          <strong>{% if average_score is not None %}{{ average_score }}%{% else %}—{% endif %}</strong>
+          <span>from marked attempts</span>
+        </article>
+        <article class="as-results__metric as-results__metric--plum">
+          <span class="as-results__metric-label">Awaiting review</span>
+          <strong>{{ awaiting_count }}</strong>
+          <span>sent to a teacher</span>
+        </article>
+      </div>
 
-<section>
-  <div class="wrap ui-body ui-body--narrow">
-    {% if in_progress %}
-    <h2 class="as-section-title">In progress</h2>
-    <ul class="as-result-list">
-      {% for attempt in in_progress %}
-      <li><a href="{% url 'assessments:take' attempt.pk %}" class="as-result-row">
-        <span class="as-result-row__title">{{ attempt.assessment.title }}</span>
-        <span class="as-result-row__meta">{{ attempt.assessment.get_kind_display }} &middot; started {{ attempt.started_at|date:"j M, H:i" }}</span>
-        <span class="as-pill as-pill--waiting">Continue &rarr;</span>
-      </a></li>
-      {% endfor %}
-    </ul>
-    {% endif %}
+      {% if groups %}
+      <nav class="as-results__categories" aria-label="Result categories">
+        {% for group in groups %}
+        <a class="as-results__category as-results__category--{{ group.key }}" href="#results-{{ group.key }}">
+          <span class="as-results__category-icon" aria-hidden="true">{{ group.icon }}</span>
+          <span><strong>{{ group.label }}</strong><small>{{ group.count }} result{{ group.count|pluralize }}</small></span>
+          <span class="as-results__category-arrow" aria-hidden="true">&darr;</span>
+        </a>
+        {% endfor %}
+      </nav>
 
-    <h2 class="as-section-title">Finished</h2>
-    {% if finished %}
-    <ul class="as-result-list">
-      {% for attempt in finished %}
-      <li><a href="{% url 'assessments:result' attempt.pk %}" class="as-result-row">
-        <span class="as-result-row__title">{{ attempt.assessment.title }}</span>
-        <span class="as-result-row__meta">
-          {{ attempt.assessment.get_kind_display }} &middot; {{ attempt.submitted_at|date:"j M Y" }}
-          {% if attempt.recommended_level %}&middot; start at {{ attempt.recommended_level }}{% endif %}
-        </span>
-        {% include "assessments/_score_pill.html" %}
-      </a></li>
+      {% for group in groups %}
+      <section class="as-results__group as-results__group--{{ group.key }}" id="results-{{ group.key }}">
+        <header class="as-results__group-head">
+          <div class="as-results__group-title-wrap">
+            <span class="as-results__group-icon" aria-hidden="true">{{ group.icon }}</span>
+            <div>
+              <p class="as-results__eyebrow">Result category</p>
+              <h2>{{ group.label }}</h2>
+              <p class="as-results__description">{{ group.description }}</p>
+            </div>
+          </div>
+          <div class="as-results__group-stats">
+            <span><strong>{{ group.count }}</strong> attempt{{ group.count|pluralize }}</span>
+            <span><strong>{{ group.passed }}</strong> passed</span>
+            {% if group.average is not None %}<span><strong>{{ group.average }}%</strong> average</span>{% endif %}
+          </div>
+        </header>
+
+        <ol class="as-results__list">
+          {% for row in group.rows %}
+          <li>
+            <a href="{{ row.url }}" class="as-results__row">
+              <span class="as-results__row-mark as-results__row-mark--{{ row.state }}" aria-hidden="true">
+                {% if row.state == "pass" %}&#10003;{% elif row.state == "fail" %}&#8635;{% elif row.state == "waiting" %}&#9203;{% else %}&#9654;{% endif %}
+              </span>
+              <span class="as-results__row-main">
+                <strong class="as-results__row-title">{{ row.title }}</strong>
+                <span class="as-results__row-detail">{{ row.detail }}</span>
+                <time class="as-results__row-date" datetime="{{ row.when|date:'c' }}">{{ row.when|date:"j M Y, H:i" }}</time>
+              </span>
+              <span class="as-results__row-score">
+                {% if row.has_score %}
+                  <strong>{{ row.percent }}%</strong>
+                  <small>{{ row.score|floatformat:"-2" }} / {{ row.max_score|floatformat:"-2" }} {% if row.category == "assessments" %}marks{% else %}correct{% endif %}</small>
+                {% else %}
+                  <strong class="as-results__row-state as-results__row-state--{{ row.state }}">{{ row.state_label }}</strong>
+                  {% if row.state == "progress" %}<small>Continue this attempt</small>{% elif row.state == "waiting" %}<small>Your teacher will mark it</small>{% endif %}
+                {% endif %}
+              </span>
+              <span class="as-results__row-arrow" aria-hidden="true">&rarr;</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ol>
+      </section>
       {% endfor %}
-    </ul>
-    {% else %}
-    <div class="ui-empty"><p>You haven't finished an assessment yet. <a href="{% url 'assessments:hub' %}" class="link-quiet">Choose one</a>.</p></div>
-    {% endif %}
-  </div>
-</section>
+      {% else %}
+      <div class="as-results__empty">
+        <span aria-hidden="true">&#127793;</span>
+        <h2>Your results will appear here</h2>
+        <p>Complete an assessment in any programme to build your learning record.</p>
+        <a href="{% url 'assessments:hub' %}" class="btn btn--maroon">Explore assessments</a>
+      </div>
+      {% endif %}
+    </div>
+  </section>
 </div>
 {% endblock %}

@@ -1,0 +1,72 @@
+{% extends "manage/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">✨ <a href="{% url 'manage:list' screen.key %}">{{ screen.name }}</a></p>
+    <h1 class="cr-pagehead__title">{{ title }}</h1>
+    {% if activity %}<p class="cr-pagehead__note">{{ activity.lesson.name }} · {{ activity.title }}</p>{% endif %}
+  </div>
+  {% if cancel_url %}<a href="{{ cancel_url }}" class="cr-btn cr-btn--ghost">Back to activity</a>{% endif %}
+</header>
+
+{% if not activity %}
+<section class="cr-card cr-bulk-picker">
+  <p class="cr-bulk-eyebrow">Choose where these questions belong</p>
+  <h2 class="cr-card__title">Select an assessment activity</h2>
+  <p class="cr-help">Each batch is saved to one activity, so its question type and marking rules stay consistent.</p>
+  {% if picker_error %}<p class="cr-message cr-message--error" role="alert">{{ picker_error }}</p>{% endif %}
+  <form method="get" action="{% url 'manage:bulk_questions' screen.key %}" class="cr-form">
+    <div class="cr-field">
+      <label for="bulk-activity">Assessment activity</label>
+      <select id="bulk-activity" name="in" class="cr-input cr-select" required>
+        <option value="">Choose an activity…</option>
+        {% for choice in activities %}
+        <option value="{{ choice.pk }}"{% if selected_activity_id == choice.pk %} selected{% endif %}>{{ choice.lesson.name }} · {{ choice.title }} · {{ choice.kind_label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="cr-btn cr-btn--gold">Continue to question builder <span aria-hidden="true">→</span></button>
+  </form>
+</section>
+{% else %}
+<section class="cr-card cr-bulk-intro">
+  <div class="cr-bulk-intro__icon" aria-hidden="true">{{ activity.icon }}</div>
+  <div>
+    <p class="cr-bulk-eyebrow">{{ activity.kind_label }} · {{ activity.mode_label }}</p>
+    <h2 class="cr-card__title">Build a question set</h2>
+    <p class="cr-help">Enter several questions below, then save them together. New questions will be added after the existing ones.</p>
+  </div>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="cr-form cr-bulk-form">
+  {% csrf_token %}
+  <input type="hidden" name="activity" value="{{ activity.pk }}">
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}<ul class="cr-errors cr-bulk-errors">{% for error in formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+
+  <div class="cr-bulk-list" data-question-list>
+    {% for form in formset %}
+      {% include "manage/_bulk_question_row.html" with question_form=form row_number=forloop.counter %}
+    {% endfor %}
+  </div>
+
+  <template id="bulk-question-template">
+    {% include "manage/_bulk_question_row.html" with question_form=formset.empty_form row_number="__number__" %}
+  </template>
+
+  <div class="cr-bulk-actions">
+    <button type="button" class="cr-btn cr-btn--ghost" data-add-question><span aria-hidden="true">＋</span> Add another question</button>
+    <span class="cr-bulk-actions__note">You can add up to 100 questions in one batch.</span>
+  </div>
+  <div class="cr-formactions cr-bulk-submit">
+    <button type="submit" class="cr-btn cr-btn--gold">Save all questions</button>
+    <a href="{{ cancel_url }}" class="cr-link">Cancel</a>
+  </div>
+</form>
+<script src="{% static 'js/manage_bulk_questions.js' %}" defer></script>
+{% endif %}
+{% endblock %}

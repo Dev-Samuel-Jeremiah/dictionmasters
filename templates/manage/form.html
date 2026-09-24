@@ -12,7 +12,10 @@
     </p>
     <h1 class="cr-pagehead__title">{% if obj %}{{ obj }}{% else %}New {{ singular }}{% endif %}</h1>
   </div>
-  {% if obj and not screen.no_delete %}<a href="{% url 'manage:delete' screen.key obj.pk %}" class="cr-btn cr-btn--danger">Delete</a>{% endif %}
+  <div class="cr-pagehead__actions">
+    {% if bulk_url %}<a href="{{ bulk_url }}" class="cr-btn cr-btn--gold">+ Add multiple questions</a>{% endif %}
+    {% if obj and not screen.no_delete %}<a href="{% url 'manage:delete' screen.key obj.pk %}" class="cr-btn cr-btn--danger">Delete</a>{% endif %}
+  </div>
 </header>
 
 {% if screen.key == "dashboard-card-images" and obj.image %}
@@ -56,7 +59,8 @@
   <header class="cr-child__head">
     <h2 class="cr-card__title">{{ child.name }} <span class="cr-count">{{ child.count }}</span></h2>
     <div>
-      <a href="{{ child.add_url }}" class="cr-btn cr-btn--gold cr-btn--small">+ Add {{ child.singular }}</a>
+      {% if child.bulk_url %}<a href="{{ child.bulk_url }}" class="cr-btn cr-btn--gold cr-btn--small">+ Add multiple</a>{% endif %}
+      <a href="{{ child.add_url }}" class="cr-btn {% if child.bulk_url %}cr-btn--ghost{% else %}cr-btn--gold{% endif %} cr-btn--small">+ Add {{ child.singular }}</a>
       {% if child.count > 50 %}<a href="{{ child.list_url }}" class="cr-link">See all</a>{% endif %}
     </div>
   </header>

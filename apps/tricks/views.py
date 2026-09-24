@@ -46,6 +46,11 @@ def open_lesson(request, programme, slug, tab="lens"):
         return render(request, "tricks/locked.html", {
             "programme": info, "lesson": lesson, "blocker": blocker, "step": standing.step(lesson),
         }, status=403)
+    step = standing.step(lesson)
+    if info["numbered"] and tab in progress.TAB_CONTENT:
+        populated = [one["slug"] for one in step["tabs"]]
+        if tab not in populated and populated:
+            return redirect(info["lesson_tab"], slug=lesson.slug, tab=populated[0])
     progress.record_tab(request.user, lesson, tab)
     step = progress.Standing(request.user, programme).step(lesson)
     return book.lesson_detail(
@@ -125,14 +130,22 @@ def activity_result(request, programme, slug, activity_slug, attempt_id):
     activity = get_object_or_404(LessonActivity, lesson=lesson, slug=activity_slug)
     attempt = get_object_or_404(LessonActivityAttempt, pk=attempt_id, activity=activity, user=request.user)
     kind = activity.kind_spec
-    rows = [
-        {"response": response, "item": response.item,
-         "feedback": feedback_for(kind, response.item, response.given, response.is_correct)}
-        for response in attempt.responses.select_related("item")
-    ]
+    rows = []
+    for response in attempt.responses.select_related("item"):
+        teacher_mark = response.awarded_mark
+        rows.append({
+            "response": response, "item": response.item,
+            "teacher_mark": teacher_mark,
+            "teacher_passed": (teacher_mark is not None
+                               and teacher_mark * 100 >= activity.pass_mark * 5),
+            "feedback": (f"Your teacher awarded {teacher_mark} out of 5 marks."
+                         if teacher_mark is not None
+                         else feedback_for(kind, response.item, response.given, response.is_correct)),
+        })
     step = progress.Standing(request.user, programme).step(lesson)
     return render(request, "echospell/activity_result.html", {
         "activity": activity, "attempt": attempt, "rows": rows,
+        "uses_numeric_marks": any(row["teacher_mark"] is not None for row in rows),
         "retry_url": reverse(info["activity"], args=[lesson.slug, activity.slug]),
         "after_result": "tricks/_after_activity.html", "step": step, "lesson": lesson,
         **_page(programme, lesson, step["number"] if step else ""),

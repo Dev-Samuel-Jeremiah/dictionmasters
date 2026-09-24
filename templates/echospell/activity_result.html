@@ -57,7 +57,7 @@
         <p class="es-score__headline">{% if attempt.passed %}Well done, you passed!{% else %}Not quite yet. Have another go.{% endif %}</p>
         <p class="es-score__note">You need {{ activity.pass_mark }}% to pass.</p>
         <div class="es-score__stats">
-          <span class="{% if attempt.passed %}is-good{% else %}is-bad{% endif %}">{{ attempt.score }} of {{ attempt.max_score }} correct</span>
+          <span class="{% if attempt.passed %}is-good{% else %}is-bad{% endif %}">{{ attempt.score }} of {{ attempt.max_score }} {% if uses_numeric_marks %}marks awarded{% else %}correct{% endif %}</span>
           <span>Pass mark {{ activity.pass_mark }}%</span>
         </div>
       </div>
@@ -81,9 +81,9 @@
       </header>
       <ol class="result-list">
         {% for row in rows %}
-        <li class="result-item {% if row.response.is_correct %}result-item--correct{% elif row.response.is_correct is False %}result-item--wrong{% else %}result-item--pending{% endif %}">
+        <li class="result-item {% if row.teacher_mark is not None %}{% if row.teacher_passed %}result-item--correct{% else %}result-item--wrong{% endif %}{% elif row.response.is_correct %}result-item--correct{% elif row.response.is_correct is False %}result-item--wrong{% else %}result-item--pending{% endif %}">
           <span class="result-item__mark" aria-hidden="true">
-            {% if row.response.is_correct %}&#10003;{% elif row.response.is_correct is False %}&#10007;{% else %}&#8943;{% endif %}
+            {% if row.teacher_mark is not None %}{% if row.teacher_passed %}&#10003;{% else %}&#10007;{% endif %}{% elif row.response.is_correct %}&#10003;{% elif row.response.is_correct is False %}&#10007;{% else %}&#8943;{% endif %}
           </span>
           <div class="result-item__body">
             {% if row.item.prompt %}<p class="result-item__prompt">{{ row.item.prompt }}</p>{% endif %}
@@ -92,6 +92,7 @@
             {% elif row.response.given %}
             <p class="result-item__given">You wrote: <strong>{{ row.response.given }}</strong></p>
             {% endif %}
+            {% if row.teacher_mark is not None %}<p class="result-item__given">Teacher's mark: <strong>{{ row.teacher_mark }} / 5</strong></p>{% endif %}
             <p class="result-item__feedback">{{ row.feedback }}</p>
           </div>
         </li>

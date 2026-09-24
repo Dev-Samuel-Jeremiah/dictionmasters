@@ -16,12 +16,15 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Max
 from django.http import Http404, JsonResponse
+from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.book.programmes import programme_for
 from apps.book.views import PHONEMIC_CHART
-from apps.echospell.models import Level
+from apps.echospell.models import ActivityAttempt as EchoSpellAttempt, Level
+from apps.tricks.models import LessonActivityAttempt
 
 from . import scoring
 from .models import RUBRIC_CRITERIA, Assessment, Attempt, Question
@@ -324,12 +327,121 @@ def result(request, attempt_id):
     })
 
 
+RESULT_CATEGORIES = [
+    {"key": "academy", "label": "44 Academy", "icon": "📘",
+     "description": "Sound and pronunciation lessons."},
+    {"key": "tricks", "label": "Tricks to Sound Fluent", "icon": "✨",
+     "description": "Fluency tricks and their lesson assessments."},
+    {"key": "echospell", "label": "EchoSpell", "icon": "🔊",
+     "description": "Spelling, listening and phonics activities."},
+    {"key": "assessments", "label": "Assessments", "icon": "📝",
+     "description": "Practice quizzes, timed tests, speaking and placement."},
+]
+
+
+def _learner_result_row(*, category, title, detail, when, url, is_open=False,
+                        awaiting=False, passed=False, percent=None, score=None, max_score=None):
+    if is_open:
+        state, state_label = "progress", "In progress"
+    elif awaiting:
+        state, state_label = "waiting", "Awaiting review"
+    elif passed:
+        state, state_label = "pass", "Passed"
+    else:
+        state, state_label = "fail", "Needs another try"
+
+    has_score = not is_open and not awaiting and max_score is not None and max_score > 0
+    return {
+        "category": category,
+        "title": title,
+        "detail": detail,
+        "when": when,
+        "url": url,
+        "state": state,
+        "state_label": state_label,
+        "passed": bool(passed),
+        "percent": percent if has_score else None,
+        "score": score,
+        "max_score": max_score,
+        "has_score": has_score,
+    }
+
+
+def _result_group_stats(group):
+    rows = group["rows"]
+    scored = [row["percent"] for row in rows if row["percent"] is not None]
+    group["count"] = len(rows)
+    group["passed"] = sum(row["state"] == "pass" for row in rows)
+    group["awaiting"] = sum(row["state"] == "waiting" for row in rows)
+    group["average"] = round(sum(scored) / len(scored)) if scored else None
+
+
 @login_required
 def my_results(request):
-    attempts = Attempt.objects.filter(user=request.user).select_related("assessment")
+    """One learner-owned history across every scored learning programme."""
+    groups = {row["key"]: {**row, "rows": []} for row in RESULT_CATEGORIES}
+    results = []
+
+    for attempt in Attempt.objects.filter(user=request.user).select_related("assessment"):
+        assessment = attempt.assessment
+        detail = assessment.get_kind_display()
+        if assessment.level:
+            detail += f" · {assessment.level}"
+        if attempt.recommended_level:
+            detail += f" · Start at {attempt.recommended_level}"
+        results.append(_learner_result_row(
+            category="assessments", title=assessment.title, detail=detail,
+            when=attempt.submitted_at or attempt.started_at,
+            url=reverse("assessments:take" if attempt.is_open else "assessments:result", args=[attempt.pk]),
+            is_open=attempt.is_open, awaiting=attempt.status == Attempt.Status.AWAITING,
+            passed=attempt.passed, percent=attempt.percent,
+            score=attempt.score, max_score=attempt.max_score,
+        ))
+
+    lesson_attempts = (LessonActivityAttempt.objects.filter(user=request.user)
+                       .select_related("activity__lesson__category"))
+    for attempt in lesson_attempts:
+        activity, lesson = attempt.activity, attempt.activity.lesson
+        programme = lesson.category.programme
+        category = "tricks" if programme == "tricks" else "academy"
+        info = programme_for(programme)
+        lesson_label = " ".join(part for part in (lesson.symbol, lesson.name) if part)
+        results.append(_learner_result_row(
+            category=category, title=activity.title,
+            detail=f"{lesson_label} · {activity.kind_label}", when=attempt.created_at,
+            url=reverse(info["activity_result"], args=[lesson.slug, activity.slug, attempt.pk]),
+            awaiting=attempt.status == attempt.STATUS_AWAITING, passed=attempt.passed,
+            percent=attempt.percent, score=attempt.score, max_score=attempt.max_score,
+        ))
+
+    echo_attempts = (EchoSpellAttempt.objects.filter(user=request.user)
+                     .select_related("activity__group__level"))
+    for attempt in echo_attempts:
+        activity, group = attempt.activity, attempt.activity.group
+        results.append(_learner_result_row(
+            category="echospell", title=activity.title,
+            detail=f"{group.level.name} · Group {group.number} · {activity.kind_label}",
+            when=attempt.created_at,
+            url=reverse("echospell:activity_result",
+                        args=[group.level.slug, group.slug, activity.slug, attempt.pk]),
+            awaiting=attempt.status == attempt.STATUS_AWAITING, passed=attempt.passed,
+            percent=attempt.percent, score=attempt.score, max_score=attempt.max_score,
+        ))
+
+    results.sort(key=lambda row: row["when"], reverse=True)
+    for row in results:
+        groups[row["category"]]["rows"].append(row)
+    visible_groups = [group for group in groups.values() if group["rows"]]
+    for group in visible_groups:
+        _result_group_stats(group)
+
+    scored_results = [row["percent"] for row in results if row["percent"] is not None]
     return render(request, "assessments/my_results.html", {
-        "in_progress": [a for a in attempts if a.is_open],
-        "finished": [a for a in attempts if not a.is_open],
+        "groups": visible_groups,
+        "total_attempts": len(results),
+        "passed_count": sum(row["state"] == "pass" for row in results),
+        "awaiting_count": sum(row["state"] == "waiting" for row in results),
+        "average_score": round(sum(scored_results) / len(scored_results)) if scored_results else None,
     })
 
 

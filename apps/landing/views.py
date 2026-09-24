@@ -4,23 +4,33 @@ from django.shortcuts import render
 
 from apps.book.views import PHONEMIC_CHART
 
-# The words the hero card cycles through. Each one is a sound Nigerian
-# learners are most often corrected on — a silent letter, a V read as B,
-# a TH read as T or D — so the animation is teaching, not decoration.
-HERO_WORDS = [
-    {"word": "Wednesday", "ipa": "/ˈwɛnzdeɪ/",
-     "tip": "Three syllables on paper, two out loud: <em>WENZ</em>-day."},
-    {"word": "achieve", "ipa": "/əˈtʃiːv/",
-     "tip": "Hold the <em>ee</em> long — a-CHEEVE, never a-chiv."},
-    {"word": "village", "ipa": "/ˈvɪlɪdʒ/",
-     "tip": "Upper teeth on the lower lip for the <em>V</em> — never a B."},
-    {"word": "breathe", "ipa": "/briːð/",
-     "tip": "Voiced <em>TH</em> at the end — feel your throat buzz."},
-    {"word": "knowledge", "ipa": "/ˈnɒlɪdʒ/",
-     "tip": "The <em>K</em> is silent: NOL-ij."},
-    {"word": "warmth", "ipa": "/wɔːmθ/",
-     "tip": "Finish the word — tongue between the teeth for the <em>TH</em>."},
-]
+def _hero_words():
+    """Choose today's six Quick Words with saved IPA, in a stable order."""
+    from apps.quick_words.models import QuickWord
+    from django.utils import timezone
+
+    words = QuickWord.objects.filter(is_published=True).exclude(ipa="").order_by("word")
+    count = words.count()
+    if not count:
+        return []
+
+    # Advance through the library each day without showing a new random
+    # selection on every page refresh.
+    per_day = min(6, count)
+    start = (timezone.localdate().toordinal() * per_day) % count
+    fields = ("word", "ipa", "example_sentence", "definition")
+    rows = list(words.values(*fields)[start:start + per_day])
+    if len(rows) < per_day:
+        rows.extend(words.values(*fields)[:per_day - len(rows)])
+
+    return [
+        {
+            "word": row["word"],
+            "ipa": row["ipa"],
+            "tip": row["example_sentence"] or row["definition"],
+        }
+        for row in rows
+    ]
 
 
 def _phoneme_symbols():
@@ -97,7 +107,7 @@ def home(request):
                 "cta": "Register your school", "url": "accounts:register_school",
             },
         ],
-        "hero_words": HERO_WORDS,
+        "hero_words": _hero_words(),
         "phonemes": _phoneme_symbols(),
         "drift": _drift_layer(),
         "stats": [

@@ -60,7 +60,7 @@
 
       <div class="hero__page hero__page--right">
         <div class="ld-stage">
-          <article class="lesson-card" aria-label="Example lesson card" data-word-cycle>
+          <article class="lesson-card" aria-label="Today’s Quick Words" data-word-cycle>
             <p class="lesson-card__label">Today's word</p>
             <div class="lesson-card__stack">
               {% for entry in hero_words %}
@@ -98,9 +98,8 @@
 
             <div class="lesson-card__notes">
               {% for entry in hero_words %}
-              {# tip is author-written copy in views.py, not user input #}
               <p class="lesson-card__note word-slide {% if forloop.first %}word-slide--on{% endif %}"
-                 data-note-slide {% if not forloop.first %}aria-hidden="true"{% endif %}>{{ entry.tip|safe }}</p>
+                 data-note-slide {% if not forloop.first %}aria-hidden="true"{% endif %}>{{ entry.tip }}</p>
               {% endfor %}
             </div>
             <p class="lesson-card__signature">— Miss Adaeze, your teacher</p>

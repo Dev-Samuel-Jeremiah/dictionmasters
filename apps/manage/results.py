@@ -10,9 +10,9 @@ Three kinds of attempt are graded on the site:
   echospell   an EchoSpell activity (apps/echospell).
   lesson      an assessment activity of a 44 Academy sound or a trick (apps/tricks).
 
-For the two activity kinds, recordings are marked Good or Needs work;
-the score, pass and the "reviewed by the teacher" status follow from
-that, and the learner sees it with the feedback on their result page.
+For the two activity kinds, a teacher awards each recording 0–5 marks;
+the total score, pass and reviewed status follow from those marks, and
+the learner sees each awarded mark with the feedback on their result page.
 """
 
 from django.db.models import Q
@@ -119,30 +119,54 @@ def get_attempt(source, pk):
 # One attempt: what the learner gave, and marking it
 # ---------------------------------------------------------------------------
 
-def activity_answers(attempt):
+RECORDING_MARKS = [
+    (0, "0 — No credit"), (1, "1 — Beginning"), (2, "2 — Developing"),
+    (3, "3 — Satisfactory"), (4, "4 — Good"), (5, "5 — Excellent"),
+]
+
+
+def activity_answers(attempt, posted=None):
     kind = attempt.activity.kind_spec
-    return [
-        {"response": response, "item": response.item,
-         "is_recording": bool(response.recording) or attempt.activity.mode == "record",
-         "feedback": feedback_for(kind, response.item, response.given, response.is_correct)}
-        for response in attempt.responses.select_related("item")
-    ]
+    shown = []
+    for response in attempt.responses.select_related("item"):
+        raw_mark = (posted or {}).get(f"verdict-{response.pk}", "")
+        if raw_mark in {str(mark) for mark, _label in RECORDING_MARKS}:
+            selected_mark = int(raw_mark)
+        elif response.awarded_mark is not None:
+            selected_mark = response.awarded_mark
+        elif response.is_correct is not None:
+            # Preserve a visible score for recordings marked before numeric
+            # marks were introduced.
+            selected_mark = 5 if response.is_correct else 0
+        else:
+            selected_mark = None
+        teacher_mark = response.awarded_mark
+        teacher_passed = (teacher_mark is not None
+                          and teacher_mark * 100 >= attempt.activity.pass_mark * 5)
+        shown.append({
+            "response": response, "item": response.item,
+            "is_recording": bool(response.recording) or attempt.activity.mode == "record",
+            "feedback": (f"Your teacher awarded {teacher_mark} out of 5 marks."
+                         if teacher_mark is not None
+                         else feedback_for(kind, response.item, response.given, response.is_correct)),
+            "teacher_mark": teacher_mark, "teacher_passed": teacher_passed,
+            "selected_mark": selected_mark,
+        })
+    return shown
 
 
-def mark_activity(attempt, verdicts, feedback):
-    """A teacher's marks for an activity attempt's recordings.
-
-    `verdicts` is {response_id: True (Good) / False (Needs work)}. Every
-    recording must have one; returns the ids still missing, if any.
-    """
+def mark_activity(attempt, marks, feedback):
+    """Save a teacher's 0–5 mark for every recording in an activity."""
     responses = list(attempt.responses.all())
     recordings = [r for r in responses if r.recording or attempt.activity.mode == "record"]
-    missing = [r.pk for r in recordings if r.pk not in verdicts]
+    valid_marks = {mark for mark, _label in RECORDING_MARKS}
+    missing = [r.pk for r in recordings
+               if r.pk not in marks or isinstance(marks[r.pk], bool) or marks[r.pk] not in valid_marks]
     if missing:
         return missing
     for response in recordings:
-        response.is_correct = verdicts[response.pk]
-        response.save(update_fields=["is_correct"])
+        response.awarded_mark = marks[response.pk]
+        response.save(update_fields=["awarded_mark"])
     attempt.recalculate()
     attempt.status = attempt.STATUS_REVIEWED
     attempt.teacher_score = attempt.percent

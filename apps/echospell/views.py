@@ -446,14 +446,19 @@ def activity_result(request, level_slug, group_slug, activity_slug, attempt_id):
     attempt = get_object_or_404(ActivityAttempt, pk=attempt_id, activity=activity, user=request.user)
 
     kind = activity.kind_spec
-    rows = [
-        {
+    rows = []
+    for response in attempt.responses.select_related("item"):
+        teacher_mark = response.awarded_mark
+        rows.append({
             "response": response,
             "item": response.item,
-            "feedback": feedback_for(kind, response.item, response.given, response.is_correct),
-        }
-        for response in attempt.responses.select_related("item")
-    ]
+            "teacher_mark": teacher_mark,
+            "teacher_passed": (teacher_mark is not None
+                               and teacher_mark * 100 >= activity.pass_mark * 5),
+            "feedback": (f"Your teacher awarded {teacher_mark} out of 5 marks."
+                         if teacher_mark is not None
+                         else feedback_for(kind, response.item, response.given, response.is_correct)),
+        })
 
     return render(request, "echospell/activity_result.html", {
         "level": level,
@@ -461,4 +466,5 @@ def activity_result(request, level_slug, group_slug, activity_slug, attempt_id):
         "activity": activity,
         "attempt": attempt,
         "rows": rows,
+        "uses_numeric_marks": any(row["teacher_mark"] is not None for row in rows),
     })

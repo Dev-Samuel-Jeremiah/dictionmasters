@@ -20,7 +20,8 @@ from django.contrib.auth import logout as auth_logout
 from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db import transaction
+from django.db.models import Max, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -39,6 +40,7 @@ from apps.billing.models import BillingSettings
 from apps.landing.models import SiteBranding
 
 from .forms import ControlLoginForm, build_form
+from .bulk_questions import question_formset
 from . import results
 from .kind_fields import guide
 from .registry import QUICK_ADDS, SECTIONS, get_screen, screens
@@ -307,6 +309,8 @@ def record_list(request, key):
         headings=headings, rows=table, page=page, query=query,
         parent_obj=parent_obj, parent_key=parent_key,
         readonly=screen.get("readonly", False), total=rows.count(),
+        bulk_url=(reverse("manage:bulk_questions", args=[key]) + (f"?in={parent_obj.pk}" if parent_obj else ""))
+        if screen.get("bulk_add") else "",
     ))
 
 
@@ -381,14 +385,95 @@ def record_form(request, key, pk=None):
                 "rows": [{"pk": c.pk, "label": str(c)} for c in found[:50]],
                 "count": found.count(),
                 "add_url": f"{reverse('manage:add', args=[child_key])}?in={obj.pk}",
+                "bulk_url": f"{reverse('manage:bulk_questions', args=[child_key])}?in={obj.pk}"
+                if child.get("bulk_add") else "",
                 "list_url": f"{reverse('manage:list', args=[child_key])}?in={obj.pk}",
             })
+
+    bulk_activity_id = parent_obj.pk if parent_obj else getattr(obj, "activity_id", None)
+    bulk_url = reverse("manage:bulk_questions", args=[key]) if screen.get("bulk_add") else ""
+    if bulk_url and bulk_activity_id:
+        bulk_url += f"?in={bulk_activity_id}"
 
     return render(request, "manage/form.html", _base_context(
         request, key,
         screen=screen, form=form, obj=obj, title=_title(screen), singular=_singular(screen),
         parent_obj=parent_obj, children=children,
-        kind_guide=kind_guide,
+        kind_guide=kind_guide, bulk_url=bulk_url,
+    ))
+
+
+@staff_only
+def bulk_questions(request, key):
+    """Add a batch of Tricks assessment questions to one activity."""
+    screen = _screen_or_404(key)
+    if not screen.get("bulk_add") or not screen.get("parent"):
+        raise Http404("Bulk question entry is not available for this screen.")
+
+    activity_key = screen["parent"][1]
+    activity_screen = _screen_or_404(activity_key)
+    activities = _rows_for(activity_screen).select_related("lesson").order_by(
+        "lesson__category__order", "lesson__order", "order", "id"
+    )
+    raw_activity_id = request.POST.get("activity") if request.method == "POST" else request.GET.get("in")
+    activity_id = None
+    activity = None
+    if raw_activity_id:
+        try:
+            activity_id = int(raw_activity_id)
+        except (TypeError, ValueError):
+            activity_id = None
+        if activity_id is not None:
+            activity = activities.filter(pk=activity_id).first()
+
+    if request.method == "GET" and raw_activity_id and activity is None:
+        raise Http404("No assessment activity found.")
+
+    if activity is None:
+        return render(request, "manage/bulk_questions.html", _base_context(
+            request, key,
+            screen=screen, title="Add multiple questions", activities=activities,
+            selected_activity_id=activity_id,
+            picker_error=("Choose a valid assessment activity." if request.method == "POST" else ""),
+            activity=None,
+        ))
+
+    if not activity.kind_spec:
+        raise Http404("This activity type is no longer available.")
+
+    formset = question_formset(
+        activity.kind_spec,
+        request.POST if request.method == "POST" else None,
+        request.FILES if request.method == "POST" else None,
+    )
+    if request.method == "POST" and formset.is_valid():
+        max_order = activity.items.aggregate(last_order=Max("order"))["last_order"]
+        next_order = max_order + 1 if max_order is not None else 0
+        added = 0
+        with transaction.atomic():
+            for item_form in formset:
+                data = item_form.cleaned_data
+                if not item_form.has_changed() or data.get("DELETE", False):
+                    continue
+                item_fields = {
+                    name: data[name]
+                    for name in ("prompt", "answer", "options", "hint", "audio_url", "audio_file", "image")
+                    if name in data
+                }
+                item = _model_for(screen)(activity=activity, order=next_order, **item_fields)
+                item.save()
+                _record(request, item, ADDITION, "Added through bulk question entry")
+                next_order += 1
+                added += 1
+
+        messages.success(request, f"Added {added} question{'s' if added != 1 else ''} to “{activity}”.")
+        return redirect("manage:edit", key=activity_key, pk=activity.pk)
+
+    return render(request, "manage/bulk_questions.html", _base_context(
+        request, key,
+        screen=screen, title="Add multiple questions", activities=activities,
+        selected_activity_id=activity.pk, activity=activity, formset=formset,
+        cancel_url=reverse("manage:edit", args=[activity_key, activity.pk]),
     ))
 
 
@@ -681,13 +766,16 @@ def result_detail(request, source, pk):
         if source == "assessment":
             errors = results.mark_assessment(attempt, request.user, request.POST)
         else:
-            verdicts = {}
+            marks = {}
             for response in attempt.responses.all():
-                choice = request.POST.get(f"verdict-{response.pk}")
-                if choice in ("good", "work"):
-                    verdicts[response.pk] = choice == "good"
-            if results.mark_activity(attempt, verdicts, request.POST.get("feedback", "")):
-                errors = ["Mark every recording Good or Needs work."]
+                choice = request.POST.get(f"verdict-{response.pk}", "")
+                if choice.isdecimal() and 0 <= int(choice) <= 5:
+                    marks[response.pk] = int(choice)
+                elif choice in ("good", "work"):
+                    # Accept forms already open when this control was updated.
+                    marks[response.pk] = 5 if choice == "good" else 0
+            if results.mark_activity(attempt, marks, request.POST.get("feedback", "")):
+                errors = ["Mark every recording by choosing a score from 0 to 5."]
         if not errors:
             audio_feedback = request.FILES.get("teacher_audio_feedback")
             if audio_feedback:
@@ -709,6 +797,7 @@ def result_detail(request, source, pk):
                        can_mark=attempt.status != attempt.Status.IN_PROGRESS
                        and any(not a.question.is_objective for a in attempt.answers.select_related("question")))
     else:
-        answers = results.activity_answers(attempt)
-        context.update(answers=answers, can_mark=any(a["is_recording"] for a in answers))
+        answers = results.activity_answers(attempt, request.POST)
+        context.update(answers=answers, can_mark=any(a["is_recording"] for a in answers),
+                       recording_marks=results.RECORDING_MARKS)
     return render(request, "manage/result_detail.html", _base_context(request, "results", **context))

@@ -13,7 +13,10 @@
     <p class="cr-pagehead__note">{{ total }} item{{ total|pluralize }}{% if query %} matching “{{ query }}”{% endif %}</p>
   </div>
   {% if not readonly and not screen.no_add %}
-  <a href="{% url 'manage:add' screen.key %}{% if parent_obj %}?in={{ parent_obj.pk }}{% endif %}" class="cr-btn cr-btn--gold">+ Add {{ singular }}</a>
+  <div class="cr-pagehead__actions">
+    {% if bulk_url %}<a href="{{ bulk_url }}" class="cr-btn cr-btn--gold">+ Add multiple questions</a>{% endif %}
+    <a href="{% url 'manage:add' screen.key %}{% if parent_obj %}?in={{ parent_obj.pk }}{% endif %}" class="cr-btn {% if bulk_url %}cr-btn--ghost{% else %}cr-btn--gold{% endif %}">+ Add {{ singular }}</a>
+  </div>
   {% endif %}
 </header>
 

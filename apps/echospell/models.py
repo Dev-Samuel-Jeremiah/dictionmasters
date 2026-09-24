@@ -43,6 +43,8 @@ def _parse_lines(raw):
     text = str(raw or "").replace("\r\n", "\n")
     return [cleaned for line in text.split("\n") if (cleaned := _LIST_MARKER_RE.sub("", line).strip())]
 
+RECORDING_MARK_CHOICES = [(mark, str(mark)) for mark in range(6)]
+
 LEVEL_NAME_CHOICES = [("Pre-Level", "Pre-Level")] + [
     (f"Level {i}", f"Level {i}") for i in range(1, 13)
 ]
@@ -480,9 +482,11 @@ class ActivityAttemptBase(models.Model):
     def recalculate(self):
         """Score from the responses attached to this attempt."""
         responses = list(self.responses.all())
-        marked = [r for r in responses if r.is_correct is not None]
-        self.max_score = len(marked)
-        self.score = sum(1 for r in marked if r.is_correct)
+        marked = [r for r in responses
+                  if getattr(r, "awarded_mark", None) is not None or r.is_correct is not None]
+        self.max_score = sum(5 if getattr(r, "awarded_mark", None) is not None else 1 for r in marked)
+        self.score = sum(r.awarded_mark if getattr(r, "awarded_mark", None) is not None
+                         else int(bool(r.is_correct)) for r in marked)
         self.percent = round(self.score * 100 / self.max_score) if self.max_score else 0
         self.status = self.STATUS_MARKED if marked else self.STATUS_AWAITING
         self.passed = bool(marked) and self.percent >= self.activity.pass_mark
@@ -508,6 +512,10 @@ class ActivityResponse(models.Model):
     item = models.ForeignKey(ActivityItem, on_delete=models.CASCADE, related_name="responses")
     given = models.TextField(blank=True)
     is_correct = models.BooleanField(null=True, blank=True)
+    awarded_mark = models.PositiveSmallIntegerField(
+        choices=RECORDING_MARK_CHOICES, null=True, blank=True,
+        help_text="Teacher-awarded mark for a recording, from 0 to 5.",
+    )
     recording = models.FileField(upload_to="echospell/recordings/%Y/%m/", blank=True)
 
     class Meta:

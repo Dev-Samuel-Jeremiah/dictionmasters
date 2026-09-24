@@ -19,6 +19,7 @@ Django's AuthenticationForm so it speaks "email" instead of
 from django import forms
 from django.contrib.auth import password_validation
 from django.contrib.auth.forms import AuthenticationForm
+from django.utils.translation import gettext_lazy as _
 
 from apps.schools.models import AccessCode, School
 
@@ -377,6 +378,23 @@ class JoinWithCodeForm(StyledFormMixin, forms.Form):
 
 
 class EmailAuthenticationForm(StyledFormMixin, AuthenticationForm):
+    error_messages = {
+        **AuthenticationForm.error_messages,
+        "invalid_login": _(
+            "Please enter a correct email address and password. "
+            "Passwords are case-sensitive."
+        ),
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._style_fields()
+
+    def clean_username(self):
+        # Registration stores email addresses in lowercase. Resolve the
+        # submitted address without regard to case, then pass the exact
+        # stored value to Django's normal authentication backend. This also
+        # lets accounts created before that convention keep signing in.
+        email = self.cleaned_data["username"].strip()
+        stored_email = User.objects.filter(email__iexact=email).values_list("email", flat=True).first()
+        return stored_email or email.lower()

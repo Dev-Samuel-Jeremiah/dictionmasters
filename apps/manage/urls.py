@@ -19,6 +19,7 @@ urlpatterns = [
     path("results/<str:source>/<int:pk>/", views.result_detail, name="result"),
     path("<slug:key>/", views.record_list, name="list"),
     path("<slug:key>/new/", views.record_form, name="add"),
+    path("<slug:key>/bulk/", views.bulk_questions, name="bulk_questions"),
     path("<slug:key>/<str:pk>/", views.record_form, name="edit"),
     path("<slug:key>/<str:pk>/delete/", views.record_delete, name="delete"),
 ]

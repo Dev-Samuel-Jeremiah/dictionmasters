@@ -110,7 +110,7 @@
       </div>
       {% endif %}
       {% elif not section_videos %}
-      <div class="ui-empty"><p>This {{ programme.lesson_word }}'s trick is being put together. Check back soon.</p></div>
+      {% if not programme.numbered %}<div class="ui-empty"><p>This {{ programme.lesson_word }}'s trick is being put together. Check back soon.</p></div>{% endif %}
       {% endif %}
 
     {% elif active_tab == "word-bank" %}
@@ -127,7 +127,7 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="ui-empty"><p>No words in this list yet.</p></div>
+      {% if not programme.numbered %}<div class="ui-empty"><p>No words in this list yet.</p></div>{% endif %}
       {% endif %}
 
     {% elif active_tab == "sentence-practice" %}
@@ -141,7 +141,7 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="ui-empty"><p>No practice sentences yet.</p></div>
+      {% if not programme.numbered %}<div class="ui-empty"><p>No practice sentences yet.</p></div>{% endif %}
       {% endif %}
 
     {% elif active_tab == "passage" %}
@@ -156,7 +156,7 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="ui-empty"><p>No passages yet.</p></div>
+      {% if not programme.numbered %}<div class="ui-empty"><p>No passages yet.</p></div>{% endif %}
       {% endif %}
 
     {% elif active_tab == "conversations" %}
@@ -171,7 +171,7 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="ui-empty"><p>No conversations yet.</p></div>
+      {% if not programme.numbered %}<div class="ui-empty"><p>No conversations yet.</p></div>{% endif %}
       {% endif %}
 
     {% elif active_tab == "twisters" %}
@@ -185,7 +185,7 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="ui-empty"><p>No tongue twisters yet.</p></div>
+      {% if not programme.numbered %}<div class="ui-empty"><p>No tongue twisters yet.</p></div>{% endif %}
       {% endif %}
 
     {% elif active_tab == "minimal-pairs" %}
@@ -208,7 +208,7 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="ui-empty"><p>No minimal pairs yet.</p></div>
+      {% if not programme.numbered %}<div class="ui-empty"><p>No minimal pairs yet.</p></div>{% endif %}
       {% endif %}
 
     {% elif active_tab == "external-links" %}
@@ -225,7 +225,7 @@
         {% endfor %}
       </ul>
       {% else %}
-      <div class="ui-empty"><p>No external links yet.</p></div>
+      {% if not programme.numbered %}<div class="ui-empty"><p>No external links yet.</p></div>{% endif %}
       {% endif %}
 
     {% elif active_tab == "assessment" %}

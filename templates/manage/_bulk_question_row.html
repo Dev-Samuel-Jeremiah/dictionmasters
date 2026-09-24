@@ -1,0 +1,17 @@
+<fieldset class="cr-bulk-question" data-bulk-row>
+  <legend class="cr-bulk-question__title" data-question-number>Question {{ row_number }}</legend>
+  <button type="button" class="cr-btn cr-btn--ghost cr-btn--small cr-bulk-question__remove" data-remove-question>Remove</button>
+  <div hidden>{{ question_form.DELETE }}</div>
+  <div class="cr-bulk-question__fields">
+    {% for field in question_form %}
+      {% if field.name != "DELETE" %}
+      <div class="cr-field{% if field.errors %} has-error{% endif %}" data-question-field="{{ field.name }}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="cr-req">required</span>{% endif %}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="cr-help">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}<ul class="cr-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</fieldset>

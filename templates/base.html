@@ -58,20 +58,21 @@
     <div class="install-steps__card">
       <img src="{% if branding.logo or branding.favicon %}{% url 'pwa_icon' 192 'any' %}?v={{ branding.updated_at|date:'U' }}{% else %}{% static 'pwa/icon-192.png' %}{% endif %}" alt="" class="install-steps__icon">
       <h2 id="install-fab-title" class="install-steps__title">Install Diction Masters</h2>
-      <p class="install-steps__lede">Open it from your home screen like any app, full screen, and always up to date.</p>
+      <p class="install-steps__lede" data-install-secure>Your browser will ask you to confirm before it adds Diction Masters to your device.</p>
+      <p class="install-steps__lede" data-install-insecure hidden>App installation requires a secure HTTPS address. Open Diction Masters from its HTTPS website, then tap Install again.</p>
       <ol class="install-steps__list" data-for="ios">
-        <li>Tap the <strong>Share</strong> button <span aria-hidden="true">&#11014;&#65039;</span> at the bottom of Safari.</li>
+        <li>Open this page in Safari, then tap <strong>Share</strong> <span aria-hidden="true">&#11014;&#65039;</span>.</li>
         <li>Choose <strong>Add to Home Screen</strong>.</li>
         <li>Tap <strong>Add</strong>.</li>
       </ol>
       <ol class="install-steps__list" data-for="android">
-        <li>Tap the browser menu <strong>&#8942;</strong> at the top right.</li>
+        <li>Open the browser menu <strong>&#8942;</strong>.</li>
         <li>Choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
-        <li>Tap <strong>Install</strong>.</li>
+        <li>Confirm by tapping <strong>Install</strong> or <strong>Add</strong>.</li>
       </ol>
       <ol class="install-steps__list" data-for="desktop">
-        <li>In Chrome or Edge, click the install icon <span aria-hidden="true">&#8862;</span> at the right of the address bar.</li>
-        <li>Or open the browser menu and choose <strong>Install Diction Masters</strong>.</li>
+        <li>Use the install icon beside the address bar, if shown.</li>
+        <li>Otherwise open the browser menu and choose <strong>Install Diction Masters</strong> or <strong>Create shortcut</strong>.</li>
         <li>On a Mac with Safari, choose <strong>File &rarr; Add to Dock</strong>.</li>
       </ol>
       <button type="button" class="install-steps__done" data-close>Got it</button>

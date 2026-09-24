@@ -13,7 +13,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.book.models import AudioContent, VideoContent
-from apps.echospell.models import ActivityAttemptBase, ActivityBase, ActivityItemBase
+from apps.echospell.models import ActivityAttemptBase, ActivityBase, ActivityItemBase, RECORDING_MARK_CHOICES
 
 
 class LessonProgress(models.Model):
@@ -76,6 +76,10 @@ class LessonActivityResponse(models.Model):
     item = models.ForeignKey(LessonActivityItem, on_delete=models.CASCADE, related_name="responses")
     given = models.TextField(blank=True)
     is_correct = models.BooleanField(null=True, blank=True)
+    awarded_mark = models.PositiveSmallIntegerField(
+        choices=RECORDING_MARK_CHOICES, null=True, blank=True,
+        help_text="Teacher-awarded mark for a recording, from 0 to 5.",
+    )
     recording = models.FileField(upload_to="tricks/recordings/%Y/%m/", blank=True)
 
     class Meta:

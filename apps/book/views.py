@@ -180,13 +180,21 @@ def lesson_detail(request, programme, slug, tab="lens", sound=None, extra_tabs=(
         )
 
     info = programme_for(programme)
+    lesson_tabs = programme_tabs(info)
+    # Tricks shows only the parts a learner can actually open. Progress
+    # already tracks the populated parts, so use the same list here rather
+    # than advertising empty sections as tabs.
+    if info["numbered"] and extra and extra.get("step"):
+        populated = {one["slug"] for one in extra["step"]["tabs"]}
+        lesson_tabs = [(slug, label) for slug, label in lesson_tabs if slug in populated]
+
     context = {
         "sound": sound,
         "programme": info,
         # Tricks are numbered by their place in the list: Trick 1, Trick 2…
         "number": ([s.pk for group in lesson_groups(programme) for s in group["sounds"]].index(sound.pk) + 1
                    if info["numbered"] else None),
-        "tabs": [*programme_tabs(info), *extra_tabs],
+        "tabs": [*lesson_tabs, *extra_tabs],
         "active_tab": tab,
         **(extra or {}),
         # Any number of videos for this tab, in the order the admin set.
