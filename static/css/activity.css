@@ -44,7 +44,7 @@
   color: var(--ink-70);
 }
 .score-pill--pass { border-color: var(--green); color: var(--green); background: rgba(15, 49, 174, 0.07); }
-.score-pill--fail { border-color: var(--maroon); color: var(--maroon); background: rgba(122, 86, 0, 0.06); }
+.score-pill--fail { border-color: var(--maroon); color: var(--maroon); background: rgba(24, 70, 224, 0.06); }
 .score-pill--waiting { border-color: var(--gold); color: var(--gold-deep); background: var(--gold-tint); }
 .score-pill--new { color: var(--ink-40); }
 
@@ -141,7 +141,7 @@
 .option:hover .option__box { border-color: var(--gold); }
 .option input:checked ~ .option__box {
   border-color: var(--maroon);
-  background: rgba(122, 86, 0, 0.07);
+  background: rgba(24, 70, 224, 0.07);
   color: var(--maroon-deep);
   font-weight: 700;
 }
@@ -164,7 +164,7 @@
 .chip:hover { border-color: var(--gold); }
 .chip--picked {
   border-color: var(--maroon);
-  background: rgba(122, 86, 0, 0.08);
+  background: rgba(24, 70, 224, 0.08);
   color: var(--maroon-deep);
   font-weight: 700;
   transform: translateY(-1px);
@@ -271,7 +271,7 @@
   margin-bottom: 22px;
 }
 .score-banner--pass { border-color: var(--green); background: rgba(15, 49, 174, 0.06); }
-.score-banner--fail { border-color: var(--maroon); background: rgba(122, 86, 0, 0.05); }
+.score-banner--fail { border-color: var(--maroon); background: rgba(24, 70, 224, 0.05); }
 .score-banner--waiting { border-color: var(--gold); background: var(--gold-tint); }
 .score-banner__percent {
   font-family: var(--font-serif);
@@ -345,6 +345,6 @@
 
 /* A trick activity's result: what it means for the next trick (templates/tricks/_after_activity.html). */
 .tr-after { margin-bottom: 18px; }
-.tr-after__label { margin: 0 0 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #B07A00; }
+.tr-after__label { margin: 0 0 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6E8DEE; }
 .tr-after__headline { margin: 0 0 6px; font-family: var(--font-serif); font-size: 1.4rem; font-weight: 600; color: var(--ink); }
 .tr-after__note { margin: 0 0 14px; color: var(--ink-70); }

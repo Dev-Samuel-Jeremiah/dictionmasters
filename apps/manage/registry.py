@@ -137,7 +137,7 @@ def assessment_screens(programme, lessons_key, key_prefix, lesson_word):
 
 SECTIONS = [
     {
-        "slug": "dashboard", "name": "Dashboard appearance", "icon": "🖼️", "tone": "#7A5600",
+        "slug": "dashboard", "name": "Dashboard appearance", "icon": "🖼️", "tone": "#1846E0",
         "blurb": "Upload a separate background image for every learner dashboard card.",
         "screens": [
             {"key": "dashboard-card-images", "model": "accounts.DashboardCardImage",
@@ -214,7 +214,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "book", "name": "44 Academy", "icon": "📖", "tone": "#7A5600",
+        "slug": "book", "name": "44 Academy", "icon": "📖", "tone": "#1846E0",
         "blurb": "The 44 Academy sounds, their lessons, and the phonemic chart audio.",
         "screens": [
             *lesson_screens("academy", ""),
@@ -224,7 +224,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "tricks", "name": "Tricks to Sound Fluent", "icon": "✨", "tone": "#B07A00",
+        "slug": "tricks", "name": "Tricks to Sound Fluent", "icon": "✨", "tone": "#6E8DEE",
         "blurb": "The tricks, their groups, and everything on each trick's eight tabs.",
         "screens": lesson_screens("tricks", "trick-"),
     },
@@ -252,7 +252,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "quick-words", "name": "Quick Words", "icon": "🔤", "tone": "#B07A00",
+        "slug": "quick-words", "name": "Quick Words", "icon": "🔤", "tone": "#6E8DEE",
         "blurb": "The word library: meanings, transcriptions and pronunciations.",
         "screens": [
             {"key": "words", "model": "quick_words.QuickWord",
@@ -263,7 +263,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "assessments", "name": "Assessments", "icon": "📋", "tone": "#7A5600",
+        "slug": "assessments", "name": "Assessments", "icon": "📋", "tone": "#1846E0",
         "blurb": "Quizzes, timed tests, speaking assessments and results.",
         "screens": [
             {"key": "assessments", "model": "assessments.Assessment",
@@ -298,7 +298,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "reference-library", "name": "Reference Library", "icon": "🔎", "tone": "#7A5600",
+        "slug": "reference-library", "name": "Reference Library", "icon": "🔎", "tone": "#1846E0",
         "blurb": "Topics, tags and articles learners look things up in.",
         "screens": [
             {"key": "topics", "model": "reference_library.LibraryCategory",
@@ -316,7 +316,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "diction-radio", "name": "Diction Radio", "icon": "📻", "tone": "#7A5600",
+        "slug": "diction-radio", "name": "Diction Radio", "icon": "📻", "tone": "#1846E0",
         "blurb": "Build the station lineup and arrange the programmes and audio episodes listeners hear.",
         "screens": [
             {"key": "radio-programs", "model": "diction_radio.RadioProgram",
@@ -362,9 +362,12 @@ SECTIONS = [
             {"key": "users", "model": "accounts.User",
              "columns": ["email", "get_full_name", "role", "level", "school", "is_active"],
              "search": ["email", "first_name", "last_name"],
-             "form": ["first_name", "last_name", "email", "role", "level", "school", "is_active", "is_staff"]},
+             "form": ["first_name", "last_name", "email", "role", "level", "school", "is_active", "is_staff"],
+             "plan_field": "user"},
             {"key": "schools", "model": "schools.School",
-             "columns": ["name", "code", "email", "phone"], "search": ["name", "email", "code"],
+             "columns": ["name", "code", "email", "current_plan", "max_teachers", "max_students"], "search": ["name", "email", "code"],
+             "plan_field": "school",
+             "login_fields": True,
              "children": ["joining-codes"]},
             {"key": "joining-codes", "model": "schools.AccessCode",
              "columns": ["code", "school", "role", "level", "label", "used_by"],

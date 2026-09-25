@@ -212,7 +212,7 @@
         <div class="cta-band__actions">
           <a href="{% url 'accounts:register_choice' %}" class="ld-btn ld-btn--gold ld-btn--large">Get started &rarr;</a>
           <p class="cta-band__note">Registering a school? <a href="{% url 'accounts:register_school' %}">Start here</a>. Already have an account? <a href="{% url 'accounts:login' %}">Sign in</a>.</p>
-          <a href="{% url 'manage:login' %}" class="ld-btn ld-btn--staff">&#128274; Control panel &rarr;</a>
+          {% if user.is_staff %}<a href="{% url 'manage:login' %}" class="ld-btn ld-btn--staff">&#128274; Control panel &rarr;</a>{% endif %}
         </div>
       </div>
     </div>

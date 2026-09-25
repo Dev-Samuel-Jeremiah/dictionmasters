@@ -99,7 +99,7 @@ def home(request):
                 "cta": "Sign up as a student", "url": "accounts:register_student",
             },
             {
-                "key": "schools", "icon": "🏫", "tone": "#7A5600",
+                "key": "schools", "icon": "🏫", "tone": "#1846E0",
                 "title": "Schools",
                 "body": "Give every teacher the tools to teach British English sounds, "
                         "and see each class's progress in one place.",

@@ -95,8 +95,7 @@ def _search_items(request, query, per_type=MAX_RESULTS_PER_TYPE):
         lessons = limit_to_levels(lessons, request.user, field="group__level__name", allow_blank=False)
         add(lessons, lambda x: x.title or (x.word_list[0] if x.word_list else x.category.name), "EchoSpell lesson", lambda x: f"{x.group.level.name} · {x.category.name}", lambda x: reverse("echospell:card_detail", args=[x.group.level.slug, x.group.slug, x.category.slug]))
         levels = Level.objects.filter(is_published=True).filter(Q(name__icontains=needle) | Q(description__icontains=needle))
-        if request.user.is_authenticated and request.user.role in {"teacher", "student"} and request.user.level:
-            levels = levels.filter(name=request.user.level)
+        levels = limit_to_levels(levels, request.user, field="name", allow_blank=False)
         add(levels, lambda x: x.name, "EchoSpell level", lambda x: x.description, lambda x: reverse("echospell:level_detail", args=[x.slug]))
 
     return items

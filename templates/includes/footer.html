@@ -1,7 +1,6 @@
 {% if user.is_authenticated %}
 <footer class="site-footer px-foot px-foot--app">
-  <p class="site-footer__copyright">&copy; {% now "Y" %} Diction Masters &middot; <a href="{% url 'billing:pricing' %}">Pricing</a> &middot; <a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Control panel</a></p>
-  <p class="site-footer__credit">Developed by Samuel Jeremiah (Techmiary) &middot; <a href="tel:07010996154">07010996154</a> &middot; <a href="tel:08051301661">08051301661</a></p>
+  <p class="site-footer__copyright">&copy; {% now "Y" %} Diction Masters &middot; <a href="{% url 'billing:pricing' %}">Pricing</a>{% if user.is_staff %} &middot; <a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Control panel</a>{% endif %}</p>
 </footer>
 {% else %}
 <footer class="site-footer px-foot">
@@ -16,10 +15,9 @@
       <a href="{% url 'landing:home' %}#who-its-for">Who it's for</a>
       <a href="{% url 'billing:pricing' %}">Pricing</a>
       <a href="{% url 'accounts:login' %}">Log in</a>
-      <a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Control panel</a>
+      {% if user.is_staff %}<a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Control panel</a>{% endif %}
     </nav>
   </div>
   <p class="site-footer__copyright">&copy; {% now "Y" %} Diction Masters. All rights reserved.</p>
-  <p class="site-footer__credit">Developed by Samuel Jeremiah (Techmiary) &middot; <a href="tel:07010996154">07010996154</a> &middot; <a href="tel:08051301661">08051301661</a></p>
 </footer>
 {% endif %}

@@ -33,7 +33,7 @@
   margin: 0; padding: 4px 12px;
   border-radius: 20px;
   font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-  color: #0b1a4a; background: linear-gradient(135deg, #ffd659, #ffc72c);
+  color: #0b1a4a; background: linear-gradient(135deg, #FFD86B, #ffc72c);
 }
 .bl-plan__name { margin: 0; font-family: var(--font-serif); font-size: 1.25rem; font-weight: 600; color: var(--ink); }
 .bl-plan__price { margin: 10px 0 2px; font-family: var(--font-serif); font-size: 2.2rem; font-weight: 600; line-height: 1.1; color: var(--ink); }
@@ -69,7 +69,7 @@
   color: var(--ink-70); background: rgba(11, 26, 74, 0.07);
 }
 .bl-pill--success { color: #1846E0; background: rgba(61, 99, 230, 0.14); }
-.bl-pill--failed { color: var(--maroon); background: rgba(122, 86, 0, 0.1); }
+.bl-pill--failed { color: var(--maroon); background: rgba(24, 70, 224, 0.1); }
 .bl-pill--pending { color: var(--gold-deep); background: var(--gold-tint); }
 
 .bl-faq dl { margin: 12px 0 0; display: grid; gap: 14px; }
@@ -94,7 +94,7 @@
 .bl-receipt__mark {
   display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px;
   font-family: var(--font-serif); font-style: italic; font-weight: 700;
-  color: #0b1a4a; background: linear-gradient(135deg, #ffd659, #ffc72c);
+  color: #0b1a4a; background: linear-gradient(135deg, #FFD86B, #ffc72c);
 }
 .bl-receipt__kicker { margin: 0; text-align: right; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-40); }
 .bl-receipt__ref { margin: 2px 0 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem; color: var(--ink); }
@@ -179,7 +179,7 @@
 .bl-promo { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; padding: 14px 16px; border-radius: 16px; background: rgba(255, 199, 44, 0.12); border: 1px solid rgba(255, 199, 44, 0.3); }
 .bl-promo__label { font-weight: 600; font-size: 0.92rem; }
 .bl-promo__input { max-width: 190px; text-transform: uppercase; }
-.bl-promo__on { margin: 0; flex: 1; font-size: 0.95rem; color: #7a5600; }
+.bl-promo__on { margin: 0; flex: 1; font-size: 0.95rem; color: #1846E0; }
 .bl-plan__was { margin-right: 6px; font-size: 1.3rem; color: var(--ink-40); text-decoration-thickness: 2px; }
 .bl-plan__promo { margin: 0 0 4px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #3D63E6; }
 .bl-start__promo { margin-top: 14px; }

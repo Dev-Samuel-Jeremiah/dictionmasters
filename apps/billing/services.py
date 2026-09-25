@@ -154,6 +154,56 @@ def grant_free_period(user, plan, promo, discount):
     return payment
 
 
+def grant_plan(user, plan, granted_by=None):
+    """A plan given in the control room, without payment: its days start at
+    once (after any paid time still to run), recorded as a paid Payment of
+    zero so the history and receipt read the same way. For a teacher or
+    school admin the plan covers their school."""
+    subscription = subscription_for(user)
+    if subscription is None:
+        raise CheckoutError("This account doesn't pay for access, so it can't be given a plan.")
+    return _grant(subscription, plan, payer=user, email=user.email, granted_by=granted_by)
+
+
+def grant_school_plan(school, plan, granted_by=None):
+    """The same, given to a school from its own page in the control room."""
+    subscription, _made = Subscription.objects.get_or_create(school=school)
+    return _grant(subscription, plan, payer=None, email=school.email, granted_by=granted_by)
+
+
+@transaction.atomic
+def _grant(subscription, plan, payer, email, granted_by):
+    subscription = Subscription.objects.select_for_update().get(pk=subscription.pk)
+    now = timezone.now()
+    start = subscription.next_period_start(now)
+    end = start + timedelta(days=plan.duration_days)
+    by = f" by {granted_by.email}" if granted_by is not None else ""
+    payment = Payment.objects.create(
+        reference=new_reference(),
+        subscription=subscription,
+        plan=plan,
+        payer=payer,
+        account_name=str(subscription),
+        email=email,
+        plan_name=(f"{plan.name} · {plan.band_label}" if plan.band_label else plan.name)[:80],
+        duration_days=plan.duration_days,
+        amount=0,
+        status=Payment.STATUS_SUCCESS,
+        channel="control room",
+        gateway_response=f"Given in the control room{by}"[:255],
+        paid_at=now,
+        period_start=start,
+        period_end=end,
+    )
+    subscription.paid_until = end
+    if subscription.trial_ends_at and subscription.trial_ends_at > now:
+        subscription.trial_ends_at = now
+    subscription.plan = plan
+    subscription.save(update_fields=["paid_until", "trial_ends_at", "plan", "updated_at"])
+    logger.info("Control room gave %s %s until %s%s", subscription, plan, end, by)
+    return payment
+
+
 def begin_access(request, user, start, plan, promo_code=""):
     """Straight after registering. The free trial is already running (see
     access.subscription_for), so "Pay now" can never leave someone with no

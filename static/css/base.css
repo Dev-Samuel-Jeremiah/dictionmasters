@@ -15,14 +15,14 @@
   --parchment-deep: #e7effe;
 
   --gold: #e9ae00;
-  --gold-deep: #8a6200;
+  --gold-deep: #3D63E6;
   --gold-tint: rgba(233, 174, 0, 0.14);
 
   --green: #3D63E6;
   --green-deep: #1846E0;
 
-  --maroon: #7A5600;
-  --maroon-deep: #7A5600;
+  --maroon: #1846E0;
+  --maroon-deep: #1846E0;
 
   --charcoal: #0b1a4a;
   --paper-white: #ffffff;
@@ -238,25 +238,25 @@ p { margin: 0; }
 
 /* ---------- footer ---------- */
 
-.site-footer { background: var(--ink); color: rgba(246, 241, 228, 0.85); padding: 56px 0 28px; }
+.site-footer { background: var(--ink); color: rgba(242, 245, 252, 0.85); padding: 56px 0 28px; }
 .site-footer__inner {
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 24px;
   padding-bottom: 32px;
-  border-bottom: 1px solid rgba(246, 241, 228, 0.15);
+  border-bottom: 1px solid rgba(242, 245, 252, 0.15);
 }
-.site-footer__brand p { margin-top: 8px; font-size: 0.9rem; color: rgba(246, 241, 228, 0.6); max-width: 32ch; }
+.site-footer__brand p { margin-top: 8px; font-size: 0.9rem; color: rgba(242, 245, 252, 0.6); max-width: 32ch; }
 .site-footer__links { display: flex; gap: 24px; flex-wrap: wrap; align-self: center; font-size: 0.92rem; }
-.site-footer__links a { text-decoration: none; color: rgba(246, 241, 228, 0.8); }
+.site-footer__links a { text-decoration: none; color: rgba(242, 245, 252, 0.8); }
 .site-footer__links a:hover { color: var(--parchment); }
 .site-footer__copyright {
   max-width: var(--wrap);
   margin: 20px auto 0;
   padding: 0 28px;
   font-size: 0.8rem;
-  color: rgba(246, 241, 228, 0.45);
+  color: rgba(242, 245, 252, 0.45);
 }
 
 /* ---------- show / hide a password (static/js/password_toggle.js) ---------- */

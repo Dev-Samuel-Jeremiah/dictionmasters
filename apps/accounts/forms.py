@@ -263,6 +263,11 @@ class StudentRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
         school = School.objects.filter(code=code).first()
         if school is None:
             raise forms.ValidationError("That school code isn't recognised. Check it with your teacher.")
+        if school.students_full:
+            raise forms.ValidationError(
+                f"{school.name} has reached the number of students it can register "
+                f"({school.max_students}). Please ask your school to contact Diction Masters for more places."
+            )
         self._school = school
         return code
 
@@ -333,6 +338,13 @@ class JoinWithCodeForm(StyledFormMixin, forms.Form):
             raise forms.ValidationError(
                 "Students now join with their school's code on the student sign-up page, "
                 "where they choose a free trial or pay for their own access."
+            )
+        school = access_code.school
+        if school.teachers_full:
+            raise forms.ValidationError(
+                f"{school.name} has reached the number of teachers it can register "
+                f"({school.teacher_limit}). Please ask your school admin to move to a bigger plan "
+                "or contact Diction Masters for more places."
             )
         if _school_is_full(access_code.school):
             raise forms.ValidationError(

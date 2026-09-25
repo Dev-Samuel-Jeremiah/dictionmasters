@@ -86,7 +86,7 @@
       {% endif %}
     {% elif section %}
       {% for group in groups %}
-      {% cycle "#7A5600" "#1846e0" "#3D63E6" "#e9ae00" as tone silent %}
+      {% cycle "#1846E0" "#1846e0" "#3D63E6" "#e9ae00" as tone silent %}
       <section class="ui-panel">
         <header class="ui-section__head">
           <h2 class="ui-section__title"><span class="ui-section__num" style="background: {{ tone }}">{{ forloop.counter }}</span> {{ group.category.name }}</h2>
@@ -112,7 +112,7 @@
     {% else %}
       <div class="ui-grid">
         {% for one in sections %}
-        {% cycle "#7A5600" "#1846e0" "#3D63E6" "#e9ae00" as tone silent %}
+        {% cycle "#1846E0" "#1846e0" "#3D63E6" "#e9ae00" as tone silent %}
         <a href="{% url programme.section one.slug %}" class="ui-card ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
           <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ one.icon }}</span></span>
           <span class="ui-card__name">{{ one.label }}</span>

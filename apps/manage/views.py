@@ -37,11 +37,14 @@ from apps.billing import paystack
 from apps.book import read_along as book_read_along
 from apps.book.models import ReadAlongTiming
 from apps.billing.models import BillingSettings
+from apps.billing.services import CheckoutError, grant_plan, grant_school_plan
 from apps.landing.models import SiteBranding
 from apps.quick_words.audio_zip import start_audio_zip_import
 from apps.quick_words.models import QuickWordAudioImportJob
 
 from .forms import ControlLoginForm, QuickWordAudioZipForm, build_form
+from .plan_field import FIELD as PLAN_FIELD, add_plan_field, check_plan
+from .school_login import add_login_fields, check_login, save_login
 from .bulk_questions import question_formset
 from . import results
 from .kind_fields import guide
@@ -379,18 +382,41 @@ def record_form(request, key, pk=None):
             form.fields[name].queryset = form.fields[name].queryset.filter(**condition)
     # Activities: only the fields their type needs (apps/manage/kind_fields.py).
     kind_guide = guide(screen, form, obj=obj, parent_obj=parent_obj)
+    plan_kind = screen.get("plan_field")
+    if plan_kind:
+        add_plan_field(form, obj, plan_kind)
+    login_fields = screen.get("login_fields")
+    if login_fields:
+        add_login_fields(form, obj)
 
-    if request.method == "POST" and form.is_valid():
+    if (request.method == "POST" and form.is_valid()
+            and (not plan_kind or check_plan(form, obj, plan_kind))
+            and (not login_fields or check_login(form, obj))):
         saved = form.save(commit=False)
         if parent_field and parent_obj and not pk:
             setattr(saved, parent_field, parent_obj)
         if not pk:
             for name, value in screen.get("defaults", {}).items():
                 setattr(saved, name, _default_value(value))
-        saved.save()
-        form.save_m2m()
+        with transaction.atomic():
+            saved.save()
+            form.save_m2m()
+            login_note = save_login(saved, form) if login_fields else ""
         _record(request, saved, CHANGE if pk else ADDITION, "Changed in the control room" if pk else "Added in the control room")
         messages.success(request, f"{_singular(screen).capitalize()} “{saved}” {'updated' if pk else 'added'}.")
+        if login_note:
+            messages.success(request, login_note)
+        plan = form.cleaned_data.get(PLAN_FIELD) if plan_kind else None
+        if plan is not None:
+            try:
+                if plan_kind == "school":
+                    payment = grant_school_plan(saved, plan, granted_by=request.user)
+                else:
+                    payment = grant_plan(saved, plan, granted_by=request.user)
+            except CheckoutError as error:
+                messages.error(request, str(error))
+            else:
+                messages.success(request, f"{plan.name} given: access runs until {timezone.localtime(payment.period_end):%d %b %Y}.")
         if "_again" in request.POST:
             again = reverse("manage:add", args=[key])
             return redirect(f"{again}?in={parent_obj.pk}" if parent_obj else again)

@@ -13,6 +13,13 @@ def dashboard(request):
 
     if request.method == "POST":
         form = GenerateAccessCodeForm(request.POST)
+        if school.teachers_full:
+            messages.error(
+                request,
+                f"Your school has reached its limit of {school.teacher_limit} teachers, so no new teacher "
+                "codes can be made. Move to a bigger plan or contact Diction Masters to add more places.",
+            )
+            return redirect("schools:dashboard")
         if form.is_valid():
             code = school.access_codes.create(
                 role=form.cleaned_data["role"],

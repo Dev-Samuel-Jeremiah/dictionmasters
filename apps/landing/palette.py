@@ -1,9 +1,11 @@
 """
-The site's palette is blue, yellow, white and navy, with their tints and
-greys. Any other colour (green, teal, purple, red, pink, orange...) is
-moved onto the nearest brand shade of the same contrast, so text stays
-readable: greens, teals and purples become blue, reds, pinks and oranges
-become gold.
+The site's palette is blue, yellow and white. Every other colour is moved
+onto the nearest shade of it with the same contrast, so text stays readable:
+
+- white and blues stay as they are, and yellows snap to the brand yellows;
+- greys, black, beige and cream become blue-greys (black becomes navy);
+- other dark or strong colours (green, red, purple, brown...) become blue;
+- pale warm colours (pink, peach...) become pale yellow.
 
 Used by the `palette` template filter for colours that live in the
 database (course, module and category colours chosen in the admin).
@@ -14,7 +16,9 @@ import math
 import re
 
 BLUE_RAMP = ["#0B1A4A", "#0F31AE", "#1846E0", "#3D63E6", "#6E8DEE", "#A9BDF6", "#D6E3FF", "#E7EFFF", "#F2F5FC"]
-YELLOW_RAMP = ["#7A5600", "#B07A00", "#E9AE00", "#FFC72C", "#FFD86B", "#FFE9A8", "#FFF5D6", "#FFFAEB"]
+BLUE_GREY_RAMP = ["#0B1A4A", "#2A3560", "#55607E", "#8A93AE", "#A9B1C8", "#C9D0E2", "#E3E8F4", "#F2F5FC"]
+YELLOW_RAMP = ["#E9AE00", "#FFC72C", "#FFD86B", "#FFE9A8", "#FFF5D6", "#FFFAEB"]
+KEEP = {c.upper() for c in BLUE_RAMP + BLUE_GREY_RAMP + YELLOW_RAMP + ["#FFFFFF", "#ECEEF3"]}
 
 NAMED = {
     "green": "#008000", "red": "#FF0000", "purple": "#800080", "orange": "#FFA500",
@@ -24,7 +28,11 @@ NAMED = {
     "brown": "#A52A2A", "darkgreen": "#006400", "darkred": "#8B0000", "seagreen": "#2E8B57",
     "forestgreen": "#228B22", "limegreen": "#32CD32", "orangered": "#FF4500",
     "hotpink": "#FF69B4", "indigo": "#4B0082", "firebrick": "#B22222", "cyan": "#00FFFF",
-    "aqua": "#00FFFF", "turquoise": "#40E0D0",
+    "aqua": "#00FFFF", "turquoise": "#40E0D0", "black": "#000000", "gray": "#808080",
+    "grey": "#808080", "silver": "#C0C0C0", "darkgray": "#A9A9A9", "darkgrey": "#A9A9A9",
+    "lightgray": "#D3D3D3", "lightgrey": "#D3D3D3", "dimgray": "#696969", "dimgrey": "#696969",
+    "gainsboro": "#DCDCDC", "beige": "#F5F5DC", "tan": "#D2B48C", "wheat": "#F5DEB3",
+    "chocolate": "#D2691E", "sienna": "#A0522D", "peru": "#CD853F", "khaki": "#F0E68C",
 }
 
 
@@ -40,22 +48,30 @@ def _rgb(hexcode):
     return tuple(int(hexcode[i:i + 2], 16) for i in (1, 3, 5))
 
 
-def _family(h, s, l):
-    """None when the colour already belongs (blue, yellow, grey, white, black)."""
-    if s < 0.15 or l < 0.05 or l > 0.97:
+def _ramp(r, g, b):
+    """None when the colour already belongs (white, blue, bright yellow)."""
+    if "#%02X%02X%02X" % (r, g, b) in KEEP:
         return None
+    h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+    lum = _luminance(r / 255, g / 255, b / 255)
     deg = h * 360
-    if 38 <= deg < 62 or 205 <= deg < 250:
+    if l > 0.97:
+        # near-white: pure or bluish stays; a cream or pink tint becomes white
+        return None if s < 0.3 or 205 <= deg < 250 else ["#FFFFFF", "#F2F5FC"]
+    if 205 <= deg < 250 and s >= 0.12 and l >= 0.05:
         return None
-    if 62 <= deg < 205 or 250 <= deg < 330:
-        return BLUE_RAMP
-    return YELLOW_RAMP
+    if 38 <= deg < 62 and s >= 0.6 and lum >= 0.35:
+        return YELLOW_RAMP
+    if l < 0.05 or s < 0.15 or (l > 0.85 and s < 0.6):
+        return BLUE_GREY_RAMP
+    if (deg < 70 or deg >= 300) and lum >= 0.35:
+        return YELLOW_RAMP
+    return BLUE_RAMP
 
 
 def remap_rgb(r, g, b):
-    """0-255 ints in, 0-255 ints out: the brand shade nearest in contrast."""
-    h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
-    ramp = _family(h, s, l)
+    """0-255 ints in, 0-255 ints out: the palette shade nearest in contrast."""
+    ramp = _ramp(r, g, b)
     if ramp is None:
         return r, g, b
     want = math.log(_luminance(r / 255, g / 255, b / 255) + 0.05)

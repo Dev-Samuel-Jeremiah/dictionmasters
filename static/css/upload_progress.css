@@ -9,7 +9,7 @@
   --up-line: rgba(11, 26, 74, 0.14);
   --up-gold: #ffc72c;
   --up-green: #3D63E6;
-  --up-red: #7A5600;
+  --up-red: #1846E0;
   margin: 18px 0 0;
   padding: 16px 18px;
   border: 1px solid var(--up-line);
@@ -35,7 +35,7 @@
   width: 0;
   height: 100%;
   border-radius: 20px;
-  background: linear-gradient(90deg, #ffd659, var(--up-gold));
+  background: linear-gradient(90deg, #FFD86B, var(--up-gold));
   transition: width 0.25s ease;
 }
 .up-progress__detail { font-size: 0.86rem; color: rgba(11, 26, 74, 0.6); }

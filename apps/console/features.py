@@ -24,7 +24,7 @@ FEATURES = [
         "site_url": "echospell:hub",
     },
     {
-        "slug": "book", "name": "44 Academy", "icon": "📖", "tone": "#7A5600",
+        "slug": "book", "name": "44 Academy", "icon": "📖", "tone": "#1846E0",
         "blurb": "The 44 sounds, their lessons, and the phonemic chart audio.",
         "models": ["book.soundcategory", "book.sound", "book.sectionvideo", "book.wordbankentry", "book.sentencepractice",
                    "book.passage", "book.conversation", "book.tonguetwister", "book.minimalpair",
@@ -38,13 +38,13 @@ FEATURES = [
         "site_url": "tutor:hub",
     },
     {
-        "slug": "quick-words", "name": "Quick Words", "icon": "🔤", "tone": "#B07A00",
+        "slug": "quick-words", "name": "Quick Words", "icon": "🔤", "tone": "#6E8DEE",
         "blurb": "The word library with meanings, transcriptions and pronunciations.",
         "models": ["quick_words.quickword", "quick_words.wordlist"],
         "site_url": "quick_words:hub",
     },
     {
-        "slug": "assessments", "name": "Assessments", "icon": "📋", "tone": "#7A5600",
+        "slug": "assessments", "name": "Assessments", "icon": "📋", "tone": "#1846E0",
         "blurb": "Quizzes, timed tests, speaking assessments, placement tests and results.",
         "models": ["assessments.assessment", "assessments.attempt"],
         "site_url": "assessments:hub",
@@ -56,7 +56,7 @@ FEATURES = [
         "site_url": "reading_club:hub",
     },
     {
-        "slug": "reference-library", "name": "Reference Library", "icon": "🔎", "tone": "#7A5600",
+        "slug": "reference-library", "name": "Reference Library", "icon": "🔎", "tone": "#1846E0",
         "blurb": "Topics, tags and articles learners can look things up in.",
         "models": ["reference_library.librarycategory", "reference_library.librarytag",
                    "reference_library.libraryarticle"],

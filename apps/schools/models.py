@@ -22,6 +22,15 @@ class School(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=20, blank=True)
     address = models.CharField(max_length=255, blank=True)
+    # Set in the control room. Blank means no limit.
+    max_teachers = models.PositiveIntegerField(
+        "Teachers allowed", null=True, blank=True,
+        help_text="How many teachers this school may register. Leave blank for no limit.",
+    )
+    max_students = models.PositiveIntegerField(
+        "Students allowed", null=True, blank=True,
+        help_text="How many students this school may register. Leave blank for no limit.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -42,6 +51,46 @@ class School(models.Model):
     @property
     def students(self):
         return self.members.filter(role="student")
+
+    def paid_plan(self):
+        """The school plan being paid for right now, or None."""
+        from django.utils import timezone
+
+        subscription = getattr(self, "subscription", None) if self.pk else None
+        if subscription and subscription.plan and subscription.paid_until and subscription.paid_until > timezone.now():
+            return subscription.plan
+        return None
+
+    @property
+    def plan_teacher_limit(self):
+        plan = self.paid_plan()
+        return plan.max_units if plan and plan.max_units else None
+
+    @property
+    def teacher_limit(self):
+        """The teachers this school may have: the lower of the limit set in
+        the control room and its paid plan's band. None for no limit."""
+        limits = [n for n in (self.max_teachers, self.plan_teacher_limit) if n is not None]
+        return min(limits) if limits else None
+
+    @property
+    def teachers_full(self):
+        limit = self.teacher_limit
+        return limit is not None and self.teachers.count() >= limit
+
+    def current_plan(self):
+        from django.utils import timezone
+
+        plan = self.paid_plan()
+        if plan is None:
+            return "—"
+        band = f" · {plan.band_label}" if plan.band_label else ""
+        return f"{plan.name}{band} (until {timezone.localtime(self.subscription.paid_until):%d %b %Y})"
+    current_plan.short_description = "Current plan"
+
+    @property
+    def students_full(self):
+        return self.max_students is not None and self.students.count() >= self.max_students
 
 
 class AccessCode(models.Model):

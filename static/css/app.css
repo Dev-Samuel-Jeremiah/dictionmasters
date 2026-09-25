@@ -269,7 +269,7 @@
 }
 .tag--teacher { background: var(--gold-tint); color: var(--gold-deep); }
 .tag--student { background: rgba(15, 49, 174, 0.12); color: var(--green); }
-.tag--pending { background: rgba(122, 86, 0, 0.1); color: var(--maroon-deep); }
+.tag--pending { background: rgba(24, 70, 224, 0.1); color: var(--maroon-deep); }
 
 .logout-form { display: inline; }
 

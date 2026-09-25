@@ -38,7 +38,7 @@
 .av__braids path { fill: none; stroke-width: 7.5; stroke-linecap: round; }
 .av__beard { fill: var(--hair-mid); opacity: 0.95; }
 .av__fade { fill: var(--hair-light); opacity: 0.55; }
-.av__hoop { fill: none; stroke: #ffd659; stroke-width: 2.8; }
+.av__hoop { fill: none; stroke: #FFD86B; stroke-width: 2.8; }
 .av__wrap { fill: #7A5600; }
 .av__wrap--knot { fill: #B07A00; }
 .av__glasses circle, .av__glasses path { fill: none; stroke: #7A5600; stroke-width: 2.4; opacity: 0.9; }
@@ -56,14 +56,14 @@
 
 /* Each face its own person. */
 .av--ada { --skin-light: #B07A00; --skin-mid: #7A5600; --skin-dark: #7A5600; --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #0d0907; --cloth-light: #6E8DEE; --cloth-dark: #1846E0; --bg-from: #F2F5FC; --bg-to: #A9BDF6; }
-.av--nia { --skin-light: #E9AE00; --skin-mid: #B07A00; --skin-dark: #7A5600; --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #7A5600; --cloth-light: #7A5600; --cloth-dark: #7A5600; --bg-from: #FFE9A8; --bg-to: #E9AE00; }
+.av--nia { --skin-light: #E9AE00; --skin-mid: #B07A00; --skin-dark: #7A5600; --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #7A5600; --cloth-light: #1846E0; --cloth-dark: #1846E0; --bg-from: #FFE9A8; --bg-to: #E9AE00; }
 .av--kayode { --skin-light: #7A5600; --skin-mid: #7A5600; --skin-dark: #7A5600; --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #0a0706; --cloth-light: #3d74ab; --cloth-dark: #254c74; --bg-from: #e6eefa; --bg-to: #a8c2e2; }
-.av--tobi { --skin-light: #B07A00; --skin-mid: #B07A00; --skin-dark: #7A5600; --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #100b09; --cloth-light: #E9AE00; --cloth-dark: #B07A00; --bg-from: #fdf2dc; --bg-to: #FFC72C; }
+.av--tobi { --skin-light: #B07A00; --skin-mid: #B07A00; --skin-dark: #7A5600; --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #100b09; --cloth-light: #E9AE00; --cloth-dark: #6E8DEE; --bg-from: #FFF5D6; --bg-to: #FFC72C; }
 .av--orb { --bg-from: #e8f0fb; --bg-to: #8ea9cf; }
 .av__orb { fill: #16243f; }
-.av__orb-inner { fill: rgba(240, 200, 120, 0.3); }
+.av__orb-inner { fill: rgba(255, 199, 44, 0.3); }
 .av__orb-gloss { fill: #fff; opacity: 0.25; }
-.av__wave rect { fill: #ffd659; transform-box: fill-box; transform-origin: center; }
+.av__wave rect { fill: #FFD86B; transform-box: fill-box; transform-origin: center; }
 
 /* An uploaded portrait. */
 .av--photo { filter: drop-shadow(0 14px 24px rgba(11, 26, 74, 0.28)); }
@@ -75,13 +75,13 @@
 .av__photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.4s ease; }
 .av__halo {
   position: absolute; inset: -6px; border-radius: 50%; pointer-events: none;
-  box-shadow: 0 0 0 0 rgba(240, 200, 120, 0.55); opacity: 0;
+  box-shadow: 0 0 0 0 rgba(255, 199, 44, 0.55); opacity: 0;
 }
 .av.is-speaking .av__halo { opacity: 1; animation: av-halo 1.6s infinite ease-out; }
 .av.is-speaking .av__photo { animation: av-breathe 1.9s infinite ease-in-out; }
 @keyframes av-halo {
-  0% { box-shadow: 0 0 0 0 rgba(240, 200, 120, 0.5); }
-  100% { box-shadow: 0 0 0 16px rgba(240, 200, 120, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(255, 199, 44, 0.5); }
+  100% { box-shadow: 0 0 0 16px rgba(255, 199, 44, 0); }
 }
 @keyframes av-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
 

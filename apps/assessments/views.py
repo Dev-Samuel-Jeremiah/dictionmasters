@@ -9,7 +9,7 @@ view source on until that question has been answered and locked.
 
 import json
 
-from apps.accounts.access import limit_to_levels, require_level
+from apps.accounts.access import accessible_levels, can_see_level, limit_to_levels, require_level
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -61,22 +61,32 @@ IPA_KEYS = [symbol for group in PHONEMIC_CHART for _, symbol, _ in group["sounds
 # ---------------------------------------------------------------------------
 
 def _own_attempt(request, attempt_id):
+    """One of your own attempts, still in your level: someone moved to
+    another level can't carry on with the old level's tests."""
     attempt = get_object_or_404(Attempt.objects.select_related("assessment"), pk=attempt_id)
     if attempt.user_id != request.user.pk:
         raise Http404
+    require_level(request.user, attempt.assessment.level)
     return attempt
 
 
 def can_mark(user, attempt):
-    """Staff mark anyone. A teacher marks students at their own school —
-    individual learners have no school, so their work goes to staff."""
+    """Staff mark anyone. A teacher marks students at their own school and
+    in their own level — individual learners have no school, so their work
+    goes to staff."""
     if user.is_staff:
         return True
     return bool(
         user.is_teacher and user.school_id
         and attempt.user.school_id == user.school_id
         and attempt.user.is_student
+        and _teaches_level(user, attempt.user.level)
     )
+
+
+def _teaches_level(teacher, level_name):
+    levels = accessible_levels(teacher)
+    return levels is None or level_name in levels
 
 
 def markable(user):
@@ -84,7 +94,9 @@ def markable(user):
     if user.is_staff:
         return waiting
     if user.is_teacher and user.school_id:
-        return waiting.filter(user__school=user.school, user__role="student")
+        waiting = waiting.filter(user__school=user.school, user__role="student")
+        levels = accessible_levels(user)
+        return waiting if levels is None else waiting.filter(user__level__in=levels)
     return waiting.none()
 
 
@@ -110,8 +122,10 @@ def hub(request):
         "kinds": kinds,
         "recent": Attempt.objects.filter(user=request.user).exclude(status=Attempt.Status.IN_PROGRESS)
                   .select_related("assessment")[:3],
-        "in_progress": Attempt.objects.filter(user=request.user, status=Attempt.Status.IN_PROGRESS)
-                       .select_related("assessment"),
+        "in_progress": limit_to_levels(
+            Attempt.objects.filter(user=request.user, status=Attempt.Status.IN_PROGRESS),
+            request.user, field="assessment__level",
+        ).select_related("assessment"),
         "can_mark": _can_use_marking(request.user),
         "to_mark": markable(request.user).count() if _can_use_marking(request.user) else 0,
     })

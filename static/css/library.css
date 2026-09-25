@@ -68,7 +68,7 @@
   border-radius: 20px;
   padding: 3px 11px;
 }
-.tag-pill--video { color: var(--maroon); background: rgba(122, 86, 0, 0.1); }
+.tag-pill--video { color: var(--maroon); background: rgba(24, 70, 224, 0.1); }
 .tag-pill--audio { color: var(--gold-deep); background: var(--gold-tint); }
 
 /* article detail */

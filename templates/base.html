@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="{% static 'css/theme.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
-<body class="{% if user.is_authenticated %}px-app{% else %}px-public{% endif %} {% block body_class %}{% endblock %}">
+<body class="{% if user.is_authenticated %}px-app{% else %}px-public{% endif %}{% if request.path|slice:':6' == '/book/' or request.path|slice:':8' == '/tricks/' or request.path|slice:':13' == '/quick-words/' or request.path|slice:':7' == '/tutor/' or request.path|slice:':16' == '/daily-practice/' or request.path|slice:':13' == '/assessments/' or request.path|slice:':7' == '/radio/' %} px-ringed{% endif %} {% block body_class %}{% endblock %}">
   {% if user.is_authenticated %}{% include "includes/app_nav.html" %}{% endif %}
   <div class="px-main">
     {% include "includes/header.html" %}

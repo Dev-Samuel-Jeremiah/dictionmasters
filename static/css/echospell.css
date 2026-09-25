@@ -212,7 +212,7 @@
 }
 .number-option__input:checked ~ .number-option__badge {
   border-color: var(--maroon);
-  background: rgba(122, 86, 0, 0.08);
+  background: rgba(24, 70, 224, 0.08);
 }
 .number-option__input:focus-visible ~ .number-option__badge {
   outline: 2px solid var(--gold-deep);
@@ -276,7 +276,7 @@
   border-color: var(--gold);
 }
 .vocab-item--correct .vocab-item__input { border-color: var(--green); background: rgba(15, 49, 174, 0.06); }
-.vocab-item--incorrect .vocab-item__input { border-color: var(--maroon); background: rgba(122, 86, 0, 0.05); }
+.vocab-item--incorrect .vocab-item__input { border-color: var(--maroon); background: rgba(24, 70, 224, 0.05); }
 
 .vocab-item__feedback {
   margin: 6px 0 0;
@@ -312,7 +312,7 @@
   align-items: flex-start;
 }
 .dialogue-line--a { background: rgba(11, 26, 74, 0.05); }
-.dialogue-line--b { background: rgba(122, 86, 0, 0.05); }
+.dialogue-line--b { background: rgba(24, 70, 224, 0.05); }
 .dialogue-line__speaker {
   flex: 0 0 auto;
   width: 26px;

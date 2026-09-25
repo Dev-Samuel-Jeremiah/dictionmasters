@@ -11,7 +11,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 
-from apps.accounts.access import limit_to_levels
+from apps.accounts.access import can_see_level, limit_to_levels
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -192,6 +192,10 @@ def _lookup_response(request, status, message=None, word=None, created=False):
     return redirect(reverse("quick_words:hub"))
 
 
+def _other_level(request):
+    return _lookup_response(request, 403, "That word is taught at a different level, so it isn't in your word list.")
+
+
 @login_required
 @require_POST
 def lookup_word(request):
@@ -205,6 +209,9 @@ def lookup_word(request):
     existing = _published(request.user).filter(word__iexact=typed).first()
     if existing:
         return _lookup_response(request, 200, word=_refresh_trusted_ipa(existing))
+    if QuickWord.objects.filter(word__iexact=typed).exists():
+        # It's in the library, but for another level.
+        return _other_level(request)
 
     if not is_lookup_candidate(typed):
         return _lookup_response(request, 400, "Type a single English word to look it up.")
@@ -228,6 +235,8 @@ def lookup_word(request):
     # The model may have corrected the spelling to a word we already have.
     existing = QuickWord.objects.filter(word__iexact=entry["word"]).first()
     if existing:
+        if not can_see_level(request.user, existing.level):
+            return _other_level(request)
         return _lookup_response(request, 200, word=_refresh_trusted_ipa(existing))
 
     try:
@@ -240,6 +249,8 @@ def lookup_word(request):
     except IntegrityError:
         # Someone else looked up the same word in the same instant.
         word = QuickWord.objects.get(slug=slugify(entry["word"]))
+        if not can_see_level(request.user, word.level):
+            return _other_level(request)
         return _lookup_response(request, 200, word=_refresh_trusted_ipa(word))
 
     _attach_pronunciation(word, typed, speech)

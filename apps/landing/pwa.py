@@ -35,7 +35,7 @@ from django.views.decorators.cache import cache_control
 
 NAME = "Diction Masters"
 NAVY = "#14213D"
-PARCHMENT = "#F4EFE2"
+PARCHMENT = "#F2F5FC"
 
 _MIME_BY_EXT = {
     "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",

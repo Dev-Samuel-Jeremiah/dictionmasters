@@ -8,47 +8,120 @@
    --body-bg / --body-fg variables so they suit light and dark mode.
    ========================================================= */
 
+/* Django admin's own colour variables, moved onto the site palette (blue,
+   yellow and white). The theme's own choices below take precedence. */
+:root, html[data-theme="light"] {
+  --message-warning-bg: #FFFAEB;
+  --primary: #6E8DEE;
+  --secondary: #3D63E6;
+  --body-fg: #2A3560;
+  --body-quiet-color: #55607E;
+  --body-medium-color: #2A3560;
+  --body-loud-color: #0B1A4A;
+  --breadcrumbs-fg: #D6E3FF;
+  --breadcrumbs-bg: #0F31AE;
+  --link-fg: #3D63E6;
+  --hairline-color: #E3E8F4;
+  --border-color: #C9D0E2;
+  --error-fg: #1846E0;
+  --message-success-bg: #F2F5FC;
+  --message-error-bg: #FFF5D6;
+  --selected-bg: #E3E8F4;
+  --button-hover-bg: #0F31AE;
+  --default-button-bg: #0F31AE;
+  --close-button-bg: #55607E;
+  --close-button-hover-bg: #2A3560;
+  --delete-button-bg: #1846E0;
+  --delete-button-hover-bg: #1846E0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --primary: #0F31AE;
+    --primary-fg: #F2F5FC;
+    --body-fg: #E3E8F4;
+    --body-bg: #0B1A4A;
+    --body-quiet-color: #C9D0E2;
+    --body-medium-color: #E3E8F4;
+    --breadcrumbs-link-fg: #E3E8F4;
+    --link-fg: #A9BDF6;
+    --link-hover-color: #A9BDF6;
+    --hairline-color: #0B1A4A;
+    --border-color: #2A3560;
+    --error-fg: #6E8DEE;
+    --message-success-bg: #1846E0;
+    --message-warning-bg: #0F31AE;
+    --message-error-bg: #0B1A4A;
+    --darkened-bg: #0B1A4A;
+    --selected-bg: #0B1A4A;
+    --selected-row: #0B1A4A;
+    --close-button-bg: #2A3560;
+    --close-button-hover-bg: #55607E;
+  }
+}
+html[data-theme="dark"] {
+  --primary: #0F31AE;
+  --primary-fg: #F2F5FC;
+  --body-fg: #E3E8F4;
+  --body-bg: #0B1A4A;
+  --body-quiet-color: #C9D0E2;
+  --body-medium-color: #E3E8F4;
+  --breadcrumbs-link-fg: #E3E8F4;
+  --link-fg: #A9BDF6;
+  --link-hover-color: #A9BDF6;
+  --hairline-color: #0B1A4A;
+  --border-color: #2A3560;
+  --error-fg: #6E8DEE;
+  --message-success-bg: #1846E0;
+  --message-warning-bg: #0F31AE;
+  --message-error-bg: #0B1A4A;
+  --darkened-bg: #0B1A4A;
+  --selected-bg: #0B1A4A;
+  --selected-row: #0B1A4A;
+  --close-button-bg: #2A3560;
+  --close-button-hover-bg: #55607E;
+}
+
 :root, html[data-theme="light"] {
   --primary: #14213D;
   --secondary: #1f3357;
-  --accent: #e0b15c;
+  --accent: #E9AE00;
   --primary-fg: #fff;
   --header-color: #eef2f8;
-  --header-branding-color: #f3d38d;
+  --header-branding-color: #FFD86B;
   --header-bg: #14213D;
   --header-link-color: #eef2f8;
   --breadcrumbs-fg: #c9d3e6;
-  --breadcrumbs-link-fg: #f3d38d;
+  --breadcrumbs-link-fg: #FFD86B;
   --breadcrumbs-bg: #1f3357;
-  --link-fg: #7A5600;
-  --link-hover-color: #7A5600;
-  --link-selected-fg: #7A5600;
+  --link-fg: #1846E0;
+  --link-hover-color: #1846E0;
+  --link-selected-fg: #1846E0;
   --button-bg: #14213D;
   --button-hover-bg: #2f4a7a;
-  --default-button-bg: #B07A00;
-  --default-button-hover-bg: #7A5600;
-  --object-tools-bg: #7A5600;
-  --object-tools-hover-bg: #7A5600;
-  --selected-row: #fbf1d9;
-  --dm-gold: #e0b15c;
+  --default-button-bg: #6E8DEE;
+  --default-button-hover-bg: #1846E0;
+  --object-tools-bg: #1846E0;
+  --object-tools-hover-bg: #1846E0;
+  --selected-row: #FFF5D6;
+  --dm-gold: #E9AE00;
   --dm-shadow: 0 1px 1px rgba(20, 33, 61, 0.04), 0 6px 16px -6px rgba(20, 33, 61, 0.14);
   --dm-shadow-lift: 0 14px 30px -10px rgba(20, 33, 61, 0.28);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --primary: #1f3357; --secondary: #23355a; --header-bg: #0e1628; --breadcrumbs-bg: #16233f;
-    --link-fg: #f3d38d; --link-hover-color: #ffe7b0; --button-bg: #2f4a7a; --default-button-bg: #B07A00;
-    --object-tools-bg: #7A5600; --selected-row: #2c2616;
-    --dm-shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 6px 16px -6px rgba(0, 0, 0, 0.5);
-    --dm-shadow-lift: 0 14px 30px -10px rgba(0, 0, 0, 0.6);
+    --link-fg: #FFD86B; --link-hover-color: #FFE9A8; --button-bg: #2f4a7a; --default-button-bg: #6E8DEE;
+    --object-tools-bg: #1846E0; --selected-row: #0B1A4A;
+    --dm-shadow: 0 1px 1px rgba(11, 26, 74, 0.3), 0 6px 16px -6px rgba(11, 26, 74, 0.5);
+    --dm-shadow-lift: 0 14px 30px -10px rgba(11, 26, 74, 0.6);
   }
 }
 html[data-theme="dark"] {
   --primary: #1f3357; --secondary: #23355a; --header-bg: #0e1628; --breadcrumbs-bg: #16233f;
-  --link-fg: #f3d38d; --link-hover-color: #ffe7b0; --button-bg: #2f4a7a; --default-button-bg: #B07A00;
-  --object-tools-bg: #7A5600; --selected-row: #2c2616;
-  --dm-shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 6px 16px -6px rgba(0, 0, 0, 0.5);
-  --dm-shadow-lift: 0 14px 30px -10px rgba(0, 0, 0, 0.6);
+  --link-fg: #FFD86B; --link-hover-color: #FFE9A8; --button-bg: #2f4a7a; --default-button-bg: #6E8DEE;
+  --object-tools-bg: #1846E0; --selected-row: #0B1A4A;
+  --dm-shadow: 0 1px 1px rgba(11, 26, 74, 0.3), 0 6px 16px -6px rgba(11, 26, 74, 0.5);
+  --dm-shadow-lift: 0 14px 30px -10px rgba(11, 26, 74, 0.6);
 }
 
 /* ---------- admin-wide touches ---------- */
@@ -57,9 +130,9 @@ html[data-theme="dark"] {
   gap: 18px;
   padding: 12px 30px;
   background:
-    radial-gradient(ellipse 40% 140% at 100% 0%, rgba(224, 177, 92, 0.18), transparent 70%),
+    radial-gradient(ellipse 40% 140% at 100% 0%, rgba(233, 174, 0, 0.18), transparent 70%),
     var(--header-bg);
-  box-shadow: 0 6px 20px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 6px 20px -12px rgba(11, 26, 74, 0.5);
 }
 #site-name a.dm-brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
 .dm-brand__logo { display: block; height: 36px; width: auto; max-width: 180px; object-fit: contain; }
@@ -69,8 +142,8 @@ html[data-theme="dark"] {
   border-radius: 11px;
   font-family: Georgia, serif; font-style: italic; font-weight: 700; font-size: 0.95rem;
   color: #14213D;
-  background: linear-gradient(135deg, #f0c878, #B07A00);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #FFC72C, #6E8DEE);
+  box-shadow: 0 6px 14px rgba(11, 26, 74, 0.3);
 }
 .dm-brand__text { font-family: Georgia, "Times New Roman", serif; font-size: 1.25rem; font-weight: 600; color: #fff; }
 .dm-brand__text small { margin-left: 4px; font-family: inherit; font-size: 0.8rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dm-gold); }
@@ -118,10 +191,10 @@ div.breadcrumbs { padding: 10px 30px; }
   border-radius: 20px;
   color: #eef2f8;
   background:
-    radial-gradient(ellipse 45% 90% at 90% 0%, rgba(224, 177, 92, 0.25), transparent 70%),
+    radial-gradient(ellipse 45% 90% at 90% 0%, rgba(233, 174, 0, 0.25), transparent 70%),
     linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px) 0 0 / 36px 36px,
     linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px) 0 0 / 36px 36px,
-    linear-gradient(135deg, #0e1a30, #1f3357 55%, #7A5600);
+    linear-gradient(135deg, #0e1a30, #1f3357 55%, #1846E0);
   box-shadow: var(--dm-shadow-lift);
 }
 .dm-hero--compact { align-items: flex-start; }
@@ -141,7 +214,7 @@ div.breadcrumbs { padding: 10px 30px; }
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 .dm-btn:hover { transform: translateY(-2px); }
-.dm-btn--gold { color: #14213D !important; background: linear-gradient(135deg, #f0c878, #B07A00); box-shadow: 0 8px 18px rgba(176, 122, 0, 0.3); }
+.dm-btn--gold { color: #14213D !important; background: linear-gradient(135deg, #FFC72C, #6E8DEE); box-shadow: 0 8px 18px rgba(110, 141, 238, 0.3); }
 .dm-btn--glass { color: #fff !important; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.24); }
 .dm-btn--ghost { color: var(--body-fg) !important; background: transparent; border: 1px solid var(--hairline-color); }
 .dm-btn--small { padding: 6px 12px; font-size: 0.8rem; }
@@ -191,7 +264,7 @@ div.breadcrumbs { padding: 10px 30px; }
 }
 .dm-quick__btn:hover { transform: translateY(-3px); border-color: var(--dm-gold); box-shadow: var(--dm-shadow-lift); }
 .dm-quick__btn small { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--body-quiet-color); }
-.dm-quick__icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border-radius: 12px; font-size: 1.2rem; background: rgba(224, 177, 92, 0.18); }
+.dm-quick__icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border-radius: 12px; font-size: 1.2rem; background: rgba(233, 174, 0, 0.18); }
 
 .dm-split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 22px; align-items: start; }
 
@@ -203,7 +276,7 @@ div.breadcrumbs { padding: 10px 30px; }
   border-radius: 12px;
   background: var(--darkened-bg);
 }
-.dm-attention__item--bad { border-left-color: #7A5600; }
+.dm-attention__item--bad { border-left-color: #1846E0; }
 .dm-attention__item--info { border-left-color: #4b86c1; }
 .dm-attention__icon { font-size: 1.4rem; }
 .dm-attention__text { flex: 1; min-width: 200px; }
@@ -216,7 +289,7 @@ div.breadcrumbs { padding: 10px 30px; }
 .dm-service { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--darkened-bg); }
 .dm-service strong { display: block; font-size: 0.9rem; }
 .dm-service small { color: var(--body-quiet-color); }
-.dm-service__dot { flex: 0 0 auto; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: #7A5600; box-shadow: 0 0 0 4px rgba(122, 86, 0, 0.18); }
+.dm-service__dot { flex: 0 0 auto; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: #1846E0; box-shadow: 0 0 0 4px rgba(24, 70, 224, 0.18); }
 .dm-service--ok .dm-service__dot { background: #6E8DEE; box-shadow: 0 0 0 4px rgba(110, 141, 238, 0.2); }
 
 .dm-features { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
@@ -249,7 +322,7 @@ div.breadcrumbs { padding: 10px 30px; }
 .dm-screen:hover { background: var(--darkened-bg); }
 .dm-screen__name { flex: 1; min-width: 0; font-weight: 600; }
 .dm-screen__count { min-width: 30px; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-align: center; color: var(--body-quiet-color); background: var(--darkened-bg); }
-.dm-screen__add { padding: 3px 10px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; text-decoration: none !important; color: #14213D !important; background: rgba(224, 177, 92, 0.35); }
+.dm-screen__add { padding: 3px 10px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; text-decoration: none !important; color: #14213D !important; background: rgba(233, 174, 0, 0.35); }
 .dm-screen__add:hover { background: var(--dm-gold); }
 
 .dm-table-wrap { overflow-x: auto; }
@@ -258,8 +331,8 @@ div.breadcrumbs { padding: 10px 30px; }
 .dm-table th, .dm-table td { padding: 9px 10px; border-bottom: 1px solid var(--hairline-color); text-align: left; }
 .dm-flag { padding: 2px 9px; border-radius: 20px; font-size: 0.74rem; font-weight: 700; }
 .dm-flag--1 { color: #3D63E6; background: rgba(110, 141, 238, 0.15); }
-.dm-flag--2 { color: #7A5600; background: rgba(224, 177, 92, 0.2); }
-.dm-flag--3 { color: #7A5600; background: rgba(122, 86, 0, 0.14); }
+.dm-flag--2 { color: #1846E0; background: rgba(233, 174, 0, 0.2); }
+.dm-flag--3 { color: #1846E0; background: rgba(24, 70, 224, 0.14); }
 
 .dm-results { margin: 0; padding: 0 18px 14px; list-style: none; }
 .dm-results li { padding: 8px 0; border-top: 1px solid var(--hairline-color); }
@@ -282,3 +355,11 @@ div.breadcrumbs { padding: 10px 30px; }
 @media (prefers-reduced-motion: reduce) {
   .dm-btn, .dm-stat, .dm-quick__btn, .dm-feature { transition: none; }
 }
+
+/* Django's own shadows on the search button, action button and date/time
+   pickers, in navy rather than black. */
+html #toolbar form input[type="submit"], html #changelist .actions .button { box-shadow: 0 -15px 20px -10px rgba(11, 26, 74, 0.15) inset; }
+html .calendarbox, html .clockbox { box-shadow: 0 2px 4px rgba(11, 26, 74, 0.15); }
+input, textarea, [contenteditable] { caret-color: #1846E0; }
+input[type="checkbox"], input[type="radio"], input[type="range"], progress { accent-color: #1846E0; color: #0B1A4A; }
+html .theme-toggle { color: var(--header-link-color); }

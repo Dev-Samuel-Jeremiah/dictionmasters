@@ -248,10 +248,10 @@
       .forEach(function (b) { g.appendChild(button({ icon: b[0], title: b[1], label: b[2], action: "command", cmd: b[3], state: b[3] })); });
 
     g = group();
-    var colorInput = make("input", { type: "color", value: "#7A5600", tabindex: "-1", "aria-hidden": "true", class: "dm-rt-color-input", "data-action": "color" });
+    var colorInput = make("input", { type: "color", value: "#1846E0", tabindex: "-1", "aria-hidden": "true", class: "dm-rt-color-input", "data-action": "color" });
     var colorBtn = button({ text: "A", title: "Text colour", action: "pick", value: "color", cls: "dm-rt-swatch" });
     colorBtn.style.setProperty("--swatch", colorInput.value);
-    var markInput = make("input", { type: "color", value: "#fff0a8", tabindex: "-1", "aria-hidden": "true", class: "dm-rt-color-input", "data-action": "highlight" });
+    var markInput = make("input", { type: "color", value: "#FFE9A8", tabindex: "-1", "aria-hidden": "true", class: "dm-rt-color-input", "data-action": "highlight" });
     var markBtn = button({ text: "ab", title: "Highlight", action: "pick", value: "highlight", cls: "dm-rt-swatch dm-rt-swatch--mark" });
     markBtn.style.setProperty("--swatch", markInput.value);
     g.appendChild(colorBtn); g.appendChild(colorInput);

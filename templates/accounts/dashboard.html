@@ -25,7 +25,9 @@
     </div>
     <div class="px-hero__text">
       <p class="px-hero__date">{{ today|date:"l j F" }}</p>
-      <h1 class="px-hero__title">{{ greeting }},<br><span>{{ user.first_name|default:"there" }}</span></h1>
+      {% with name=user.first_name|default:"there" %}
+      <h1 class="px-hero__title"><span class="px-hero__hello">{{ greeting }},</span><br><span class="px-hero__name"><span class="px-sr">{{ name }}</span>{% for ch in name %}<span class="px-hero__ch" data-c="{{ ch }}" style="--i: {{ forloop.counter0 }}" aria-hidden="true">{{ ch }}</span>{% endfor %}</span></h1>
+      {% endwith %}
       <p class="px-hero__sub">{% if user.school %}{{ user.get_role_display }} at {{ user.school.name }}{% if level %}, {{ level }}{% endif %}{% else %}Individual learner{% endif %}</p>
       {% if user.is_teacher %}<p class="px-hero__note">Your class dashboard is on its way. Until then, every learning tool is open to you.</p>{% endif %}
       <div class="px-hero__actions">
