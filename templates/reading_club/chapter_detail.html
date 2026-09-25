@@ -18,7 +18,7 @@
 
 {% block content %}
 <div class="ui">
-  <section class="ui-hero ui-hero--teal" style="--tint: {{ book.color }}">
+  <section class="ui-hero ui-hero--teal" style="--tint: {{ book.color|palette }}">
     <div class="wrap">
       <ol class="ui-crumbs">
         <li><a href="{% url 'reading_club:book_detail' book.slug %}">{{ book.title }}</a></li>

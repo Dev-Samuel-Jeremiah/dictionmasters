@@ -68,10 +68,10 @@
   color: #eef2f8;
   background:
     radial-gradient(ellipse 50% 70% at 85% 20%, rgba(255, 199, 44, 0.24), transparent 70%),
-    radial-gradient(ellipse 40% 50% at 5% 100%, rgba(195, 39, 74, 0.35), transparent 70%),
+    radial-gradient(ellipse 40% 50% at 5% 100%, rgba(122, 86, 0, 0.35), transparent 70%),
     linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 44px 44px,
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 44px 44px,
-    linear-gradient(135deg, #0c1629 0%, #0b1a4a 50%, #2a1626 100%);
+    linear-gradient(135deg, #0c1629 0%, #0b1a4a 50%, #0B1A4A 100%);
   background-position: 0 0;
 }
 .ld .hero::after {                          /* soft rings */
@@ -140,7 +140,7 @@
   position: absolute;
   inset: 44px 0 6px 46px;
   border-radius: 26px;
-  background: linear-gradient(145deg, rgba(255, 199, 44, 0.5), rgba(195, 39, 74, 0.45));
+  background: linear-gradient(145deg, rgba(255, 199, 44, 0.5), rgba(122, 86, 0, 0.45));
   transform: rotateY(-14deg) rotateX(6deg) translateZ(-60px) rotate(4deg);
   filter: blur(0.3px);
   opacity: 0.75;
@@ -188,7 +188,7 @@
 .ld .lesson-card__stack { min-height: 110px; }
 .ld .lesson-card__row { border-top: 1px dashed var(--rule); }
 .ld .lesson-card__control { width: 38px; height: 38px; border: 0; color: #fff; background: linear-gradient(145deg, #0f31ae, #0b1a4a); box-shadow: 0 6px 14px rgba(11, 26, 74, 0.3); }
-.ld .lesson-card__control--mic { background: linear-gradient(145deg, #d8436a, #9e1d3b); box-shadow: 0 6px 14px rgba(195, 39, 74, 0.35); }
+.ld .lesson-card__control--mic { background: linear-gradient(145deg, #B07A00, #7A5600); box-shadow: 0 6px 14px rgba(122, 86, 0, 0.35); }
 .ld .lesson-card__note { border-bottom: 0; padding: 12px 14px; border-radius: 12px; background: var(--parchment); }
 .ld .lesson-card__notes { min-height: 84px; }
 
@@ -316,13 +316,13 @@
   overflow: hidden;
   padding: 56px 48px;
   border-radius: 28px;
-  color: #e1f5ec;
+  color: #E7EFFF;
   background:
     radial-gradient(ellipse 50% 80% at 90% 0%, rgba(255, 199, 44, 0.22), transparent 70%),
     linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px) 0 0 / 40px 40px,
     linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px) 0 0 / 40px 40px,
     linear-gradient(135deg, #0f31ae 0%, #1846e0 55%, #0b1a4a 100%);
-  box-shadow: 0 30px 60px -24px rgba(19, 54, 44, 0.6);
+  box-shadow: 0 30px 60px -24px rgba(11, 26, 74, 0.6);
 }
 .ld .chalkboard__line { color: #fff; font-family: var(--font-serif); font-size: clamp(1.4rem, 3vw, 2rem); max-width: 30ch; }
 .ld .chalkboard__figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 30px; }
@@ -335,7 +335,7 @@
 }
 .ld .chalkboard__figure:hover { transform: translateY(-4px); background: rgba(255, 255, 255, 0.11); }
 .ld .chalkboard__number { display: block; font-family: var(--font-serif); font-size: 2.8rem; line-height: 1; color: #ffe08a; }
-.ld .chalkboard__label { display: block; margin-top: 8px; color: rgba(238, 245, 241, 0.75); }
+.ld .chalkboard__label { display: block; margin-top: 8px; color: rgba(242, 245, 252, 0.75); }
 
 /* Testimonial */
 .ld .testimonial { padding: 96px 0 0; background: none; }
@@ -379,7 +379,7 @@
     radial-gradient(ellipse 50% 90% at 100% 0%, rgba(255, 199, 44, 0.28), transparent 70%),
     linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,
-    linear-gradient(135deg, #0c1629, #0b1a4a 55%, #3e1828);
+    linear-gradient(135deg, #0c1629, #0b1a4a 55%, #7A5600);
   box-shadow: 0 34px 70px -26px rgba(11, 26, 74, 0.65);
 }
 .ld .cta-band__copy { flex: 1 1 420px; }

@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="ui">
-  <section class="ui-hero ui-hero--teal" style="--tint: {{ book.color }}">
+  <section class="ui-hero ui-hero--teal" style="--tint: {{ book.color|palette }}">
     <div class="wrap">
       <ol class="ui-crumbs">
         <li><a href="{% url 'reading_club:hub' %}">Reading Club</a></li>
@@ -34,7 +34,7 @@
       {% for row in chapter_rows %}
       <a href="{% url 'reading_club:chapter_detail' book.slug term.slug row.chapter.slug %}"
          class="ui-tile ui-lift{% if row.is_complete %} ui-tile--done{% elif row.is_current %} ui-tile--active{% endif %}"
-         style="--tone: {{ book.color }}; --i: {{ forloop.counter0 }}">
+         style="--tone: {{ book.color|palette }}; --i: {{ forloop.counter0 }}">
         {% if row.is_current %}<span class="ui-status ui-status--current">Now</span>{% elif row.is_complete %}<span class="ui-status ui-status--done">Done</span>{% endif %}
         <span class="ui-node" aria-hidden="true">{% if row.is_complete %}&#10003;{% else %}{{ row.chapter.number }}{% endif %}</span>
         <span class="ui-tile__name">Chapter {{ row.chapter.number }}</span>

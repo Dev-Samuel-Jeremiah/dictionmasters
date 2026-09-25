@@ -64,11 +64,11 @@
   display: inline-block;
   font-size: 0.76rem;
   color: var(--green);
-  background: rgba(36, 71, 62, 0.1);
+  background: rgba(15, 49, 174, 0.1);
   border-radius: 20px;
   padding: 3px 11px;
 }
-.tag-pill--video { color: var(--maroon); background: rgba(195, 39, 74, 0.1); }
+.tag-pill--video { color: var(--maroon); background: rgba(122, 86, 0, 0.1); }
 .tag-pill--audio { color: var(--gold-deep); background: var(--gold-tint); }
 
 /* article detail */

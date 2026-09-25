@@ -16,7 +16,7 @@
 
 {% block content %}
 <div class="es">
-<section class="es-hero es-hero--accent" style="--accent: {{ category.color }}">
+<section class="es-hero es-hero--accent" style="--accent: {{ category.color|palette }}">
   <div class="wrap">
     <ol class="es-crumbs">
       <li><a href="{% url 'echospell:hub' %}">EchoSpell</a></li>
@@ -26,7 +26,7 @@
     </ol>
     <div class="es-hero__inner">
       <div class="es-hero__main">
-        <span class="es-hero__icon" aria-hidden="true" style="background: linear-gradient(145deg, {{ category.color }}, rgba(255,255,255,0.08));">{{ category.icon }}</span>
+        <span class="es-hero__icon" aria-hidden="true" style="background: linear-gradient(145deg, {{ category.color|palette }}, rgba(255,255,255,0.08));">{{ category.icon }}</span>
         <div>
           <p class="es-hero__eyebrow">{{ level.name }} &middot; Group {{ group.number }}</p>
           <h1 class="es-hero__title">{{ category.name }}</h1>

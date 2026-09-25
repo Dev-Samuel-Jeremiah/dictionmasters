@@ -22,7 +22,7 @@ class VideoPosterAdminMixin:
                 obj.video_poster.url,
             )
         if obj.video_file or obj.video_url:
-            return format_html('<span style="color:#b23c5a;">none yet</span>')
+            return format_html('<span style="color:#7A5600;">none yet</span>')
         return "—"
 
     @admin.action(description="Take the video thumbnail again")

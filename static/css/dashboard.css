@@ -8,12 +8,12 @@
    ========================================================= */
 
 .dash {
-  --dash-green: #12875a;
+  --dash-green: #3D63E6;
   --dash-blue: #3f78b5;
-  --dash-maroon: #c3274a;
+  --dash-maroon: #7A5600;
   --dash-gold: #e9ae00;
-  --dash-plum: #6b5a8e;
-  --dash-teal: #1f7a86;
+  --dash-plum: #1846E0;
+  --dash-teal: #3D63E6;
   --dash-card: #ffffff;
   --dash-ground: #f2f5fc;
   --dash-shadow:
@@ -78,7 +78,7 @@
   background:
     linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 44px 44px,
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 44px 44px,
-    linear-gradient(135deg, #0f1a33 0%, #0b1a4a 45%, #3e1828 100%);
+    linear-gradient(135deg, #0f1a33 0%, #0b1a4a 45%, #7A5600 100%);
   padding: 56px 0 120px;
 }
 .dash-hero__glow {
@@ -173,7 +173,7 @@
   color: #ffffff;
   border: 1px solid rgba(243, 211, 141, 0.55);
   border-radius: 14px;
-  background: linear-gradient(145deg, #6b4a2a, #3d1d2c);
+  background: linear-gradient(145deg, #7A5600, #7A5600);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 0 34px rgba(255, 199, 44, 0.35);
   text-shadow: 0 0 18px rgba(243, 211, 141, 0.6);
   backface-visibility: hidden;
@@ -236,7 +236,7 @@
   color: #3a2c00;
   background:
     radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.75), transparent 38%),
-    conic-gradient(from 200deg, #ffeab0, #e9ae00, #ffe08a, #a8762c, #ffeab0);
+    conic-gradient(from 200deg, #ffeab0, #e9ae00, #ffe08a, #B07A00, #ffeab0);
   box-shadow:
     inset 0 0 0 6px rgba(255, 255, 255, 0.25),
     inset 0 -8px 16px rgba(122, 86, 0, 0.45),
@@ -426,7 +426,7 @@ a.dash-stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3p
 }
 .dash-chart__col--today .dash-bar { background: linear-gradient(180deg, #ffd659, #e9ae00); }
 .dash-chart__col--today .dash-bar__top { background: #ffeab0; }
-.dash-chart__col--today .dash-bar__side { background: #7a561d; }
+.dash-chart__col--today .dash-bar__side { background: #7A5600; }
 .dash-chart__day { font-size: 0.75rem; font-weight: 600; color: var(--ink-70); }
 .dash-chart__col--today .dash-chart__day { color: var(--gold-deep); }
 

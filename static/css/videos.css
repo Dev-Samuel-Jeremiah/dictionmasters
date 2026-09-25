@@ -26,19 +26,19 @@
 .vid__btn[disabled] { opacity: 0.75; cursor: progress; transform: none; }
 
 /* Save: the one to reach for, so it is the brightest thing here. */
-.vid__btn--keep { color: #0b1a4a; background: linear-gradient(135deg, #ffe08a, #f5b400); box-shadow: 0 6px 16px rgba(217, 155, 54, 0.45); }
-.vid__btn--keep:hover { box-shadow: 0 10px 22px rgba(217, 155, 54, 0.55); }
-.vid__btn--keep.vid__btn--saved, .vid__btn--keep.vid__btn--saved:hover { color: #ffffff; background: linear-gradient(135deg, #16815f, #075f49); box-shadow: 0 6px 16px rgba(7, 95, 73, 0.25); cursor: default; }
-.vid__btn--watch { color: #ffffff; background: linear-gradient(135deg, #3aa882, #237a5c); box-shadow: 0 6px 16px rgba(35, 122, 92, 0.4); }
-.vid__btn--remove { color: #ffd9e0; background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 217, 224, 0.45); }
-.vid__btn--remove:hover { color: #fff; background: rgba(214, 74, 104, 0.35); }
+.vid__btn--keep { color: #0b1a4a; background: linear-gradient(135deg, #ffe08a, #f5b400); box-shadow: 0 6px 16px rgba(233, 174, 0, 0.45); }
+.vid__btn--keep:hover { box-shadow: 0 10px 22px rgba(233, 174, 0, 0.55); }
+.vid__btn--keep.vid__btn--saved, .vid__btn--keep.vid__btn--saved:hover { color: #ffffff; background: linear-gradient(135deg, #3D63E6, #1846E0); box-shadow: 0 6px 16px rgba(24, 70, 224, 0.25); cursor: default; }
+.vid__btn--watch { color: #ffffff; background: linear-gradient(135deg, #6E8DEE, #3D63E6); box-shadow: 0 6px 16px rgba(61, 99, 230, 0.4); }
+.vid__btn--remove { color: #FFD86B; background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 216, 107, 0.45); }
+.vid__btn--remove:hover { color: #fff; background: rgba(176, 122, 0, 0.35); }
 
 /* What it is doing, said plainly and in a colour that shows. */
 .vid__state { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 600; color: #ffffff; }
-.vid__state--good { color: #9ff0cf; }
+.vid__state--good { color: #D6E3FF; }
 .vid__manage-devices { width: fit-content; color: #ffe08a; font-size: 0.88rem; font-weight: 700; }
 .vid__manage-devices[hidden] { display: none; }
-.vid__state--bad { color: #ffc2cd; }
+.vid__state--bad { color: #FFC72C; }
 .vid__state--working::before {
   content: ""; width: 15px; height: 15px; border-radius: 50%;
   border: 2.5px solid rgba(255, 255, 255, 0.35); border-top-color: #ffe08a;
@@ -75,7 +75,7 @@
 }
 .vid-kept .vid__state, .ui-body > .vid .vid__state { color: var(--ink); }
 .ui-body > .vid .vid__manage-devices { color: var(--maroon); }
-.vid-kept .vid__btn--remove, .ui-body > .vid .vid__btn--remove { color: #c3274a; border-color: rgba(155, 53, 80, 0.35); background: transparent; }
+.vid-kept .vid__btn--remove, .ui-body > .vid .vid__btn--remove { color: #7A5600; border-color: rgba(122, 86, 0, 0.35); background: transparent; }
 
 /* The Offline videos page */
 .vid-keptlist, .vid-devices { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }

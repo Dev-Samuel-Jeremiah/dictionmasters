@@ -13,7 +13,7 @@
 
 {% block content %}
 <div class="lm">
-  <section class="lm-hero" style="--tint: {{ module.color }}">
+  <section class="lm-hero" style="--tint: {{ module.color|palette }}">
     <div class="wrap">
       <ol class="lm-crumbs">
         <li><a href="{% url 'learning_modules:hub' %}">Learning Modules</a></li>
@@ -48,7 +48,7 @@
   <div class="wrap lm-body">
     {% if next_row %}
     <section class="lm-panel lm-continue">
-      <span class="lm-ring lm-ring--light" style="--p: {{ progress.percent }}; --ring: {{ module.color }}"><strong>{{ progress.percent }}%</strong></span>
+      <span class="lm-ring lm-ring--light" style="--p: {{ progress.percent }}; --ring: {{ module.color|palette }}"><strong>{{ progress.percent }}%</strong></span>
       <div class="lm-continue__text">
         <p class="lm-continue__kicker">Up next</p>
         <p class="lm-continue__title">{{ next_row.day.get_day_name_display }}</p>
@@ -68,7 +68,7 @@
         {% for row in day_rows %}
         <a href="{% url 'learning_modules:day_detail' module.slug term.slug week.slug row.day.day_name %}"
            class="lm-day lm-lift{% if row.is_complete %} lm-day--done{% elif row == next_row %} lm-day--next{% endif %}"
-           style="--tone: {{ module.color }}; --i: {{ forloop.counter0 }}">
+           style="--tone: {{ module.color|palette }}; --i: {{ forloop.counter0 }}">
           {% if row.is_complete %}<span class="lm-status lm-status--done">&#10003; Done</span>{% elif row == next_row %}<span class="lm-status lm-status--current">Next</span>{% endif %}
           <span class="lm-day__abbr" aria-hidden="true">{{ row.day.get_day_name_display|slice:":3" }}</span>
           <span class="lm-day__name">{{ row.day.get_day_name_display }}</span>

@@ -12,8 +12,8 @@
   border-radius: 4px;
   background: var(--darkened-bg);
 }
-.stored-media--r2 { border-left-color: #2f855a; }
-.stored-media--local { border-left-color: #b7791f; }
+.stored-media--r2 { border-left-color: #3D63E6; }
+.stored-media--local { border-left-color: #B07A00; }
 
 .stored-media__badge {
   margin: 0 0 8px;
@@ -21,8 +21,8 @@
   font-weight: 600;
   color: var(--body-fg);
 }
-.stored-media--r2 .stored-media__badge { color: #2f855a; }
-.stored-media--local .stored-media__badge { color: #b7791f; }
+.stored-media--r2 .stored-media__badge { color: #3D63E6; }
+.stored-media--local .stored-media__badge { color: #B07A00; }
 .stored-media__name {
   display: block;
   margin-top: 2px;
@@ -50,7 +50,7 @@ video.stored-media__preview { max-height: 220px; background: #000; }
   font-weight: 600;
   white-space: nowrap;
 }
-.media-pill--r2 { background: rgba(47, 133, 90, 0.15); color: #2f855a; }
+.media-pill--r2 { background: rgba(61, 99, 230, 0.15); color: #3D63E6; }
 .media-pill--link { background: rgba(66, 153, 225, 0.15); color: #2b6cb0; }
-.media-pill--local { background: rgba(183, 121, 31, 0.15); color: #b7791f; }
+.media-pill--local { background: rgba(176, 122, 0, 0.15); color: #B07A00; }
 .media-pill--none { color: var(--body-quiet-color); }

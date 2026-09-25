@@ -42,7 +42,7 @@
         <span class="ui-card__cta">Carry on &rarr;</span>
       </a>
       {% endif %}
-      <a href="{% url 'tricks:lessons' %}" class="ui-card ui-lift" style="--tone: #c3274a; --i: 0">
+      <a href="{% url 'tricks:lessons' %}" class="ui-card ui-lift" style="--tone: #7A5600; --i: 0">
         <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#10024;</span>{% if not current and not done %}<span class="ui-status ui-status--current">Start here</span>{% endif %}</span>
         <span class="ui-card__name">All Tricks</span>
         <span class="ui-card__desc">{{ total_tricks }} trick{{ total_tricks|pluralize }}, taken in order: finish each one and pass its assessment to unlock the next.</span>

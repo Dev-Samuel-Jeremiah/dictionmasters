@@ -32,7 +32,7 @@
     {% if book_cards %}
     <div class="ui-grid">
       {% for card in book_cards %}
-      <a href="{% url 'reading_club:book_detail' card.book.slug %}" class="ui-card ui-lift" style="--tone: {{ card.book.color }}; --i: {{ forloop.counter0 }}">
+      <a href="{% url 'reading_club:book_detail' card.book.slug %}" class="ui-card ui-lift" style="--tone: {{ card.book.color|palette }}; --i: {{ forloop.counter0 }}">
         <span class="ui-card__top">
           <span class="ui-card__icon" aria-hidden="true">{{ card.book.icon }}</span>
           {% if card.progress.total and card.progress.done == card.progress.total %}<span class="ui-status ui-status--done">Complete</span>

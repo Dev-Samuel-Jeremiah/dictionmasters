@@ -137,7 +137,7 @@ def assessment_screens(programme, lessons_key, key_prefix, lesson_word):
 
 SECTIONS = [
     {
-        "slug": "dashboard", "name": "Dashboard appearance", "icon": "🖼️", "tone": "#7A2438",
+        "slug": "dashboard", "name": "Dashboard appearance", "icon": "🖼️", "tone": "#7A5600",
         "blurb": "Upload a separate background image for every learner dashboard card.",
         "screens": [
             {"key": "dashboard-card-images", "model": "accounts.DashboardCardImage",
@@ -148,7 +148,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "echospell", "name": "EchoSpell", "icon": "🔊", "tone": "#2e7d62",
+        "slug": "echospell", "name": "EchoSpell", "icon": "🔊", "tone": "#3D63E6",
         "blurb": "Levels, groups, card lessons and scored activities.",
         "screens": [
             {"key": "levels", "model": "echospell.Level",
@@ -214,7 +214,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "book", "name": "44 Academy", "icon": "📖", "tone": "#7A2438",
+        "slug": "book", "name": "44 Academy", "icon": "📖", "tone": "#7A5600",
         "blurb": "The 44 Academy sounds, their lessons, and the phonemic chart audio.",
         "screens": [
             *lesson_screens("academy", ""),
@@ -224,12 +224,12 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "tricks", "name": "Tricks to Sound Fluent", "icon": "✨", "tone": "#b8863b",
+        "slug": "tricks", "name": "Tricks to Sound Fluent", "icon": "✨", "tone": "#B07A00",
         "blurb": "The tricks, their groups, and everything on each trick's eight tabs.",
         "screens": lesson_screens("tricks", "trick-"),
     },
     {
-        "slug": "tutor", "name": "AI Reading Tutor", "icon": "🎙️", "tone": "#1f6f5c",
+        "slug": "tutor", "name": "AI Reading Tutor", "icon": "🎙️", "tone": "#1846E0",
         "blurb": "Passages learners read aloud to the live tutor, and how each reading went.",
         "screens": [
             {"key": "tutor-voices", "model": "tutor.TutorVoice", "name": "Tutor voices",
@@ -252,7 +252,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "quick-words", "name": "Quick Words", "icon": "🔤", "tone": "#b8863b",
+        "slug": "quick-words", "name": "Quick Words", "icon": "🔤", "tone": "#B07A00",
         "blurb": "The word library: meanings, transcriptions and pronunciations.",
         "screens": [
             {"key": "words", "model": "quick_words.QuickWord",
@@ -263,7 +263,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "assessments", "name": "Assessments", "icon": "📋", "tone": "#9b3550",
+        "slug": "assessments", "name": "Assessments", "icon": "📋", "tone": "#7A5600",
         "blurb": "Quizzes, timed tests, speaking assessments and results.",
         "screens": [
             {"key": "assessments", "model": "assessments.Assessment",
@@ -279,7 +279,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "reading-club", "name": "Reading Club", "icon": "📚", "tone": "#1b6b78",
+        "slug": "reading-club", "name": "Reading Club", "icon": "📚", "tone": "#1846E0",
         "blurb": "Termly reading books, chapter by chapter.",
         "screens": [
             {"key": "books", "model": "reading_club.Book",
@@ -298,7 +298,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "reference-library", "name": "Reference Library", "icon": "🔎", "tone": "#8c6526",
+        "slug": "reference-library", "name": "Reference Library", "icon": "🔎", "tone": "#7A5600",
         "blurb": "Topics, tags and articles learners look things up in.",
         "screens": [
             {"key": "topics", "model": "reference_library.LibraryCategory",
@@ -316,7 +316,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "diction-radio", "name": "Diction Radio", "icon": "📻", "tone": "#7A2438",
+        "slug": "diction-radio", "name": "Diction Radio", "icon": "📻", "tone": "#7A5600",
         "blurb": "Build the station lineup and arrange the programmes and audio episodes listeners hear.",
         "screens": [
             {"key": "radio-programs", "model": "diction_radio.RadioProgram",
@@ -340,7 +340,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "diction-library", "name": "Diction Library", "icon": "📚", "tone": "#236b65",
+        "slug": "diction-library", "name": "Diction Library", "icon": "📚", "tone": "#1846E0",
         "blurb": "Books, stories, audio and video shared with everyone or a selected school.",
         "screens": [
             {"key": "diction-library-items", "model": "diction_library.LibraryItem",
@@ -356,7 +356,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "people", "name": "People & schools", "icon": "👥", "tone": "#5a3d8a",
+        "slug": "people", "name": "People & schools", "icon": "👥", "tone": "#0F31AE",
         "blurb": "Learners, teachers, admins, schools and joining codes.",
         "screens": [
             {"key": "users", "model": "accounts.User",
@@ -403,7 +403,7 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "billing", "name": "Billing", "icon": "💳", "tone": "#2e7d62",
+        "slug": "billing", "name": "Billing", "icon": "💳", "tone": "#3D63E6",
         "blurb": "Plans and prices, who has access until when, and every payment.",
         "screens": [
             {"key": "plans", "model": "billing.Plan",

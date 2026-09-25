@@ -81,7 +81,7 @@ def home(request):
         # "schools only". Starting prices come from the plans in the database.
         "audiences": [
             {
-                "key": "adults", "icon": "🧑", "tone": "#2e7d62",
+                "key": "adults", "icon": "🧑", "tone": "#3D63E6",
                 "title": "Adults & individual learners",
                 "body": "Sharpen your pronunciation for work, study or confidence — "
                         "at your own pace, on your own schedule. No school needed.",
@@ -99,7 +99,7 @@ def home(request):
                 "cta": "Sign up as a student", "url": "accounts:register_student",
             },
             {
-                "key": "schools", "icon": "🏫", "tone": "#7A2438",
+                "key": "schools", "icon": "🏫", "tone": "#7A5600",
                 "title": "Schools",
                 "body": "Give every teacher the tools to teach British English sounds, "
                         "and see each class's progress in one place.",

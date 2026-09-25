@@ -16,7 +16,7 @@
 
 {% block content %}
 <div class="lm">
-  <section class="lm-hero" style="--tint: {{ module.color }}">
+  <section class="lm-hero" style="--tint: {{ module.color|palette }}">
     <div class="wrap">
       <ol class="lm-crumbs">
         <li><a href="{% url 'learning_modules:module_detail' module.slug %}">{{ module.name }}</a></li>

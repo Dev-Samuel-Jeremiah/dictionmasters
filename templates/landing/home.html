@@ -94,7 +94,7 @@
 
       <div class="audience__grid">
         {% for item in audiences %}
-        <article class="audience__card ld-lift reveal" style="--d: {{ forloop.counter0 }}; --tone: {{ item.tone }};">
+        <article class="audience__card ld-lift reveal" style="--d: {{ forloop.counter0 }}; --tone: {{ item.tone|palette }};">
           <span class="audience__icon" aria-hidden="true">{{ item.icon }}</span>
           <h3 class="audience__title">{{ item.title }}</h3>
           <div class="audience__body dm-rich-content">{{ item.body|rich_text }}</div>

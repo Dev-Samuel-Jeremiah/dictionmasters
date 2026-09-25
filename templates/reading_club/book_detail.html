@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="ui">
-  <section class="ui-hero ui-hero--teal" style="--tint: {{ book.color }}">
+  <section class="ui-hero ui-hero--teal" style="--tint: {{ book.color|palette }}">
     <div class="wrap">
       <ol class="ui-crumbs">
         <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
@@ -42,7 +42,7 @@
   <div class="wrap ui-body ui-stack">
     {% if continue_entry %}
     <section class="ui-panel ui-continue">
-      <span class="ui-ring ui-ring--light" style="--p: {{ progress.percent }}; --ring: {{ book.color }}"><strong>{{ progress.percent }}%</strong></span>
+      <span class="ui-ring ui-ring--light" style="--p: {{ progress.percent }}; --ring: {{ book.color|palette }}"><strong>{{ progress.percent }}%</strong></span>
       <div class="ui-continue__text">
         <p class="ui-continue__kicker">{% if progress.done %}Up next{% else %}Start here{% endif %}</p>
         <p class="ui-continue__title">Chapter {{ continue_entry.chapter.number }}: {{ continue_entry.chapter.title }}</p>
@@ -73,7 +73,7 @@
             <span class="ui-status">Locked</span>
           </div>
           {% else %}
-          <a href="{% url 'reading_club:term_detail' book.slug card.term.slug %}" class="ui-step ui-lift ui-step--{{ card.status }}" style="--tone: {{ book.color }}; --i: {{ forloop.counter0 }}">
+          <a href="{% url 'reading_club:term_detail' book.slug card.term.slug %}" class="ui-step ui-lift ui-step--{{ card.status }}" style="--tone: {{ book.color|palette }}; --i: {{ forloop.counter0 }}">
             <span class="ui-node" aria-hidden="true">{% if card.status == "done" %}&#10003;{% else %}{{ forloop.counter }}{% endif %}</span>
             <span class="ui-step__main">
               <span class="ui-step__title">{{ card.term.name }}</span>
@@ -84,7 +84,7 @@
             </span>
             {% if card.total %}
             <span class="ui-step__progress">
-              <span class="ui-bar" style="--tone: {{ book.color }}"><span class="ui-bar__fill" style="--p: {{ card.percent }}"></span></span>
+              <span class="ui-bar" style="--tone: {{ book.color|palette }}"><span class="ui-bar__fill" style="--p: {{ card.percent }}"></span></span>
               <span class="ui-bar-meta"><span>{{ card.done }}/{{ card.total }}</span><span>{{ card.percent }}%</span></span>
             </span>
             {% endif %}

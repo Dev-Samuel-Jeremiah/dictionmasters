@@ -47,7 +47,7 @@
   display: grid; place-items: center;
   width: 18px; height: 18px; border-radius: 50%;
   font-size: 0.7rem; font-weight: 700;
-  color: #fff; background: #12875a;
+  color: #fff; background: #3D63E6;
 }
 .bl-plan__form { margin: 0; }
 .bl-plan .ui-btn[disabled] { opacity: 0.7; cursor: progress; }
@@ -56,7 +56,7 @@
 /* ---------- status ---------- */
 
 .bl-status { border-left: 5px solid var(--gold); }
-.bl-status--active { border-left-color: #12875a; }
+.bl-status--active { border-left-color: #3D63E6; }
 .bl-status--expired { border-left-color: var(--maroon); }
 .bl-status__title { margin: 4px 0 6px; font-family: var(--font-serif); font-size: 1.5rem; font-weight: 600; color: var(--ink); }
 .bl-status__meta { margin: 12px 0 0; font-size: 0.9rem; color: var(--ink-70); }
@@ -68,8 +68,8 @@
   font-size: 0.76rem; font-weight: 700; white-space: nowrap;
   color: var(--ink-70); background: rgba(11, 26, 74, 0.07);
 }
-.bl-pill--success { color: #1f6a52; background: rgba(18, 135, 90, 0.14); }
-.bl-pill--failed { color: var(--maroon); background: rgba(195, 39, 74, 0.1); }
+.bl-pill--success { color: #1846E0; background: rgba(61, 99, 230, 0.14); }
+.bl-pill--failed { color: var(--maroon); background: rgba(122, 86, 0, 0.1); }
 .bl-pill--pending { color: var(--gold-deep); background: var(--gold-tint); }
 
 .bl-faq dl { margin: 12px 0 0; display: grid; gap: 14px; }
@@ -181,6 +181,6 @@
 .bl-promo__input { max-width: 190px; text-transform: uppercase; }
 .bl-promo__on { margin: 0; flex: 1; font-size: 0.95rem; color: #7a5600; }
 .bl-plan__was { margin-right: 6px; font-size: 1.3rem; color: var(--ink-40); text-decoration-thickness: 2px; }
-.bl-plan__promo { margin: 0 0 4px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #12875a; }
+.bl-plan__promo { margin: 0 0 4px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #3D63E6; }
 .bl-start__promo { margin-top: 14px; }
 .bl-start__promo .field-input { max-width: 260px; text-transform: uppercase; }

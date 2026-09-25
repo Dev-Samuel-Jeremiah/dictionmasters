@@ -13,7 +13,7 @@
 
 {% block content %}
 <div class="lm">
-  <section class="lm-hero" style="--tint: {{ module.color }}">
+  <section class="lm-hero" style="--tint: {{ module.color|palette }}">
     <div class="wrap">
       <ol class="lm-crumbs">
         <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
@@ -49,7 +49,7 @@
   <div class="wrap lm-body">
     {% if continue_entry %}
     <section class="lm-panel lm-continue">
-      <span class="lm-ring lm-ring--light" style="--p: {{ progress.percent }}; --ring: {{ module.color }}"><strong>{{ progress.percent }}%</strong></span>
+      <span class="lm-ring lm-ring--light" style="--p: {{ progress.percent }}; --ring: {{ module.color|palette }}"><strong>{{ progress.percent }}%</strong></span>
       <div class="lm-continue__text">
         <p class="lm-continue__kicker">{% if progress.done %}Up next{% else %}Start here{% endif %}</p>
         <p class="lm-continue__title">{{ continue_entry.day.get_day_name_display }}, {{ continue_entry.week.display_name }}</p>
@@ -81,7 +81,7 @@
           </div>
           {% else %}
           <a href="{% url 'learning_modules:term_detail' module.slug card.term.slug %}"
-             class="lm-step lm-lift lm-step--{{ card.status }}" style="--tone: {{ module.color }}; --i: {{ forloop.counter0 }}">
+             class="lm-step lm-lift lm-step--{{ card.status }}" style="--tone: {{ module.color|palette }}; --i: {{ forloop.counter0 }}">
             <span class="lm-step__node" aria-hidden="true">{% if card.status == "done" %}&#10003;{% else %}{{ forloop.counter }}{% endif %}</span>
             <span class="lm-step__main">
               <span class="lm-step__title">{{ card.term.name }}</span>
@@ -92,7 +92,7 @@
             </span>
             {% if card.total %}
             <span class="lm-step__progress">
-              <span class="lm-bar" style="--tone: {{ module.color }}"><span class="lm-bar__fill" style="--p: {{ card.percent }}"></span></span>
+              <span class="lm-bar" style="--tone: {{ module.color|palette }}"><span class="lm-bar__fill" style="--p: {{ card.percent }}"></span></span>
               <small><span>{{ card.done }}/{{ card.total }} days</span><span>{{ card.percent }}%</span></small>
             </span>
             {% endif %}

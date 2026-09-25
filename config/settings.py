@@ -181,6 +181,8 @@ TEMPLATES = [
                 "apps.landing.context_processors.nav",
                 "apps.billing.context_processors.billing",
             ],
+            # {{ colour|palette }} everywhere, for colours stored in the database.
+            "builtins": ["apps.landing.templatetags.palette"],
         },
     },
 ]

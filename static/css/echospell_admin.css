@@ -35,7 +35,7 @@
   color: #333;
   cursor: pointer;
 }
-.echospell-unlock:hover { border-color: #417690; color: #417690; }
+.echospell-unlock:hover { border-color: #3D63E6; color: #3D63E6; }
 
 .echospell-unlocked {
   opacity: 1;

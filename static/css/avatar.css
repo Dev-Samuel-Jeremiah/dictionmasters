@@ -8,10 +8,10 @@
 
 .av {
   --av-size: 132px;
-  --skin-light: #d18f5e; --skin-mid: #b06a3c; --skin-dark: #7d4626;
-  --hair-light: #4a3a33; --hair-mid: #2a1f1a; --hair-dark: #150f0d;
+  --skin-light: #E9AE00; --skin-mid: #B07A00; --skin-dark: #7A5600;
+  --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #7A5600;
   --cloth-light: #2e4470; --cloth-dark: #1b2c4d;
-  --bg-from: #fbe9cd; --bg-to: #dca964;
+  --bg-from: #FFE9A8; --bg-to: #E9AE00;
   position: relative; display: grid; place-items: center;
   width: var(--av-size); height: var(--av-size); margin: 0;
   filter: drop-shadow(0 10px 18px rgba(11, 26, 74, 0.22));
@@ -39,26 +39,26 @@
 .av__beard { fill: var(--hair-mid); opacity: 0.95; }
 .av__fade { fill: var(--hair-light); opacity: 0.55; }
 .av__hoop { fill: none; stroke: #ffd659; stroke-width: 2.8; }
-.av__wrap { fill: #c03a56; }
-.av__wrap--knot { fill: #dc5172; }
-.av__glasses circle, .av__glasses path { fill: none; stroke: #241c19; stroke-width: 2.4; opacity: 0.9; }
+.av__wrap { fill: #7A5600; }
+.av__wrap--knot { fill: #B07A00; }
+.av__glasses circle, .av__glasses path { fill: none; stroke: #7A5600; stroke-width: 2.4; opacity: 0.9; }
 .av__white { fill: #ffffff; }
-.av__iris { fill: #4b2f1d; }
-.av__pupil { fill: #140d09; }
+.av__iris { fill: #7A5600; }
+.av__pupil { fill: #7A5600; }
 .av__spark { fill: #fff; }
 .av__lash { fill: none; stroke: var(--hair-dark); stroke-width: 2; stroke-linecap: round; }
 .av__brows path { fill: none; stroke: var(--hair-mid); stroke-width: 3.6; stroke-linecap: round; }
 .av__nose { fill: none; stroke: var(--skin-dark); stroke-width: 2.4; stroke-linecap: round; opacity: 0.75; }
-.av__blush { fill: #d8735c; opacity: 0.28; }
-.av__lips { fill: #7d2b33; }
+.av__blush { fill: #B07A00; opacity: 0.28; }
+.av__lips { fill: #7A5600; }
 .av__teeth { fill: #ffffff; opacity: 0.92; }
 .av__lipgloss { fill: none; stroke: #fff; stroke-width: 1.4; opacity: 0.35; stroke-linecap: round; }
 
 /* Each face its own person. */
-.av--ada { --skin-light: #a96637; --skin-mid: #8d5230; --skin-dark: #613720; --hair-light: #3a2a24; --hair-mid: #1c1411; --hair-dark: #0d0907; --cloth-light: #3d9a7c; --cloth-dark: #24604e; --bg-from: #eef6ec; --bg-to: #a9cfba; }
-.av--nia { --skin-light: #dd9a66; --skin-mid: #c07a49; --skin-dark: #8d5630; --hair-light: #402c24; --hair-mid: #2a1d18; --hair-dark: #150e0b; --cloth-light: #97304a; --cloth-dark: #6b1f32; --bg-from: #fdeade; --bg-to: #eeb595; }
-.av--kayode { --skin-light: #96562f; --skin-mid: #7a4526; --skin-dark: #522d16; --hair-light: #2b1e18; --hair-mid: #17100d; --hair-dark: #0a0706; --cloth-light: #3d74ab; --cloth-dark: #254c74; --bg-from: #e6eefa; --bg-to: #a8c2e2; }
-.av--tobi { --skin-light: #c47a3d; --skin-mid: #a4612f; --skin-dark: #74411c; --hair-light: #33241e; --hair-mid: #1f1613; --hair-dark: #100b09; --cloth-light: #d4a054; --cloth-dark: #9a6f2c; --bg-from: #fdf2dc; --bg-to: #efc482; }
+.av--ada { --skin-light: #B07A00; --skin-mid: #7A5600; --skin-dark: #7A5600; --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #0d0907; --cloth-light: #6E8DEE; --cloth-dark: #1846E0; --bg-from: #F2F5FC; --bg-to: #A9BDF6; }
+.av--nia { --skin-light: #E9AE00; --skin-mid: #B07A00; --skin-dark: #7A5600; --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #7A5600; --cloth-light: #7A5600; --cloth-dark: #7A5600; --bg-from: #FFE9A8; --bg-to: #E9AE00; }
+.av--kayode { --skin-light: #7A5600; --skin-mid: #7A5600; --skin-dark: #7A5600; --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #0a0706; --cloth-light: #3d74ab; --cloth-dark: #254c74; --bg-from: #e6eefa; --bg-to: #a8c2e2; }
+.av--tobi { --skin-light: #B07A00; --skin-mid: #B07A00; --skin-dark: #7A5600; --hair-light: #7A5600; --hair-mid: #7A5600; --hair-dark: #100b09; --cloth-light: #E9AE00; --cloth-dark: #B07A00; --bg-from: #fdf2dc; --bg-to: #FFC72C; }
 .av--orb { --bg-from: #e8f0fb; --bg-to: #8ea9cf; }
 .av__orb { fill: #16243f; }
 .av__orb-inner { fill: rgba(240, 200, 120, 0.3); }

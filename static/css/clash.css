@@ -14,8 +14,8 @@
   --chalk: #eceef3;
   --chalk-dim: rgba(243, 236, 220, 0.62);
   --gold-bright: #ffc72c;
-  --win: #43c28f;
-  --lose: #e8687a;
+  --win: #A9BDF6;
+  --lose: #B07A00;
 
   position: relative;
   min-height: calc(100vh - 77px);
@@ -23,7 +23,7 @@
   color: var(--chalk);
   background:
     radial-gradient(ellipse 70% 45% at 50% -10%, rgba(255, 199, 44, 0.16), transparent 70%),
-    radial-gradient(ellipse 40% 35% at 95% 90%, rgba(195, 39, 74, 0.28), transparent 65%),
+    radial-gradient(ellipse 40% 35% at 95% 90%, rgba(122, 86, 0, 0.28), transparent 65%),
     linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(180deg, var(--arena-2), var(--arena));
@@ -176,15 +176,15 @@
 .clash-hud__streak, .clash-hud__score { text-align: center; }
 .clash-hud__streak strong, .clash-hud__score strong { font-family: var(--font-serif); font-size: 1.45rem; line-height: 1; }
 .clash-hud__score strong { color: var(--gold-bright); }
-.clash-hud__streak--hot strong { color: #ff9f5a; text-shadow: 0 0 14px rgba(255, 159, 90, 0.6); }
-.clash-hud__bonus { margin-left: 4px; font-size: 0.75rem; font-weight: 700; color: #ff9f5a; }
-.clash-heart { font-size: 1.2rem; color: var(--lose); text-shadow: 0 0 10px rgba(232, 104, 122, 0.55); }
+.clash-hud__streak--hot strong { color: #E9AE00; text-shadow: 0 0 14px rgba(233, 174, 0, 0.6); }
+.clash-hud__bonus { margin-left: 4px; font-size: 0.75rem; font-weight: 700; color: #E9AE00; }
+.clash-heart { font-size: 1.2rem; color: var(--lose); text-shadow: 0 0 10px rgba(176, 122, 0, 0.55); }
 .clash-heart--lost { color: rgba(255, 255, 255, 0.15); text-shadow: none; }
 
 .clash-chip { padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-.clash-chip--beginner { background: rgba(67, 194, 143, 0.16); color: var(--win); }
+.clash-chip--beginner { background: rgba(169, 189, 246, 0.16); color: var(--win); }
 .clash-chip--intermediate { background: rgba(255, 199, 44, 0.16); color: var(--gold-bright); }
-.clash-chip--expert { background: rgba(232, 104, 122, 0.16); color: var(--lose); }
+.clash-chip--expert { background: rgba(176, 122, 0, 0.16); color: var(--lose); }
 
 /* The countdown. --left is the seconds the server says remain; an
    integer custom property animates from it to zero and is printed with
@@ -223,15 +223,15 @@
 }
 @keyframes clash-count { from { --clash-secs: var(--left); } to { --clash-secs: 0; } }
 @keyframes clash-drain { to { width: 0; } }
-@keyframes clash-warn-text { to { color: var(--lose); text-shadow: 0 0 18px rgba(232, 104, 122, 0.7); } }
-@keyframes clash-warn-bar { to { background: var(--lose); box-shadow: 0 0 16px rgba(232, 104, 122, 0.6); } }
+@keyframes clash-warn-text { to { color: var(--lose); text-shadow: 0 0 18px rgba(176, 122, 0, 0.7); } }
+@keyframes clash-warn-bar { to { background: var(--lose); box-shadow: 0 0 16px rgba(176, 122, 0, 0.6); } }
 
 .clash-flash {
   margin: 0 0 12px; padding: 8px 14px; border-radius: 10px; font-weight: 700; text-align: center;
   animation: clash-pop 0.3s ease-out;
 }
-.clash-flash--right { background: rgba(67, 194, 143, 0.14); color: var(--win); }
-.clash-flash--wrong { background: rgba(232, 104, 122, 0.14); color: var(--lose); }
+.clash-flash--right { background: rgba(169, 189, 246, 0.14); color: var(--win); }
+.clash-flash--wrong { background: rgba(176, 122, 0, 0.14); color: var(--lose); }
 @keyframes clash-pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
 
 .clash-card {
@@ -294,8 +294,8 @@
 
 .clash-verdict { text-align: center; margin: 6px 0 18px; animation: clash-pop 0.35s ease-out; }
 .clash-verdict__big { margin: 0; font-family: var(--font-serif); font-size: clamp(2.4rem, 7vw, 3.6rem); font-weight: 700; line-height: 1.05; }
-.clash-verdict--right .clash-verdict__big { color: var(--win); text-shadow: 0 0 30px rgba(67, 194, 143, 0.45); }
-.clash-verdict--wrong .clash-verdict__big { color: var(--lose); text-shadow: 0 0 30px rgba(232, 104, 122, 0.45); animation: clash-shake 0.4s ease; }
+.clash-verdict--right .clash-verdict__big { color: var(--win); text-shadow: 0 0 30px rgba(169, 189, 246, 0.45); }
+.clash-verdict--wrong .clash-verdict__big { color: var(--lose); text-shadow: 0 0 30px rgba(176, 122, 0, 0.45); animation: clash-shake 0.4s ease; }
 @keyframes clash-shake { 20% { transform: translateX(-7px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
 .clash-verdict__points { margin: 6px 0 0; font-size: 1.05rem; color: var(--chalk-dim); }
 

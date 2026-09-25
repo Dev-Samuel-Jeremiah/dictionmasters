@@ -74,7 +74,7 @@
   <h2 class="cr-section-title">Everything you can manage</h2>
   <div class="cr-features">
     {% for section in sections %}
-    <article class="cr-feature" style="--tone: {{ section.tone }}">
+    <article class="cr-feature" style="--tone: {{ section.tone|palette }}">
       <header>
         <span class="cr-feature__icon" aria-hidden="true">{{ section.icon }}</span>
         <div>

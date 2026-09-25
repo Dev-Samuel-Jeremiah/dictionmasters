@@ -137,9 +137,9 @@
   letter-spacing: 0.02em;
   margin-bottom: 8px;
 }
-.callout--maroon { background: rgba(195, 39, 74, 0.08); }
+.callout--maroon { background: rgba(122, 86, 0, 0.08); }
 .callout--maroon .callout__title { color: var(--maroon); }
-.callout--green { background: rgba(36, 71, 62, 0.08); }
+.callout--green { background: rgba(15, 49, 174, 0.08); }
 .callout--green .callout__title { color: var(--green); }
 .callout--gold { background: var(--gold-tint); }
 .callout--gold .callout__title { color: var(--gold-deep); }

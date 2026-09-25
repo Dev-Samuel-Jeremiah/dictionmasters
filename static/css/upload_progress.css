@@ -8,8 +8,8 @@
   --up-ink: #0b1a4a;
   --up-line: rgba(11, 26, 74, 0.14);
   --up-gold: #ffc72c;
-  --up-green: #12875a;
-  --up-red: #c3274a;
+  --up-green: #3D63E6;
+  --up-red: #7A5600;
   margin: 18px 0 0;
   padding: 16px 18px;
   border: 1px solid var(--up-line);
@@ -55,7 +55,7 @@
 .up-progress.is-saving { border-left-color: var(--up-green); }
 .up-progress.is-saving .up-progress__percent { color: var(--up-green); }
 .up-progress.is-saving .up-progress__fill {
-  background: repeating-linear-gradient(115deg, #12875a 0 14px, #379a79 14px 28px);
+  background: repeating-linear-gradient(115deg, #3D63E6 0 14px, #6E8DEE 14px 28px);
   animation: up-stripes 0.9s linear infinite;
 }
 @keyframes up-stripes { to { background-position: 56px 0; } }

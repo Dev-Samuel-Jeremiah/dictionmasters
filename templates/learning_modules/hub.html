@@ -68,7 +68,7 @@
         {% for card in module_cards %}
         <a href="{% url 'learning_modules:module_detail' card.module.slug %}"
            class="lm-module lm-lift{% if card.is_current %} lm-module--current{% endif %}"
-           style="--tone: {{ card.module.color }}; --i: {{ forloop.counter0 }}">
+           style="--tone: {{ card.module.color|palette }}; --i: {{ forloop.counter0 }}">
           <span class="lm-module__top">
             <span class="lm-module__badge" aria-hidden="true">{{ card.module.icon }}</span>
             {% if card.is_current %}<span class="lm-status lm-status--current">Continue here</span>

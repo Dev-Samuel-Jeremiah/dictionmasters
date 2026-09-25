@@ -79,7 +79,7 @@
     {% endif %}
     {% else %}
     {% for group in groups %}
-    {% cycle "#c3274a" "#1846e0" "#12875a" "#e9ae00" as tone silent %}
+    {% cycle "#7A5600" "#1846e0" "#3D63E6" "#e9ae00" as tone silent %}
     <section class="ui-panel">
       <header class="ui-section__head">
         <h2 class="ui-section__title"><span class="ui-section__num" style="background: {{ tone }}">{{ forloop.counter }}</span> {{ group.category.name }}</h2>

@@ -65,7 +65,7 @@
       {% if categories %}
       <div class="ui-grid">
         {% for category in categories %}
-        {% cycle "#e9ae00" "#1846e0" "#c3274a" "#12875a" as tone silent %}
+        {% cycle "#e9ae00" "#1846e0" "#7A5600" "#3D63E6" as tone silent %}
         <a href="{% url 'reference_library:category' category.slug %}" class="ui-card ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}; min-height: 170px;">
           <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ category.name|slice:":1"|upper }}</span></span>
           <span class="ui-card__name">{{ category.name }}</span>

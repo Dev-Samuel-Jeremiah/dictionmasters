@@ -108,7 +108,7 @@
     </header>
     <div class="dm-features">
       {% for feature in console.features %}
-      <article class="dm-feature" id="feature-{{ feature.slug }}" style="--tone: {{ feature.tone }}">
+      <article class="dm-feature" id="feature-{{ feature.slug }}" style="--tone: {{ feature.tone|palette }}">
         <header class="dm-feature__head">
           <span class="dm-feature__icon" aria-hidden="true">{{ feature.icon }}</span>
           <span class="dm-feature__titles">

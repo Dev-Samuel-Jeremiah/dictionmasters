@@ -46,7 +46,7 @@
       {% if categories %}
       <div class="es-cards">
         {% for category in categories %}
-        <a href="{% url 'echospell:card_detail' level.slug group.slug category.slug %}" class="es-card es-lift" style="--tone: {{ category.color }}; --i: {{ forloop.counter0 }}">
+        <a href="{% url 'echospell:card_detail' level.slug group.slug category.slug %}" class="es-card es-lift" style="--tone: {{ category.color|palette }}; --i: {{ forloop.counter0 }}">
           <span class="es-card__icon" aria-hidden="true">{{ category.icon }}</span>
           <span class="es-card__name">{{ category.name }}</span>
           {% if category.description %}<span class="es-card__desc">{{ category.description }}</span>{% endif %}

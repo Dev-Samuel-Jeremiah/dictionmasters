@@ -11,7 +11,7 @@
   --rt-muted: #788197;
   --rt-accent: #ffc72c;
   --rt-accent-soft: rgba(233, 174, 0, .14);
-  --rt-danger: #b00045;
+  --rt-danger: #7A5600;
   --rt-quote: #fbf8ee;
   position: relative;
   box-sizing: border-box;
@@ -27,7 +27,7 @@
 }
 .dm-rich-editor *, .dm-rich-editor *::before, .dm-rich-editor *::after { box-sizing: border-box; }
 .dm-rich-editor:focus-within { border-color: var(--rt-accent); box-shadow: 0 0 0 3px var(--rt-accent-soft); }
-.dm-rich-editor.dm-rt-invalid { border-color: var(--rt-danger); box-shadow: 0 0 0 3px rgba(176, 0, 69, .12); }
+.dm-rich-editor.dm-rt-invalid { border-color: var(--rt-danger); box-shadow: 0 0 0 3px rgba(122, 86, 0, .12); }
 
 /* Toolbar ------------------------------------------------------------- */
 .dm-rt-toolbar {

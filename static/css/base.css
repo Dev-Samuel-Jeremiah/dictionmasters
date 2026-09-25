@@ -18,11 +18,11 @@
   --gold-deep: #8a6200;
   --gold-tint: rgba(233, 174, 0, 0.14);
 
-  --green: #12875a;
-  --green-deep: #0b5e3e;
+  --green: #3D63E6;
+  --green-deep: #1846E0;
 
-  --maroon: #c3274a;
-  --maroon-deep: #9e1d3b;
+  --maroon: #7A5600;
+  --maroon-deep: #7A5600;
 
   --charcoal: #0b1a4a;
   --paper-white: #ffffff;
@@ -90,8 +90,8 @@ p { margin: 0; }
   font-size: 0.92rem;
   border: 1px solid var(--rule);
 }
-.message--success { background: #EEF4EC; border-color: #BFD8B8; color: #295C22; }
-.message--error { background: #FBECEC; border-color: #E3B4B4; color: var(--maroon-deep); }
+.message--success { background: #F2F5FC; border-color: #D6E3FF; color: #1846E0; }
+.message--error { background: #FFE9A8; border-color: #E9AE00; color: var(--maroon-deep); }
 .message--info, .message--warning { background: var(--gold-tint); border-color: var(--gold); color: var(--gold-deep); }
 
 /* ---------- buttons & links ---------- */
@@ -264,7 +264,7 @@ p { margin: 0; }
 /* ---------- choosing a password (static/js/password_strength.js) ---------- */
 
 .pw-guide { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: rgba(11, 26, 74, 0.04); border: 1px solid var(--rule); }
-.pw-guide.is-accepted { background: rgba(36, 71, 62, 0.07); border-color: rgba(36, 71, 62, 0.35); }
+.pw-guide.is-accepted { background: rgba(15, 49, 174, 0.07); border-color: rgba(15, 49, 174, 0.35); }
 .pw-meter { display: flex; align-items: center; gap: 10px; }
 .pw-meter__bar { flex: 1 1 auto; height: 7px; border-radius: 999px; background: rgba(11, 26, 74, 0.12); overflow: hidden; }
 .pw-meter__fill { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--maroon); transition: width 0.25s ease, background 0.25s ease; }
