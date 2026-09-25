@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 
 from .registry import screens
 
@@ -123,3 +123,95 @@ class ResultsAndMarkingTests(TestCase):
     def test_learners_cannot_get_in(self):
         self.client.force_login(self.learner)
         self.assertEqual(self.client.get(f"/manage/results/lesson/{self.trick.pk}/").status_code, 302)
+
+
+class RichTextTests(TestCase):
+    """The shared editor's server side: what is stored, what learners see,
+    and what speech, marking and search read."""
+
+    def test_sanitizer_removes_scripts_handlers_and_unsafe_links(self):
+        from .rich_text import sanitize_rich_text
+
+        dirty = ('<p onclick="x()">Hi<script>alert(1)</script></p>'
+                 '<a href="javascript:alert(1)">bad</a><a href="example.com" target="_blank">ok</a>'
+                 '<span style="color: red; background: url(x)">c</span>')
+        clean = sanitize_rich_text(dirty)
+        self.assertNotIn("script", clean)
+        self.assertNotIn("onclick", clean)
+        self.assertNotIn("javascript", clean)
+        self.assertNotIn("url(", clean)
+        self.assertIn('<a href="https://example.com" target="_blank" rel="noopener noreferrer">ok</a>', clean)
+        self.assertIn('<span style="color: red">c</span>', clean)
+
+    def test_legacy_plain_text_renders_escaped_with_line_breaks(self):
+        from .rich_text import sanitize_rich_text
+
+        self.assertEqual(sanitize_rich_text("Tom & Jerry\nsay 2 < 3"), "Tom &amp; Jerry<br>say 2 &lt; 3")
+
+    def test_single_line_editor_value_is_not_escaped_twice(self):
+        from .rich_text import clean_rich_text_input, sanitize_rich_text
+
+        # The editor always wraps its HTML, so entities are never mistaken
+        # for plain text that needs escaping again.
+        for typed in ("<p>Tom &amp; Jerry</p>", "<p>two&nbsp; spaces</p>", "<p>2 &lt; 3</p>"):
+            stored = clean_rich_text_input(typed)
+            self.assertTrue(stored.startswith("<p>"), stored)
+            self.assertNotIn("&amp;amp;", sanitize_rich_text(stored))
+            self.assertNotIn("&amp;nbsp;", sanitize_rich_text(stored))
+            # Saving again leaves it unchanged.
+            self.assertEqual(clean_rich_text_input(stored), stored)
+
+    def test_empty_editor_saves_nothing(self):
+        from .rich_text import clean_rich_text_input
+
+        for empty in ("", "   ", "<br>", "<p><br></p>", "<p>&nbsp;</p>", "<div><br></div>"):
+            self.assertEqual(clean_rich_text_input(empty), "", empty)
+        self.assertEqual(clean_rich_text_input("<hr>"), "<hr>")
+
+    def test_plain_text_submission_is_stored_as_typed(self):
+        from .rich_text import clean_rich_text_input, sanitize_rich_text
+
+        stored = clean_rich_text_input("  One\nTwo & more ")
+        self.assertEqual(stored, "One\nTwo & more")
+        self.assertEqual(sanitize_rich_text(stored), "One<br>Two &amp; more")
+
+    def test_plain_text_for_speech_marking_and_search(self):
+        from .rich_text import plain_text
+
+        self.assertEqual(plain_text("<p>Hello <b>wor</b>ld &amp; you</p><ul><li>one</li><li>two</li></ul>"),
+                         "Hello world & you\n\none\n\ntwo")
+        self.assertEqual(plain_text("Plain & simple"), "Plain & simple")
+        self.assertEqual(plain_text(None), "")
+
+    def test_truncation_never_cuts_through_a_tag(self):
+        from .rich_text import sanitize_rich_text, truncate_rich_text
+
+        long = "<p>" + "<b>word</b> " * 500 + "</p>"
+        cut = truncate_rich_text(long, 400)
+        self.assertLessEqual(len(cut), 400)
+        self.assertNotIn("<", cut)
+        self.assertTrue(cut.startswith("word word"))
+        self.assertIn("word word", sanitize_rich_text(cut))
+        self.assertEqual(truncate_rich_text("<p><b>short</b></p>", 400), "<p><b>short</b></p>")
+
+    def test_admin_uses_the_editor_only_for_learner_prose(self):
+        from django.contrib import admin
+
+        from apps.echospell.models import CardLesson
+        from apps.quick_words.models import QuickWord
+
+        from .rich_text import RichTextWidget
+
+        request = RequestFactory().get("/admin/")
+        request.user = User.objects.create_superuser(email="root@example.com", password="pw-12345678")
+        word_form = admin.site._registry[QuickWord].get_form(request)
+        self.assertIsInstance(word_form.base_fields["definition"].widget, RichTextWidget)
+        lesson_form = admin.site._registry[CardLesson].get_form(request)
+        self.assertNotIsInstance(lesson_form.base_fields["definition"].widget, RichTextWidget)
+
+    def test_rich_text_filters(self):
+        from django.template import Context, Template
+
+        out = Template("{% load rich_text %}{{ v|rich_text }}|{{ v|rich_text_plain }}|{{ v|rich_text_inline }}").render(
+            Context({"v": "<p>A <em>b</em></p><p>c</p>"}))
+        self.assertEqual(out, "<p>A <em>b</em></p><p>c</p>|A b\n\nc|A <em>b</em><br>c")

@@ -25,6 +25,8 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.views.decorators.http import require_GET, require_POST
 
+from apps.manage.rich_text import plain_text
+
 from .british_ipa import get_british_ipa
 from .lookup import LookupUnavailable, is_lookup_candidate, lookup
 from .models import QuickWord, WordList
@@ -123,7 +125,7 @@ def suggest(request):
             "ipa_confidence": m["ipa_confidence"] or None,
             "ipa_review_required": m["ipa_review_required"],
             "ipa_accent": m["ipa_accent"],
-            "definition": m["definition"][:90],
+            "definition": plain_text(m["definition"])[:90],
             "url": reverse("quick_words:word_detail", args=[m["slug"]]),
         }
         for m in matches

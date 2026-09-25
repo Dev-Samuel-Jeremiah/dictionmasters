@@ -12,10 +12,28 @@ class ManageConfig(AppConfig):
 
     def ready(self):
         # Use the shared editor for learner-facing Django Admin text fields.
-        # Structured fields remain plain through the widget's field allow-list.
-        from django.contrib.admin.options import FORMFIELD_FOR_DBFIELD_DEFAULTS
+        # The check runs per model, so structured or tokenized text (see
+        # PLAIN_TEXT_MODEL_FIELDS) keeps a plain textarea in every admin.
+        from django.contrib.admin.options import BaseModelAdmin
+        from django.contrib.admin.widgets import AdminTextareaWidget
         from django.db import models
 
-        from apps.manage.rich_text import RichTextWidget
+        from apps.manage.rich_text import RichTextWidget, is_rich_text_field
 
-        FORMFIELD_FOR_DBFIELD_DEFAULTS.setdefault(models.TextField, {})["widget"] = RichTextWidget
+        if getattr(BaseModelAdmin.formfield_for_dbfield, "_rich_text", False):
+            return
+        original = BaseModelAdmin.formfield_for_dbfield
+
+        def formfield_for_dbfield(admin, db_field, request, **kwargs):
+            formfield = original(admin, db_field, request, **kwargs)
+            if (
+                formfield is not None
+                and isinstance(db_field, models.TextField)
+                and type(formfield.widget) is AdminTextareaWidget
+                and is_rich_text_field(db_field.name, db_field.model)
+            ):
+                formfield.widget = RichTextWidget(attrs=formfield.widget.attrs)
+            return formfield
+
+        formfield_for_dbfield._rich_text = True
+        BaseModelAdmin.formfield_for_dbfield = formfield_for_dbfield

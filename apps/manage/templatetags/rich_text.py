@@ -1,10 +1,10 @@
-from django import template
-from django.utils.html import conditional_escape
 import re
 
+from django import template
+from django.utils.html import conditional_escape
 from django.utils.safestring import mark_safe
 
-from apps.manage.rich_text import _contains_markup, sanitize_rich_text
+from apps.manage.rich_text import _contains_markup, plain_text, sanitize_rich_text
 
 register = template.Library()
 
@@ -41,3 +41,9 @@ def rich_text_inline(value):
     fragment = re.sub(r"(?:<br>\s*){2,}", "<br>", fragment, flags=re.I)
     fragment = re.sub(r"^(?:<br>\s*)+|(?:<br>\s*)+$", "", fragment, flags=re.I)
     return mark_safe(fragment)
+
+
+@register.filter(name="rich_text_plain")
+def rich_text_plain(value):
+    """The words only, for snippets, attributes and truncated previews."""
+    return plain_text(value)

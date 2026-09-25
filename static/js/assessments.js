@@ -139,7 +139,12 @@
           el("p", "as-feedback__verdict",
              data.correct ? "✓ Correct" : "✗ Not quite — the answer is " + data.answer)
         );
-        if (data.explanation) feedback.appendChild(el("p", "as-feedback__why", data.explanation));
+        if (data.explanation) {
+          // Sanitized on the server by the control room's rich text rules.
+          var why = el("div", "as-feedback__why dm-rich-content");
+          why.innerHTML = data.explanation;
+          feedback.appendChild(why);
+        }
       })
       .catch(function () {
         button.disabled = false;

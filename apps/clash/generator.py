@@ -15,6 +15,7 @@ import random
 import re
 
 from apps.accounts.access import limit_to_levels
+from apps.manage.rich_text import plain_text
 from apps.quick_words.models import QuickWord
 
 from . import catalogue as C
@@ -43,7 +44,13 @@ def word_pool(tier, user=None):
     if user is not None:
         usable = limit_to_levels(usable, user)
     tiered = usable.filter(level__in=tier.levels)
-    return list(tiered if tiered.count() >= C.MIN_POOL else usable)
+    words = list(tiered if tiered.count() >= C.MIN_POOL else usable)
+    for word in words:
+        # Rounds use these as one-line prompts, options and answers, so the
+        # editor's formatting is dropped (the instances are never saved).
+        word.definition = " ".join(plain_text(word.definition).split())
+        word.example_sentence = " ".join(plain_text(word.example_sentence).split())
+    return words
 
 
 def has_audio(word):

@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from apps.accounts.access import limit_to_levels
 from apps.learning_tools.views import TOOLS
+from apps.manage.rich_text import plain_text
 
 
 MAX_RESULTS_PER_TYPE = 8
@@ -18,7 +19,7 @@ def _search_items(request, query, per_type=MAX_RESULTS_PER_TYPE):
             items.append({
                 "title": title(obj),
                 "section": section,
-                "summary": summary(obj),
+                "summary": plain_text(summary(obj)),
                 "url": url(obj),
             })
 

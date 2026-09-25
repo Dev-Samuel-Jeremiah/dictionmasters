@@ -53,6 +53,7 @@ GROUP_NUMBER_CHOICES = [(i, i) for i in range(1, 51)]
 
 from apps.book.models import AudioContent, VideoContent
 from apps.learning_modules.models import COLOR_CHOICES, ICON_CHOICES
+from apps.manage.rich_text import plain_text
 
 from .activity_kinds import ACTIVITY_KIND_CHOICES, MODE_SORT, get_kind
 
@@ -278,7 +279,7 @@ class DialogueLine(models.Model):
         ordering = ["order", "id"]
 
     def __str__(self):
-        return f"{self.speaker}: {self.text[:40]}"
+        return f"{self.speaker}: {plain_text(self.text)[:40]}"
 
 
 class ActivityBase(models.Model):
@@ -407,7 +408,7 @@ class ActivityItemBase(models.Model):
         ordering = ["order", "id"]
 
     def __str__(self):
-        return self.prompt[:60] or self.first_answer[:60] or f"Item {self.order}"
+        return plain_text(self.prompt)[:60] or self.first_answer[:60] or f"Item {self.order}"
 
     @property
     def option_list(self):

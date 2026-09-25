@@ -22,7 +22,7 @@ from apps.assessments.models import RUBRIC_CRITERIA, Attempt
 from apps.book.models import TRICKS
 from apps.echospell.marking import feedback_for
 from apps.echospell.models import ActivityAttempt
-from apps.manage.rich_text import sanitize_rich_text
+from apps.manage.rich_text import plain_text, truncate_rich_text
 from apps.tricks.models import LessonActivityAttempt
 
 # Each source, as the results pages need it.
@@ -171,7 +171,7 @@ def mark_activity(attempt, marks, feedback):
     attempt.recalculate()
     attempt.status = attempt.STATUS_REVIEWED
     attempt.teacher_score = attempt.percent
-    attempt.teacher_feedback = sanitize_rich_text(feedback)[:4000]
+    attempt.teacher_feedback = truncate_rich_text(feedback, 4000)
     attempt.save()
     return []
 
@@ -201,7 +201,7 @@ def mark_assessment(attempt, marker, post):
         for field, label in RUBRIC_CRITERIA:
             raw = post.get(f"{answer.pk}-{field}", "")
             if raw not in {"1", "2", "3", "4", "5"}:
-                errors.append(f"“{answer.question.prompt[:40]}”: give “{label}” a score from 1 to 5.")
+                errors.append(f"“{plain_text(answer.question.prompt)[:40]}”: give “{label}” a score from 1 to 5.")
             else:
                 entry[field] = int(raw)
         marks[answer.pk] = entry

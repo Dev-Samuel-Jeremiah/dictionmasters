@@ -50,16 +50,16 @@
         {% endfor %}
       </fieldset>
       {% endfor %}
-      <label class="cr-field"><span>Comment on this answer</span>
-        <textarea name="{{ one.answer.pk }}-comment" rows="2" class="cr-input cr-textarea" data-rich-text="true" data-rich-text-initial-html="{{ one.answer.comment|rich_text_has_markup|yesno:'true,false' }}">{{ one.answer.comment|rich_text_source }}</textarea></label>
+      <div class="cr-field"><label for="comment-{{ one.answer.pk }}">Comment on this answer</label>
+        <textarea id="comment-{{ one.answer.pk }}" name="{{ one.answer.pk }}-comment" rows="2" class="cr-input cr-textarea" data-rich-text="true" data-rich-text-initial-html="{{ one.answer.comment|rich_text_has_markup|yesno:'true,false' }}">{{ one.answer.comment|rich_text_source }}</textarea></div>
     </div>
     {% endif %}
   </section>
   {% endfor %}
   {% if can_mark %}
   <section class="cr-card">
-    <label class="cr-field"><span>Feedback for the learner</span>
-      <textarea name="feedback" rows="3" class="cr-input cr-textarea" data-rich-text="true" data-rich-text-initial-html="{{ attempt.feedback|rich_text_has_markup|yesno:'true,false' }}">{{ attempt.feedback|rich_text_source }}</textarea></label>
+    <div class="cr-field"><label for="learner-feedback">Feedback for the learner</label>
+      <textarea id="learner-feedback" name="feedback" rows="3" class="cr-input cr-textarea" data-rich-text="true" data-rich-text-initial-html="{{ attempt.feedback|rich_text_has_markup|yesno:'true,false' }}">{{ attempt.feedback|rich_text_source }}</textarea></div>
     {% if attempt.teacher_audio_feedback %}<p class="cr-field"><span>Current audio feedback</span><audio controls preload="none" src="{{ attempt.teacher_audio_feedback.url }}"></audio></p>{% endif %}
     {% include "manage/_audio_feedback_recorder.html" %}
     <p class="cr-help">Scores from 1 (needs a lot of work) to 5 (excellent). Each spoken answer earns its points in proportion to its rubric total.</p>
@@ -95,8 +95,8 @@
   {% endfor %}
   {% if can_mark %}
   <section class="cr-card">
-    <label class="cr-field"><span>Feedback for the learner</span>
-      <textarea name="feedback" rows="3" class="cr-input cr-textarea" data-rich-text="true" data-rich-text-initial-html="{{ attempt.teacher_feedback|rich_text_has_markup|yesno:'true,false' }}">{{ attempt.teacher_feedback|rich_text_source }}</textarea></label>
+    <div class="cr-field"><label for="learner-feedback">Feedback for the learner</label>
+      <textarea id="learner-feedback" name="feedback" rows="3" class="cr-input cr-textarea" data-rich-text="true" data-rich-text-initial-html="{{ attempt.teacher_feedback|rich_text_has_markup|yesno:'true,false' }}">{{ attempt.teacher_feedback|rich_text_source }}</textarea></div>
     {% if attempt.teacher_audio_feedback %}<p class="cr-field"><span>Current audio feedback</span><audio controls preload="none" src="{{ attempt.teacher_audio_feedback.url }}"></audio></p>{% endif %}
     {% include "manage/_audio_feedback_recorder.html" %}
     <p class="cr-help">Award each recording from 0 to 5 marks. The learner's final percentage uses marks earned out of the available total.</p>

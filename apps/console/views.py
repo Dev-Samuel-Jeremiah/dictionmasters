@@ -22,6 +22,7 @@ from apps.reading_club.models import Book, Chapter
 from apps.reference_library.models import LibraryArticle
 from apps.diction_library.models import LibraryItem
 from apps.diction_radio.models import RadioProgram, RadioEpisode
+from apps.manage.rich_text import plain_text
 from apps.schools.models import School
 
 from . import jobs
@@ -30,7 +31,7 @@ RESULTS_PER_TYPE = 8
 
 # (model, fields searched, how a result is described)
 SEARCHES = [
-    (QuickWord, ["word", "definition"], lambda o: o.definition),
+    (QuickWord, ["word", "definition"], lambda o: plain_text(o.definition)),
     (User, ["email", "first_name", "last_name"], lambda o: f"{o.get_role_display()} · {o.email}"),
     (School, ["name", "email", "code"], lambda o: f"Code {o.code}"),
     (Sound, ["name", "symbol", "example_words"], lambda o: o.example_words),

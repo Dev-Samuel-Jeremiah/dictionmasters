@@ -3,6 +3,7 @@ import random
 from django.shortcuts import render
 
 from apps.book.views import PHONEMIC_CHART
+from apps.manage.rich_text import plain_text
 
 def _hero_words():
     """Choose today's six Quick Words with saved IPA, in a stable order."""
@@ -27,7 +28,7 @@ def _hero_words():
         {
             "word": row["word"],
             "ipa": row["ipa"],
-            "tip": row["example_sentence"] or row["definition"],
+            "tip": plain_text(row["example_sentence"] or row["definition"]),
         }
         for row in rows
     ]

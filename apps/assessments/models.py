@@ -27,6 +27,7 @@ from django.utils.text import slugify
 
 from apps.book.models import AudioContent
 from apps.echospell.models import LEVEL_NAME_CHOICES
+from apps.manage.rich_text import plain_text
 
 LEVEL_ORDER = [value for value, _ in LEVEL_NAME_CHOICES]
 
@@ -144,7 +145,7 @@ class Question(AudioContent):
         ordering = ["order", "id"]
 
     def __str__(self):
-        return self.prompt[:70]
+        return plain_text(self.prompt)[:70]
 
     @property
     def option_list(self):

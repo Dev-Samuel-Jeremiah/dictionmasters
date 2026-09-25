@@ -20,7 +20,7 @@ from django.utils import timezone
 
 from apps.echospell.marking import answers_match
 
-from apps.manage.rich_text import sanitize_rich_text
+from apps.manage.rich_text import truncate_rich_text
 
 from .models import LEVEL_ORDER, RUBRIC_CRITERIA, RUBRIC_MAX, Answer, Attempt, Question, grade_for
 
@@ -210,7 +210,7 @@ def apply_marks(attempt, marker, marks, feedback):
         entry = marks[answer.pk]
         for field, _ in RUBRIC_CRITERIA:
             setattr(answer, field, entry.get(field))
-        answer.comment = sanitize_rich_text(entry.get("comment", ""))[:2000]
+        answer.comment = truncate_rich_text(entry.get("comment", ""), 2000)
         if answer.is_rubric_complete:
             total = sum(getattr(answer, field) for field, _ in RUBRIC_CRITERIA)
             answer.points_awarded = (
@@ -218,7 +218,7 @@ def apply_marks(attempt, marker, marks, feedback):
             ).quantize(Decimal("0.01"))
         answer.save()
 
-    attempt.feedback = sanitize_rich_text(feedback)[:4000]
+    attempt.feedback = truncate_rich_text(feedback, 4000)
     attempt.marked_by = marker
     attempt.marked_at = timezone.now()
     attempt.save(update_fields=["feedback", "marked_by", "marked_at"])

@@ -54,6 +54,8 @@ from django.db import IntegrityError, close_old_connections
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.manage.rich_text import plain_text
+
 logger = logging.getLogger(__name__)
 
 # Bump to measure everything again after a change to how it's done.
@@ -97,13 +99,14 @@ def _without_speaker_labels(script):
     return _SPEAKER_LABEL.sub("", script or "")
 
 
+# Rich text fields are aligned by their words, never their markup.
 TEXT_FOR = {
-    "book.passage": lambda obj: obj.body,
+    "book.passage": lambda obj: plain_text(obj.body),
     "book.conversation": lambda obj: _without_speaker_labels(obj.script),
-    "echospell.passage": lambda obj: obj.body,
-    "echospell.dialogue": lambda obj: "\n".join(line.text for line in obj.lines.all()),
-    "learning_modules.lessonitem": lambda obj: obj.body,
-    "reading_club.chapter": lambda obj: obj.body,
+    "echospell.passage": lambda obj: plain_text(obj.body),
+    "echospell.dialogue": lambda obj: "\n".join(plain_text(line.text) for line in obj.lines.all()),
+    "learning_modules.lessonitem": lambda obj: plain_text(obj.body),
+    "reading_club.chapter": lambda obj: plain_text(obj.body),
 }
 
 

@@ -195,8 +195,6 @@ class _RichTextSanitizer(HTMLParser):
         return "".join(self.parts)
 
 
-
-
 def _contains_markup(value) -> bool:
     if value is None:
         return False
@@ -207,6 +205,11 @@ def _contains_markup(value) -> bool:
         return parser.saw_markup
     except Exception:
         return False
+
+
+def _plain_to_html(raw: str) -> str:
+    """Escape legacy plain text, keeping its line breaks visible."""
+    return html.escape(raw, quote=False).replace("\r\n", "\n").replace("\n", "<br>")
 
 
 def sanitize_rich_text(value) -> str:
@@ -221,10 +224,105 @@ def sanitize_rich_text(value) -> str:
         cleaned = sanitizer.finish()
     except Exception:
         # Malformed markup must degrade to escaped text, never to raw HTML.
-        return html.escape(raw, quote=False).replace("\r\n", "<br>").replace("\n", "<br>")
+        return _plain_to_html(raw)
     if not sanitizer.saw_markup:
-        return html.escape(raw, quote=False).replace("\r\n", "<br>").replace("\n", "<br>")
+        return _plain_to_html(raw)
     return cleaned
+
+
+_TAG_RE = re.compile(r"<[a-z][^>]*>", re.I)
+_VISIBLE_WITHOUT_TEXT_RE = re.compile(r"<(?:hr|table)\b", re.I)
+
+
+def clean_rich_text_input(value) -> str:
+    """Sanitize a submission for storage.
+
+    Plain text (no JavaScript, bulk forms) is stored as typed and escaped
+    when rendered, like legacy content. Editor HTML is sanitized and always
+    keeps a wrapping tag, so a single line such as ``Tom &amp; Jerry`` is
+    never mistaken for plain text and escaped a second time on display.
+    """
+    if value is None:
+        return ""
+    raw = str(value).strip()
+    if not raw or not _contains_markup(raw):
+        return raw
+    cleaned = sanitize_rich_text(raw).strip()
+    if not plain_text(cleaned) and not _VISIBLE_WITHOUT_TEXT_RE.search(cleaned):
+        # An emptied editor leaves "<p><br></p>"; that must not satisfy
+        # a required field.
+        return ""
+    if not _TAG_RE.search(cleaned):
+        cleaned = f"<p>{cleaned}</p>"
+    return cleaned
+
+
+def truncate_rich_text(value, limit: int) -> str:
+    """Cleaned rich text within ``limit`` characters, never cut mid-tag."""
+    cleaned = clean_rich_text_input(value)
+    if len(cleaned) <= limit:
+        return cleaned
+    # Too long as markup: keep the words as plain text, which renders safely.
+    return plain_text(cleaned)[:limit].rstrip()
+
+
+class _PlainTextExtractor(HTMLParser):
+    BLOCKS = frozenset({
+        "p", "div", "h2", "h3", "h4", "blockquote", "pre", "li", "ul", "ol",
+        "table", "tr", "hr",
+    })
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.drop_depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        if tag in DROP_CONTENT_TAGS:
+            self.drop_depth += 1
+        elif tag == "br":
+            self.parts.append("\n")
+        elif tag in self.BLOCKS:
+            self.parts.append("\n\n")
+        elif tag in {"td", "th"}:
+            self.parts.append("\t")
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if tag in DROP_CONTENT_TAGS and self.drop_depth:
+            self.drop_depth -= 1
+        elif tag in self.BLOCKS:
+            self.parts.append("\n\n")
+
+    def handle_data(self, data):
+        if not self.drop_depth:
+            self.parts.append(data)
+
+    def text(self):
+        text = "".join(self.parts).replace("\xa0", " ")
+        text = re.sub(r"[ \t]*\n[ \t]*", "\n", text)
+        text = re.sub(r"[ \t]{2,}", " ", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
+
+
+def plain_text(value) -> str:
+    """The words of a rich text value, for speech, marking, search and
+    anywhere else markup would be read literally. Legacy plain text is
+    returned unchanged."""
+    if value is None:
+        return ""
+    raw = str(value)
+    if not _contains_markup(raw):
+        return raw.strip()
+    parser = _PlainTextExtractor()
+    try:
+        parser.feed(raw)
+        parser.close()
+    except Exception:
+        return _TAG_RE.sub(" ", raw).strip()
+    return parser.text()
 
 
 class RichTextWidget(forms.Textarea):
@@ -250,4 +348,6 @@ class RichTextWidget(forms.Textarea):
 
     def value_from_datadict(self, data, files, name):
         value = super().value_from_datadict(data, files, name)
-        return sanitize_rich_text(value) if is_rich_text_field(name) else value
+        if value is None or not is_rich_text_field(name):
+            return value
+        return clean_rich_text_input(value)

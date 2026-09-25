@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static rich_text %}
 
 {% block title %}Results — Diction Clash{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/clash.css' %}">{% endblock %}
@@ -41,7 +41,7 @@
       <li class="clash-review__item {% if r.is_correct %}clash-review__item--right{% else %}clash-review__item--wrong{% endif %}">
         <span class="clash-review__mark" aria-hidden="true">{% if r.is_correct %}&#10003;{% elif r.timed_out %}&#8987;{% else %}&#10007;{% endif %}</span>
         <div class="clash-review__body">
-          <p class="clash-review__q">{{ r.label }}{% if r.prompt %} &middot; <span class="clash-dim">{{ r.prompt|truncatechars:90 }}</span>{% endif %}</p>
+          <p class="clash-review__q">{{ r.label }}{% if r.prompt %} &middot; <span class="clash-dim">{{ r.prompt|rich_text_plain|truncatechars:90 }}</span>{% endif %}</p>
           {% if r.word %}
           <p class="clash-review__word">
             <strong>{{ r.word.word }}</strong> <span class="clash-review__ipa">{{ r.word.ipa }}</span>

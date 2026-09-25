@@ -7,6 +7,7 @@ import urllib.request
 from django.conf import settings
 
 from apps.echospell.activity_kinds import MODE_CHOICE, MODE_RECORD, MODE_SORT
+from apps.manage.rich_text import plain_text
 
 
 API_URL = "https://api.openai.com/v1/chat/completions"
@@ -47,7 +48,7 @@ def _activity_context(activity, guidance):
     trick = activity.lesson
     kind = activity.kind_spec
     existing = [
-        {"prompt": prompt[:240], "answer": answer[:240]}
+        {"prompt": plain_text(prompt)[:240], "answer": answer[:240]}
         for prompt, answer in activity.items.order_by("order", "id").values_list("prompt", "answer")[:30]
     ]
     return {

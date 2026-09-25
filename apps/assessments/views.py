@@ -25,6 +25,7 @@ from apps.book.programmes import programme_for
 from apps.book.views import PHONEMIC_CHART
 from apps.echospell.models import ActivityAttempt as EchoSpellAttempt, Level
 from apps.tricks.models import LessonActivityAttempt
+from apps.manage.rich_text import plain_text, sanitize_rich_text
 
 from . import scoring
 from .models import RUBRIC_CRITERIA, Assessment, Attempt, Question
@@ -293,7 +294,7 @@ def check_answer(request, attempt_id):
     return JsonResponse({
         "correct": answer.is_correct,
         "answer": question.first_answer,
-        "explanation": question.explanation,
+        "explanation": sanitize_rich_text(question.explanation) if question.explanation else "",
     })
 
 
@@ -480,7 +481,7 @@ def mark(request, attempt_id):
             for field, label in RUBRIC_CRITERIA:
                 raw = request.POST.get(f"{answer.pk}-{field}", "")
                 if raw not in {"1", "2", "3", "4", "5"}:
-                    errors.append(f"Question {answer.question.prompt[:40]!r}: score “{label}” from 1 to 5.")
+                    errors.append(f"Question {plain_text(answer.question.prompt)[:40]!r}: score “{label}” from 1 to 5.")
                     entry[field] = None
                 else:
                     entry[field] = int(raw)

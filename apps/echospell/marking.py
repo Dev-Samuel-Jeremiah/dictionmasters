@@ -15,6 +15,8 @@ import random
 import re
 import unicodedata
 
+from apps.manage.rich_text import plain_text
+
 from .activity_kinds import (
     MODE_CHOICE,
     MODE_ORDER,
@@ -119,7 +121,7 @@ def mark_response(kind, item, given):
         return False
 
     if kind.slug == "word-to-sentence":
-        correct, _ = grade_sentence_use(item.prompt, given)
+        correct, _ = grade_sentence_use(plain_text(item.prompt), given)
         return correct
 
     if kind.slug == "transcription":
@@ -146,7 +148,7 @@ def feedback_for(kind, item, given, is_correct):
     if is_correct:
         return "Correct"
     if kind is not None and kind.slug == "word-to-sentence":
-        return grade_sentence_use(item.prompt, given)[1]
+        return grade_sentence_use(plain_text(item.prompt), given)[1]
     if not str(given or "").strip():
         return "You left this one blank."
     if kind is not None and kind.slug == "listen-and-number":

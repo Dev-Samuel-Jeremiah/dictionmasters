@@ -21,6 +21,8 @@ from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
 
+from apps.manage.rich_text import plain_text
+
 
 class VideoContent(models.Model):
     """Reusable video fields: an upload, or a URL, for CDN-hosted video."""
@@ -305,7 +307,7 @@ class SentencePractice(AudioContent, OrderedForSound):
         verbose_name_plural = "Sentence practice"
 
     def __str__(self):
-        return self.sentence[:60]
+        return plain_text(self.sentence)[:60]
 
 
 # ---------------------------------------------------------------------------
@@ -353,7 +355,7 @@ class TongueTwister(AudioContent, OrderedForSound):
         verbose_name = "Tongue twister"
 
     def __str__(self):
-        return self.text[:60]
+        return plain_text(self.text)[:60]
 
 
 # ---------------------------------------------------------------------------
