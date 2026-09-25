@@ -1,6 +1,7 @@
 {% if user.is_authenticated %}
 <footer class="site-footer px-foot px-foot--app">
   <p class="site-footer__copyright">&copy; {% now "Y" %} Diction Masters &middot; <a href="{% url 'billing:pricing' %}">Pricing</a> &middot; <a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Control panel</a></p>
+  <p class="site-footer__credit">Developed by Samuel Jeremiah (Techmiary) &middot; <a href="tel:07010996154">07010996154</a> &middot; <a href="tel:08051301661">08051301661</a></p>
 </footer>
 {% else %}
 <footer class="site-footer px-foot">
@@ -19,5 +20,6 @@
     </nav>
   </div>
   <p class="site-footer__copyright">&copy; {% now "Y" %} Diction Masters. All rights reserved.</p>
+  <p class="site-footer__credit">Developed by Samuel Jeremiah (Techmiary) &middot; <a href="tel:07010996154">07010996154</a> &middot; <a href="tel:08051301661">08051301661</a></p>
 </footer>
 {% endif %}

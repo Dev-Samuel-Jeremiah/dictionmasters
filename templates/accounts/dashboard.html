@@ -9,6 +9,20 @@
   {# ================= Hero: the day, the greeting, the learner ================= #}
   <section class="px-hero">
     <img class="px-hero__img" src="{% static 'img/app/heroBoy.jpg' %}" alt="">
+    {# Sounds rising out of the tablet in the picture; the box matches the image's so they stay on it. #}
+    <div class="px-hero__sounds" aria-hidden="true">
+      <span class="px-hero__emit">
+        <i class="px-hero__wave"></i><i class="px-hero__wave"></i>
+        <b style="--dx:-120px;--dy:-120px;--r:-14deg;--d:0s">iː</b>
+        <b class="is-gold" style="--dx:-30px;--dy:-150px;--r:8deg;--d:.6s">θ</b>
+        <b style="--dx:70px;--dy:-130px;--r:12deg;--d:1.2s">ʃ</b>
+        <b class="is-gold" style="--dx:-160px;--dy:-60px;--r:-10deg;--d:1.8s">æ</b>
+        <b style="--dx:20px;--dy:-170px;--r:-6deg;--d:2.4s">ð</b>
+        <b class="is-gold" style="--dx:110px;--dy:-80px;--r:14deg;--d:3s">ŋ</b>
+        <b style="--dx:-80px;--dy:-165px;--r:10deg;--d:3.6s">ɜː</b>
+        <b class="is-gold" style="--dx:50px;--dy:-175px;--r:-12deg;--d:4.2s">ə</b>
+      </span>
+    </div>
     <div class="px-hero__text">
       <p class="px-hero__date">{{ today|date:"l j F" }}</p>
       <h1 class="px-hero__title">{{ greeting }},<br><span>{{ user.first_name|default:"there" }}</span></h1>
