@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}Quick Words — Diction Masters{% endblock %}
@@ -55,7 +56,7 @@
             {% if row.word.level %}<span class="qw-chip">{{ row.word.level }}</span>{% endif %}
           </p>
           {% if row.word.ipa %}<p class="qw-item__ipa">{{ row.word.ipa }}</p>{% endif %}
-          <p class="qw-item__def">{{ row.word.definition }}</p>
+          <div class="qw-item__def dm-rich-content">{{ row.word.definition|rich_text }}</div>
           {% if row.in_lists %}
           <p class="qw-item__saved">
             Saved in

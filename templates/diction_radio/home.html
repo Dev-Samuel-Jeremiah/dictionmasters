@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}Diction Radio — Diction Masters{% endblock %}
@@ -29,7 +30,7 @@
           <p class="radio-now__label">NOW PLAYING</p>
           <h2 data-radio-title>{{ queue.0.title }}</h2>
           <p class="radio-now__program" data-radio-program>{{ queue.0.program }}</p>
-          <p class="radio-now__description" data-radio-description>{{ queue.0.description }}</p>
+          <div class="radio-now__description dm-rich-content" data-radio-description>{{ queue.0.description|rich_text }}</div>
           <p class="radio-status" data-radio-status aria-live="polite">Ready when you are. Press Play to start the station.</p>
           <audio data-radio-audio controls preload="metadata" src="{{ queue.0.src }}" aria-label="Diction Radio audio"></audio>
           <div class="radio-controls">
@@ -54,11 +55,11 @@
             <div class="radio-program__copy"><p class="radio-program__meta">{% if program.presenter %}WITH {{ program.presenter|upper }}{% else %}DICTION RADIO ORIGINAL{% endif %}</p><h3>{{ program.title }}</h3>{% if program.tagline %}<p>{{ program.tagline }}</p>{% endif %}</div>
             <span class="radio-program__count">{{ program.episodes.count }} episode{{ program.episodes.count|pluralize }}</span>
           </header>
-          {% if program.description %}<p class="radio-program__description">{{ program.description }}</p>{% endif %}
+          {% if program.description %}<div class="radio-program__description dm-rich-content">{{ program.description|rich_text }}</div>{% endif %}
           <ol class="radio-episodes" aria-label="{{ program.title }} episodes">
             {% for episode in program.episodes.all %}
             <li><button type="button" class="radio-episode" data-radio-track="{{ episode.queue_index }}">
-              <span class="radio-episode__play" aria-hidden="true">&#9654;</span><span class="radio-episode__text"><strong>{{ episode.title }}</strong>{% if episode.description %}<small>{{ episode.description|truncatewords:18 }}</small>{% endif %}</span><span class="radio-episode__order">{{ forloop.counter|stringformat:"02d" }}</span>
+              <span class="radio-episode__play" aria-hidden="true">&#9654;</span><span class="radio-episode__text"><strong>{{ episode.title }}</strong>{% if episode.description %}<small>{{ episode.description|rich_text_inline }}</small>{% endif %}</span><span class="radio-episode__order">{{ forloop.counter|stringformat:"02d" }}</span>
             </button></li>
             {% endfor %}
           </ol>

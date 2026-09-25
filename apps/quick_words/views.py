@@ -25,6 +25,7 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.views.decorators.http import require_GET, require_POST
 
+from .british_ipa import get_british_ipa
 from .lookup import LookupUnavailable, is_lookup_candidate, lookup
 from .models import QuickWord, WordList
 from .speech import SpeechUnavailable, is_configured as speech_is_configured, synthesise
@@ -109,12 +110,19 @@ def suggest(request):
             output_field=IntegerField(),
         ))
         .order_by("rank", "word")
-        .values("word", "slug", "ipa", "definition")[:SUGGESTION_LIMIT]
+        .values(
+            "word", "slug", "ipa", "ipa_source", "ipa_confidence",
+            "ipa_review_required", "ipa_accent", "definition",
+        )[:SUGGESTION_LIMIT]
     )
     results = [
         {
             "word": m["word"],
-            "ipa": m["ipa"],
+            "ipa": m["ipa"] or None,
+            "ipa_source": m["ipa_source"] or None,
+            "ipa_confidence": m["ipa_confidence"] or None,
+            "ipa_review_required": m["ipa_review_required"],
+            "ipa_accent": m["ipa_accent"],
             "definition": m["definition"][:90],
             "url": reverse("quick_words:word_detail", args=[m["slug"]]),
         }
@@ -137,6 +145,27 @@ def _throttled(user):
     return False
 
 
+def _refresh_trusted_ipa(word):
+    """Keep saved AI or legacy IPA from shadowing a local dictionary entry."""
+    pronunciation = get_british_ipa(word.word, allow_ai=False)
+    if pronunciation["source"] not in {"britfone", "ipa_dict"}:
+        return word
+
+    fields = {
+        "ipa": pronunciation["ipa"] or "",
+        "ipa_accent": pronunciation["accent"],
+        "ipa_source": pronunciation["source"],
+        "ipa_confidence": pronunciation["confidence"],
+        "ipa_review_required": pronunciation["review_required"],
+    }
+    changed = [name for name, value in fields.items() if getattr(word, name) != value]
+    if changed:
+        for name in changed:
+            setattr(word, name, fields[name])
+        word.save(update_fields=[*changed, "updated_at"])
+    return word
+
+
 def _lookup_response(request, status, message=None, word=None, created=False):
     """JSON for the live search; a normal redirect for a plain form post."""
     wants_json = "application/json" in request.headers.get("Accept", "")
@@ -147,6 +176,11 @@ def _lookup_response(request, status, message=None, word=None, created=False):
                 "word": word.word,
                 "url": reverse("quick_words:word_detail", args=[word.slug]),
                 "created": created,
+                "ipa": word.ipa or None,
+                "ipa_source": word.ipa_source or None,
+                "ipa_confidence": word.ipa_confidence or None,
+                "ipa_review_required": word.ipa_review_required,
+                "ipa_accent": word.ipa_accent,
             })
         return JsonResponse(data, status=status)
 
@@ -168,7 +202,7 @@ def lookup_word(request):
 
     existing = _published(request.user).filter(word__iexact=typed).first()
     if existing:
-        return _lookup_response(request, 200, word=existing)
+        return _lookup_response(request, 200, word=_refresh_trusted_ipa(existing))
 
     if not is_lookup_candidate(typed):
         return _lookup_response(request, 400, "Type a single English word to look it up.")
@@ -192,7 +226,7 @@ def lookup_word(request):
     # The model may have corrected the spelling to a word we already have.
     existing = QuickWord.objects.filter(word__iexact=entry["word"]).first()
     if existing:
-        return _lookup_response(request, 200, word=existing)
+        return _lookup_response(request, 200, word=_refresh_trusted_ipa(existing))
 
     try:
         with transaction.atomic():
@@ -204,7 +238,7 @@ def lookup_word(request):
     except IntegrityError:
         # Someone else looked up the same word in the same instant.
         word = QuickWord.objects.get(slug=slugify(entry["word"]))
-        return _lookup_response(request, 200, word=word)
+        return _lookup_response(request, 200, word=_refresh_trusted_ipa(word))
 
     _attach_pronunciation(word, typed, speech)
     return _lookup_response(request, 201, word=word, created=True)

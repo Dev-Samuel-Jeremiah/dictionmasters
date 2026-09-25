@@ -2,6 +2,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Prefetch, Q
 from django.shortcuts import render
 
+from apps.manage.rich_text import sanitize_rich_text
+
 from .models import RadioEpisode, RadioProgram
 
 
@@ -18,8 +20,8 @@ def home(request):
         {
             "id": episode.pk,
             "title": episode.title,
-            "description": episode.description,
-            "transcript": episode.transcript,
+            "description": sanitize_rich_text(episode.description),
+            "transcript": sanitize_rich_text(episode.transcript),
             "program": program.title,
             "programId": program.pk,
             "programSlug": program.slug,

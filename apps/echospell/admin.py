@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 
 from apps.book.video_admin import VideoPosterAdminMixin
@@ -106,6 +107,12 @@ class CardLessonAdmin(VideoPosterAdminMixin, admin.ModelAdmin):
                            "A learner sees each one tagged with its name.",
         }),
     ]
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        # These newline-aligned definitions are matched to words by position.
+        if db_field.name == "definition":
+            kwargs["widget"] = forms.Textarea
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
     def word_display(self, obj):
         return ", ".join(obj.word_list) or obj.title or "—"

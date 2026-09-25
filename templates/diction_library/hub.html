@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 
 {% block title %}Diction Library — Diction Masters{% endblock %}
 
@@ -26,7 +27,7 @@
     {% if items %}<div class="ui-grid">
       {% for item in items %}<a class="ui-card ui-lift" href="{% url 'diction_library:detail' item.slug %}" style="--tone:#236b65;--i:{{ forloop.counter0 }}">
         <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{% if item.kind == 'book' %}&#128214;{% elif item.kind == 'story' %}&#128214;{% elif item.kind == 'audio' %}&#127925;{% elif item.kind == 'video' %}&#127916;{% else %}&#128196;{% endif %}</span><span class="ui-status">{{ item.get_kind_display }}</span></span>
-        <span class="ui-card__name">{{ item.title }}</span><span class="ui-card__desc">{{ item.summary|default:item.description|truncatewords:24 }}</span>
+        <span class="ui-card__name">{{ item.title }}</span><div class="ui-card__desc dm-rich-content">{{ item.summary|default:item.description|rich_text }}</div>
         <span class="ui-card__cta">{% if item.school %}{{ item.school.name }}{% else %}Diction Masters{% endif %} &middot; Open &rarr;</span>
       </a>{% endfor %}
     </div>{% else %}<div class="ui-empty"><p>No library items match your search yet.</p></div>{% endif %}

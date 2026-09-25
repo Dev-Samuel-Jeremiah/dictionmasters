@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}Daily Practice — Diction Masters{% endblock %}
@@ -53,17 +54,17 @@
           <div class="entry-card__head">
             <span class="entry-card__word">{{ activity.heading }}</span>
           </div>
-          {% if activity.body %}<p class="entry-card__body">{{ activity.body }}</p>{% endif %}
+          {% if activity.body %}<div class="entry-card__body dm-rich-content">{{ activity.body|rich_text }}</div>{% endif %}
         {% elif activity.kind == "minimal-pairs" %}
           <div class="pair-card__row">
             <p class="pair-card__word">{{ activity.word_a }}</p>
             <p class="pair-card__word">{{ activity.word_b }}</p>
           </div>
-          {% if activity.body %}<p class="pair-card__notes">{{ activity.body }}</p>{% endif %}
+          {% if activity.body %}<div class="pair-card__notes dm-rich-content">{{ activity.body|rich_text }}</div>{% endif %}
         {% elif activity.kind == "twisters" %}
-          <p class="twister-card__text">{{ activity.body }}</p>
+          <div class="twister-card__text dm-rich-content">{{ activity.body|rich_text }}</div>
         {% else %}
-          <p class="entry-card__text">{{ activity.body }}</p>
+          <div class="entry-card__text dm-rich-content">{{ activity.body|rich_text }}</div>
         {% endif %}
 
         {% if activity.audio %}<audio controls src="{{ activity.audio }}" style="margin-top: 12px;"></audio>{% endif %}

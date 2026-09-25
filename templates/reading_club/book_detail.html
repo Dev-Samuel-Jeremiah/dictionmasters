@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}{{ book.title }} — Reading Club{% endblock %}
@@ -18,7 +19,7 @@
           <div>
             <p class="ui-hero__eyebrow">{% if book.author %}by {{ book.author }}{% else %}Reading Club{% endif %}</p>
             <h1 class="ui-hero__title">{{ book.title }}</h1>
-            {% if book.overview %}<p class="ui-hero__lede">{{ book.overview|linebreaksbr }}</p>
+            {% if book.overview %}<div class="ui-hero__lede dm-rich-content">{{ book.overview|rich_text }}</div>
             {% elif book.description %}<p class="ui-hero__lede">{{ book.description }}</p>{% endif %}
             <div class="ui-hero__chips">
               <span class="ui-chip">{{ term_cards|length }} term{{ term_cards|length|pluralize }}</span>

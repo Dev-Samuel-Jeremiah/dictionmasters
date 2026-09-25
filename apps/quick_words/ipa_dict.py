@@ -1,54 +1,65 @@
-"""
-Phonemic transcriptions for Quick Words, from IPA-Dict UK.
+"""Fast local lookup for the project's IPA-Dict English UK dataset.
 
-A word's transcription used to be one more thing asked of the model
-alongside its definition and example sentence — and a model asked to
-transcribe pronunciation happily invents or misremembers one, symbol
-by symbol, with nothing to check it against. IPA-Dict UK
-(https://github.com/open-dict-data/ipa-dict) is a fixed, human-curated
-list of British English words and their IPA instead: the model is
-never asked for pronunciation at all, only this file is.
-
-The file (data/ipa/en_UK.txt) is a tab-separated word/transcription
-pair per line, occasionally with more than one transcription separated
-by commas ("the\t/ðə, ði/") — the first is the one Quick Words shows.
-It is loaded once per process and kept in memory: 65k short lines is
-small, and every look-up after the first is then a dict hit.
+The tab-separated file is parsed once per process. All source symbols,
+including stress and syllable markers, are retained; only wrappers and
+spacing are normalized.
 """
 
 import re
+import unicodedata
 from functools import lru_cache
 from pathlib import Path
 
 from django.conf import settings
 
 DICT_PATH = Path(settings.BASE_DIR) / "data" / "ipa" / "en_UK.txt"
-
-# IPA-Dict UK spellings of a symbol -> the symbol the site's own
-# phonemic chart uses, so a learner never meets a different alphabet
-# in Quick Words than on the chart.
-IPA_EQUIVALENTS = {
-    "ɡ": "g",   # script g
-    "ɛ": "e",   # DRESS
-    "ɹ": "r",
-}
-# Syllable boundaries and linking marks — not part of the chart.
-IPA_DROP = re.compile(r"[.‿]")
+IPA_DICT_INVALID_ENTRIES = 0
 
 
-def _normalise(raw):
-    text = str(raw or "").strip().strip("/[]").strip()
-    for dict_symbol, chart_symbol in IPA_EQUIVALENTS.items():
-        text = text.replace(dict_symbol, chart_symbol)
-    text = IPA_DROP.sub("", text)
-    text = re.sub(r"\s+", "", text)
+def _wrap(raw):
+    text = unicodedata.normalize("NFC", str(raw or "")).strip()
+    if not text or "\n" in text or "\r" in text:
+        return ""
+    if (text.startswith("/") and text.endswith("/")) or (
+        text.startswith("[") and text.endswith("]")
+    ):
+        text = text[1:-1]
+    elif text.startswith(("/", "[")) or text.endswith(("/", "]")):
+        return ""
+    text = re.sub(r"\s+", " ", text).strip()
     return f"/{text}/" if text else ""
 
 
+def parse_ipa_variants(raw):
+    """Split IPA-Dict's comma-separated alternatives into slash-wrapped IPA."""
+    text = str(raw or "").strip()
+    if not text:
+        return ()
+
+    if text.startswith("/") and text.endswith("/"):
+        alternatives = text[1:-1].split(",")
+    else:
+        wrapped = re.fullmatch(r"\s*(/[^/]+/)(?:\s*,\s*(/[^/]+/))*\s*", text)
+        if wrapped:
+            alternatives = re.findall(r"/([^/]+)/", text)
+        else:
+            alternatives = [text]
+
+    values = []
+    for alternative in alternatives:
+        ipa = _wrap(alternative)
+        if ipa and ipa not in values:
+            values.append(ipa)
+    return tuple(values)
+
+
 @lru_cache(maxsize=1)
-def _entries():
-    """word (lowercase) -> chart-normalised transcription, built once."""
+def load_ipa_dict():
+    """Return ``casefolded word -> tuple of pronunciations`` from IPA-Dict."""
+    global IPA_DICT_INVALID_ENTRIES
     entries = {}
+    invalid_entries = 0
+    IPA_DICT_INVALID_ENTRIES = 0
     try:
         handle = open(DICT_PATH, encoding="utf-8")
     except OSError:
@@ -56,19 +67,37 @@ def _entries():
 
     with handle:
         for line in handle:
-            word, _, raw_ipa = line.partition("\t")
-            word = word.strip().lower()
-            if not word:
+            word, separator, raw_ipa = line.rstrip("\r\n").partition("\t")
+            if not separator:
+                invalid_entries += 1
                 continue
-            first_pronunciation, _, _ = raw_ipa.partition(",")
-            ipa = _normalise(first_pronunciation)
-            if ipa:
-                # A word already seen wins — first entry in the file stands.
-                entries.setdefault(word, ipa)
+            word = unicodedata.normalize("NFKC", word).strip().casefold()
+            if not word:
+                invalid_entries += 1
+                continue
+            pronunciations = parse_ipa_variants(raw_ipa)
+            if pronunciations:
+                existing = list(entries.get(word, ()))
+                existing.extend(ipa for ipa in pronunciations if ipa not in existing)
+                entries[word] = tuple(existing)
+            else:
+                invalid_entries += 1
+    IPA_DICT_INVALID_ENTRIES = invalid_entries
     return entries
 
 
+def _entries():
+    """Backward-compatible alias for the former cached loader."""
+    return load_ipa_dict()
+
+
 def get_ipa(word):
-    """The chart-normalised transcription for `word`, or "" if IPA-Dict
-    UK doesn't have an entry for it."""
-    return _entries().get(str(word or "").strip().lower(), "")
+    """DictionMasters-style British IPA, retaining alternatives."""
+    from .british_ipa import normalize_british_ipa
+
+    normalized = unicodedata.normalize("NFKC", str(word or "")).strip().casefold()
+    pronunciations = (
+        normalize_british_ipa(ipa, source="ipa_dict")
+        for ipa in load_ipa_dict().get(normalized, ())
+    )
+    return ", ".join(ipa for ipa in pronunciations if ipa)

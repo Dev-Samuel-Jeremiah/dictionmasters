@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 {% load videos %}
 {% load read_along %}
@@ -90,7 +91,7 @@
         {% endif %}
 
         {% if item.body %}
-        <div class="lesson-body" style="margin-top: 16px;" data-ra-text>{{ item.body|linebreaksbr }}</div>
+        <div class="lesson-body dm-rich-content" style="margin-top: 16px;" data-ra-text>{{ item.body|rich_text }}</div>
         {% endif %}
 
         {% if item.resources.all %}

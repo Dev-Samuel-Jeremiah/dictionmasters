@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}{{ assessment.title }} — Assessments{% endblock %}
@@ -53,7 +54,7 @@
         {% endif %}
         {% if assessment.kind == "placement" %}<li>Answer what you can — it's fine to find the later questions hard. That's how we find your level.</li>{% endif %}
       </ul>
-      {% if assessment.instructions %}<div class="as-brief__notes">{{ assessment.instructions|linebreaksbr }}</div>{% endif %}
+      {% if assessment.instructions %}<div class="as-brief__notes dm-rich-content">{{ assessment.instructions|rich_text }}</div>{% endif %}
 
       {% if question_count %}
         {% if resumable %}

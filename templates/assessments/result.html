@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}Result — {{ assessment.title }}{% endblock %}
@@ -64,7 +65,7 @@
     {% if attempt.feedback or attempt.teacher_audio_feedback %}
     <div class="as-teacher">
       <p class="as-teacher__label">Feedback{% if attempt.marked_by %} from {{ attempt.marked_by.get_full_name|default:"your teacher" }}{% endif %}</p>
-      {% if attempt.feedback %}<p class="as-teacher__body">{{ attempt.feedback|linebreaksbr }}</p>{% endif %}
+      {% if attempt.feedback %}<div class="as-teacher__body dm-rich-content">{{ attempt.feedback|rich_text }}</div>{% endif %}
       {% if attempt.teacher_audio_feedback %}<audio controls preload="none" src="{{ attempt.teacher_audio_feedback.url }}" class="as-review__audio">Your browser can't play this audio.</audio>{% endif %}
     </div>
     {% endif %}
@@ -81,7 +82,7 @@
             {% if a.points_awarded is not None %}{{ a.points_awarded|floatformat:"-2" }} / {{ q.points }}{% else %}— / {{ q.points }}{% endif %}
           </span>
         </div>
-        <p class="as-review__prompt">{{ q.prompt|linebreaksbr }}{% if q.word %} <strong>{{ q.word }}</strong>{% endif %}</p>
+        <div class="as-review__prompt dm-rich-content">{{ q.prompt|rich_text }}{% if q.word %} <strong>{{ q.word }}</strong>{% endif %}</div>
 
         {% if q.type == "speak" %}
           {% if a.recording %}<audio controls preload="none" src="{{ a.recording.url }}" class="as-review__audio"></audio>
@@ -92,12 +93,12 @@
             <tr><th>{{ label }}</th><td><span class="as-rubric__bar"><span style="width: {% widthratio value 5 100 %}%;"></span></span></td><td>{{ value }}/5</td></tr>
             {% endfor %}
           </table>
-          {% if a.comment %}<p class="as-review__comment">&ldquo;{{ a.comment }}&rdquo;</p>{% endif %}
+          {% if a.comment %}<div class="as-review__comment dm-rich-content">{{ a.comment|rich_text }}</div>{% endif %}
           {% else %}<p class="as-review__given">Waiting for your teacher to mark this.</p>{% endif %}
         {% else %}
           <p class="as-review__given">Your answer: <strong>{{ a.given|default:"(blank)" }}</strong></p>
           {% if not a.is_correct %}<p class="as-review__correct">Correct answer: <strong>{{ q.first_answer }}</strong></p>{% endif %}
-          {% if q.explanation %}<p class="as-review__why">{{ q.explanation }}</p>{% endif %}
+          {% if q.explanation %}<div class="as-review__why dm-rich-content">{{ q.explanation|rich_text }}</div>{% endif %}
         {% endif %}
       </li>
       {% endwith %}

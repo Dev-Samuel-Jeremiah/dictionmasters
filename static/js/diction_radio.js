@@ -52,7 +52,7 @@
     }
     title.textContent = item.title;
     program.textContent = item.program;
-    description.textContent = item.description || "Settle in and enjoy this Diction Radio programme.";
+    description.innerHTML = item.description || "Settle in and enjoy this Diction Radio programme.";
     if (item.cover) {
       cover.src = item.cover;
       cover.hidden = false;
@@ -63,7 +63,7 @@
       artPlaceholder.hidden = false;
     }
     if (item.transcript) {
-      transcript.textContent = item.transcript;
+      transcript.innerHTML = item.transcript;
       transcriptWrap.hidden = false;
     } else {
       transcript.textContent = "";

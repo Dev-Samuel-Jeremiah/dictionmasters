@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}{{ hud.mode.label }} — Diction Clash{% endblock %}
@@ -35,7 +36,7 @@
       <p class="clash-card__label">{{ round.label }}</p>
       {% if audio %}<audio class="clash-card__audio" controls autoplay src="{{ audio }}"></audio>{% endif %}
       {% if round.prompt %}
-      <p class="clash-card__prompt {% if round.kind == 'unscramble' %}clash-card__prompt--scramble{% elif round.kind == 'ipa_to_word' %}clash-card__prompt--ipa{% elif round.kind == 'word_to_ipa' or round.kind == 'word_to_meaning' %}clash-card__prompt--word{% endif %}">{{ round.prompt }}</p>
+      <div class="clash-card__prompt dm-rich-content {% if round.kind == 'unscramble' %}clash-card__prompt--scramble{% elif round.kind == 'ipa_to_word' %}clash-card__prompt--ipa{% elif round.kind == 'word_to_ipa' or round.kind == 'word_to_meaning' %}clash-card__prompt--word{% endif %}">{{ round.prompt|rich_text }}</div>
       {% endif %}
       {% if round.prompt_detail %}<p class="clash-card__detail">{{ round.prompt_detail }}</p>{% endif %}
     </article>

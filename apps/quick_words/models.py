@@ -37,10 +37,35 @@ class QuickWord(AudioContent):
     # able to find and check them.
     source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default=SOURCE_STAFF)
     slug = models.SlugField(max_length=120, unique=True, blank=True)
+    IPA_SOURCE_CHOICES = [
+        ("", "Not recorded"),
+        ("britfone", "Britfone"),
+        ("ipa_dict", "IPA-Dict UK"),
+        ("database", "Database / manually entered"),
+        ("openai", "OpenAI generated"),
+    ]
+    IPA_CONFIDENCE_CHOICES = [
+        ("", "Not recorded"),
+        ("dictionary", "Dictionary"),
+        ("verified", "Manually verified"),
+        ("ai", "AI generated"),
+        ("unknown", "Unknown / legacy"),
+    ]
+
     ipa = models.CharField(
-        max_length=100, blank=True, verbose_name="transcription",
-        help_text='Phonemic transcription, e.g. "/əˈtʃiːv/"',
+        max_length=500, blank=True, verbose_name="transcription",
+        help_text='British English phonemic transcription, e.g. "/əˈtʃiːv/"',
     )
+    ipa_accent = models.CharField(max_length=20, default="en-GB", db_index=True)
+    ipa_source = models.CharField(
+        max_length=20, blank=True, choices=IPA_SOURCE_CHOICES,
+        help_text="Source for the saved pronunciation.",
+    )
+    ipa_confidence = models.CharField(
+        max_length=20, blank=True, choices=IPA_CONFIDENCE_CHOICES,
+        help_text="AI-generated IPA must remain marked for review.",
+    )
+    ipa_review_required = models.BooleanField(default=False, db_index=True)
     definition = models.TextField(help_text="One clear sentence a child can understand.")
     example_sentence = models.TextField(
         blank=True, help_text="The word used in a full sentence.",
@@ -54,6 +79,8 @@ class QuickWord(AudioContent):
         help_text="The level this word suits. Optional.",
     )
     is_published = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["word"]

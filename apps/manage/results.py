@@ -22,6 +22,7 @@ from apps.assessments.models import RUBRIC_CRITERIA, Attempt
 from apps.book.models import TRICKS
 from apps.echospell.marking import feedback_for
 from apps.echospell.models import ActivityAttempt
+from apps.manage.rich_text import sanitize_rich_text
 from apps.tricks.models import LessonActivityAttempt
 
 # Each source, as the results pages need it.
@@ -170,7 +171,7 @@ def mark_activity(attempt, marks, feedback):
     attempt.recalculate()
     attempt.status = attempt.STATUS_REVIEWED
     attempt.teacher_score = attempt.percent
-    attempt.teacher_feedback = str(feedback or "")[:4000]
+    attempt.teacher_feedback = sanitize_rich_text(feedback)[:4000]
     attempt.save()
     return []
 

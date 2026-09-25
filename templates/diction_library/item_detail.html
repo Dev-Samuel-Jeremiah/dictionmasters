@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 
 {% block title %}{{ item.title }} — Diction Library{% endblock %}
 
@@ -11,7 +12,7 @@
   <div class="wrap ui-body"><article class="ui-panel">
     {% if item.kind == "audio" and item.file %}<audio controls preload="metadata" style="width:100%"><source src="{{ item.file.url }}">Your browser does not support audio playback.</audio>{% endif %}
     {% if item.kind == "video" and item.file %}<video controls preload="metadata" style="width:100%;max-height:70vh"><source src="{{ item.file.url }}">Your browser does not support video playback.</video>{% endif %}
-    {% if item.description %}<div class="ui-panel__lede" style="white-space:pre-line">{{ item.description }}</div>{% endif %}
+    {% if item.description %}<div class="ui-panel__lede dm-rich-content">{{ item.description|rich_text }}</div>{% endif %}
     {% if item.file and item.kind != "audio" and item.kind != "video" %}<p><a class="ui-btn ui-btn--gold" href="{{ item.file.url }}" target="_blank" rel="noopener">Open or download {{ item.get_kind_display|lower }}</a></p>{% endif %}
     {% if item.external_url %}<p><a class="ui-btn ui-btn--glass" href="{{ item.external_url }}" target="_blank" rel="noopener">Open linked resource</a></p>{% endif %}
   </article></div>

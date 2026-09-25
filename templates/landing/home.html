@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static billing %}
 
 {% block extra_css %}
@@ -136,7 +137,7 @@
         <article class="audience__card ld-lift reveal" style="--d: {{ forloop.counter0 }}; --tone: {{ item.tone }};">
           <span class="audience__icon" aria-hidden="true">{{ item.icon }}</span>
           <h3 class="audience__title">{{ item.title }}</h3>
-          <p class="audience__body">{{ item.body }}</p>
+          <div class="audience__body dm-rich-content">{{ item.body|rich_text }}</div>
           <ul class="audience__points">
             {% for point in item.points %}<li>{{ point }}</li>{% endfor %}
           </ul>
@@ -168,7 +169,7 @@
         <li class="steps__item ld-lift reveal" style="--d: {{ forloop.counter0 }};">
           <span class="steps__number" aria-hidden="true">{{ forloop.counter }}</span>
           <h3 class="steps__title">{{ step.title }}</h3>
-          <p class="steps__body">{{ step.body }}</p>
+          <div class="steps__body dm-rich-content">{{ step.body|rich_text }}</div>
         </li>
         {% endfor %}
       </ol>
@@ -192,7 +193,7 @@
           <div class="feature-row__content">
             <p class="feature-row__eyebrow">{{ feature.eyebrow }}</p>
             <h3 class="feature-row__title">{{ feature.title }}</h3>
-            <p class="feature-row__body">{{ feature.body }}</p>
+            <div class="feature-row__body dm-rich-content">{{ feature.body|rich_text }}</div>
           </div>
         </div>
         {% endfor %}

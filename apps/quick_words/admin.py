@@ -22,15 +22,23 @@ def _speak_or_none(word):
 
 @admin.register(QuickWord)
 class QuickWordAdmin(admin.ModelAdmin):
-    list_display = ["word", "ipa", "level", "source", "media_status", "list_count", "is_published"]
-    list_filter = ["source", "level", "is_published"]
+    list_display = [
+        "word", "ipa", "ipa_source", "ipa_confidence", "ipa_review_required",
+        "level", "source", "media_status", "list_count", "is_published",
+    ]
+    list_filter = ["ipa_source", "ipa_confidence", "ipa_review_required", "source", "level", "is_published"]
     search_fields = ["word", "definition", "example_sentence", "synonyms", "ipa"]
     prepopulated_fields = {"slug": ("word",)}
     ordering = ["word"]
+    readonly_fields = ["created_at", "updated_at"]
     fieldsets = [
         (None, {"fields": ["word", "slug", "level", "source", "is_published"]}),
-        ("Pronunciation", {"fields": ["ipa", ("audio_file", "audio_url")]}),
+        ("Pronunciation", {"fields": [
+            "ipa", "ipa_accent", "ipa_source", "ipa_confidence", "ipa_review_required",
+            ("audio_file", "audio_url"),
+        ]}),
         ("Meaning", {"fields": ["definition", "example_sentence", "synonyms"]}),
+        ("Dates", {"fields": ["created_at", "updated_at"]}),
     ]
 
     actions = ["generate_pronunciation"]

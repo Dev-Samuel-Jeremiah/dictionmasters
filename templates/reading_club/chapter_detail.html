@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 {% load videos %}
 {% load read_along %}
@@ -64,7 +65,7 @@
       <audio controls src="{{ chapter.audio_source }}" data-ra-media style="margin-bottom: 18px;"></audio>
       {% endif %}
       {% if chapter.body %}
-      <div class="lesson-body ui-prose" data-ra-text>{{ chapter.body|linebreaksbr }}</div>
+      <div class="lesson-body ui-prose dm-rich-content" data-ra-text>{{ chapter.body|rich_text }}</div>
       {% endif %}
       {% if resources %}
       <div class="attachment-list">

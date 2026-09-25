@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}{{ assessment.title }} — Assessments{% endblock %}
@@ -68,7 +69,7 @@
           <span class="as-q__meta">{{ q.get_type_display }}{% if q.points != 1 %} &middot; {{ q.points }} marks{% endif %}</span>
         </div>
 
-        <p class="as-q__prompt">{{ q.prompt|linebreaksbr }}</p>
+        <div class="as-q__prompt dm-rich-content">{{ q.prompt|rich_text }}</div>
         {% if q.word %}<p class="as-q__word">{{ q.word }}</p>{% endif %}
         {% if q.image %}<img src="{{ q.image.url }}" alt="" class="as-q__image">{% endif %}
         {% if q.audio_source %}<audio controls preload="none" src="{{ q.audio_source }}" class="as-q__audio"></audio>{% endif %}
@@ -124,7 +125,7 @@
           <div class="as-feedback" data-feedback {% if not row.checked %}hidden{% endif %}>
             {% if row.checked %}
             <p class="as-feedback__verdict">{% if row.is_correct %}&#10003; Correct{% else %}&#10007; Not quite — the answer is {{ row.correct_answer }}{% endif %}</p>
-            {% if row.explanation %}<p class="as-feedback__why">{{ row.explanation }}</p>{% endif %}
+            {% if row.explanation %}<div class="as-feedback__why dm-rich-content">{{ row.explanation|rich_text }}</div>{% endif %}
             {% endif %}
           </div>
         </div>

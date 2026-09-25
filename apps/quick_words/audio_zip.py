@@ -11,7 +11,7 @@ from django.core.files.base import ContentFile
 from django.db import close_old_connections, transaction
 from django.utils import timezone
 
-from .ipa_dict import get_ipa
+from .british_ipa import get_british_ipa
 from .lookup import LookupUnavailable, is_lookup_candidate, lookup
 from .models import QuickWord, QuickWordAudioImportJob
 
@@ -85,14 +85,19 @@ def inspect_audio_zip(upload):
 def _save_audio(word, suffix, data, is_new=False, ipa_update=False):
     old_name = word.audio_file.name if word.audio_file else ""
     saved_name = ""
-    fields = ["audio_file", "audio_url"]
+    fields = ["audio_file", "audio_url", "updated_at"]
     try:
         with transaction.atomic():
             if is_new:
                 word.save()
             elif ipa_update:
-                word.ipa = ipa_update
-                fields.append("ipa")
+                if isinstance(ipa_update, dict):
+                    for name, value in ipa_update.items():
+                        setattr(word, name, value)
+                        fields.append(name)
+                else:
+                    word.ipa = ipa_update
+                    fields.append("ipa")
             word.audio_file.save(
                 f"{word.slug}{suffix}", ContentFile(data), save=False
             )
@@ -120,19 +125,28 @@ def _import_entry(word_name, suffix, data):
         raise WordImportSkipped("Use a single English word as the filename, without spaces or numbers.")
 
     existing = QuickWord.objects.filter(word__iexact=word_name).order_by("pk").first()
-    dictionary_ipa = get_ipa(word_name)
+    pronunciation = get_british_ipa(word_name, allow_ai=False)
 
     if existing:
         word = existing
-        ipa = dictionary_ipa or word.ipa
-        if not ipa:
-            raise WordImportSkipped("IPA-Dict UK has no transcription for this word.")
-        update_ipa = dictionary_ipa if dictionary_ipa and dictionary_ipa != word.ipa else False
+        if not pronunciation["ipa"]:
+            raise WordImportSkipped("No British IPA transcription was found for this word.")
+        update_ipa = False
+        if pronunciation["source"] in {"britfone", "ipa_dict"}:
+            fields = {
+                "ipa": pronunciation["ipa"],
+                "ipa_accent": pronunciation["accent"],
+                "ipa_source": pronunciation["source"],
+                "ipa_confidence": pronunciation["confidence"],
+                "ipa_review_required": pronunciation["review_required"],
+            }
+            if any(getattr(word, name) != value for name, value in fields.items()):
+                update_ipa = fields
         _save_audio(word, suffix, data, ipa_update=update_ipa)
         return "updated", word.word, "Audio attached to the existing Quick Word."
 
-    if not dictionary_ipa:
-        raise WordImportSkipped("IPA-Dict UK has no transcription for this filename.")
+    if pronunciation["source"] not in {"britfone", "ipa_dict"}:
+        raise WordImportSkipped("No local Britfone or IPA-Dict UK transcription was found for this filename.")
 
     try:
         details = lookup(word_name)
@@ -145,13 +159,17 @@ def _import_entry(word_name, suffix, data):
             f"OpenAI suggested “{details['word']}”. Rename the audio file to that spelling and upload again."
         )
 
-    # Keep the exact filename spelling as the saved word; IPA itself always
-    # comes from the bundled British English IPA-Dict, never OpenAI.
+    # Keep the exact filename spelling as the saved word; use the local
+    # dictionary result and its provenance rather than an OpenAI IPA value.
     details["word"] = word_name
-    details["ipa"] = dictionary_ipa
+    details["ipa"] = pronunciation["ipa"]
+    details["ipa_accent"] = pronunciation["accent"]
+    details["ipa_source"] = pronunciation["source"]
+    details["ipa_confidence"] = pronunciation["confidence"]
+    details["ipa_review_required"] = pronunciation["review_required"]
     word = QuickWord(source=QuickWord.SOURCE_AI, **details)
     _save_audio(word, suffix, data, is_new=True)
-    return "created", word.word, "Created from the filename with UK IPA and OpenAI dictionary details."
+    return "created", word.word, "Created from the filename with British IPA and OpenAI dictionary details."
 
 
 def _append_result(job, filename, word, status, message):
@@ -208,7 +226,7 @@ def _process_import(job_id):
                         raise AudioZipError("The ZIP expands beyond the 600 MB total audio limit.")
 
                     existing = QuickWord.objects.filter(word__iexact=word_name).exists()
-                    if not existing and get_ipa(word_name):
+                    if not existing and get_british_ipa(word_name, allow_ai=False)["source"] in {"britfone", "ipa_dict"}:
                         delay = LOOKUP_INTERVAL_SECONDS - (time.monotonic() - last_lookup)
                         if delay > 0:
                             time.sleep(delay)

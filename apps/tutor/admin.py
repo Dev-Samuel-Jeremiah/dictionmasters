@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 
 from .models import TutorChoice, TutorPassage, TutorSession, TutorSpeech, TutorVoice
@@ -8,6 +9,12 @@ class TutorPassageAdmin(admin.ModelAdmin):
     list_display = ("title", "level", "order", "is_published")
     list_filter = ("level", "is_published")
     search_fields = ("title", "body")
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        # The tutor tokenizes this passage for word-by-word reading feedback.
+        if db_field.name == "body":
+            kwargs["widget"] = forms.Textarea
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
 
 @admin.register(TutorSession)

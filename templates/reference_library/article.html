@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}{{ article.title }} — Reference Library{% endblock %}
@@ -36,7 +37,7 @@
 
   <div class="wrap ui-body ui-body--narrow">
     <article class="ui-panel">
-      <div class="ui-prose ui-prose--pre">{{ article.body }}</div>
+      <div class="ui-prose ui-prose--pre dm-rich-content">{{ article.body|rich_text }}</div>
 
       {% if article.source_credit %}<p class="article-credit" style="margin-top: 20px;">{{ article.source_credit }}</p>{% endif %}
 

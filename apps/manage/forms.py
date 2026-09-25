@@ -13,6 +13,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.db import models
 
 from apps.quick_words.audio_zip import AudioZipError, inspect_audio_zip
+from apps.manage.rich_text import RichTextWidget, is_rich_text_field
 
 
 class ControlFormMixin:
@@ -31,7 +32,12 @@ class ControlFormMixin:
             elif isinstance(widget, forms.Textarea):
                 css = "cr-input cr-textarea"
                 widget.attrs.setdefault("rows", 6)
-            widget.attrs["class"] = f"{widget.attrs.get('class', '')} {css}".strip()
+                model = getattr(getattr(self, "_meta", None), "model", None)
+                if is_rich_text_field(name, model):
+                    field.widget = RichTextWidget(attrs={**widget.attrs, "rows": 10})
+                    widget = field.widget
+                    css = "cr-input cr-textarea dm-rich-text-source"
+            widget.attrs["class"] = " ".join(dict.fromkeys(f"{widget.attrs.get('class', '')} {css}".split()))
             if isinstance(widget, forms.DateTimeInput):
                 # A real date-and-time picker, e.g. to extend someone's access by hand.
                 widget.input_type = "datetime-local"

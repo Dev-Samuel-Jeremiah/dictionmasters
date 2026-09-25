@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}Your score — {{ activity.title }} — {% if place %}{{ place }}{% else %}EchoSpell{% endif %}{% endblock %}
@@ -70,7 +71,7 @@
     <section class="es-panel content-card teacher-note">
       <p class="teacher-note__label">Your teacher says</p>
       {% if attempt.teacher_score is not None %}<p class="teacher-note__score">{{ attempt.teacher_score }}/100</p>{% endif %}
-      {% if attempt.teacher_feedback %}<p class="teacher-note__body">{{ attempt.teacher_feedback }}</p>{% endif %}
+      {% if attempt.teacher_feedback %}<div class="teacher-note__body dm-rich-content">{{ attempt.teacher_feedback|rich_text }}</div>{% endif %}
       {% if attempt.teacher_audio_feedback %}<audio controls preload="none" src="{{ attempt.teacher_audio_feedback.url }}" class="result-item__audio">Your browser can't play this audio.</audio>{% endif %}
     </section>
     {% endif %}
@@ -86,7 +87,7 @@
             {% if row.teacher_mark is not None %}{% if row.teacher_passed %}&#10003;{% else %}&#10007;{% endif %}{% elif row.response.is_correct %}&#10003;{% elif row.response.is_correct is False %}&#10007;{% else %}&#8943;{% endif %}
           </span>
           <div class="result-item__body">
-            {% if row.item.prompt %}<p class="result-item__prompt">{{ row.item.prompt }}</p>{% endif %}
+            {% if row.item.prompt %}<div class="result-item__prompt dm-rich-content">{{ row.item.prompt|rich_text }}</div>{% endif %}
             {% if row.response.recording %}
             <audio controls src="{{ row.response.recording.url }}" class="result-item__audio"></audio>
             {% elif row.response.given %}

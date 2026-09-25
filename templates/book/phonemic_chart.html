@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}Phonemic Chart — Diction Masters{% endblock %}
@@ -57,13 +58,13 @@
         {% if articulation.trap_text %}
         <div class="ui-callout ui-callout--maroon">
           <p class="ui-callout__title">{{ articulation.trap_heading }}</p>
-          <p>{{ articulation.trap_text }}</p>
+          <div class="dm-rich-content">{{ articulation.trap_text|rich_text }}</div>
         </div>
         {% endif %}
         {% if articulation.mouth_position_text %}
         <div class="ui-callout ui-callout--green">
           <p class="ui-callout__title">Mouth position</p>
-          <p>{{ articulation.mouth_position_text }}</p>
+          <div class="dm-rich-content">{{ articulation.mouth_position_text|rich_text }}</div>
         </div>
         {% endif %}
         {% if articulation.practice_words %}

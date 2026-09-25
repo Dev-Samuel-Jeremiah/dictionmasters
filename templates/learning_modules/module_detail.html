@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}{{ module.name }} — Learning Modules{% endblock %}
@@ -25,7 +26,7 @@
           <div>
             <p class="lm-hero__eyebrow">Learning module</p>
             <h1 class="lm-hero__title">{{ module.name }}</h1>
-            {% if module.overview %}<p class="lm-hero__lede">{{ module.overview|linebreaksbr }}</p>
+            {% if module.overview %}<div class="lm-hero__lede dm-rich-content">{{ module.overview|rich_text }}</div>
             {% elif module.description %}<p class="lm-hero__lede">{{ module.description }}</p>{% endif %}
             <div class="lm-hero__chips">
               <span class="lm-chip">{{ term_cards|length }} term{{ term_cards|length|pluralize }}</span>

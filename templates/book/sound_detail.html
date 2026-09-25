@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 {% load videos %}
 {% load read_along %}
@@ -83,14 +84,14 @@
       {% if articulation.trap_text %}
       <div class="ui-callout ui-callout--maroon" style="margin-top: 16px;">
         <p class="ui-callout__title">{{ articulation.trap_heading }}</p>
-        <p>{{ articulation.trap_text }}</p>
+        <div class="dm-rich-content">{{ articulation.trap_text|rich_text }}</div>
       </div>
       {% endif %}
 
       {% if articulation.mouth_position_text %}
       <div class="ui-callout ui-callout--green" style="margin-top: 12px;">
         <p class="ui-callout__title">Mouth position</p>
-        <p>{{ articulation.mouth_position_text }}</p>
+        <div class="dm-rich-content">{{ articulation.mouth_position_text|rich_text }}</div>
       </div>
       {% endif %}
 
@@ -121,7 +122,7 @@
           <div class="entry-card__head">
             <span class="entry-card__word">{{ entry.word }}</span>
           </div>
-          {% if entry.spelling_pattern %}<p class="entry-card__body">{{ entry.spelling_pattern }}</p>{% endif %}
+          {% if entry.spelling_pattern %}<div class="entry-card__body dm-rich-content">{{ entry.spelling_pattern|rich_text }}</div>{% endif %}
           {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}"></audio>{% endif %}
         </div>
         {% endfor %}
@@ -135,7 +136,7 @@
       <div class="entry-list">
         {% for entry in entries %}
         <div class="content-card entry-card">
-          <p class="entry-card__text">{{ entry.sentence }}</p>
+          <div class="entry-card__text dm-rich-content">{{ entry.sentence|rich_text }}</div>
           {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}"></audio>{% endif %}
         </div>
         {% endfor %}
@@ -151,7 +152,7 @@
         <div class="content-card"{% if entry.audio_source %} data-read-along{% read_along_sync entry %}{% endif %}>
           <h2 class="passage-card__title">{{ entry.title }}</h2>
           {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}" data-ra-media></audio>{% endif %}
-          <p class="passage-card__body" data-ra-text>{{ entry.body }}</p>
+          <div class="passage-card__body dm-rich-content" data-ra-text>{{ entry.body|rich_text }}</div>
         </div>
         {% endfor %}
       </div>
@@ -179,7 +180,7 @@
       <div class="entry-list">
         {% for entry in entries %}
         <div class="content-card entry-card">
-          <p class="twister-card__text">{{ entry.text }}</p>
+          <div class="twister-card__text dm-rich-content">{{ entry.text|rich_text }}</div>
           {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}"></audio>{% endif %}
         </div>
         {% endfor %}
@@ -203,7 +204,7 @@
             <p class="pair-card__word">{{ entry.word_a }}</p>
             <p class="pair-card__word">{{ entry.word_b }}</p>
           </div>
-          {% if entry.notes %}<p class="pair-card__notes">{{ entry.notes }}</p>{% endif %}
+          {% if entry.notes %}<div class="pair-card__notes dm-rich-content">{{ entry.notes|rich_text }}</div>{% endif %}
         </div>
         {% endfor %}
       </div>
@@ -218,7 +219,7 @@
         <li>
           <a href="{{ entry.url }}" class="link-card" target="_blank" rel="noopener">
             <div class="link-card__title">{{ entry.title }}</div>
-            {% if entry.description %}<div class="link-card__desc">{{ entry.description }}</div>{% endif %}
+            {% if entry.description %}<div class="link-card__desc dm-rich-content">{{ entry.description|rich_text }}</div>{% endif %}
             <div class="link-card__url">{{ entry.url }}</div>
           </a>
         </li>

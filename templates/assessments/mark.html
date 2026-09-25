@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}Mark — {{ assessment.title }}{% endblock %}
@@ -6,6 +7,7 @@
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <link rel="stylesheet" href="{% static 'css/assessments.css' %}">
+  <link rel="stylesheet" href="{% static 'css/rich_text_editor.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -53,7 +55,7 @@
       {% for row in spoken_rows %}
       {% with a=row.answer %}
       <fieldset class="as-mark__item">
-        <legend class="as-mark__prompt">{{ a.question.prompt|linebreaksbr }}{% if a.question.word %} — <strong>{{ a.question.word }}</strong>{% endif %}</legend>
+        <legend class="as-mark__prompt">{{ a.question.prompt|rich_text_inline }}{% if a.question.word %} — <strong>{{ a.question.word }}</strong>{% endif %}</legend>
         {% if a.recording %}<audio controls preload="metadata" src="{{ a.recording.url }}" class="as-mark__audio"></audio>
         {% else %}<p class="as-mark__missing">No recording was sent for this question — score it as heard (nothing).</p>{% endif %}
 
@@ -75,15 +77,15 @@
           {% endfor %}
         </table>
         <label class="as-mark__label" for="c{{ a.pk }}">Comment for the student</label>
-        <textarea id="c{{ a.pk }}" name="{{ a.pk }}-comment" rows="2" class="as-textarea"
-                  placeholder="e.g. Good TH — watch the final sound in MONTH.">{{ row.comment }}</textarea>
+        <textarea id="c{{ a.pk }}" name="{{ a.pk }}-comment" rows="2" class="as-textarea" data-rich-text="true" data-rich-text-initial-html="{{ row.comment|rich_text_has_markup|yesno:'true,false' }}"
+                  placeholder="e.g. Good TH — watch the final sound in MONTH.">{{ row.comment|rich_text_source }}</textarea>
       </fieldset>
       {% endwith %}
       {% endfor %}
 
       <label class="as-mark__label" for="feedback">Overall feedback</label>
-      <textarea id="feedback" name="feedback" rows="3" class="as-textarea"
-                placeholder="What they did well, and the one thing to practise next.">{{ feedback }}</textarea>
+      <textarea id="feedback" name="feedback" rows="3" class="as-textarea" data-rich-text="true" data-rich-text-initial-html="{{ feedback|rich_text_has_markup|yesno:'true,false' }}"
+                placeholder="What they did well, and the one thing to practise next.">{{ feedback|rich_text_source }}</textarea>
 
       <div class="as-submit">
         <button type="submit" class="btn btn--green btn--large">Save marks &amp; release result</button>
@@ -93,4 +95,5 @@
   </div>
 </section>
 </div>
+<script src="{% static 'js/rich_text_editor.js' %}" defer></script>
 {% endblock %}

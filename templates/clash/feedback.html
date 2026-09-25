@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}{{ hud.mode.label }} — Diction Clash{% endblock %}
@@ -31,8 +32,8 @@
       <p class="clash-learn__word">{{ word.word }}</p>
       <p class="clash-learn__ipa">{{ word.ipa }}</p>
       {% if word.audio_source %}<audio controls src="{{ word.audio_source }}" class="clash-card__audio"></audio>{% endif %}
-      <p class="clash-learn__meaning">{{ word.definition }}</p>
-      {% if word.example_sentence %}<p class="clash-learn__example">&ldquo;{{ word.example_sentence }}&rdquo;</p>{% endif %}
+      <div class="clash-learn__meaning dm-rich-content">{{ word.definition|rich_text }}</div>
+      {% if word.example_sentence %}<div class="clash-learn__example dm-rich-content">{{ word.example_sentence|rich_text }}</div>{% endif %}
       {% endif %}
     </article>
 

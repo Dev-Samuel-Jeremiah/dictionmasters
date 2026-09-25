@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}{{ activity.title }} — {% if place %}{{ place }}{% else %}{{ level.name }} — EchoSpell{% endif %}{% endblock %}
@@ -30,7 +31,7 @@
         <div>
           <p class="es-hero__eyebrow">Activity &middot; {{ activity.kind_label }}</p>
           <h1 class="es-hero__title">{{ activity.title }}</h1>
-          <p class="es-hero__lede">{{ activity.display_instructions }}</p>
+          <div class="es-hero__lede dm-rich-content">{{ activity.display_instructions|rich_text }}</div>
           <div class="es-hero__chips">
             <span class="es-chip">{{ item_rows|length }} question{{ item_rows|length|pluralize }}</span>
             <span class="es-chip">Pass mark {{ activity.pass_mark }}%</span>
@@ -68,7 +69,7 @@
           <p class="chip-bank__label">Drag a word into a box &mdash; or tap the word, then tap the box.</p>
           <div class="chip-bank__chips">
             {% for row in item_rows %}
-            <button type="button" class="chip" draggable="true" data-item-id="{{ row.item.id }}">{{ row.item.prompt }}</button>
+            <button type="button" class="chip" draggable="true" data-item-id="{{ row.item.id }}">{{ row.item.prompt|rich_text_inline }}</button>
             {% endfor %}
           </div>
         </div>
@@ -92,9 +93,9 @@
           <audio controls src="{{ row.item.audio_source }}" class="activity-item__audio"></audio>
           {% endif %}
           {% if row.item.prompt %}
-          <p class="activity-item__prompt {% if activity.mode == 'record' %}activity-item__prompt--passage{% endif %}">{{ row.item.prompt }}</p>
+          <div class="activity-item__prompt dm-rich-content {% if activity.mode == 'record' %}activity-item__prompt--passage{% endif %}">{{ row.item.prompt|rich_text }}</div>
           {% endif %}
-          {% if row.item.hint %}<p class="activity-item__hint">{{ row.item.hint }}</p>{% endif %}
+          {% if row.item.hint %}<div class="activity-item__hint dm-rich-content">{{ row.item.hint|rich_text }}</div>{% endif %}
 
           {% if activity.mode == "typed" %}
           <input type="text" name="item-{{ row.item.id }}" class="activity-input"

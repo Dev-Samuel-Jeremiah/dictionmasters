@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load rich_text %}
 {% load static %}
 
 {% block title %}{{ word.word }} — Quick Words — Diction Masters{% endblock %}
@@ -25,7 +26,10 @@
         <div>
           <p class="qk-hero__eyebrow">Word {{ position }} of {{ total }}</p>
           <h1 class="qk-hero__title qk-hero__title--word">{{ word.word }}</h1>
-          {% if word.ipa %}<p class="qk-hero__ipa">{{ word.ipa }}</p>{% endif %}
+          {% if word.ipa %}
+          <p class="qk-hero__eyebrow">British English</p>
+          <p class="qk-hero__ipa">{{ word.ipa }}</p>
+          {% endif %}
           <div class="qk-hero__chips">
             {% if word.level %}<span class="qk-chip qk-chip--gold">{{ word.level }}</span>{% endif %}
             {% if word.audio_source %}<span class="qk-chip">&#127911; Audio</span>{% endif %}
@@ -54,13 +58,13 @@
 
       <section class="qk-panel qw-block">
         <p class="qk-panel__label qw-block__label">What it means</p>
-        <p class="qw-block__body">{{ word.definition }}</p>
+        <div class="qw-block__body dm-rich-content">{{ word.definition|rich_text }}</div>
       </section>
 
       {% if word.example_sentence %}
       <section class="qk-panel qw-block">
         <p class="qk-panel__label qw-block__label">Used in a sentence</p>
-        <p class="qw-block__example">&ldquo;{{ word.example_sentence }}&rdquo;</p>
+        <div class="qw-block__example dm-rich-content">{{ word.example_sentence|rich_text }}</div>
       </section>
       {% endif %}
 
