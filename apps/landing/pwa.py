@@ -180,7 +180,7 @@ def manifest(request):
         "display": "standalone",
         "orientation": "any",
         "background_color": PARCHMENT,
-        "theme_color": NAVY,
+        "theme_color": "#1846E0",
         "categories": ["education"],
         "icons": _icons(),
         "shortcuts": [
@@ -194,7 +194,7 @@ def manifest(request):
 # Never cached: the browser must see a new worker as soon as there is one.
 @cache_control(no_cache=True, no_store=True, must_revalidate=True, max_age=0)
 def service_worker(request):
-    precache = ["/offline/", static("pwa/icon-192.png"), static("css/base.css"), static("css/ui.css")]
+    precache = ["/offline/", static("pwa/icon-192.png"), static("css/base.css"), static("css/ui.css"), static("css/theme.css")]
     from apps.landing.models import SiteBranding
 
     branding = SiteBranding.load()

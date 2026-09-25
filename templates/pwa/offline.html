@@ -3,27 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#14213D">
+  <meta name="theme-color" content="#0b1a4a">
   <title>You're offline — Diction Masters</title>
   <style>
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; box-sizing: border-box;
-           font-family: "Work Sans", system-ui, sans-serif; color: #14213D; background: #F4EFE2; text-align: center; }
-    .card { width: min(620px, 100%); box-sizing: border-box; padding: 32px 26px; border-radius: 24px; background: #fffdf8;
-            box-shadow: 0 20px 44px rgba(20, 33, 61, .12); }
+           font-family: "Plus Jakarta Sans", system-ui, sans-serif; color: #0b1a4a; background: #f2f5fc; text-align: center; }
+    .card { width: min(620px, 100%); box-sizing: border-box; padding: 32px 26px; border-radius: 24px; background: #ffffff;
+            box-shadow: 0 20px 44px rgba(11, 26, 74, .12); }
     .saved { margin: 24px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 8px; text-align: left; }
-    .saved a { display: block; padding: 12px 14px; border-radius: 12px; color: #14213D; background: #f4efe2; text-decoration: none; font-weight: 600; text-transform: capitalize; }
-    .saved a:hover { outline: 2px solid #c98f3a; }
+    .saved a { display: block; padding: 12px 14px; border-radius: 12px; color: #0b1a4a; background: #f2f5fc; text-decoration: none; font-weight: 600; text-transform: capitalize; }
+    .saved a:hover { outline: 2px solid #ffc72c; }
     .saved__empty { grid-column: 1 / -1; color: #4a5470; font-size: .9rem; }
     .downloads { margin: 12px 0 0; padding: 0; list-style: none; text-align: left; }
-    .downloads > li { margin: 10px 0; padding: 14px; border-radius: 14px; background: #f4efe2; }
-    .downloads video { width: 100%; max-height: 55vh; margin-top: 12px; border-radius: 10px; background: #14213d; }
+    .downloads > li { margin: 10px 0; padding: 14px; border-radius: 14px; background: #f2f5fc; }
+    .downloads video { width: 100%; max-height: 55vh; margin-top: 12px; border-radius: 10px; background: #0b1a4a; }
     .downloads .vid-kept__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .downloads .vid__btn { display: inline-block; padding: 9px 13px; border: 0; border-radius: 10px; color: #14213d; background: #f0c878; font: 600 14px system-ui; text-decoration: none; cursor: pointer; }
+    .downloads .vid__btn { display: inline-block; padding: 9px 13px; border: 0; border-radius: 10px; color: #0b1a4a; background: #ffd659; font: 600 14px system-ui; text-decoration: none; cursor: pointer; }
     img { width: 72px; height: 72px; border-radius: 18px; }
-    h1 { margin: 18px 0 8px; font-family: Fraunces, Georgia, serif; font-size: 1.6rem; }
+    h1 { margin: 18px 0 8px; font-family: "Plus Jakarta Sans", system-ui, sans-serif; font-size: 1.6rem; }
     p { margin: 0 0 22px; line-height: 1.55; color: #4a5470; }
-    button { padding: 13px 26px; border: 0; border-radius: 14px; font: inherit; font-weight: 700; color: #14213D;
-             background: linear-gradient(135deg, #f0c878, #c98f3a); cursor: pointer; }
+    button { padding: 13px 26px; border: 0; border-radius: 14px; font: inherit; font-weight: 700; color: #0b1a4a;
+             background: linear-gradient(135deg, #ffd659, #ffc72c); cursor: pointer; }
   </style>
 </head>
 <body>
@@ -34,7 +34,7 @@
     <button type="button" onclick="location.reload()">Try again</button>
     <h2 style="margin:28px 0 10px;font-size:1.1rem">Downloaded videos on this device</h2>
     <ul class="downloads" data-offline-list><li class="saved__empty">Looking for downloaded videos&hellip;</li></ul>
-    <p style="margin-top:18px"><a href="/videos/offline/" style="color:#7A2438;font-weight:700">Open the offline video library &rarr;</a></p>
+    <p style="margin-top:18px"><a href="/videos/offline/" style="color:#c3274a;font-weight:700">Open the offline video library &rarr;</a></p>
     <h2 style="margin:28px 0 10px;font-size:1.1rem">Pages saved on this device</h2>
     <ul class="saved" data-offline-pages><li class="saved__empty">Loading saved pages&hellip;</li></ul>
     <script src="{% static 'js/offline_video.js' %}" defer></script>

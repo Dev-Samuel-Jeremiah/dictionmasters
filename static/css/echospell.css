@@ -78,7 +78,7 @@
   color: var(--gold-deep);
   background: var(--gold-tint);
 }
-.word-card__audio-tag--quick { color: #1f6f5c; background: rgba(31, 111, 92, 0.12); }
+.word-card__audio-tag--quick { color: #0f7a6a; background: rgba(31, 111, 92, 0.12); }
 .word-card__definition { margin-top: 10px; color: var(--ink-70); font-size: 0.96rem; text-align: left; }
 .word-card__example { margin-top: 8px; color: var(--ink-40); font-style: italic; font-size: 0.9rem; text-align: left; }
 .word-card__image {
@@ -212,7 +212,7 @@
 }
 .number-option__input:checked ~ .number-option__badge {
   border-color: var(--maroon);
-  background: rgba(122, 36, 56, 0.08);
+  background: rgba(195, 39, 74, 0.08);
 }
 .number-option__input:focus-visible ~ .number-option__badge {
   outline: 2px solid var(--gold-deep);
@@ -276,7 +276,7 @@
   border-color: var(--gold);
 }
 .vocab-item--correct .vocab-item__input { border-color: var(--green); background: rgba(36, 71, 62, 0.06); }
-.vocab-item--incorrect .vocab-item__input { border-color: var(--maroon); background: rgba(122, 36, 56, 0.05); }
+.vocab-item--incorrect .vocab-item__input { border-color: var(--maroon); background: rgba(195, 39, 74, 0.05); }
 
 .vocab-item__feedback {
   margin: 6px 0 0;
@@ -311,8 +311,8 @@
   border-radius: var(--radius);
   align-items: flex-start;
 }
-.dialogue-line--a { background: rgba(20, 33, 61, 0.05); }
-.dialogue-line--b { background: rgba(122, 36, 56, 0.05); }
+.dialogue-line--a { background: rgba(11, 26, 74, 0.05); }
+.dialogue-line--b { background: rgba(195, 39, 74, 0.05); }
 .dialogue-line__speaker {
   flex: 0 0 auto;
   width: 26px;

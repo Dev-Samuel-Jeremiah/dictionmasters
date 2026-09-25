@@ -6,31 +6,31 @@
    ========================================================= */
 
 :root {
-  --ink: #14213D;
-  --ink-70: rgba(20, 33, 61, 0.72);
-  --ink-40: rgba(20, 33, 61, 0.4);
-  --rule: rgba(20, 33, 61, 0.12);
+  --ink: #0b1a4a;
+  --ink-70: rgba(11, 26, 74, 0.72);
+  --ink-40: rgba(11, 26, 74, 0.4);
+  --rule: rgba(11, 26, 74, 0.12);
 
-  --parchment: #F6F1E4;
-  --parchment-deep: #EFE7D3;
+  --parchment: #f2f5fc;
+  --parchment-deep: #e7effe;
 
-  --gold: #B8863B;
-  --gold-deep: #8C6526;
-  --gold-tint: rgba(184, 134, 59, 0.14);
+  --gold: #e9ae00;
+  --gold-deep: #8a6200;
+  --gold-tint: rgba(233, 174, 0, 0.14);
 
-  --green: #24473E;
-  --green-deep: #172F29;
+  --green: #12875a;
+  --green-deep: #0b5e3e;
 
-  --maroon: #7A2438;
-  --maroon-deep: #611C2C;
+  --maroon: #c3274a;
+  --maroon-deep: #9e1d3b;
 
-  --charcoal: #24242A;
-  --paper-white: #FFFDF8;
+  --charcoal: #0b1a4a;
+  --paper-white: #ffffff;
 
-  --font-serif: "Fraunces", Georgia, serif;
-  --font-sans: "Work Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Plus Jakarta Sans", "Noto Sans", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  --wrap: 1160px;
+  --wrap: 1320px;
   --radius: 6px;
 }
 
@@ -263,10 +263,10 @@ p { margin: 0; }
 
 /* ---------- choosing a password (static/js/password_strength.js) ---------- */
 
-.pw-guide { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: rgba(20, 33, 61, 0.04); border: 1px solid var(--rule); }
+.pw-guide { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: rgba(11, 26, 74, 0.04); border: 1px solid var(--rule); }
 .pw-guide.is-accepted { background: rgba(36, 71, 62, 0.07); border-color: rgba(36, 71, 62, 0.35); }
 .pw-meter { display: flex; align-items: center; gap: 10px; }
-.pw-meter__bar { flex: 1 1 auto; height: 7px; border-radius: 999px; background: rgba(20, 33, 61, 0.12); overflow: hidden; }
+.pw-meter__bar { flex: 1 1 auto; height: 7px; border-radius: 999px; background: rgba(11, 26, 74, 0.12); overflow: hidden; }
 .pw-meter__fill { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--maroon); transition: width 0.25s ease, background 0.25s ease; }
 .pw-guide[data-score="2"] .pw-meter__fill { background: var(--gold); }
 .pw-guide[data-score="3"] .pw-meter__fill,
@@ -310,6 +310,6 @@ p { margin: 0; }
   cursor: pointer;
   transition: color 0.15s ease, background 0.15s ease;
 }
-.pw-toggle:hover { color: var(--ink); background: rgba(20, 33, 61, 0.06); }
+.pw-toggle:hover { color: var(--ink); background: rgba(11, 26, 74, 0.06); }
 .pw-toggle:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .pw-toggle[aria-pressed="true"] { color: var(--gold-deep); }

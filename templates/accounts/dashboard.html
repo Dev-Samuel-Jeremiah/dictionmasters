@@ -3,355 +3,164 @@
 
 {% block title %}My dashboard — Diction Masters{% endblock %}
 
-{% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="dash">
+<div class="px-page px-home">
 
-  {# ================= Hero ================= #}
-  <section class="dash-hero">
-    <div class="dash-hero__glow" aria-hidden="true"></div>
-    <div class="wrap dash-hero__inner">
-      <div class="dash-hero__text">
-        <p class="dash-hero__date">{{ today|date:"l, j F Y" }}</p>
-        <h1 class="dash-hero__title">{{ greeting }}, <span>{{ user.first_name }}</span></h1>
-        <p class="dash-hero__lede">
-          {% if user.school %}{{ user.get_role_display }} at {{ user.school.name }}{% if level %}, {{ level }}{% endif %}.{% else %}Individual learner.{% endif %}
-          {% if practised_today %}You've practised today — keep the momentum going.
-          {% elif streak %}Practise today to keep your {{ streak }}-day streak alive.
-          {% else %}A few minutes today starts a new streak.{% endif %}
-        </p>
-        {% if user.is_teacher %}
-          <p class="dash-hero__note">Your class dashboard is on its way. Until then, every learning tool is open to you.</p>
-        {% endif %}
-        <div class="dash-hero__actions">
-          <a href="{% if echospell.resume %}{{ echospell.resume.url }}{% else %}{{ echospell.url }}{% endif %}" class="dash-btn dash-btn--gold">
-            {% if echospell.resume %}Continue {{ echospell.resume.group.level.name }} · Group {{ echospell.resume.group.number }} · {{ echospell.resume.category.name }}{% elif echospell.group %}Continue {{ echospell.group.level.name }} · Group {{ echospell.group.number }}{% else %}Open EchoSpell{% endif %}
-            <span aria-hidden="true">&rarr;</span>
-          </a>
-          <a href="{% url 'clash:hub' %}" class="dash-btn dash-btn--glass">&#9876;&#65039; Play Diction Clash</a>
-          {% if billing.can_pay %}<a href="{% url 'billing:account' %}" class="dash-btn dash-btn--glass">&#128179; {% if billing.state == "active" %}My plan{% else %}Plans &amp; billing{% endif %}</a>{% endif %}
-          {# Install Diction Masters as an app (static/js/pwa.js); hidden once it's running as one. #}
-          <button type="button" class="dash-btn dash-btn--install" data-install-app>
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v7m-3-3 3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            Install the app
-          </button>
-        </div>
-      </div>
-
-      <div class="dash-hero__scene" aria-hidden="true">
-        <div class="dash-orbit">
-          {% for symbol in orbit_symbols %}
-            <span class="dash-orbit__sym" style="--i: {{ forloop.counter0 }}">{{ symbol }}</span>
-          {% endfor %}
-        </div>
-        <div class="dash-cube">
-          <span class="dash-cube__face dash-cube__face--front">iː</span>
-          <span class="dash-cube__face dash-cube__face--back">ɑː</span>
-          <span class="dash-cube__face dash-cube__face--right">θ</span>
-          <span class="dash-cube__face dash-cube__face--left">ə</span>
-          <span class="dash-cube__face dash-cube__face--top">ʃ</span>
-          <span class="dash-cube__face dash-cube__face--bottom">ŋ</span>
-        </div>
-        <div class="dash-cube__shadow"></div>
-      </div>
-
-      <div class="dash-coin" tabindex="0" aria-label="Study streak: {{ streak }} day{{ streak|pluralize }}. Best: {{ best_streak }}.">
-        <div class="dash-coin__inner">
-          <div class="dash-coin__face dash-coin__face--front">
-            <span class="dash-coin__flame" aria-hidden="true">&#128293;</span>
-            <strong class="dash-count" style="--to: {{ streak }}"></strong>
-            <span>day streak</span>
-          </div>
-          <div class="dash-coin__face dash-coin__face--back">
-            <span class="dash-coin__flame" aria-hidden="true">&#127942;</span>
-            <strong>{{ best_streak }}</strong>
-            <span>best streak</span>
-          </div>
-        </div>
+  {# ================= Hero: the day, the greeting, the learner ================= #}
+  <section class="px-hero">
+    <img class="px-hero__img" src="{% static 'img/app/heroBoy.jpg' %}" alt="">
+    <div class="px-hero__text">
+      <p class="px-hero__date">{{ today|date:"l j F" }}</p>
+      <h1 class="px-hero__title">{{ greeting }},<br><span>{{ user.first_name|default:"there" }}</span></h1>
+      <p class="px-hero__sub">{% if user.school %}{{ user.get_role_display }} at {{ user.school.name }}{% if level %}, {{ level }}{% endif %}{% else %}Individual learner{% endif %}</p>
+      {% if user.is_teacher %}<p class="px-hero__note">Your class dashboard is on its way. Until then, every learning tool is open to you.</p>{% endif %}
+      <div class="px-hero__actions">
+        <a href="{% url 'clash:hub' %}" class="px-chipbtn">{% include "includes/icon.html" with name="swords" size=18 %} Play Diction Clash</a>
+        {% if billing.can_pay %}<a href="{% url 'billing:account' %}" class="px-chipbtn">{% include "includes/icon.html" with name="card" size=18 %} {% if billing.state == "active" %}My plan{% else %}Plans and billing{% endif %}</a>{% endif %}
+        {# Install Diction Masters as an app (static/js/pwa.js); hidden once it's running as one. #}
+        <button type="button" class="px-chipbtn" data-install-app>{% include "includes/icon.html" with name="dl" size=18 %} Install the app</button>
       </div>
     </div>
   </section>
 
-  <div class="wrap dash-body">
-    <section class="dash-search" aria-labelledby="dash-search-title">
-      <div>
-        <p class="dash-search__eyebrow">Find your next lesson</p>
-        <h2 id="dash-search-title">Search Diction Masters</h2>
-      </div>
-      <form data-search-autocomplete="{% url 'platform_search:suggest' %}" role="search" method="get" action="{% url 'platform_search:results' %}">
-        <label class="sr-only" for="dashboard-search">Search tools, lessons and resources</label>
-        <input id="dashboard-search" type="search" name="q" placeholder="Try “vocabulary”, “story” or “pronunciation”…" autocomplete="off">
-        <button type="submit">Search <span aria-hidden="true">→</span></button>
-      </form>
-    </section>
+  <div class="px-wrap px-lift">
 
-    {# ================= The places to learn ================= #}
-    <section class="dash-stats" aria-label="Where to learn">
-      <a href="{% url 'echospell:hub' %}" class="dash-stat dash-tilt{% if dashboard_card_images.progress_echospell %} dash-stat--image{% endif %}" data-tilt style="--accent: var(--dash-green)">
-        {% if dashboard_card_images.progress_echospell %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_echospell }}" alt="" aria-hidden="true">{% endif %}
-        <span class="dash-stat__icon" aria-hidden="true">&#127919;</span>
-        <p class="dash-stat__label">EchoSpell</p>
-        <p class="dash-stat__value"><span class="dash-count" style="--to: {{ echospell.completed }}"></span><small> / {{ echospell.total }} groups</small></p>
-        <p class="dash-stat__foot">{% if activity_average is not None %}{{ activities_done }} activit{{ activities_done|pluralize:"y,ies" }} · {{ activity_average }}% average{% else %}Spell, hear and say every word{% endif %}</p>
+    {# ================= Continue, streak, this week ================= #}
+    <div class="px-top">
+      <a href="{% if echospell.resume %}{{ echospell.resume.url }}{% else %}{{ echospell.url }}{% endif %}" class="px-card px-cont">
+        <span class="px-cont__ic"><img src="{% if dashboard_card_images.progress_echospell %}{{ dashboard_card_images.progress_echospell }}{% else %}{% static 'img/app/kidThumb.jpg' %}{% endif %}" alt=""></span>
+        <span class="px-cont__t">
+          <span class="px-cont__lab">Continue in EchoSpell</span>
+          <span class="px-cont__title">{% if echospell.resume %}{{ echospell.resume.group.level.name }}, Group {{ echospell.resume.group.number }}{% elif echospell.group %}{{ echospell.group.level.name }}, Group {{ echospell.group.number }}{% elif echospell.total %}Every group complete{% else %}Levels coming soon{% endif %}</span>
+          <span class="px-cont__meta">{% if echospell.resume %}{{ echospell.resume.category.name }}{% else %}{{ echospell.completed }} of {{ echospell.total }} groups complete{% endif %}</span>
+          <span class="px-meter"><i style="width: {{ echospell.percent }}%"></i></span>
+        </span>
+        <span class="px-playbig" aria-hidden="true">{% include "includes/icon.html" with name="play" size=22 %}</span>
       </a>
-      {# The Etiquette Advantage: shown, but locked until its lessons are ready. #}
-      <div class="dash-stat dash-stat--locked{% if dashboard_card_images.progress_etiquette %} dash-stat--image{% endif %}" style="--accent: var(--dash-plum)" aria-disabled="true">
-        {% if dashboard_card_images.progress_etiquette %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_etiquette }}" alt="" aria-hidden="true">{% endif %}
-        <span class="dash-stat__icon" aria-hidden="true">&#129309;</span>
-        <p class="dash-stat__label">The Etiquette Advantage</p>
-        <p class="dash-stat__value dash-stat__lock">
-          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" fill="currentColor"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-          <small>Locked</small>
-        </p>
-        <p class="dash-stat__foot">Poise and polish for every conversation</p>
-      </div>
-      <a href="{% url 'book:home' %}" class="dash-stat dash-tilt{% if dashboard_card_images.progress_academy %} dash-stat--image{% endif %}" data-tilt style="--accent: var(--dash-maroon)">
-        {% if dashboard_card_images.progress_academy %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_academy }}" alt="" aria-hidden="true">{% endif %}
-        <span class="dash-stat__icon" aria-hidden="true">&#128214;</span>
-        <p class="dash-stat__label">44 Academy</p>
-        <p class="dash-stat__value"><span class="dash-count" style="--to: {{ academy_sounds }}"></span><small> sound{{ academy_sounds|pluralize }}</small></p>
-        <p class="dash-stat__foot">{% if academy_sounds %}{{ academy_done }} of {{ academy_sounds }} complete{% else %}A full lesson for every sound of English{% endif %}</p>
-      </a>
-      <a href="{% url 'tricks:home' %}" class="dash-stat dash-tilt{% if dashboard_card_images.progress_tricks %} dash-stat--image{% endif %}" data-tilt style="--accent: var(--dash-gold)">
-        {% if dashboard_card_images.progress_tricks %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_tricks }}" alt="" aria-hidden="true">{% endif %}
-        <span class="dash-stat__icon" aria-hidden="true">&#10024;</span>
-        <p class="dash-stat__label">Tricks to Sound Fluent</p>
-        <p class="dash-stat__value"><span class="dash-count" style="--to: {{ tricks_count }}"></span><small> trick{{ tricks_count|pluralize }}</small></p>
-        <p class="dash-stat__foot">{% if tricks_count %}{{ tricks_done }} of {{ tricks_count }} complete{% else %}The little tricks that make English flow{% endif %}</p>
-      </a>
-      {# Yela: the live reading tutor. #}
-      <a href="{% url 'tutor:hub' %}" class="dash-stat dash-tilt{% if dashboard_card_images.progress_tutor %} dash-stat--image{% endif %}" data-tilt style="--accent: var(--dash-teal)">
-        {% if dashboard_card_images.progress_tutor %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_tutor }}" alt="" aria-hidden="true">{% endif %}
-        <span class="dash-stat__icon" aria-hidden="true">&#127908;</span>
-        <p class="dash-stat__label">Yela &middot; your AI Diction Assistant</p>
-        <p class="dash-stat__value">
-          {% if tutor.readings %}<span class="dash-count" style="--to: {{ tutor.readings }}"></span><small> reading{{ tutor.readings|pluralize }}</small>
-          {% else %}<span class="dash-stat__invite">Read aloud</span>{% endif %}
-        </p>
-        <p class="dash-stat__foot">{% if tutor.level %}Last reading: {{ tutor.level }}{% if tutor.accuracy %} &middot; {{ tutor.accuracy }}% accurate{% endif %}{% else %}Reads with you and helps with every word{% endif %}</p>
-      </a>
-      <a href="{% url 'learning_modules:hub' %}" class="dash-stat dash-tilt{% if dashboard_card_images.progress_modules %} dash-stat--image{% endif %}" data-tilt style="--accent: var(--dash-blue)">
-        {% if dashboard_card_images.progress_modules %}<img class="dash-stat__background" src="{{ dashboard_card_images.progress_modules }}" alt="" aria-hidden="true">{% endif %}
-        <span class="dash-stat__icon" aria-hidden="true">&#127891;</span>
-        <p class="dash-stat__label">My Modules</p>
-        <p class="dash-stat__value"><span class="dash-count" style="--to: {{ modules.completed }}"></span><small> / {{ modules.total }} days</small></p>
-        <p class="dash-stat__foot">{{ modules.percent }}% of your course path</p>
-      </a>
-    </section>
 
-    {# ================= Continue + week ================= #}
-    <div class="dash-row">
-      <section class="dash-panel dash-panel--continue">
-        <header class="dash-panel__head">
-          <h2 class="dash-panel__title">Pick up where you left off</h2>
-        </header>
-
-        <a href="{% if echospell.resume %}{{ echospell.resume.url }}{% else %}{{ echospell.url }}{% endif %}" class="dash-next dash-tilt" data-tilt>
-          <span class="dash-ring" style="--p: {{ echospell.percent }}; --ring: var(--dash-green)">
-            <span class="dash-ring__num">{{ echospell.percent }}%</span>
-          </span>
-          <span class="dash-next__text">
-            <span class="dash-next__kicker">EchoSpell</span>
-            <span class="dash-next__title">{% if echospell.resume %}{{ echospell.resume.group.level.name }} · Group {{ echospell.resume.group.number }} · {{ echospell.resume.category.name }}{% elif echospell.group %}{{ echospell.group.level.name }} · Group {{ echospell.group.number }}{% elif echospell.total %}Every group complete{% else %}Levels coming soon{% endif %}</span>
-            <span class="dash-next__meta">{{ echospell.completed }} of {{ echospell.total }} groups complete</span>
-          </span>
-          <span class="dash-next__go" aria-hidden="true">&rarr;</span>
-        </a>
-
-        <a href="{{ modules.url }}" class="dash-next dash-tilt" data-tilt>
-          <span class="dash-ring" style="--p: {{ modules.percent }}; --ring: var(--dash-blue)">
-            <span class="dash-ring__num">{{ modules.percent }}%</span>
-          </span>
-          <span class="dash-next__text">
-            <span class="dash-next__kicker">Learning Modules</span>
-            <span class="dash-next__title">{% if modules.day %}{{ modules.day.week.term.module.name }} · {{ modules.day.get_day_name_display }}{% elif modules.total %}Course path complete{% else %}Modules coming soon{% endif %}</span>
-            <span class="dash-next__meta">{% if modules.day %}{{ modules.day.week.term.name }} · {{ modules.day.week.display_name }}{% else %}{{ modules.completed }} of {{ modules.total }} days{% endif %}</span>
-          </span>
-          <span class="dash-next__go" aria-hidden="true">&rarr;</span>
-        </a>
-      </section>
-
-      <section class="dash-panel dash-panel--week">
-        <header class="dash-panel__head">
-          <h2 class="dash-panel__title">This week</h2>
-          <p class="dash-panel__aside">{{ week_total }} session{{ week_total|pluralize }}</p>
-        </header>
-        <div class="dash-chart" role="img" aria-label="Practice sessions over the last seven days">
-          {% for day in week %}
-            <div class="dash-chart__col{% if day.is_today %} dash-chart__col--today{% endif %}">
-              <span class="dash-chart__count">{{ day.count }}</span>
-              <div class="dash-chart__slot">
-                <span class="dash-bar" style="--h: {{ day.height }}; --d: {{ forloop.counter0 }}">
-                  <span class="dash-bar__top"></span>
-                  <span class="dash-bar__side"></span>
-                </span>
-              </div>
-              <span class="dash-chart__day">{{ day.label }}</span>
-            </div>
-          {% endfor %}
+      <div class="px-duo">
+        <div class="px-card px-streak" aria-label="Study streak: {{ streak }} day{{ streak|pluralize }}. Best: {{ best_streak }}.">
+          <b><span class="px-streak__flame">{% include "includes/icon.html" with name="flame" size=24 %}</span>{{ streak }}</b>
+          <span class="px-small px-muted">day streak. {% if practised_today %}You've practised today, keep it going.{% elif streak %}Practise today to keep it alive.{% else %}A few minutes today starts a new one.{% endif %}</span>
+          {% if best_streak %}<span class="px-pill">Best: {{ best_streak }}</span>{% endif %}
         </div>
-      </section>
+        <a href="{% url 'assessments:my_results' %}" class="px-card px-weekcard">
+          <span class="px-weekcard__head"><b>This week</b><span class="px-small px-muted">{{ week_total }} session{{ week_total|pluralize }}</span></span>
+          <span class="px-week" role="img" aria-label="Practice sessions over the last seven days">
+            {% for day in week %}
+            <span class="px-week__col"><span class="px-week__slot"><span class="px-week__bar{% if day.count %} is-on{% endif %}{% if day.is_today %} is-today{% endif %}" style="height: {{ day.height }}%"></span></span>{{ day.label|slice:":1" }}</span>
+            {% endfor %}
+          </span>
+        </a>
+      </div>
     </div>
 
-    {# ================= Tools ================= #}
-    <section class="dash-tools-section">
-      <header class="dash-section-head">
-        <h2 class="dash-section-head__title">My learning tools</h2>
-      </header>
-      <div class="dash-tools">
-        <a href="{% url 'learning_modules:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_learning_modules %} dash-tool--image{% endif %}" data-tilt style="--tool: #2f5d8a; --tool-2: #14213D">
-          {% if dashboard_card_images.tool_learning_modules %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_learning_modules }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#127891;</span>
-          <span class="dash-tool__name">Learning Modules</span>
-          <span class="dash-tool__body">Term-by-term courses, week by week, Monday to Friday.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-        <a href="{% url 'echospell:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_echospell %} dash-tool--image{% endif %}" data-tilt style="--tool: #2e7d62; --tool-2: #172F29">
-          {% if dashboard_card_images.tool_echospell %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_echospell }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#128266;</span>
-          <span class="dash-tool__name">EchoSpell</span>
-          <span class="dash-tool__body">Spelling and phonics by level, with scored activities.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-        <a href="{% url 'quick_words:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_quick_words %} dash-tool--image{% endif %}" data-tilt style="--tool: #b8863b; --tool-2: #6e4b17">
-          {% if dashboard_card_images.tool_quick_words %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_quick_words }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#128269;</span>
-          <span class="dash-tool__name">Quick Words</span>
-          <span class="dash-tool__body">Hear any word, see its meaning and save it to your lists.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-        <a href="{% url 'assessments:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_assessments %} dash-tool--image{% endif %}" data-tilt style="--tool: #9b3550; --tool-2: #4d1522">
-          {% if dashboard_card_images.tool_assessments %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_assessments }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#128203;</span>
-          <span class="dash-tool__name">Assessments</span>
-          <span class="dash-tool__body">Practice quizzes, timed tests, speaking and placement.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-        <a href="{% url 'clash:hub' %}" class="dash-tool dash-tool--featured dash-tilt{% if dashboard_card_images.tool_clash %} dash-tool--image{% endif %}" data-tilt style="--tool: #e0b15c; --tool-2: #0b1427">
-          {% if dashboard_card_images.tool_clash %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_clash }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#9876;&#65039;</span>
-          <span class="dash-tool__name">Diction Clash</span>
-          <span class="dash-tool__body">Race the clock on meanings, spellings and sounds.</span>
-          <span class="dash-tool__cta">Play &rarr;</span>
-        </a>
-        <a href="{% url 'tutor:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_tutor %} dash-tool--image{% endif %}" data-tilt style="--tool: #1f6f5c; --tool-2: #172F29">
-          {% if dashboard_card_images.tool_tutor %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_tutor }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#127908;</span>
-          <span class="dash-tool__name">AI Reading Tutor</span>
-          <span class="dash-tool__body">Read a passage aloud to a live tutor and get your reading level and feedback.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-        <a href="{% url 'daily_practice:home' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_daily_practice %} dash-tool--image{% endif %}" data-tilt style="--tool: #2e7d62; --tool-2: #172F29">
-          {% if dashboard_card_images.tool_daily_practice %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_daily_practice }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#128197;</span>
-          <span class="dash-tool__name">Daily Practice</span>
-          <span class="dash-tool__body">Fresh pronunciation drills from the 44 Academy each day.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-        <a href="{% url 'book:home' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_academy %} dash-tool--image{% endif %}" data-tilt style="--tool: #7A2438; --tool-2: #4d1522">
-          {% if dashboard_card_images.tool_academy %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_academy }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#128214;</span>
-          <span class="dash-tool__name">44 Academy</span>
-          <span class="dash-tool__body">A full lesson for every English sound, with guided practice and audio.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-        <a href="{% url 'tricks:home' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_tricks %} dash-tool--image{% endif %}" data-tilt style="--tool: #b8863b; --tool-2: #6e4b17">
-          {% if dashboard_card_images.tool_tricks %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_tricks }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#10024;</span>
-          <span class="dash-tool__name">Tricks to Sound Fluent</span>
-          <span class="dash-tool__body">Learn the tricks that make English flow, with practice for every lesson.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-        <a href="{% url 'reading_club:hub' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_reading_club %} dash-tool--image{% endif %}" data-tilt style="--tool: #2f5d8a; --tool-2: #14213D">
-          {% if dashboard_card_images.tool_reading_club %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_reading_club }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#128218;</span>
-          <span class="dash-tool__name">Reading Club</span>
-          <span class="dash-tool__body">Read this term's book, chapter by chapter, with model audio.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-        <a href="{% url 'diction_radio:home' %}" class="dash-tool dash-tilt" data-tilt style="--tool: #7A2438; --tool-2: #4d1522">
-          <span class="dash-tool__plate" aria-hidden="true">&#128251;</span>
-          <span class="dash-tool__name">Diction Radio</span>
-          <span class="dash-tool__body">Listen to curated diction, pronunciation and storytelling programmes.</span>
-          <span class="dash-tool__cta">Tune in &rarr;</span>
-        </a>
-        <a href="{% url 'diction_library:hub' %}" class="dash-tool dash-tilt" data-tilt style="--tool: #236b65; --tool-2: #174642">
-          <span class="dash-tool__plate" aria-hidden="true">&#128218;</span>
-          <span class="dash-tool__name">Diction Library</span>
-          <span class="dash-tool__body">Books, stories, audio and video from Diction Masters and your school.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-        <a href="{% url 'reference_library:home' %}" class="dash-tool dash-tilt{% if dashboard_card_images.tool_reference_library %} dash-tool--image{% endif %}" data-tilt style="--tool: #b8863b; --tool-2: #6e4b17">
-          {% if dashboard_card_images.tool_reference_library %}<img class="dash-tool__background" src="{{ dashboard_card_images.tool_reference_library }}" alt="" aria-hidden="true">{% endif %}
-          <span class="dash-tool__plate" aria-hidden="true">&#128269;</span>
-          <span class="dash-tool__name">Reference Library</span>
-          <span class="dash-tool__body">Look up grammar, spelling rules, word origins and more.</span>
-          <span class="dash-tool__cta">Open &rarr;</span>
-        </a>
-      </div>
-    </section>
+    {# ================= Quick tools ================= #}
+    <div class="px-sec"><h2>Quick tools</h2></div>
+    <div class="px-tools">
+      <a href="{% url 'book:phonemic_chart' %}" class="px-tool"><span class="px-tool__ti t-sky">{% include "includes/icon.html" with name="ipa" size=30 %}</span>Phonemic chart</a>
+      <a href="{% url 'quick_words:hub' %}" class="px-tool"><span class="px-tool__ti t-butter">{% include "includes/icon.html" with name="words" size=26 %}</span>Quick Words</a>
+      <a href="{% url 'tutor:hub' %}" class="px-tool"><span class="px-tool__ti t-sky"><img src="{% if dashboard_card_images.tool_tutor %}{{ dashboard_card_images.tool_tutor }}{% else %}{% static 'img/app/cYala.jpg' %}{% endif %}" alt=""></span>Read with Yela</a>
+      <a href="{% url 'clash:hub' %}" class="px-tool"><span class="px-tool__ti t-blush">{% include "includes/icon.html" with name="swords" size=26 %}</span>Diction Clash</a>
+      <a href="{% url 'daily_practice:home' %}" class="px-tool"><span class="px-tool__ti t-mint">{% include "includes/icon.html" with name="calendar" size=26 %}</span>Daily Practice</a>
+      <a href="{% url 'assessments:hub' %}" class="px-tool"><span class="px-tool__ti t-lilac">{% include "includes/icon.html" with name="task" size=26 %}</span>Assessments</a>
+      <a href="{% url 'diction_radio:home' %}" class="px-tool"><span class="px-tool__ti t-butter">{% include "includes/icon.html" with name="radio" size=26 %}</span>Diction Radio</a>
+      <a href="{% url 'diction_library:hub' %}" class="px-tool"><span class="px-tool__ti t-mint">{% include "includes/icon.html" with name="shelf" size=26 %}</span>Diction Library</a>
+    </div>
 
-    {# ================= Feed + shortcuts ================= #}
-    <div class="dash-row dash-row--bottom">
-      <section class="dash-panel">
-        <header class="dash-panel__head">
-          <h2 class="dash-panel__title">Recent activity</h2>
-        </header>
+    {# ================= Your courses ================= #}
+    <div class="px-sec"><h2>Your courses</h2><a href="{% url 'learning_tools:hub' %}">See all</a></div>
+    <div class="px-courses">
+      <a href="{% url 'book:home' %}" class="px-course t-butter">
+        <img class="px-course__img" src="{% if dashboard_card_images.progress_academy %}{{ dashboard_card_images.progress_academy }}{% else %}{% static 'img/app/c44.jpg' %}{% endif %}" alt="">
+        <h3>The 44 Academy</h3>
+        <span class="px-course__meta">{% if academy_sounds %}{{ academy_done }} of {{ academy_sounds }} sounds{% else %}Every sound of English{% endif %}</span>
+        <span class="px-meter"><i style="width: {% widthratio academy_done academy_sounds 100 %}%"></i></span>
+      </a>
+      <a href="{% url 'echospell:hub' %}" class="px-course t-sky">
+        <img class="px-course__img" src="{% if dashboard_card_images.tool_echospell %}{{ dashboard_card_images.tool_echospell }}{% else %}{% static 'img/app/cEcho.jpg' %}{% endif %}" alt="">
+        <h3>EchoSpell</h3>
+        <span class="px-course__meta">{{ echospell.completed }} of {{ echospell.total }} groups{% if activity_average is not None %}, {{ activity_average }}% average{% endif %}</span>
+        <span class="px-meter"><i style="width: {{ echospell.percent }}%"></i></span>
+      </a>
+      <a href="{% url 'tricks:home' %}" class="px-course t-blush">
+        <img class="px-course__img" src="{% if dashboard_card_images.progress_tricks %}{{ dashboard_card_images.progress_tricks }}{% else %}{% static 'img/app/cSB.jpg' %}{% endif %}" alt="">
+        <h3>Tricks to Sound Fluent</h3>
+        <span class="px-course__meta">{% if tricks_count %}{{ tricks_done }} of {{ tricks_count }} tricks{% else %}The tricks that make English flow{% endif %}</span>
+        <span class="px-meter"><i style="width: {% widthratio tricks_done tricks_count 100 %}%"></i></span>
+      </a>
+      <a href="{{ modules.url }}" class="px-course t-mint">
+        <img class="px-course__img" src="{% if dashboard_card_images.progress_modules %}{{ dashboard_card_images.progress_modules }}{% else %}{% static 'img/app/cSchool.jpg' %}{% endif %}" alt="">
+        <h3>Learning Modules</h3>
+        <span class="px-course__meta">{% if modules.day %}Next: {{ modules.day.get_day_name_display }}, {{ modules.day.week.display_name }}{% else %}{{ modules.completed }} of {{ modules.total }} days{% endif %}</span>
+        <span class="px-meter"><i style="width: {{ modules.percent }}%"></i></span>
+      </a>
+      <a href="{% url 'reading_club:hub' %}" class="px-course t-lilac">
+        {% if dashboard_card_images.tool_reading_club %}<img class="px-course__img" src="{{ dashboard_card_images.tool_reading_club }}" alt="">{% else %}<span class="px-course__ci">{% include "includes/icon.html" with name="shelf" size=24 %}</span>{% endif %}
+        <h3>Reading Club</h3>
+        <span class="px-course__meta">This term's book, chapter by chapter</span>
+      </a>
+      {# The Etiquette Advantage: shown, but locked until its lessons are ready. #}
+      <div class="px-course t-lilac is-locked" aria-disabled="true">
+        <img class="px-course__img" src="{% if dashboard_card_images.progress_etiquette %}{{ dashboard_card_images.progress_etiquette }}{% else %}{% static 'img/app/cEtiq.jpg' %}{% endif %}" alt="">
+        <h3>{% include "includes/icon.html" with name="lock" size=14 stroke="2.4" %} The Etiquette Advantage</h3>
+        <span class="px-course__meta">Coming soon</span>
+      </div>
+    </div>
+
+    <div class="px-cols">
+      {# ================= Recent activity ================= #}
+      <section>
+        <div class="px-sec"><h2>Recent activity</h2></div>
         {% if feed %}
-          <ol class="dash-feed">
-            {% for item in feed %}
-              <li>
-                <a href="{{ item.url }}" class="dash-feed__item dash-feed__item--{{ item.kind }}">
-                  <span class="dash-feed__dot" aria-hidden="true"></span>
-                  <span class="dash-feed__text">
-                    <span class="dash-feed__title">{{ item.title }}</span>
-                    <span class="dash-feed__detail">{{ item.detail }}</span>
-                  </span>
-                  <time class="dash-feed__when" datetime="{{ item.when|date:'c' }}">{% if item.recent %}Just now{% else %}{{ item.when|timesince }} ago{% endif %}</time>
-                </a>
-              </li>
-            {% endfor %}
-          </ol>
+        <ol class="px-list">
+          {% for item in feed %}
+          <li>
+            <a href="{{ item.url }}" class="px-item">
+              <span class="px-item__ii {% if item.kind == 'echospell' %}t-sky{% elif item.kind == 'clash' %}t-blush{% elif item.kind == 'module' %}t-mint{% else %}t-butter{% endif %}">{% include "includes/icon.html" with name="check" size=22 stroke="2.6" %}</span>
+              <span class="px-item__it"><b>{{ item.title }}</b><span>{{ item.detail }}</span></span>
+              <time class="px-item__when" datetime="{{ item.when|date:'c' }}">{% if item.recent %}Just now{% else %}{{ item.when|timesince }} ago{% endif %}</time>
+            </a>
+          </li>
+          {% endfor %}
+        </ol>
         {% else %}
-          <div class="dash-empty">
-            <span aria-hidden="true">&#127793;</span>
-            <p>Nothing here yet. Finish an activity, a module day or a Clash game and it will show up here.</p>
-          </div>
+        <div class="px-card px-empty">Nothing here yet. Finish an activity, a module day or a Clash game and it will show up here.</div>
         {% endif %}
       </section>
 
-      <section class="dash-panel">
-        <header class="dash-panel__head">
-          <h2 class="dash-panel__title">Shortcuts</h2>
-        </header>
-        <div class="dash-shortcuts">
-          <a href="{% url 'book:phonemic_chart' %}" class="dash-shortcut">
-            <span class="dash-shortcut__icon dash-shortcut__icon--ipa" aria-hidden="true">iː</span>
-            <span><strong>Phonemic chart</strong><small>Every sound, with audio</small></span>
+      {# ================= Shortcuts ================= #}
+      <section>
+        <div class="px-sec"><h2>Shortcuts</h2></div>
+        <div class="px-list">
+          <a href="{% url 'tutor:hub' %}" class="px-item">
+            <span class="px-item__ii t-sky">{% include "includes/icon.html" with name="robot" size=22 %}</span>
+            <span class="px-item__it"><b>Yela, your AI reading tutor</b><span>{% if tutor.level %}Last reading: {{ tutor.level }}{% if tutor.accuracy %}, {{ tutor.accuracy }}% accurate{% endif %}{% elif tutor.readings %}{{ tutor.readings }} reading{{ tutor.readings|pluralize }}{% else %}Read aloud and get coached as you go{% endif %}</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
           </a>
-          <a href="{% url 'quick_words:hub' %}" class="dash-shortcut">
-            <span class="dash-shortcut__icon" aria-hidden="true">&#128278;</span>
-            <span><strong>Saved words</strong><small>{{ saved_words }} word{{ saved_words|pluralize }} in your lists</small></span>
+          <a href="{% url 'quick_words:hub' %}" class="px-item">
+            <span class="px-item__ii t-butter">{% include "includes/icon.html" with name="bookmark" size=22 %}</span>
+            <span class="px-item__it"><b>Saved words</b><span>{{ saved_words }} word{{ saved_words|pluralize }} in your lists</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
           </a>
-          <a href="{% url 'assessments:hub' %}" class="dash-shortcut">
-            <span class="dash-shortcut__icon" aria-hidden="true">&#129517;</span>
-            <span><strong>Find my level</strong><small>Take a placement test</small></span>
+          <a href="{% url 'assessments:hub' %}" class="px-item">
+            <span class="px-item__ii t-mint">{% include "includes/icon.html" with name="compass" size=22 %}</span>
+            <span class="px-item__it"><b>Find my level</b><span>Take a placement test</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
           </a>
-          <a href="{% url 'assessments:my_results' %}" class="dash-shortcut">
-            <span class="dash-shortcut__icon" aria-hidden="true">&#128202;</span>
-            <span><strong>My assessment results</strong><small>Scores across all programmes</small></span>
+          <a href="{% url 'assessments:my_results' %}" class="px-item">
+            <span class="px-item__ii t-lilac">{% include "includes/icon.html" with name="chart" size=22 %}</span>
+            <span class="px-item__it"><b>My results</b><span>{% if assessment_average is not None %}{{ assessments_taken }} assessment{{ assessments_taken|pluralize }}, {{ assessment_average }}% average{% else %}Scores across all programmes{% endif %}</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+          </a>
+          <a href="{% url 'reference_library:home' %}" class="px-item">
+            <span class="px-item__ii t-stone">{% include "includes/icon.html" with name="search" size=22 %}</span>
+            <span class="px-item__it"><b>Reference Library</b><span>Grammar, spelling rules, word origins and more</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
           </a>
         </div>
       </section>
     </div>
   </div>
 </div>
-
-{% endblock %}
-
-{% block extra_js %}
-  <script src="{% static 'js/dashboard_3d.js' %}" defer></script>
 {% endblock %}

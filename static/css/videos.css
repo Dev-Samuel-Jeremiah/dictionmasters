@@ -2,7 +2,7 @@
    (apps/videos, static/js/offline_video.js). */
 
 .vid { display: grid; gap: 10px; }
-.vid__player { width: 100%; border-radius: 14px; background: #14213D; display: block; }
+.vid__player { width: 100%; border-radius: 14px; background: #0b1a4a; display: block; }
 
 /* The offline strip under a video: what it can do, and what it is doing.
    It sits on dark video cards and on light pages alike, so it carries its
@@ -10,7 +10,7 @@
 .vid__bar {
   display: grid; gap: 10px;
   padding: 12px 14px; border-radius: 14px;
-  color: #fffdf8; background: rgba(255, 255, 255, 0.08);
+  color: #ffffff; background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
 }
 .vid__actions { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -22,26 +22,26 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 .vid__btn:hover { transform: translateY(-1px); }
-.vid__btn:focus-visible { outline: 3px solid #f0c878; outline-offset: 2px; }
+.vid__btn:focus-visible { outline: 3px solid #ffd659; outline-offset: 2px; }
 .vid__btn[disabled] { opacity: 0.75; cursor: progress; transform: none; }
 
 /* Save: the one to reach for, so it is the brightest thing here. */
-.vid__btn--keep { color: #14213D; background: linear-gradient(135deg, #f7d68f, #d99b36); box-shadow: 0 6px 16px rgba(217, 155, 54, 0.45); }
+.vid__btn--keep { color: #0b1a4a; background: linear-gradient(135deg, #ffe08a, #f5b400); box-shadow: 0 6px 16px rgba(217, 155, 54, 0.45); }
 .vid__btn--keep:hover { box-shadow: 0 10px 22px rgba(217, 155, 54, 0.55); }
-.vid__btn--keep.vid__btn--saved, .vid__btn--keep.vid__btn--saved:hover { color: #fffdf8; background: linear-gradient(135deg, #16815f, #075f49); box-shadow: 0 6px 16px rgba(7, 95, 73, 0.25); cursor: default; }
-.vid__btn--watch { color: #fffdf8; background: linear-gradient(135deg, #3aa882, #237a5c); box-shadow: 0 6px 16px rgba(35, 122, 92, 0.4); }
+.vid__btn--keep.vid__btn--saved, .vid__btn--keep.vid__btn--saved:hover { color: #ffffff; background: linear-gradient(135deg, #16815f, #075f49); box-shadow: 0 6px 16px rgba(7, 95, 73, 0.25); cursor: default; }
+.vid__btn--watch { color: #ffffff; background: linear-gradient(135deg, #3aa882, #237a5c); box-shadow: 0 6px 16px rgba(35, 122, 92, 0.4); }
 .vid__btn--remove { color: #ffd9e0; background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 217, 224, 0.45); }
 .vid__btn--remove:hover { color: #fff; background: rgba(214, 74, 104, 0.35); }
 
 /* What it is doing, said plainly and in a colour that shows. */
-.vid__state { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 600; color: #fffdf8; }
+.vid__state { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 600; color: #ffffff; }
 .vid__state--good { color: #9ff0cf; }
-.vid__manage-devices { width: fit-content; color: #f7d68f; font-size: 0.88rem; font-weight: 700; }
+.vid__manage-devices { width: fit-content; color: #ffe08a; font-size: 0.88rem; font-weight: 700; }
 .vid__manage-devices[hidden] { display: none; }
 .vid__state--bad { color: #ffc2cd; }
 .vid__state--working::before {
   content: ""; width: 15px; height: 15px; border-radius: 50%;
-  border: 2.5px solid rgba(255, 253, 248, 0.35); border-top-color: #f7d68f;
+  border: 2.5px solid rgba(255, 255, 255, 0.35); border-top-color: #ffe08a;
   animation: vid-spin 0.8s linear infinite;
 }
 @keyframes vid-spin { to { transform: rotate(360deg); } }
@@ -49,47 +49,47 @@
 /* The bar itself: tall enough to see across a room, with the number on it. */
 .vid__progress {
   position: relative; height: 22px; border-radius: 999px; overflow: hidden;
-  background: rgba(255, 253, 248, 0.18);
+  background: rgba(255, 255, 255, 0.18);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .vid__progress > span {
   display: block; height: 100%; width: 0; border-radius: 999px;
-  background: linear-gradient(90deg, #f7d68f, #d99b36);
+  background: linear-gradient(90deg, #ffe08a, #f5b400);
   background-size: 28px 28px;
   transition: width 0.3s ease;
   animation: vid-stripes 0.9s linear infinite;
-  background-image: linear-gradient(90deg, #f7d68f, #d99b36),
+  background-image: linear-gradient(90deg, #ffe08a, #f5b400),
     repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.28) 0 8px, rgba(255, 255, 255, 0) 8px 16px);
   background-blend-mode: overlay;
 }
 .vid__progress__figure {
   position: absolute; inset: 0; display: grid; place-items: center;
-  font-size: 0.78rem; font-weight: 800; color: #14213D; letter-spacing: 0.02em;
+  font-size: 0.78rem; font-weight: 800; color: #0b1a4a; letter-spacing: 0.02em;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 @keyframes vid-stripes { from { background-position: 0 0, 0 0; } to { background-position: 0 0, 32px 0; } }
 
 /* On a light page (the Offline videos list) the strip turns dark-on-light. */
 .vid-kept .vid__bar, .ui-body > .vid .vid__bar {
-  color: var(--ink); background: rgba(20, 33, 61, 0.05); border-color: rgba(20, 33, 61, 0.1);
+  color: var(--ink); background: rgba(11, 26, 74, 0.05); border-color: rgba(11, 26, 74, 0.1);
 }
 .vid-kept .vid__state, .ui-body > .vid .vid__state { color: var(--ink); }
 .ui-body > .vid .vid__manage-devices { color: var(--maroon); }
-.vid-kept .vid__btn--remove, .ui-body > .vid .vid__btn--remove { color: #9b3550; border-color: rgba(155, 53, 80, 0.35); background: transparent; }
+.vid-kept .vid__btn--remove, .ui-body > .vid .vid__btn--remove { color: #c3274a; border-color: rgba(155, 53, 80, 0.35); background: transparent; }
 
 /* The Offline videos page */
 .vid-keptlist, .vid-devices { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .vid-kept, .vid-device {
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
-  padding: 14px 16px; border-radius: 16px; background: var(--ui-card, #fffdf8);
-  box-shadow: var(--ui-shadow, 0 8px 20px rgba(20, 33, 61, 0.08));
+  padding: 14px 16px; border-radius: 16px; background: var(--ui-card, #ffffff);
+  box-shadow: var(--ui-shadow, 0 8px 20px rgba(11, 26, 74, 0.08));
 }
 .vid-kept__body, .vid-device > div { flex: 1; min-width: 200px; }
 .vid-kept__title, .vid-device__name { margin: 0; font-weight: 700; color: var(--ink); }
 .vid-kept__note, .vid-device__note { margin: 2px 0 0; font-size: 0.82rem; color: var(--ink-40); }
-.vid-kept__player { width: 100%; border-radius: 12px; background: #14213D; }
+.vid-kept__player { width: 100%; border-radius: 12px; background: #0b1a4a; }
 .vid-kept__actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.vid-kept__none { padding: 18px; border-radius: 16px; text-align: center; color: var(--ink-40); background: rgba(20, 33, 61, 0.03); }
+.vid-kept__none { padding: 18px; border-radius: 16px; text-align: center; color: var(--ink-40); background: rgba(11, 26, 74, 0.03); }
 .vid-device--off { opacity: 0.6; }
 @media (max-width: 560px) {
   .vid__actions, .vid-kept__actions { width: 100%; }

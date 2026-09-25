@@ -35,7 +35,7 @@
     {% if selected %}
     <section class="ui-panel" aria-label="Selected sound">
       <div class="ui-continue" style="padding: 0 0 16px;">
-        <span class="ui-sound__symbol" style="--tone: #2f5d8a; margin: 0;">/{{ selected.symbol }}/</span>
+        <span class="ui-sound__symbol" style="--tone: #1846e0; margin: 0;">/{{ selected.symbol }}/</span>
         <div class="ui-continue__text">
           <p class="ui-continue__kicker">{{ selected.group }}</p>
           <p class="ui-continue__title">{{ selected.name }}</p>
@@ -84,7 +84,7 @@
     {% endif %}
 
     {% for group in groups %}
-    {% cycle "#2f5d8a" "#7A2438" "#2e7d62" as tone silent %}
+    {% cycle "#1846e0" "#c3274a" "#12875a" as tone silent %}
     <section class="ui-panel">
       <header class="ui-section__head">
         <h2 class="ui-section__title"><span class="ui-section__num" style="background: {{ tone }}">{{ forloop.counter }}</span> {{ group.label }}</h2>

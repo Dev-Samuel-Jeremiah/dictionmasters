@@ -9,7 +9,7 @@
   {% if branding.favicon %}<link rel="icon" href="{% url 'pwa_brand_asset' 'favicon' %}?v={{ branding.updated_at|date:'U' }}">{% else %}<link rel="icon" type="image/png" href="{% static 'pwa/favicon-32.png' %}">{% endif %}
   {# Installing it as an app (apps/landing/pwa.py). #}
   <link rel="manifest" href="{% url 'pwa_manifest' %}">
-  <meta name="theme-color" content="#14213D">
+  <meta name="theme-color" content="#0b1a4a">
   <link rel="apple-touch-icon" href="{% if branding.logo or branding.favicon %}{% url 'pwa_icon' 180 'any' %}?v={{ branding.updated_at|date:'U' }}{% else %}{% static 'pwa/apple-touch-icon.png' %}{% endif %}">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -18,7 +18,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans:wght@500;700&display=swap" rel="stylesheet">
 
   {# Shown inside the header's quick-look panel: drop the page's own header and footer before it paints. #}
   <script>if (window.self !== window.top) document.documentElement.classList.add("is-embedded");</script>
@@ -29,16 +29,21 @@
   <link rel="stylesheet" href="{% static 'css/upload_progress.css' %}">
   <link rel="stylesheet" href="{% static 'css/videos.css' %}">
   {% block extra_css %}{% endblock %}
+  {# The app look (blue, yellow and white, from the prototype): loaded last so it sits over every page's own styles. #}
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
-<body>
-  {% include "includes/header.html" %}
-  {% if user.is_authenticated %}{% include "billing/_banner.html" %}{% endif %}
-  {% include "includes/messages.html" %}
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-  {% include "includes/footer.html" %}
+<body class="{% if user.is_authenticated %}px-app{% else %}px-public{% endif %} {% block body_class %}{% endblock %}">
+  {% if user.is_authenticated %}{% include "includes/app_nav.html" %}{% endif %}
+  <div class="px-main">
+    {% include "includes/header.html" %}
+    {% if user.is_authenticated %}{% include "billing/_banner.html" %}{% endif %}
+    {% include "includes/messages.html" %}
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+    {% include "includes/footer.html" %}
+  </div>
 
   {% comment %}Install Diction Masters as an app: a round button by the
   scrollbar, hidden once it is running as one (static/js/pwa.js).{% endcomment %}

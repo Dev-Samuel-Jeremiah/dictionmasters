@@ -4,43 +4,28 @@
 {% block title %}Log in — Diction Masters{% endblock %}
 
 {% block content %}
-<div class="ui">
-  <div class="wrap">
-    <div class="ui-auth">
-      <aside class="ui-auth__aside">
-        <span class="ui-auth__mark" aria-hidden="true">iː</span>
-        <div>
-          <p class="ui-auth__eyebrow">Welcome back</p>
-          <h1 class="ui-auth__title">Carry on where you left off</h1>
-          <p class="ui-auth__lede">Your lessons, your streak and everything you have practised are waiting.</p>
-        </div>
-        <div class="ui-auth__sounds" aria-hidden="true">
-          <span>iː</span><span>θ</span><span>ð</span><span>ʃ</span><span>ŋ</span><span>ɑː</span>
-        </div>
-        <ul class="ui-auth__points">
-          <li>Lessons for every sound of English</li>
-          <li>Spelling, vocabulary and transcription practice</li>
-          <li>Your teacher sees every recording and score</li>
-        </ul>
-      </aside>
+<div class="px-page px-authpage">
+  <div class="px-auth">
+    <div class="px-auth__art">
+      <img src="{% static 'img/app/login.jpg' %}" alt="Welcome back! Log in to continue your learning journey with Diction Masters.">
+    </div>
 
-      <div class="ui-auth__panel">
-        <h2 class="ui-auth__heading">Log in</h2>
-        <p class="ui-auth__note">Use the email address you registered with.</p>
-        <div class="form-card">
-          <form method="post" novalidate>
-            {% csrf_token %}
-            {% if form.non_field_errors %}
-            <ul class="non-field-errors">
-              {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
-            </ul>
-            {% endif %}
-            {% include "includes/form_fields.html" %}
-            <button type="submit" class="ui-btn ui-btn--gold ui-btn--large ui-btn--full">Log in</button>
-            <p class="ui-auth__foot">New here? <a href="{% url 'accounts:register_choice' %}">Get started</a>.</p>
-          </form>
-        </div>
+    <div class="px-auth__panel">
+      <h1 class="px-auth__title">Log in</h1>
+      <p class="px-auth__lede">Use the email address you registered with. Your lessons, your streak and everything you have practised are waiting.</p>
+      <div class="form-card px-auth__form">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+          <ul class="non-field-errors">
+            {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+          </ul>
+          {% endif %}
+          {% include "includes/form_fields.html" %}
+          <button type="submit" class="px-bigbtn">Log in {% include "includes/icon.html" with name="chev" size=22 stroke="2.8" %}</button>
+        </form>
       </div>
+      <p class="px-auth__foot">Don't have an account? <a href="{% url 'accounts:register_choice' %}">Sign up</a></p>
     </div>
   </div>
 </div>

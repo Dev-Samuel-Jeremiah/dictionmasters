@@ -269,7 +269,7 @@
 }
 .tag--teacher { background: var(--gold-tint); color: var(--gold-deep); }
 .tag--student { background: rgba(36, 71, 62, 0.12); color: var(--green); }
-.tag--pending { background: rgba(122, 36, 56, 0.1); color: var(--maroon-deep); }
+.tag--pending { background: rgba(195, 39, 74, 0.1); color: var(--maroon-deep); }
 
 .logout-form { display: inline; }
 
@@ -313,7 +313,7 @@
 .pathway-card:hover {
   transform: translateY(-3px);
   border-color: var(--gold);
-  box-shadow: 0 14px 30px -18px rgba(20, 33, 61, 0.35);
+  box-shadow: 0 14px 30px -18px rgba(11, 26, 74, 0.35);
 }
 .pathway-card__body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .pathway-card__name { font-size: 1.08rem; font-weight: 700; color: var(--ink); }
@@ -333,7 +333,7 @@
 .progress-bar {
   height: 6px;
   border-radius: 4px;
-  background: rgba(20, 33, 61, 0.08);
+  background: rgba(11, 26, 74, 0.08);
   overflow: hidden;
 }
 .progress-bar__fill { height: 100%; border-radius: 4px; }

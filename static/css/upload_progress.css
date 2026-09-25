@@ -5,18 +5,18 @@
    ========================================================= */
 
 .up-progress {
-  --up-ink: #14213D;
-  --up-line: rgba(20, 33, 61, 0.14);
-  --up-gold: #c98f3a;
-  --up-green: #2e7d62;
-  --up-red: #b23c5a;
+  --up-ink: #0b1a4a;
+  --up-line: rgba(11, 26, 74, 0.14);
+  --up-gold: #ffc72c;
+  --up-green: #12875a;
+  --up-red: #c3274a;
   margin: 18px 0 0;
   padding: 16px 18px;
   border: 1px solid var(--up-line);
   border-left: 5px solid var(--up-gold);
   border-radius: 14px;
-  background: #fffdf8;
-  box-shadow: 0 10px 26px -18px rgba(20, 33, 61, 0.5);
+  background: #ffffff;
+  box-shadow: 0 10px 26px -18px rgba(11, 26, 74, 0.5);
   font-family: inherit;
   color: var(--up-ink);
 }
@@ -28,17 +28,17 @@
   height: 10px;
   margin: 10px 0 8px;
   border-radius: 20px;
-  background: rgba(20, 33, 61, 0.09);
+  background: rgba(11, 26, 74, 0.09);
   overflow: hidden;
 }
 .up-progress__fill {
   width: 0;
   height: 100%;
   border-radius: 20px;
-  background: linear-gradient(90deg, #f0c878, var(--up-gold));
+  background: linear-gradient(90deg, #ffd659, var(--up-gold));
   transition: width 0.25s ease;
 }
-.up-progress__detail { font-size: 0.86rem; color: rgba(20, 33, 61, 0.6); }
+.up-progress__detail { font-size: 0.86rem; color: rgba(11, 26, 74, 0.6); }
 .up-progress__cancel {
   padding: 5px 14px;
   border: 1px solid var(--up-line);
@@ -55,7 +55,7 @@
 .up-progress.is-saving { border-left-color: var(--up-green); }
 .up-progress.is-saving .up-progress__percent { color: var(--up-green); }
 .up-progress.is-saving .up-progress__fill {
-  background: repeating-linear-gradient(115deg, #2e7d62 0 14px, #379a79 14px 28px);
+  background: repeating-linear-gradient(115deg, #12875a 0 14px, #379a79 14px 28px);
   animation: up-stripes 0.9s linear infinite;
 }
 @keyframes up-stripes { to { background-position: 56px 0; } }

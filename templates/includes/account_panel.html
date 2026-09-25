@@ -1,0 +1,41 @@
+{# The inside of the account menu: shared by the top bar and the "Me" tab. Needs dashboard_url. #}
+<div class="account-menu__panel">
+  <div class="account-menu__who">
+    <span class="account-menu__avatar account-menu__avatar--big" aria-hidden="true">{{ user.first_name|default:user.email|slice:":1"|upper }}</span>
+    <span class="account-menu__identity">
+      <strong>{{ user.get_full_name|default:user.first_name|default:"Signed in" }}</strong>
+      <small>{{ user.email }}</small>
+    </span>
+  </div>
+  <nav class="account-menu__list" aria-label="Your account">
+    <a href="{{ dashboard_url }}" class="account-menu__item"{% if request.path == dashboard_url %} aria-current="page"{% endif %}>
+      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="home" size=18 %}</span>
+      <span class="account-menu__text"><span>My dashboard</span><small>Your progress and next lesson</small></span>
+    </a>
+    <a href="{% url 'assessments:my_results' %}" class="account-menu__item"{% if request.resolver_match.url_name == 'my_results' %} aria-current="page"{% endif %}>
+      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="chart" size=18 %}</span>
+      <span class="account-menu__text"><span>My results</span><small>Scores across all programmes</small></span>
+    </a>
+    <a href="{% url 'learning_tools:hub' %}" class="account-menu__item"{% if '/learning-tools/' in request.path %} aria-current="page"{% endif %}>
+      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="grid" size=18 %}</span>
+      <span class="account-menu__text"><span>Learning tools</span><small>Every tool in one place</small></span>
+    </a>
+    {% if billing.can_pay %}
+    <a href="{% url 'billing:account' %}" class="account-menu__item"{% if request.path == '/billing/' %} aria-current="page"{% endif %}>
+      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="card" size=18 %}</span>
+      <span class="account-menu__text"><span>My plan</span><small>Plans, payments and receipts</small></span>
+    </a>
+    {% endif %}
+    <a href="{% url 'videos:offline' %}" class="account-menu__item"{% if '/videos/offline/' in request.path %} aria-current="page"{% endif %}>
+      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="video" size=18 %}</span>
+      <span class="account-menu__text"><span>Offline videos</span><small>Watch without the internet</small></span>
+    </a>
+  </nav>
+  <form method="post" action="{% url 'accounts:logout' %}" class="account-menu__logout">
+    {% csrf_token %}
+    <button type="submit" class="account-menu__item account-menu__item--out">
+      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="logout" size=18 %}</span>
+      <span class="account-menu__text"><span>Log out</span></span>
+    </button>
+  </form>
+</div>

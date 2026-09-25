@@ -1,59 +1,120 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Learning Tools — Diction Masters{% endblock %}
+{% block title %}Learn — Diction Masters{% endblock %}
 
 {% block content %}
-<div class="ui">
-  <section class="ui-hero ui-hero--plum">
-    <div class="wrap">
-      <ol class="ui-crumbs">
-        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
-        <li>Learning tools</li>
-      </ol>
-      <div class="ui-hero__inner">
-        <div class="ui-hero__main">
-          <span class="ui-hero__icon" aria-hidden="true">&#129520;</span>
-          <div>
-            <p class="ui-hero__eyebrow">Learning tools</p>
-            <h1 class="ui-hero__title">Everything you can practise with</h1>
-            <p class="ui-hero__lede">Drills, lessons for every sound, this term's reading book and a library to look things up. More will land here as they're built.</p>
-            <div class="ui-hero__chips">
-              <span class="ui-chip ui-chip--gold">{{ tools|length }} tool{{ tools|length|pluralize }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+<div class="px-page px-learn">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/heroGirl.jpg' %}" alt="">
+    <h1>Learn</h1>
+    <p>Pick up any course or tool. Your progress saves as you go.</p>
   </section>
 
-  <div class="wrap ui-body">
-    <div class="ui-grid">
-      {% for tool in tools %}
-        {% if tool.icon == "daily-practice" %}{% firstof "#2e7d62" as tone %}{% firstof "📅" as icon %}
-        {% elif tool.icon == "tutor" %}{% firstof "#1f6f5c" as tone %}{% firstof "🎙️" as icon %}
-        {% elif tool.icon == "book" %}{% firstof "#7A2438" as tone %}{% firstof "📖" as icon %}
-        {% elif tool.icon == "tricks" %}{% firstof "#b8863b" as tone %}{% firstof "✨" as icon %}
-        {% elif tool.icon == "reading-club" %}{% firstof "#2f5d8a" as tone %}{% firstof "📚" as icon %}
-        {% elif tool.icon == "diction-library" %}{% firstof "#236b65" as tone %}{% firstof "🏛️" as icon %}
-        {% elif tool.icon == "diction-radio" %}{% firstof "#7A2438" as tone %}{% firstof "📻" as icon %}
-        {% else %}{% firstof "#b8863b" as tone %}{% firstof "🔎" as icon %}{% endif %}
+  <div class="px-wrap" style="margin-top: 18px">
+    <div class="px-chips" role="toolbar" aria-label="Show" data-learn-filter>
+      <button type="button" class="px-chip is-on" data-cat="all" aria-pressed="true">All</button>
+      <button type="button" class="px-chip" data-cat="pronunciation" aria-pressed="false">Pronunciation</button>
+      <button type="button" class="px-chip" data-cat="fluency" aria-pressed="false">Fluency</button>
+      <button type="button" class="px-chip" data-cat="spelling" aria-pressed="false">Spelling &amp; reading</button>
+      <button type="button" class="px-chip" data-cat="school" aria-pressed="false">School</button>
+      <button type="button" class="px-chip" data-cat="library" aria-pressed="false">Libraries &amp; radio</button>
+      <button type="button" class="px-chip" data-cat="etiquette" aria-pressed="false">Etiquette</button>
+    </div>
+
+    <div class="px-sec" data-learn-head><h2>Courses</h2></div>
+    <div class="px-grid-list" style="margin-top: 0">
+      <a href="{% url 'book:home' %}" class="px-item" data-cat="pronunciation">
+        <img class="px-thumb" src="{% static 'img/app/c44.jpg' %}" alt="">
+        <span class="px-item__it"><b>The 44 Academy</b><span>A full lesson for every sound of British English.</span></span>
+        <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+      </a>
+      <a href="{% url 'tricks:home' %}" class="px-item" data-cat="fluency">
+        <img class="px-thumb" src="{% static 'img/app/cSB.jpg' %}" alt="">
+        <span class="px-item__it"><b>Tricks to Sound Fluent</b><span>The tricks that make English flow.</span></span>
+        <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+      </a>
+      <a href="{% url 'echospell:hub' %}" class="px-item" data-cat="spelling">
+        <img class="px-thumb" src="{% static 'img/app/cEcho.jpg' %}" alt="">
+        <span class="px-item__it"><b>EchoSpell</b><span>Spelling and phonics by level, with scored activities.</span></span>
+        <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+      </a>
+      <a href="{% url 'learning_modules:hub' %}" class="px-item" data-cat="school">
+        <img class="px-thumb" src="{% static 'img/app/cSchool.jpg' %}" alt="">
+        <span class="px-item__it"><b>Learning Modules</b><span>Term by term, week by week, Monday to Friday.</span></span>
+        <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+      </a>
+      <div class="px-item is-locked" data-cat="etiquette" aria-disabled="true">
+        <img class="px-thumb" src="{% static 'img/app/cEtiq.jpg' %}" alt="">
+        <span class="px-item__it"><b>The Etiquette Advantage</b><span>Poise and polish for every conversation.</span><span class="px-item__prog">Coming soon</span></span>
+        <span class="px-chev">{% include "includes/icon.html" with name="lock" size=20 %}</span>
+      </div>
+    </div>
+
+    <div class="px-sec" data-learn-head><h2>Learning tools</h2></div>
+    <div class="px-grid-list" style="margin-top: 0">
+      {% for tool in tools %}{% if tool.icon != "book" and tool.icon != "tricks" %}
+        {% if tool.icon == "daily-practice" %}{% firstof "t-mint" as tone %}{% firstof "calendar" as icon %}{% firstof "pronunciation" as cat %}
+        {% elif tool.icon == "tutor" %}{% firstof "t-sky" as tone %}{% firstof "robot" as icon %}{% firstof "spelling" as cat %}
+        {% elif tool.icon == "book" %}{% firstof "t-butter" as tone %}{% firstof "cap" as icon %}{% firstof "pronunciation" as cat %}
+        {% elif tool.icon == "tricks" %}{% firstof "t-blush" as tone %}{% firstof "spark" as icon %}{% firstof "fluency" as cat %}
+        {% elif tool.icon == "reading-club" %}{% firstof "t-lilac" as tone %}{% firstof "shelf" as icon %}{% firstof "spelling" as cat %}
+        {% elif tool.icon == "diction-library" %}{% firstof "t-mint" as tone %}{% firstof "shelf" as icon %}{% firstof "library" as cat %}
+        {% elif tool.icon == "diction-radio" %}{% firstof "t-butter" as tone %}{% firstof "radio" as icon %}{% firstof "library" as cat %}
+        {% else %}{% firstof "t-stone" as tone %}{% firstof "search" as icon %}{% firstof "library" as cat %}{% endif %}
         {% if tool.available %}
-        <a href="{% url tool.url_name %}" class="ui-card ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
-          <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ icon }}</span></span>
-          <span class="ui-card__name">{{ tool.name }}</span>
-          <span class="ui-card__desc">{{ tool.blurb }}</span>
-          <span class="ui-card__cta">Open &rarr;</span>
-        </a>
+        <a href="{% url tool.url_name %}" class="px-item" data-cat="{{ cat }}">
         {% else %}
-        <div class="ui-card ui-card--soon" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
-          <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">{{ icon }}</span><span class="ui-status">Coming soon</span></span>
-          <span class="ui-card__name">{{ tool.name }}</span>
-          <span class="ui-card__desc">{{ tool.blurb }}</span>
-        </div>
+        <div class="px-item is-locked" data-cat="{{ cat }}" aria-disabled="true">
         {% endif %}
-      {% endfor %}
+          {% if tool.icon == "tutor" %}<img class="px-thumb" src="{% static 'img/app/cYala.jpg' %}" alt="">{% else %}<span class="px-item__ii {{ tone }}">{% include "includes/icon.html" with name=icon size=24 %}</span>{% endif %}
+          <span class="px-item__it"><b>{{ tool.name }}</b><span>{{ tool.blurb }}</span>{% if not tool.available %}<span class="px-item__prog">Coming soon</span>{% endif %}</span>
+          <span class="px-chev">{% if tool.available %}{% include "includes/icon.html" with name="chev" size=20 %}{% else %}{% include "includes/icon.html" with name="lock" size=20 %}{% endif %}</span>
+        {% if tool.available %}</a>{% else %}</div>{% endif %}
+      {% endif %}{% endfor %}
+      <a href="{% url 'clash:hub' %}" class="px-item" data-cat="fluency">
+        <span class="px-item__ii t-blush">{% include "includes/icon.html" with name="swords" size=24 %}</span>
+        <span class="px-item__it"><b>Diction Clash</b><span>Timed games built from your lessons. Fastest correct answers win.</span></span>
+        <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+      </a>
+      <a href="{% url 'quick_words:hub' %}" class="px-item" data-cat="pronunciation">
+        <span class="px-item__ii t-butter">{% include "includes/icon.html" with name="words" size=24 %}</span>
+        <span class="px-item__it"><b>Quick Words</b><span>Hear any word, see its meaning and save it to your lists.</span></span>
+        <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+      </a>
+      <a href="{% url 'book:phonemic_chart' %}" class="px-item" data-cat="pronunciation">
+        <span class="px-item__ii t-sky">{% include "includes/icon.html" with name="ipa" size=28 %}</span>
+        <span class="px-item__it"><b>Phonemic chart</b><span>Every sound of English, with audio.</span></span>
+        <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+      </a>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* The chips above the list: show one kind of course or tool at a time. */
+(function () {
+  var bar = document.querySelector("[data-learn-filter]");
+  if (!bar) return;
+  var items = [].slice.call(document.querySelectorAll(".px-learn .px-grid-list [data-cat]"));
+  bar.addEventListener("click", function (event) {
+    var chip = event.target.closest("[data-cat]");
+    if (!chip) return;
+    var cat = chip.dataset.cat;
+    [].forEach.call(bar.querySelectorAll(".px-chip"), function (c) {
+      var on = c === chip;
+      c.classList.toggle("is-on", on);
+      c.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    items.forEach(function (item) { item.hidden = cat !== "all" && item.dataset.cat !== cat; });
+    [].forEach.call(document.querySelectorAll("[data-learn-head]"), function (head) {
+      var list = head.nextElementSibling;
+      head.hidden = list && !list.querySelector("[data-cat]:not([hidden])");
+      if (list) list.hidden = head.hidden;
+    });
+  });
+})();
+</script>
 {% endblock %}

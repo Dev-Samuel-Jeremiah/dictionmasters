@@ -1,7 +1,12 @@
-<footer class="site-footer">
+{% if user.is_authenticated %}
+<footer class="site-footer px-foot px-foot--app">
+  <p class="site-footer__copyright">&copy; {% now "Y" %} Diction Masters &middot; <a href="{% url 'billing:pricing' %}">Pricing</a> &middot; <a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Control panel</a></p>
+</footer>
+{% else %}
+<footer class="site-footer px-foot">
   <div class="wrap site-footer__inner">
     <div class="site-footer__brand">
-      <span class="brand__name brand__name--light">{% if branding.logo %}<img src="{% url 'pwa_brand_asset' 'logo' %}?v={{ branding.updated_at|date:'U' }}" alt="{% if not branding.show_name_with_logo %}Diction Masters{% endif %}" class="site-footer__logo">{% else %}<span class="site-footer__mark" aria-hidden="true">iː</span>{% endif %}{% if not branding.logo or branding.show_name_with_logo %}Diction Masters{% endif %}</span>
+      {% url 'landing:home' as home_url %}{% include "includes/brand.html" with brand_href=home_url %}
       <p>A private British English tutor for every learner, at school or at home.</p>
     </div>
     <nav class="site-footer__links" aria-label="Footer">
@@ -15,3 +20,4 @@
   </div>
   <p class="site-footer__copyright">&copy; {% now "Y" %} Diction Masters. All rights reserved.</p>
 </footer>
+{% endif %}

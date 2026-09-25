@@ -4,58 +4,38 @@
 {% block title %}Get started — Diction Masters{% endblock %}
 
 {% block content %}
-<div class="ui">
-  <section class="ui-hero">
-    <div class="wrap">
-      <ol class="ui-crumbs">
-        <li><a href="{% url 'landing:home' %}">Home</a></li>
-        <li>Get started</li>
-      </ol>
-      <div class="ui-hero__inner">
-        <div class="ui-hero__main">
-          <span class="ui-hero__icon" aria-hidden="true">iː</span>
-          <div>
-            <p class="ui-hero__eyebrow">Get started</p>
-            <h1 class="ui-hero__title">How will you be using Diction Masters?</h1>
-            <p class="ui-hero__lede">Pick the one that matches you. You can sort out the details on the next page.</p>
-          </div>
-        </div>
-        <div class="ui-hero__side">
-          <a href="{% url 'accounts:login' %}" class="ui-btn ui-btn--glass">Already have an account? Log in</a>
-        </div>
-      </div>
+<div class="px-page px-authpage">
+  <div class="px-auth">
+    <div class="px-auth__art">
+      <img src="{% static 'img/app/role.jpg' %}" alt="Choose your role. Tell us who you are so we can personalise your learning experience.">
     </div>
-  </section>
 
-  <div class="wrap ui-body">
-    <div class="ui-grid">
-      <a href="{% url 'accounts:register_school' %}" class="ui-card ui-lift" style="--tone: #7A2438; --i: 0">
-        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#127979;</span></span>
-        <span class="ui-card__name">Register your school</span>
-        <span class="ui-card__desc">Set your school up and get your school code. Plans are priced by your number of teachers.</span>
-        <span class="ui-card__cta">Register your school &rarr;</span>
-      </a>
-
-      <a href="{% url 'accounts:register_student' %}" class="ui-card ui-lift" style="--tone: #2f5d8a; --i: 1">
-        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#127890;</span></span>
-        <span class="ui-card__name">I'm a student at a school</span>
-        <span class="ui-card__desc">Sign up with your school's code, then start a free trial or pay for your own access.</span>
-        <span class="ui-card__cta">Sign up as a student &rarr;</span>
-      </a>
-
-      <a href="{% url 'accounts:join_with_code' %}" class="ui-card ui-lift" style="--tone: #b8863b; --i: 2">
-        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#128273;</span></span>
-        <span class="ui-card__name">I'm a teacher with a code</span>
-        <span class="ui-card__desc">Use the one-time code your school admin gave you to join your class.</span>
-        <span class="ui-card__cta">Enter your code &rarr;</span>
-      </a>
-
-      <a href="{% url 'accounts:register_individual' %}" class="ui-card ui-lift" style="--tone: #2e7d62; --i: 3">
-        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#129489;&#8205;&#127891;</span></span>
-        <span class="ui-card__name">I'm an adult learner</span>
-        <span class="ui-card__desc">Not a student? Create your own account and learn at your own pace, no code needed.</span>
-        <span class="ui-card__cta">Register as an individual &rarr;</span>
-      </a>
+    <div class="px-auth__panel">
+      <h1 class="px-auth__title">How will you use Diction Masters?</h1>
+      <p class="px-auth__lede">Pick the one that matches you. You can sort out the details on the next page.</p>
+      <nav class="px-roles" aria-label="Choose your role">
+        <a href="{% url 'accounts:register_student' %}" class="px-role">
+          <img src="{% static 'img/app/rStudent.jpg' %}" alt="">
+          <span class="px-role__t"><b>I'm a student at a school</b><span>Sign up with your school's code, then start a free trial or pay for your own access.</span></span>
+          <span class="px-role__go" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=18 stroke="2.6" %}</span>
+        </a>
+        <a href="{% url 'accounts:join_with_code' %}" class="px-role">
+          <img src="{% static 'img/app/rTeacher.jpg' %}" alt="">
+          <span class="px-role__t"><b>I'm a teacher with a code</b><span>Use the one-time code your school admin gave you to join your class.</span></span>
+          <span class="px-role__go" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=18 stroke="2.6" %}</span>
+        </a>
+        <a href="{% url 'accounts:register_school' %}" class="px-role">
+          <img src="{% static 'img/app/rSchool.jpg' %}" alt="">
+          <span class="px-role__t"><b>School owner or administrator</b><span>Set your school up and get your school code. Plans are priced by your number of teachers.</span></span>
+          <span class="px-role__go" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=18 stroke="2.6" %}</span>
+        </a>
+        <a href="{% url 'accounts:register_individual' %}" class="px-role">
+          <img src="{% static 'img/app/rParent.jpg' %}" alt="">
+          <span class="px-role__t"><b>Adult or individual learner</b><span>Not a student? Create your own account and learn at your own pace, no code needed.</span></span>
+          <span class="px-role__go" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=18 stroke="2.6" %}</span>
+        </a>
+      </nav>
+      <p class="px-auth__foot">Already have an account? <a href="{% url 'accounts:login' %}">Log in</a></p>
     </div>
   </div>
 </div>

@@ -44,7 +44,7 @@
   color: var(--ink-70);
 }
 .score-pill--pass { border-color: var(--green); color: var(--green); background: rgba(36, 71, 62, 0.07); }
-.score-pill--fail { border-color: var(--maroon); color: var(--maroon); background: rgba(122, 36, 56, 0.06); }
+.score-pill--fail { border-color: var(--maroon); color: var(--maroon); background: rgba(195, 39, 74, 0.06); }
 .score-pill--waiting { border-color: var(--gold); color: var(--gold-deep); background: var(--gold-tint); }
 .score-pill--new { color: var(--ink-40); }
 
@@ -141,7 +141,7 @@
 .option:hover .option__box { border-color: var(--gold); }
 .option input:checked ~ .option__box {
   border-color: var(--maroon);
-  background: rgba(122, 36, 56, 0.07);
+  background: rgba(195, 39, 74, 0.07);
   color: var(--maroon-deep);
   font-weight: 700;
 }
@@ -164,7 +164,7 @@
 .chip:hover { border-color: var(--gold); }
 .chip--picked {
   border-color: var(--maroon);
-  background: rgba(122, 36, 56, 0.08);
+  background: rgba(195, 39, 74, 0.08);
   color: var(--maroon-deep);
   font-weight: 700;
   transform: translateY(-1px);
@@ -195,7 +195,7 @@
   padding: 14px;
   border: 1.5px dashed var(--rule);
   border-radius: var(--radius);
-  background: rgba(20, 33, 61, 0.02);
+  background: rgba(11, 26, 74, 0.02);
 }
 .bucket__label {
   margin: 0 0 10px;
@@ -211,7 +211,7 @@
   padding: 10px;
   border: 1.5px dashed var(--rule);
   border-radius: var(--radius);
-  background: rgba(20, 33, 61, 0.02);
+  background: rgba(11, 26, 74, 0.02);
   align-items: center;
 }
 .order-line:empty::before {
@@ -271,7 +271,7 @@
   margin-bottom: 22px;
 }
 .score-banner--pass { border-color: var(--green); background: rgba(36, 71, 62, 0.06); }
-.score-banner--fail { border-color: var(--maroon); background: rgba(122, 36, 56, 0.05); }
+.score-banner--fail { border-color: var(--maroon); background: rgba(195, 39, 74, 0.05); }
 .score-banner--waiting { border-color: var(--gold); background: var(--gold-tint); }
 .score-banner__percent {
   font-family: var(--font-serif);
