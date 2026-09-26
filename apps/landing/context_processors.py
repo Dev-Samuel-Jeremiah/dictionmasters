@@ -20,7 +20,7 @@ NAV_SECTIONS = (
     ("practice", ("/daily-practice/", "/assessments/", "/clash/", "/tutor/")),
     ("learn", (
         "/learning-tools/", "/book/", "/tricks/", "/echospell/", "/learning-modules/",
-        "/reading-club/", "/reference-library/", "/library/", "/radio/", "/quick-words/",
+        "/reading-club/", "/assembly-recitals/", "/reference-library/", "/library/", "/radio/", "/quick-words/",
     )),
     ("me", ("/billing/", "/videos/offline/")),
     ("home", ("/accounts/dashboard/", "/school/dashboard/")),

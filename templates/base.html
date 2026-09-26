@@ -35,7 +35,7 @@
   {% if native_app %}<link rel="stylesheet" href="{% static 'css/native_app.css' %}">{% endif %}
   {% block extra_head %}{% endblock %}
 </head>
-<body class="{% if user.is_authenticated %}px-app{% else %}px-public{% endif %}{% if request.path|slice:':6' == '/book/' or request.path|slice:':8' == '/tricks/' or request.path|slice:':13' == '/quick-words/' or request.path|slice:':7' == '/tutor/' or request.path|slice:':16' == '/daily-practice/' or request.path|slice:':13' == '/assessments/' or request.path|slice:':7' == '/radio/' %} px-ringed{% endif %} {% block body_class %}{% endblock %}">
+<body class="{% if user.is_authenticated %}px-app{% else %}px-public{% endif %}{% if request.path|slice:':6' == '/book/' or request.path|slice:':8' == '/tricks/' or request.path|slice:':13' == '/quick-words/' or request.path|slice:':7' == '/tutor/' or request.path|slice:':16' == '/daily-practice/' or request.path|slice:':13' == '/assessments/' or request.path|slice:':7' == '/radio/' or request.path|slice:':19' == '/assembly-recitals/' %} px-ringed{% endif %} {% block body_class %}{% endblock %}">
   {% if user.is_authenticated %}{% include "includes/app_nav.html" %}{% endif %}
   <div class="px-main">
     {% include "includes/header.html" %}
@@ -47,21 +47,7 @@
     {% include "includes/footer.html" %}
   </div>
 
-  {% comment %}Install Diction Masters as an app: a round button by the
-  scrollbar, hidden once it is running as one (static/js/pwa.js).{% endcomment %}
-  {% if not native_app %}{# Already an app: no "Install app" button. #}
-  <div class="install-fab" data-install-fab hidden>
-    <button type="button" class="install-fab__btn" data-install-app aria-label="Install Diction Masters as an app">
-      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-        <rect x="4" y="2.5" width="16" height="19" rx="4" fill="none" stroke="currentColor" stroke-width="1.9"/>
-        <path d="M12 7.5v7m-3.2-3.2L12 14.5l3.2-3.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M9.5 18.5h5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-      </svg>
-      <span class="install-fab__word">Install app</span>
-    </button>
-    <button type="button" class="install-fab__close" data-install-hide aria-label="Not now">&times;</button>
-  </div>
-
+  {% if not native_app %}
   {# The steps, for browsers with no install button of their own. #}
   <dialog class="install-steps" id="install-steps" aria-labelledby="install-fab-title">
     <div class="install-steps__card">

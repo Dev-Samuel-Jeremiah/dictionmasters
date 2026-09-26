@@ -18,7 +18,7 @@ def school_admin(school):
 def add_login_fields(form, school):
     admin = school_admin(school)
     new = admin is None
-    keep = "" if new else " Leave blank to keep their current password."
+    keep = "" if new else " A password is already saved: leave these blank to keep it, or type a new one to change it."
     form.fields[NAME] = forms.CharField(
         label="School login: admin's name", max_length=150, required=False,
         initial=admin.get_full_name() if admin else "",
@@ -28,14 +28,18 @@ def add_login_fields(form, school):
         label="School login: email", required=False, initial=admin.email if admin else "",
         help_text="They sign in with this email on the main site's Log in page, then add teachers and share the school code.",
     )
+    # A saved password is stored one-way (hashed) and can't be shown again,
+    # so the box says one is set. What's typed stays in the box if the form
+    # comes back with an error; the eye button shows it.
+    saved = {"placeholder": "•••••••• saved — type a new one to change it"} if admin and admin.has_usable_password() else {}
     form.fields[PASSWORD] = forms.CharField(
         label="School login: password", required=False, strip=False,
-        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}, render_value=False),
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password", **saved}, render_value=True),
         help_text="At least 8 characters, not just numbers." + keep,
     )
     form.fields[CONFIRM] = forms.CharField(
         label="School login: confirm password", required=False, strip=False,
-        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}, render_value=False),
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password", **saved}, render_value=True),
     )
     for name in (NAME, EMAIL, PASSWORD, CONFIRM):
         form.fields[name].widget.attrs["class"] = "cr-input"

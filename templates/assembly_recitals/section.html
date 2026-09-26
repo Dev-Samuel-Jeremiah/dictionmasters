@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ section.name }} — Assembly Recitals{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/recitals.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--blue px-hero-img--teacher">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'assembly_recitals:hub' %}">Assembly Recitals</a></li>
+        <li>{{ section.name }}</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">{{ section.icon }}</span>
+          <div>
+            <p class="ui-hero__eyebrow">Assembly Recitals</p>
+            <h1 class="ui-hero__title">{{ section.name }}</h1>
+            {% if section.description %}<p class="ui-hero__lede">{{ section.description }}</p>{% endif %}
+            <div class="ui-hero__chips"><span class="ui-chip ui-chip--gold">{{ recitals|length }} recital{{ recitals|length|pluralize }}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+    <nav class="rc-tabs" aria-label="Sections">
+      {% for s in sections %}
+      <a href="{% url 'assembly_recitals:section' s.slug %}" class="rc-tab{% if s.pk == section.pk %} is-on{% endif %}"{% if s.pk == section.pk %} aria-current="page"{% endif %}><span aria-hidden="true">{{ s.icon }}</span> {{ s.name }}</a>
+      {% endfor %}
+    </nav>
+
+    {% if recitals %}
+    <div class="ui-grid">
+      {% for recital in recitals %}
+      <a href="{% url 'assembly_recitals:recital' section.slug recital.slug %}" class="ui-card ui-lift" style="--i: {{ forloop.counter0 }}">
+        <span class="ui-card__top">
+          <span class="ui-card__icon" aria-hidden="true">{{ forloop.counter }}</span>
+          <span class="rc-media">{% if recital.video_source %}<span class="ui-chip">&#9654; Video</span>{% endif %}{% if recital.audio_source %}<span class="ui-chip">&#127911; Audio</span>{% endif %}</span>
+        </span>
+        <span class="ui-card__name">{{ recital.title }}</span>
+        {% if recital.summary %}<span class="ui-card__desc">{{ recital.summary }}</span>{% endif %}
+        <span class="ui-card__foot">
+          <span class="ui-card__meta"><span>{{ recital.line_count }} line{{ recital.line_count|pluralize }}</span><span>Recite &rarr;</span></span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="ui-empty"><p>{{ section.name }} recitals are on their way. Check back soon.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

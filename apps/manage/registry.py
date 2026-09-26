@@ -298,6 +298,22 @@ SECTIONS = [
         ],
     },
     {
+        "slug": "assembly-recitals", "name": "Assembly Recitals", "icon": "📣", "tone": "#1846E0",
+        "blurb": "Days & months, numerals, songs and more, said together at assembly.",
+        "screens": [
+            {"key": "recital-sections", "model": "assembly_recitals.Section",
+             "columns": ["name", "icon", "order", "is_published"],
+             "search": ["name", "description"], "children": ["recitals"],
+             "form": ["name", "icon", "description", "order", "is_published"]},
+            {"key": "recitals", "model": "assembly_recitals.Recital",
+             "columns": ["title", "section", "order", "is_published"],
+             "search": ["title", "summary", "lines"], "parent": ("section", "recital-sections"),
+             "form": ["section", "title", "summary", "lines", "notes", "audio_file", "audio_url",
+                      "video_file", "video_url", "video_caption", "video_duration_label", "video_poster",
+                      "order", "is_published"]},
+        ],
+    },
+    {
         "slug": "reference-library", "name": "Reference Library", "icon": "🔎", "tone": "#1846E0",
         "blurb": "Topics, tags and articles learners look things up in.",
         "screens": [
@@ -449,6 +465,7 @@ QUICK_ADDS = [
     ("sounds", "Sound lesson", "🗣️"),
     ("assessments", "Assessment", "📋"),
     ("chapters", "Reading chapter", "📚"),
+    ("recitals", "Assembly recital", "📣"),
     ("articles", "Library article", "📄"),
     ("diction-library-items", "Diction Library item", "📚"),
     ("radio-programs", "Radio programme", "📻"),

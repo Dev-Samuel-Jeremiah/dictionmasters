@@ -6,6 +6,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 
+from apps.billing.access import subscription_for
 from apps.billing.models import Plan
 from apps.billing.services import begin_access
 
@@ -13,7 +14,7 @@ from .dashboard_data import learner_dashboard
 from .forms import (
     EmailAuthenticationForm,
     IndividualRegistrationForm,
-    JoinWithCodeForm,
+    TeacherRegistrationForm,
     SchoolRegistrationForm,
     StudentRegistrationForm,
 )
@@ -48,12 +49,19 @@ def register_school(request):
         if form.is_valid():
             user = form.save()
             auth_login(request, user)
+            plan = _chosen_plan(form, Plan.AUDIENCE_SCHOOL)
+            if plan is not None:
+                # Remembered now, trial or not: it sets how many teachers can join.
+                subscription = subscription_for(user)
+                if subscription is not None and subscription.plan_id is None:
+                    subscription.plan = plan
+                    subscription.save(update_fields=["plan", "updated_at"])
             messages.success(
                 request,
                 f"{user.school.name} is set up. Your school code is {user.school.code} — "
-                "teachers join with codes you make, and students sign up with this school code.",
+                "teachers and students both sign up with it.",
             )
-            return redirect(begin_access(request, user, form.cleaned_data.get("start"), _chosen_plan(form, Plan.AUDIENCE_SCHOOL),
+            return redirect(begin_access(request, user, form.cleaned_data.get("start"), plan,
                                           form.cleaned_data.get("promo_code", "")))
     else:
         form = SchoolRegistrationForm()
@@ -90,14 +98,14 @@ def register_student(request):
 
 def join_with_code(request):
     if request.method == "POST":
-        form = JoinWithCodeForm(request.POST)
+        form = TeacherRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
             auth_login(request, user)
             messages.success(request, f"You're in, {user.first_name}. Welcome to {user.school.name}.")
             return redirect(_post_login_redirect(user))
     else:
-        form = JoinWithCodeForm()
+        form = TeacherRegistrationForm(initial={"school_code": request.GET.get("school", "")})
     return render(request, "accounts/join_with_code.html", {"form": form})
 
 

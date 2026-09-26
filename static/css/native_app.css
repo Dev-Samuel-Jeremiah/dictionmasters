@@ -31,8 +31,7 @@ html[data-native-app] select {
 }
 
 /* ---- already an app: no install prompts ---- */
-html[data-native-app] [data-install-app],
-html[data-native-app] [data-install-fab] {
+html[data-native-app] [data-install-app] {
   display: none !important;
 }
 

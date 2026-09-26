@@ -1,0 +1,52 @@
+/* Assembly Recitals: the words set large and calm, and Present mode for
+   the hall screen. Blue, yellow and white only. */
+
+.rc-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.rc-tab { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 999px;
+  background: #fff; color: #55607E; font-weight: 700; font-size: 0.88rem; text-decoration: none; box-shadow: 0 2px 8px rgba(11, 26, 74, 0.06); }
+.rc-tab:hover { color: #0B1A4A; }
+.rc-tab.is-on { background: #0B1A4A; color: #fff; }
+.rc-media { display: inline-flex; gap: 4px; }
+.rc-media .ui-chip { font-size: 0.7rem; padding: 3px 8px; background: #E7EFFF; color: #1846E0; }
+
+/* the words */
+.rc-words__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rc-size { display: inline-flex; gap: 4px; }
+.rc-size__btn { min-width: 40px; min-height: 34px; border: 1px solid #E3E8F4; border-radius: 10px; background: #fff; color: #0B1A4A; font: inherit; font-weight: 800; cursor: pointer; }
+.rc-size__btn:hover { background: #F2F5FC; }
+.rc-audio { width: 100%; margin: 4px 0 18px; }
+.rc-verses { --rc-scale: 1; display: flex; flex-direction: column; gap: calc(18px * var(--rc-scale)); }
+.rc-verse { margin: 0; font-size: calc(1.45rem * var(--rc-scale)); line-height: 1.55; font-weight: 700; color: #0B1A4A; letter-spacing: -0.005em; }
+.rc-verse + .rc-verse { padding-top: calc(18px * var(--rc-scale)); border-top: 1px solid #E3E8F4; }
+.rc-line { display: inline; }
+
+/* present mode */
+.rc-presenting, .rc-presenting body { overflow: hidden; }
+.rc-present { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column;
+  background: radial-gradient(120% 90% at 50% 0%, #1846E0 0%, #0F31AE 55%, #0B1A4A 100%); color: #fff; }
+.rc-present[hidden] { display: none; }
+.rc-present__top, .rc-present__bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px clamp(16px, 4vw, 40px); }
+.rc-present__title { margin: 0; font-weight: 800; font-size: clamp(1rem, 2vw, 1.3rem); opacity: 0.9; }
+.rc-present__tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.rc-present__btn { min-height: 40px; padding: 0 14px; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1); color: #fff; font: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer; }
+.rc-present__btn:hover, .rc-present__btn[aria-pressed="true"] { background: #FFC72C; border-color: #FFC72C; color: #0B1A4A; }
+.rc-present__stage { flex: 1; display: grid; place-items: center; padding: 0 clamp(16px, 6vw, 80px); overflow: auto; }
+.rc-present__slide { text-align: center; animation: rc-in 0.35s cubic-bezier(.2, .8, .2, 1); }
+.rc-present__line { margin: 0.12em 0; font-size: clamp(2rem, 6.5vw, 5.2rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.02em;
+  text-shadow: 0 0.05em 0 #0F31AE, 0 0.12em 0.3em rgba(11, 26, 74, 0.45); }
+.rc-present__slide.is-line .rc-present__line { font-size: clamp(2.6rem, 9vw, 7.5rem); color: #FFC72C; }
+.rc-present__count { margin: 0; font-weight: 700; opacity: 0.85; font-variant-numeric: tabular-nums; }
+.rc-present__nav { width: 64px; height: 64px; border: 0; border-radius: 50%; background: #FFC72C; color: #0B1A4A; font-size: 1.6rem; font-weight: 800; cursor: pointer;
+  box-shadow: 0 6px 0 #E9AE00, 0 12px 24px rgba(11, 26, 74, 0.4); }
+.rc-present__nav:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+.rc-present__nav:focus-visible, .rc-present__btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.rc-present__hint { margin: 0 0 14px; text-align: center; font-size: 0.8rem; opacity: 0.65; }
+@keyframes rc-in { from { opacity: 0; transform: translateY(18px) scale(.98); } }
+@media (max-width: 600px) {
+  .rc-present__top { flex-direction: column; align-items: stretch; }
+  .rc-present__tools { justify-content: flex-start; }
+  .rc-present__hint { display: none; }
+  .rc-verse { font-size: calc(1.25rem * var(--rc-scale)); }
+}
+@media (prefers-reduced-motion: reduce) { .rc-present__slide { animation: none; } }

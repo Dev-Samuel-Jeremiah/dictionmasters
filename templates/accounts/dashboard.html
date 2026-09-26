@@ -33,8 +33,7 @@
       <div class="px-hero__actions">
         <a href="{% url 'clash:hub' %}" class="px-chipbtn">{% include "includes/icon.html" with name="swords" size=18 %} Play Diction Clash</a>
         {% if billing.can_pay %}<a href="{% url 'billing:account' %}" class="px-chipbtn">{% include "includes/icon.html" with name="card" size=18 %} {% if billing.state == "active" %}My plan{% else %}Plans and billing{% endif %}</a>{% endif %}
-        {# Install Diction Masters as an app (static/js/pwa.js); hidden once it's running as one. #}
-        <button type="button" class="px-chipbtn" data-install-app>{% include "includes/icon.html" with name="dl" size=18 %} Install the app</button>
+        {% if not native_app %}<a href="{% url 'native_app_get' %}" class="px-chipbtn">{% include "includes/icon.html" with name="dl" size=18 %} Get the app</a>{% endif %}
       </div>
     </div>
   </section>
@@ -115,6 +114,11 @@
         {% if dashboard_card_images.tool_reading_club %}<img class="px-course__img" src="{{ dashboard_card_images.tool_reading_club }}" alt="">{% else %}<span class="px-course__ci">{% include "includes/icon.html" with name="shelf" size=24 %}</span>{% endif %}
         <h3>Reading Club</h3>
         <span class="px-course__meta">This term's book, chapter by chapter</span>
+      </a>
+      <a href="{% url 'assembly_recitals:hub' %}" class="px-course t-sky">
+        <img class="px-course__img" src="{% static 'img/app/teacher.jpg' %}" alt="">
+        <h3>Assembly Recitals</h3>
+        <span class="px-course__meta">Days, months, numbers and songs</span>
       </a>
       {# The Etiquette Advantage: shown, but locked until its lessons are ready. #}
       <div class="px-course t-lilac is-locked" aria-disabled="true">

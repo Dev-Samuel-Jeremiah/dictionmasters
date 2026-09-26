@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load static %}
+{% load rich_text %}
+{% load videos %}
+{% load read_along %}
+
+{% block title %}{{ recital.title }} — {{ section.name }} — Assembly Recitals{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/recitals.css' %}">
+{% endblock %}
+{% block extra_js %}
+  <script src="{% static 'js/read_along.js' %}" defer></script>
+  <script src="{% static 'js/recitals.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="ui" data-recital>
+  <section class="ui-hero ui-hero--blue px-hero-img--teacher">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'assembly_recitals:hub' %}">Assembly Recitals</a></li>
+        <li><a href="{% url 'assembly_recitals:section' section.slug %}">{{ section.name }}</a></li>
+        <li>{{ recital.title }}</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">{{ section.icon }}</span>
+          <div>
+            <p class="ui-hero__eyebrow">{{ section.name }} &middot; {{ position }} of {{ count }}</p>
+            <h1 class="ui-hero__title">{{ recital.title }}</h1>
+            {% if recital.summary %}<p class="ui-hero__lede">{{ recital.summary }}</p>{% endif %}
+            <div class="ui-hero__chips">
+              {% if recital.line_count %}<span class="ui-chip ui-chip--gold">{{ recital.line_count }} line{{ recital.line_count|pluralize }}</span>{% endif %}
+              {% if recital.video_source %}<span class="ui-chip">&#9654; Video</span>{% endif %}
+              {% if recital.audio_source %}<span class="ui-chip">&#127911; Model recording</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% if verses %}
+        <div class="ui-hero__side">
+          <button type="button" class="ui-btn ui-btn--gold" data-present-open>&#128250; Present on screen</button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body ui-body--narrow ui-stack">
+    {% if recital.video_source %}
+    <div class="video-card">
+      <div class="video-card__bar">
+        <div>
+          <div class="video-card__title">{{ recital.video_caption|default:"Watch and join in" }}</div>
+          {% if recital.video_duration_label %}<div class="video-card__meta">{{ recital.video_duration_label }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="video-card__stage">{% video_player recital %}</div>
+    </div>
+    {% endif %}
+
+    {% if verses %}
+    <section class="ui-panel rc-words"{% if recital.audio_source %} data-read-along{% read_along_sync recital %}{% endif %}>
+      <div class="rc-words__head">
+        <p class="ui-panel__label">{% if recital.audio_source %}Listen, then say it together{% else %}Say it together{% endif %}</p>
+        <div class="rc-size" role="group" aria-label="Text size">
+          <button type="button" class="rc-size__btn" data-size="-1" aria-label="Smaller words">A&minus;</button>
+          <button type="button" class="rc-size__btn" data-size="1" aria-label="Bigger words">A+</button>
+        </div>
+      </div>
+      {% if recital.audio_source %}
+      <p class="ui-panel__lede">Press play and each word lights up as it is said.</p>
+      <audio controls src="{{ recital.audio_source }}" data-ra-media data-recital-audio class="rc-audio"></audio>
+      {% endif %}
+      <div class="rc-verses" data-ra-text data-verses>
+        {% for verse in verses %}
+        <p class="rc-verse">{% for line in verse %}<span class="rc-line">{{ line }}</span>{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        {% endfor %}
+      </div>
+    </section>
+    {% elif not recital.video_source and not recital.audio_source %}
+    <div class="ui-empty"><p>This recital is being put together. Check back soon.</p></div>
+    {% endif %}
+
+    {% if recital.notes %}
+    <section class="ui-callout">
+      <p class="ui-panel__label">For the teacher leading it</p>
+      <div class="dm-rich-content">{{ recital.notes|rich_text }}</div>
+    </section>
+    {% endif %}
+
+    {% if prev_recital or next_recital %}
+    <nav class="ui-pager" aria-label="Other recitals">
+      {% if prev_recital %}
+      <a href="{% url 'assembly_recitals:recital' section.slug prev_recital.slug %}" class="ui-lift">
+        <small>&larr; Previous</small><strong>{{ prev_recital.title }}</strong>
+      </a>
+      {% endif %}
+      {% if next_recital %}
+      <a href="{% url 'assembly_recitals:recital' section.slug next_recital.slug %}" class="ui-pager__next ui-lift">
+        <small>Next &rarr;</small><strong>{{ next_recital.title }}</strong>
+      </a>
+      {% endif %}
+    </nav>
+    {% endif %}
+  </div>
+
+  {% if verses %}
+  {# Present mode: the words on the hall screen, a verse (or a line) at a time. #}
+  <div class="rc-present" data-present hidden role="dialog" aria-modal="true" aria-label="{{ recital.title }}, presented on screen">
+    <header class="rc-present__top">
+      <p class="rc-present__title"><span aria-hidden="true">{{ section.icon }}</span> {{ recital.title }}</p>
+      <div class="rc-present__tools">
+        <button type="button" class="rc-present__btn" data-mode aria-pressed="false">One line at a time</button>
+        {% if recital.audio_source %}<button type="button" class="rc-present__btn" data-play>&#9654; Play recording</button>{% endif %}
+        <button type="button" class="rc-present__btn" data-present-close aria-label="Close">&times; Close</button>
+      </div>
+    </header>
+    <div class="rc-present__stage" data-stage aria-live="polite"></div>
+    <footer class="rc-present__bottom">
+      <button type="button" class="rc-present__nav" data-prev aria-label="Previous">&larr;</button>
+      <p class="rc-present__count" data-count></p>
+      <button type="button" class="rc-present__nav" data-next aria-label="Next">&rarr;</button>
+    </footer>
+    <p class="rc-present__hint">Use &larr; &rarr; or the space bar to move on. Esc to close.</p>
+  </div>
+  {{ verses|json_script:"recital-verses" }}
+  {% endif %}
+</div>
+{% endblock %}

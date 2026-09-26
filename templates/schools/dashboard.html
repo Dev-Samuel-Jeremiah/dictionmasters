@@ -3,6 +3,20 @@
 
 {% block title %}{{ school.name }} — Diction Masters{% endblock %}
 
+{% block extra_js %}
+<script>
+  // "Copy link" for the teacher sign-up link.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-copy]");
+    if (!btn) return;
+    var field = document.querySelector("[data-copy-source]");
+    var done = function () { btn.textContent = "Copied ✓"; setTimeout(function () { btn.textContent = "Copy link"; }, 1800); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(field.value).then(done, function () { field.select(); });
+    else { field.select(); try { document.execCommand("copy"); done(); } catch (err) { /* selected for them to copy */ } }
+  });
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="ui">
   <section class="ui-hero ui-hero--blue">
@@ -16,7 +30,7 @@
           <div>
             <p class="ui-hero__eyebrow">School dashboard</p>
             <h1 class="ui-hero__title">{{ school.name }}</h1>
-            <p class="ui-hero__lede">Add teachers with one-time codes. Students sign up with your school code, {{ school.code }}, and pay for their own access.</p>
+            <p class="ui-hero__lede">Teachers and students both sign up with your school code, {{ school.code }}. Teachers choose the level they teach; students pay for their own access.</p>
             <div class="ui-hero__chips">
               <span class="ui-chip ui-chip--gold">School code: {{ school.code }}</span>
               <span class="ui-chip">{{ teachers|length }}{% if school.teacher_limit is not None %} of {{ school.teacher_limit }}{% endif %} teacher{{ teachers|length|pluralize }}</span>
@@ -36,50 +50,56 @@
   <div class="wrap ui-body">
     <div class="ui-cols">
       <div>
-        <section class="ui-panel">
-          <p class="ui-panel__label">Add a teacher</p>
-          <h2 class="ui-panel__title">Generate a joining code</h2>
-          <p class="ui-panel__lede">Pick the level they teach, then hand them the code. They use it on the "join with a code" page to create their own account, already linked to {{ school.name }} and to that level. Your plan sets how many teachers can join.</p>
+        <section class="ui-panel sd-teachers">
+          <p class="ui-panel__label">Add teachers</p>
+          <h2 class="ui-panel__title">Teachers join with your school code</h2>
+          <p class="ui-panel__lede">Share the code or the link below. Each teacher signs up, chooses the level they teach, and sees only that level's work. There's no code to make for each one.</p>
+          <div class="sd-code">
+            <span class="sd-code__label">School code</span>
+            <strong class="sd-code__value">{{ school.code }}</strong>
+          </div>
+          <div class="sd-link">
+            <input type="text" class="field-input" readonly value="{{ teacher_link }}" aria-label="Teacher sign-up link" data-copy-source>
+            <button type="button" class="ui-btn ui-btn--ghost" data-copy>Copy link</button>
+          </div>
 
-          <form method="post" novalidate>
-            {% csrf_token %}
-            {% if form.non_field_errors %}
-            <ul class="non-field-errors">
-              {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
-            </ul>
-            {% endif %}
-            {% if school.teachers_full %}
-            <div class="ui-callout"><p>Your school has reached its limit of {{ school.teacher_limit }} teacher{{ school.teacher_limit|pluralize }}. Move to a bigger plan or contact Diction Masters to add more places.</p></div>
-            {% else %}
-            {% include "includes/form_fields.html" %}
-            <button type="submit" class="ui-btn ui-btn--gold ui-btn--full">Generate code</button>
-            {% endif %}
-          </form>
+          {% with limit=school.teacher_limit used=teachers|length %}
+          {% if limit is not None %}
+          <div class="sd-meter{% if school.teachers_full %} is-full{% endif %}">
+            <div class="sd-meter__head">
+              <span><strong>{{ used }} of {{ limit }}</strong> teacher place{{ limit|pluralize }} used</span>
+              {% if plan %}<span class="sd-meter__plan">{{ plan.name }}{% if plan.band_label %} · {{ plan.band_label }}{% endif %}</span>{% endif %}
+            </div>
+            <span class="sd-meter__track" role="img" aria-label="{{ used }} of {{ limit }} teacher places used"><span class="sd-meter__fill" style="width: {% widthratio used limit 100 %}%"></span></span>
+          </div>
+          {% endif %}
+          {% if school.teachers_full %}
+          <div class="ui-callout">
+            <p><strong>Your plan is full.</strong> All {{ limit }} teacher place{{ limit|pluralize }} are taken, so no more teachers can sign up. Upgrade to a bigger plan to add more.</p>
+            {% if billing.can_pay %}<p style="margin-top: 10px;"><a href="{% url 'billing:account' %}" class="ui-btn ui-btn--gold">Upgrade my plan</a></p>{% endif %}
+          </div>
+          {% elif limit is not None %}
+          <p class="ui-panel__lede" style="margin-top: 10px;">{{ school.teacher_places_left }} more teacher{{ school.teacher_places_left|pluralize }} can join on your current plan.</p>
+          {% endif %}
+          {% endwith %}
         </section>
 
+        {% if pending_codes %}
         <section class="ui-panel">
-          <p class="ui-panel__label">Codes waiting to be used</p>
-          <p class="ui-panel__lede">Not redeemed yet, so they're safe to hand out.</p>
-          {% if pending_codes %}
+          <p class="ui-panel__label">Earlier one-time codes</p>
+          <p class="ui-panel__lede">Codes made before teachers could use the school code. They still work until used, and still count against your plan.</p>
           <div class="ui-table-wrap">
             <table class="ui-table">
-              <thead><tr><th>Code</th><th>For</th><th>Level</th><th>Note</th></tr></thead>
+              <thead><tr><th>Code</th><th>Level</th><th>Note</th></tr></thead>
               <tbody>
                 {% for code in pending_codes %}
-                <tr>
-                  <td><span class="ui-code">{{ code.code }}</span></td>
-                  <td><span class="ui-status {% if code.role == 'teacher' %}ui-status--current{% else %}ui-status--done{% endif %}">{{ code.get_role_display }}</span></td>
-                  <td>{{ code.level|default:"Every level" }}</td>
-                  <td>{{ code.label|default:"—" }}</td>
-                </tr>
+                <tr><td><span class="ui-code">{{ code.code }}</span></td><td>{{ code.level|default:"Every level" }}</td><td>{{ code.label|default:"—" }}</td></tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
-          {% else %}
-          <div class="ui-empty"><p>No unused codes right now.</p></div>
-          {% endif %}
         </section>
+        {% endif %}
       </div>
 
       <div>
@@ -88,7 +108,6 @@
           <dl class="ui-facts">
             <div><dt>Teachers</dt><dd>{{ teachers|length }}{% if school.teacher_limit is not None %} / {{ school.teacher_limit }}{% endif %}</dd></div>
             <div><dt>Students</dt><dd>{{ students|length }}{% if school.max_students is not None %} / {{ school.max_students }}{% endif %}</dd></div>
-            <div><dt>Unused codes</dt><dd>{{ pending_codes|length }}</dd></div>
           </dl>
           <div class="ui-table-wrap" style="margin-top: 16px;">
             <table class="ui-table">
@@ -107,16 +126,16 @@
           {% if teachers %}
           <div class="ui-table-wrap">
             <table class="ui-table">
-              <thead><tr><th>Name</th><th>Email</th><th>Joined</th></tr></thead>
+              <thead><tr><th>Name</th><th>Level</th><th>Email</th><th>Joined</th></tr></thead>
               <tbody>
                 {% for teacher in teachers %}
-                <tr><td>{{ teacher.get_full_name }}</td><td>{{ teacher.email }}</td><td>{{ teacher.date_joined|date:"d M Y" }}</td></tr>
+                <tr><td>{{ teacher.get_full_name }}</td><td>{{ teacher.level|default:"—" }}</td><td>{{ teacher.email }}</td><td>{{ teacher.date_joined|date:"d M Y" }}</td></tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
           {% else %}
-          <div class="ui-empty"><p>No teachers yet. Generate a code to add one.</p></div>
+          <div class="ui-empty"><p>No teachers yet. Share your school code, <strong>{{ school.code }}</strong>, or the teacher sign-up link above.</p></div>
           {% endif %}
         </section>
 

@@ -1,49 +1,22 @@
-from django.contrib import messages
-from django.shortcuts import redirect, render
+from django.shortcuts import render
+from django.urls import reverse
 
 from apps.accounts.decorators import role_required
 from apps.accounts.models import User
 
-from .forms import GenerateAccessCodeForm
-
 
 @role_required(User.Role.SCHOOL_ADMIN)
 def dashboard(request):
+    """The school admin's page. Teachers and students both sign up with the
+    school code; the school's plan sets how many teachers can join."""
     school = request.user.school
-
-    if request.method == "POST":
-        form = GenerateAccessCodeForm(request.POST)
-        if school.teachers_full:
-            messages.error(
-                request,
-                f"Your school has reached its limit of {school.teacher_limit} teachers, so no new teacher "
-                "codes can be made. Move to a bigger plan or contact Diction Masters to add more places.",
-            )
-            return redirect("schools:dashboard")
-        if form.is_valid():
-            code = school.access_codes.create(
-                role=form.cleaned_data["role"],
-                level=form.cleaned_data["level"],
-                label=form.cleaned_data["label"],
-                created_by=request.user,
-            )
-            messages.success(
-                request,
-                f"New {code.get_role_display().lower()} code for {code.level}: {code.code}. "
-                "Share it with them to join.",
-            )
-            return redirect("schools:dashboard")
-    else:
-        form = GenerateAccessCodeForm()
-
     codes = school.access_codes.select_related("used_by").all()
-
     context = {
         "school": school,
-        "form": form,
+        "plan": school.chosen_plan(),
+        "teacher_link": request.build_absolute_uri(reverse("accounts:join_with_code")) + f"?school={school.code}",
         "teachers": school.teachers,
         "students": school.students,
-        "pending_codes": codes.filter(used_by__isnull=True),
-        "redeemed_codes": codes.filter(used_by__isnull=False),
+        "pending_codes": codes.filter(used_by__isnull=True, role="teacher"),
     }
     return render(request, "schools/dashboard.html", context)

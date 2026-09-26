@@ -61,6 +61,12 @@ def _search_items(request, query, per_type=MAX_RESULTS_PER_TYPE):
         chapters = Chapter.objects.filter(is_published=True, term__book__is_published=True).filter(Q(title__icontains=needle) | Q(summary__icontains=needle) | Q(body__icontains=needle)).select_related("term__book")
         add(chapters, lambda x: x.title, "Reading Club lesson", lambda x: x.summary or x.term.book.title, lambda x: reverse("reading_club:chapter_detail", args=[x.term.book.slug, x.term.slug, x.slug]))
 
+        from apps.assembly_recitals.models import Recital, Section as RecitalSection
+        sections = RecitalSection.objects.filter(is_published=True).filter(Q(name__icontains=needle) | Q(description__icontains=needle))
+        add(sections, lambda x: x.name, "Assembly Recitals section", lambda x: x.description, lambda x: reverse("assembly_recitals:section", args=[x.slug]))
+        recitals = Recital.objects.filter(is_published=True, section__is_published=True).filter(Q(title__icontains=needle) | Q(summary__icontains=needle) | Q(lines__icontains=needle)).select_related("section")
+        add(recitals, lambda x: x.title, "Assembly recital", lambda x: x.summary or x.section.name, lambda x: reverse("assembly_recitals:recital", args=[x.section.slug, x.slug]))
+
         from apps.learning_modules.models import LearningModule, LessonItem
         modules = LearningModule.objects.filter(is_published=True).filter(Q(name__icontains=needle) | Q(description__icontains=needle) | Q(overview__icontains=needle))
         add(modules, lambda x: x.name, "Learning Module", lambda x: x.description or x.overview, lambda x: reverse("learning_modules:module_detail", args=[x.slug]))

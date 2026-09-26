@@ -61,17 +61,41 @@ class School(models.Model):
             return subscription.plan
         return None
 
+    def chosen_plan(self):
+        """The school plan that sets its size: the one it's paying for, or
+        the one it picked when it registered and is trying for free."""
+        subscription = getattr(self, "subscription", None) if self.pk else None
+        return subscription.plan if subscription and subscription.plan_id else None
+
     @property
     def plan_teacher_limit(self):
-        plan = self.paid_plan()
-        return plan.max_units if plan and plan.max_units else None
+        """The teachers its plan allows. A school with no plan at all gets
+        the smallest school plan's allowance, so no school is uncapped."""
+        from apps.billing.models import Plan
+
+        plan = self.chosen_plan()
+        if plan and plan.max_units:
+            return plan.max_units
+        if self.max_teachers is not None:
+            return None
+        entry = (
+            Plan.objects.filter(is_active=True, audience=Plan.AUDIENCE_SCHOOL, max_units__isnull=False)
+            .order_by("max_units").first()
+        )
+        return entry.max_units if entry else None
 
     @property
     def teacher_limit(self):
-        """The teachers this school may have: the lower of the limit set in
-        the control room and its paid plan's band. None for no limit."""
+        """The teachers this school may register: its plan's allowance, or
+        the number set in the control room if that's lower. None only when
+        there are no school plans at all."""
         limits = [n for n in (self.max_teachers, self.plan_teacher_limit) if n is not None]
         return min(limits) if limits else None
+
+    @property
+    def teacher_places_left(self):
+        limit = self.teacher_limit
+        return None if limit is None else max(0, limit - self.teachers.count())
 
     @property
     def teachers_full(self):

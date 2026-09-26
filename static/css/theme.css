@@ -337,7 +337,6 @@ h1, h2, h3, h4 { font-family: inherit; font-weight: 800; letter-spacing: -0.02em
     max-height: 70vh; overflow-y: auto;
   }
   .px-bar__account { display: none; }
-  .install-fab { bottom: calc(var(--tab-h) + 14px); }
 }
 
 @media (max-width: 860px) {
@@ -1308,7 +1307,6 @@ a.px-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
 /* things pinned to the bottom sit above the tab bar; things under the top bar follow its height */
 .as-bar, .qw-toolbar { top: var(--bar-h); }
 @media (min-width: 1100px) { .px-app .tool-sheet, .px-app .tt-dock { left: var(--side-w); } }
-body:has(.tt-dock) .install-fab { display: none; }
 @media (max-width: 1099.98px) {
   .px-app .es-submitbar { bottom: calc(var(--tab-h) + 12px); }
   .px-app .tt-dock { bottom: var(--tab-h); }
@@ -1362,3 +1360,19 @@ body:has(.tt-dock) .install-fab { display: none; }
 input, textarea, [contenteditable] { caret-color: var(--blue); }
 input[type="checkbox"], input[type="radio"], input[type="range"], progress { accent-color: var(--blue); color: var(--text); }
 .ui-empty, .ui-panel dd, .ui-panel td { overflow-wrap: anywhere; }
+
+/* school dashboard: teachers join with the school code */
+.sd-code { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 10px; padding: 14px 16px; border-radius: 16px; background: var(--butter); }
+.sd-code__label { font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+.sd-code__value { font-size: clamp(1.3rem, 3vw, 1.7rem); font-weight: 800; letter-spacing: 0.06em; color: var(--navy); }
+.sd-link { display: flex; gap: 8px; }
+.sd-link .field-input { flex: 1; min-width: 0; font-size: 0.85rem; }
+.sd-link .ui-btn { flex: none; }
+.sd-meter { margin-top: 16px; }
+.sd-meter__head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; margin-bottom: 8px; font-size: 0.88rem; color: var(--muted); }
+.sd-meter__head strong { color: var(--text); }
+.sd-meter__plan { font-weight: 700; color: var(--blue); }
+.sd-meter__track { display: block; height: 10px; border-radius: 999px; background: var(--sky); overflow: hidden; }
+.sd-meter__fill { display: block; height: 100%; border-radius: 999px; background: var(--blue); }
+.sd-meter.is-full .sd-meter__fill { background: var(--yellow-deep); }
+@media (max-width: 480px) { .sd-link { flex-direction: column; } }

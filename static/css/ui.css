@@ -1487,46 +1487,7 @@ html.qs-open { overflow: hidden; }
 
 /* ---------- "Install app": a round button by the scrollbar (static/js/pwa.js) ---------- */
 
-.install-fab {
-  position: fixed; z-index: 58;
-  right: max(16px, env(safe-area-inset-right));
-  bottom: max(20px, env(safe-area-inset-bottom));
-  display: flex; align-items: flex-start; gap: 6px;
-  animation: ui-rise 0.5s 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-.install-fab[hidden] { display: none; }
-.install-fab__btn {
-  display: inline-flex; align-items: center; gap: 0;
-  height: 56px; padding: 0 16px; border: 0; border-radius: 999px;
-  font: inherit; font-weight: 700; font-size: 0.92rem; line-height: 1;
-  color: #0b1a4a; background: linear-gradient(135deg, #FFD86B, #ffc72c);
-  box-shadow: 0 10px 24px rgba(11, 26, 74, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  cursor: pointer; overflow: hidden;
-  transition: gap 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-.install-fab__btn:hover, .install-fab__btn:focus-visible {
-  gap: 9px; transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(11, 26, 74, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  outline: none;
-}
-.install-fab__word {
-  max-width: 0; opacity: 0; white-space: nowrap;
-  transition: max-width 0.28s ease, opacity 0.2s ease;
-}
-.install-fab__btn:hover .install-fab__word, .install-fab__btn:focus-visible .install-fab__word { max-width: 120px; opacity: 1; }
 /* On a phone there is no hover, so the words are always there. */
-@media (hover: none) {
-  .install-fab__word { max-width: 120px; opacity: 1; margin-left: 9px; }
-  .install-fab { bottom: max(14px, env(safe-area-inset-bottom)); }
-  .install-fab__btn { height: 48px; font-size: 0.86rem; }
-}
-.install-fab__close {
-  width: 24px; height: 24px; border: 0; border-radius: 50%;
-  font: inherit; font-size: 1rem; line-height: 1;
-  color: var(--ink-40); background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 4px 10px rgba(11, 26, 74, 0.18); cursor: pointer;
-}
-.install-fab__close:hover { color: var(--ink); }
 
 /* The steps, for browsers without an install button of their own. */
 .install-steps { padding: 0; border: 0; border-radius: 24px; max-width: min(420px, calc(100vw - 32px)); background: transparent; }

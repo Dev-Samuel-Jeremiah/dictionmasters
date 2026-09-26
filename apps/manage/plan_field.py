@@ -67,12 +67,12 @@ def add_plan_field(form, obj, kind="user"):
         widget=forms.Select(attrs={"class": "cr-input cr-select"}),
     )
     if kind == "school" and "max_teachers" in form.fields and obj is not None and obj.pk:
-        plan = obj.paid_plan()
+        plan = obj.chosen_plan()
         if plan and plan.max_units:
             band = f" ({plan.name} · {plan.band_label})" if plan.band_label else f" ({plan.name})"
             form.fields["max_teachers"].help_text = (
-                f"Their paid plan{band} allows up to {plan.max_units} teachers, and that limit already applies. "
-                "Leave blank to use it, or set a lower number to limit them further."
+                f"Their plan{band} allows up to {plan.max_units} teachers, and that limit already applies. "
+                f"{obj.teachers.count()} have joined. Leave blank to use the plan's limit, or set a lower number."
             )
     form.fields[FIELD].label_from_instance = _label
 

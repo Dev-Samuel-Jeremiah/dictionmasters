@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Join with a code — Diction Masters{% endblock %}
+{% block title %}Teacher sign-up — Diction Masters{% endblock %}
 
 {% block content %}
 <div class="ui">
@@ -12,18 +12,18 @@
         <div>
           <p class="ui-auth__eyebrow">Teachers</p>
           <h1 class="ui-auth__title">Join your school</h1>
-          <p class="ui-auth__lede">Your school admin gave you a one-time code. It puts you in the right class and nowhere else. Students: <a href="{% url 'accounts:register_student' %}">sign up with your school code here</a>.</p>
+          <p class="ui-auth__lede">Sign up with your school's code and choose the level you teach. Your school's plan covers you, so there's nothing to pay. Students: <a href="{% url 'accounts:register_student' %}">sign up here</a>.</p>
         </div>
         <ul class="ui-auth__points">
-          <li>The code works once, for you</li>
-          <li>It sets your level, so you see the right work</li>
-          <li>Teachers see their class's work</li>
+          <li>The same school code your students use</li>
+          <li>You choose your level, and see that level's work</li>
+          <li>Your school's plan sets how many teachers can join</li>
         </ul>
       </aside>
 
       <div class="ui-auth__panel">
-        <h2 class="ui-auth__heading">Your code and your details</h2>
-        <p class="ui-auth__note">Ask your school admin if you haven't been given a code yet.</p>
+        <h2 class="ui-auth__heading">Your school and your details</h2>
+        <p class="ui-auth__note">Your school admin can give you the school code — it starts with DM-.</p>
         <div class="form-card">
           <form method="post" novalidate>
             {% csrf_token %}

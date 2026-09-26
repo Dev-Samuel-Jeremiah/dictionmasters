@@ -129,6 +129,7 @@ LOCAL_APPS = [
     "apps.daily_practice",
     "apps.learning_modules",
     "apps.reading_club",
+    "apps.assembly_recitals",
     "apps.echospell",
     "apps.quick_words",
     "apps.tutor",

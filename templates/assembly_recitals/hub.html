@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Assembly Recitals — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/recitals.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--blue px-hero-img--teacher">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
+        <li>Assembly Recitals</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128227;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Said together, said well</p>
+            <h1 class="ui-hero__title">Assembly Recitals</h1>
+            <p class="ui-hero__lede">The days, the months, numbers and diction songs your school says together at assembly. Hear the model, follow the words, and present them on the hall screen.</p>
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ sections|length }} section{{ sections|length|pluralize }}</span>
+              <span class="ui-chip">{{ recital_total }} recital{{ recital_total|pluralize }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+    {% if sections %}
+    <div class="ui-grid">
+      {% for section in sections %}
+      <a href="{% url 'assembly_recitals:section' section.slug %}" class="ui-card ui-lift" style="--i: {{ forloop.counter0 }}">
+        <span class="ui-card__top">
+          <span class="ui-card__icon" aria-hidden="true">{{ section.icon }}</span>
+          {% if not section.recital_count %}<span class="ui-status">Coming soon</span>{% endif %}
+        </span>
+        <span class="ui-card__name">{{ section.name }}</span>
+        {% if section.description %}<span class="ui-card__desc">{{ section.description }}</span>{% endif %}
+        <span class="ui-card__foot">
+          <span class="ui-card__meta"><span>{{ section.recital_count }} recital{{ section.recital_count|pluralize }}</span><span>Open &rarr;</span></span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="ui-empty"><p>Assembly recitals are being put together. Check back soon.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

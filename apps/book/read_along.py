@@ -107,6 +107,7 @@ TEXT_FOR = {
     "echospell.dialogue": lambda obj: "\n".join(plain_text(line.text) for line in obj.lines.all()),
     "learning_modules.lessonitem": lambda obj: plain_text(obj.body),
     "reading_club.chapter": lambda obj: plain_text(obj.body),
+    "assembly_recitals.recital": lambda obj: "\n".join(" ".join(verse) for verse in obj.verses),
 }
 
 
@@ -120,6 +121,7 @@ TEXT_FIELD = {
     "echospell.dialogue": None,
     "learning_modules.lessonitem": "body",
     "reading_club.chapter": "body",
+    "assembly_recitals.recital": None,
 }
 
 

@@ -6,7 +6,7 @@ Four ways to get an account:
 - IndividualRegistrationForm: an adult learner, no school.
 - StudentRegistrationForm: a pupil joining with their school's code and
   paying for their own access.
-- JoinWithCodeForm: a teacher redeeming a code their school admin made.
+- TeacherRegistrationForm: a teacher joining with their school's code.
 
 Every registration also asks how to begin: the free trial, or paying for
 a plan now (see StartChoiceMixin). Plans and prices come from billing.
@@ -131,6 +131,10 @@ class SchoolRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
         super().__init__(*args, **kwargs)
         self._style_fields()
         self._add_start_fields(_plan_choices("school"), plan_label="Plan (by number of teachers)")
+        # The plan sets how many teachers can join, from the free trial on.
+        if len(self.fields["plan"].choices) > 1:
+            self.fields["plan"].required = True
+            self.fields["plan"].help_text = "How many teachers can join your school. You can move to a bigger plan later."
 
     def clean_email(self):
         email = self.cleaned_data["email"].lower().strip()
@@ -209,20 +213,6 @@ class IndividualRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
             last_name=self.cleaned_data["last_name"],
             role=User.Role.INDIVIDUAL,
         )
-
-
-def _school_is_full(school):
-    """A school on a paid plan whose teacher tier is already full."""
-    from django.utils import timezone
-
-    subscription = getattr(school, "subscription", None)
-    try:
-        plan = subscription.plan if subscription and subscription.paid_until and subscription.paid_until > timezone.now() else None
-    except Exception:
-        plan = None
-    if not plan or not plan.max_units:
-        return False
-    return school.members.filter(role=User.Role.TEACHER).count() >= plan.max_units
 
 
 class StudentRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
@@ -309,11 +299,20 @@ class StudentRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
         return next((plan for plan, ok, _why in plans_for(user) if ok and plan.name == period), None)
 
 
-class JoinWithCodeForm(StyledFormMixin, forms.Form):
-    code = forms.CharField(
-        label="Your code",
-        max_length=10,
-        help_text="The code your school admin gave you.",
+class TeacherRegistrationForm(StyledFormMixin, forms.Form):
+    """A teacher joining their school with the school's code. They choose
+    the level they teach, and see only that level's work. The school's
+    plan sets how many teachers can join; once it's full, nobody else can
+    until the school moves to a bigger plan. A one-time code a school
+    admin handed out before school codes did this is still accepted."""
+
+    school_code = forms.CharField(
+        label="School code", max_length=16,
+        help_text="Your school's code, e.g. DM-ABC234. Your school admin has it.",
+    )
+    level = forms.ChoiceField(
+        label="The level you teach", choices=[], required=False,
+        help_text="You'll see this level's lessons and your students' work at this level.",
     )
     first_name = forms.CharField(label="First name", max_length=150)
     last_name = forms.CharField(label="Last name", max_length=150, required=False)
@@ -322,36 +321,35 @@ class JoinWithCodeForm(StyledFormMixin, forms.Form):
     password2 = forms.CharField(label="Confirm password", widget=forms.PasswordInput)
 
     def __init__(self, *args, **kwargs):
+        from apps.echospell.models import LEVEL_NAME_CHOICES
+
         super().__init__(*args, **kwargs)
+        self.fields["level"].choices = [("", "Choose your level")] + LEVEL_NAME_CHOICES
         self._style_fields()
+        self.fields["school_code"].widget.attrs.update({"autocapitalize": "characters", "autocomplete": "off"})
+        self._school = None
         self._access_code = None
 
-    def clean_code(self):
-        raw = self.cleaned_data["code"].strip().upper()
-        try:
-            access_code = AccessCode.objects.select_related("school").get(code=raw)
-        except AccessCode.DoesNotExist:
-            raise forms.ValidationError("That code isn't recognised. Double-check it with your school.")
-        if access_code.is_used:
-            raise forms.ValidationError("That code has already been used.")
-        if access_code.role == AccessCode.Role.STUDENT:
-            raise forms.ValidationError(
-                "Students now join with their school's code on the student sign-up page, "
-                "where they choose a free trial or pay for their own access."
-            )
-        school = access_code.school
+    def clean_school_code(self):
+        raw = self.cleaned_data["school_code"].strip().upper()
+        legacy = AccessCode.objects.select_related("school").filter(code=raw, role=AccessCode.Role.TEACHER).first()
+        if legacy is not None:
+            if legacy.is_used:
+                raise forms.ValidationError("That one-time code has already been used. Use your school's code instead.")
+            self._access_code, school = legacy, legacy.school
+        else:
+            code = raw if raw.startswith("DM-") else f"DM-{raw}"
+            school = School.objects.filter(code=code).first()
+            if school is None:
+                raise forms.ValidationError("That school code isn't recognised. Check it with your school admin.")
+            raw = code
         if school.teachers_full:
             raise forms.ValidationError(
-                f"{school.name} has reached the number of teachers it can register "
-                f"({school.teacher_limit}). Please ask your school admin to move to a bigger plan "
-                "or contact Diction Masters for more places."
+                f"{school.name} has reached its limit of {school.teacher_limit} teacher"
+                f"{'' if school.teacher_limit == 1 else 's'} on its current plan, so no more teachers can join. "
+                "Please ask your school admin to upgrade to a bigger plan."
             )
-        if _school_is_full(access_code.school):
-            raise forms.ValidationError(
-                "Your school has reached the number of teachers its plan allows. "
-                "Please ask your school admin to move to a bigger plan."
-            )
-        self._access_code = access_code
+        self._school = school
         return raw
 
     def clean_email(self):
@@ -370,22 +368,24 @@ class JoinWithCodeForm(StyledFormMixin, forms.Form):
         p1, p2 = cleaned.get("password1"), cleaned.get("password2")
         if p1 and p2 and p1 != p2:
             self.add_error("password2", "Those passwords don't match.")
+        # An old one-time code already carries a level; otherwise it's chosen here.
+        if not cleaned.get("level") and not (self._access_code and self._access_code.level):
+            self.add_error("level", "Choose the level you teach.")
         return cleaned
 
     def save(self):
-        access_code = self._access_code
+        level = self.cleaned_data.get("level") or (self._access_code.level if self._access_code else "")
         user = User.objects.create_user(
             email=self.cleaned_data["email"],
             password=self.cleaned_data["password1"],
             first_name=self.cleaned_data["first_name"],
             last_name=self.cleaned_data["last_name"],
-            role=access_code.role,
-            school=access_code.school,
-            # The code decides the level; it is never typed by the
-            # person joining.
-            level=access_code.level,
+            role=User.Role.TEACHER,
+            school=self._school,
+            level=level,
         )
-        access_code.mark_used_by(user)
+        if self._access_code is not None:
+            self._access_code.mark_used_by(user)
         return user
 
 
