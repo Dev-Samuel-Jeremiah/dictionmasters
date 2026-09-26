@@ -85,13 +85,54 @@ class NativeAppMiddleware:
         return response
 
 
+def app_downloads():
+    """Where people can get the apps (config/settings.py). Empty = not offered."""
+    return {
+        "android_apk": getattr(settings, "NATIVE_APP_ANDROID_APK_URL", ""),
+        "android_store": getattr(settings, "NATIVE_APP_ANDROID_STORE_URL", ""),
+        "ios_store": getattr(settings, "NATIVE_APP_IOS_STORE_URL", ""),
+    }
+
+
 def context(request):
-    """`native_app` in every template: None in a browser, otherwise
-    {"platform": "android"|"ios", "hide_payments": bool}."""
+    """In every template:
+
+    `native_app`     None in a browser, otherwise
+                     {"platform": "android"|"ios", "hide_payments": bool}
+    `app_downloads`  where the apps can be downloaded (see app_downloads)"""
     platform = platform_of(request)
+    downloads = app_downloads()
     if not platform:
-        return {"native_app": None}
-    return {"native_app": {"platform": platform, "hide_payments": hides_payments(request)}}
+        return {"native_app": None, "app_downloads": downloads}
+    return {"native_app": {"platform": platform, "hide_payments": hides_payments(request)},
+            "app_downloads": downloads}
+
+
+def device_of(request):
+    """'android', 'ios' or 'desktop', from the browser's description of itself."""
+    agent = request.headers.get("User-Agent", "")
+    if re.search(r"Android", agent):
+        return "android"
+    if re.search(r"iPhone|iPad|iPod", agent) or ("Macintosh" in agent and "Mobile" in agent):
+        return "ios"
+    return "desktop"
+
+
+def get_app(request):
+    """/app/get/ — the "Get the app" page: the Android app to download, the
+    App Store, or "Add to Home Screen" on iPhone, whichever fits the phone
+    it's opened on. Already inside the app, there's nothing to get."""
+    if platform_of(request):
+        return redirect("accounts:dashboard")
+    from apps.echospell.qr import svg
+
+    page = request.build_absolute_uri(request.path) if settings.DEBUG else f"{settings.SITE_URL}{request.path}"
+    return render(request, "native_app/get_app.html", {
+        "device": device_of(request),
+        "downloads": app_downloads(),
+        "qr": svg(page, 180),
+        "page_url": page,
+    })
 
 
 def welcome(request):

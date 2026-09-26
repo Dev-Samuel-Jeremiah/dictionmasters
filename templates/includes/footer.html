@@ -1,6 +1,6 @@
 {% if user.is_authenticated %}
 <footer class="site-footer px-foot px-foot--app">
-  <p class="site-footer__copyright">&copy; {% now "Y" %} Diction Masters {% if not native_app.hide_payments %}&middot; <a href="{% url 'billing:pricing' %}">Pricing</a> {% endif %}&middot; <a href="{% url 'landing:privacy' %}">Privacy</a>{% if user.is_staff %} &middot; <a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Control panel</a>{% endif %}</p>
+  <p class="site-footer__copyright">&copy; {% now "Y" %} Diction Masters {% if not native_app.hide_payments %}&middot; <a href="{% url 'billing:pricing' %}">Pricing</a> {% endif %}&middot; <a href="{% url 'landing:privacy' %}">Privacy</a>{% if not native_app %} &middot; <a href="{% url 'native_app_get' %}" class="ga-footer-link">&#128241; Get the app</a>{% endif %}{% if user.is_staff %} &middot; <a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Control panel</a>{% endif %}</p>
 </footer>
 {% else %}
 <footer class="site-footer px-foot">
@@ -16,6 +16,7 @@
       {% if not native_app.hide_payments %}<a href="{% url 'billing:pricing' %}">Pricing</a>{% endif %}
       <a href="{% url 'accounts:login' %}">Log in</a>
       <a href="{% url 'landing:privacy' %}">Privacy</a>
+      {% if not native_app %}<a href="{% url 'native_app_get' %}" class="ga-footer-link">&#128241; Get the app</a>{% endif %}
       {% if user.is_staff %}<a href="{% url 'manage:login' %}" class="site-footer__staff">&#128274; Control panel</a>{% endif %}
     </nav>
   </div>

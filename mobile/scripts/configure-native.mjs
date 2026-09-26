@@ -27,6 +27,11 @@ if (devUrl) console.log(`• TEST MODE: the app will open ${devUrl} (your comput
 const siteUrl = devUrl || settings.siteUrl.replace(/\/+$/, "");
 const siteHost = new URL(siteUrl).host;
 
+// The number Android uses to tell a newer app from an older one. It must go
+// up with every release: GitHub passes its build count (DM_BUILD_NUMBER),
+// and the larger of that and "build" in app.settings.json is used.
+const buildNumber = Math.max(Number(settings.build) || 1, Number(process.env.DM_BUILD_NUMBER) || 0);
+
 const done = [];
 const read = (p) => fs.readFileSync(p, "utf8");
 function write(p, text, label) {
@@ -105,7 +110,7 @@ if (fs.existsSync(manifestPath)) {
   const gradlePath = path.join(root, "android", "app", "build.gradle");
   if (fs.existsSync(gradlePath)) {
     let g = read(gradlePath);
-    g = g.replace(/versionCode\s+\d+/, `versionCode ${Number(settings.build) || 1}`);
+    g = g.replace(/versionCode\s+\d+/, `versionCode ${buildNumber}`);
     g = g.replace(/versionName\s+"[^"]*"/, `versionName "${settings.version}"`);
     if (!g.includes("dm:signing:start")) {
       g += `
@@ -183,7 +188,7 @@ if (fs.existsSync(plistPath)) {
   if (fs.existsSync(pbxPath)) {
     let pbx = read(pbxPath);
     pbx = pbx.replace(/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${settings.version};`);
-    pbx = pbx.replace(/CURRENT_PROJECT_VERSION = [^;]+;/g, `CURRENT_PROJECT_VERSION = ${Number(settings.build) || 1};`);
+    pbx = pbx.replace(/CURRENT_PROJECT_VERSION = [^;]+;/g, `CURRENT_PROJECT_VERSION = ${buildNumber};`);
     write(pbxPath, pbx);
   }
 

@@ -118,8 +118,22 @@
     if (fab) fab.hidden = true;
   }
 
+  // The real Android/iPhone app, when there is one to offer (the <html> tag
+  // says so, from NATIVE_APP_* in config/settings.py): the install buttons
+  // open the "Get the app" page instead of adding the website.
+  function nativeAppOffered() {
+    var root = document.documentElement;
+    var which = device();
+    return (which === "android" && root.hasAttribute("data-android-app")) ||
+      (which === "ios" && root.hasAttribute("data-ios-app"));
+  }
+
   function requestInstall() {
     if (installed) return;
+    if (nativeAppOffered() && location.pathname !== "/app/get/") {
+      location.href = "/app/get/";
+      return;
+    }
     if (!deferred) {
       showSteps();
       return;

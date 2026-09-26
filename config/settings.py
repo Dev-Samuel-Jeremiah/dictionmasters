@@ -456,6 +456,15 @@ NATIVE_APP_ANDROID_SHA256 = env_list("NATIVE_APP_ANDROID_SHA256")
 NATIVE_APP_IOS_TEAM_ID = os.environ.get("NATIVE_APP_IOS_TEAM_ID", "")
 NATIVE_APP_IOS_BUNDLE_ID = os.environ.get("NATIVE_APP_IOS_BUNDLE_ID", NATIVE_APP_ANDROID_PACKAGE)
 
+# The "Get the app" page (/app/get/) and install buttons. Leave any of these
+# empty and that option simply isn't offered.
+#   The Android app file. Once GitHub publishes it (guide, section 12) use:
+#   https://github.com/<owner>/<repo>/releases/latest/download/diction-masters.apk
+NATIVE_APP_ANDROID_APK_URL = os.environ.get("NATIVE_APP_ANDROID_APK_URL", "")
+#   The app's Google Play and App Store pages, once they're published.
+NATIVE_APP_ANDROID_STORE_URL = os.environ.get("NATIVE_APP_ANDROID_STORE_URL", "")
+NATIVE_APP_IOS_STORE_URL = os.environ.get("NATIVE_APP_IOS_STORE_URL", "")
+
 # Hosts that lesson pictures and audio are served from (besides this site),
 # so the app can keep them for offline study. Cloudflare R2 is included;
 # add a custom media domain here if you use one. Each needs a CORS rule

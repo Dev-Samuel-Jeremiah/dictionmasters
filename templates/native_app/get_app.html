@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+  /app/get/ — "Get the app" (apps/landing/native_app.py: get_app).
+
+  Shows first what fits the device it is opened on (`device`: android,
+  ios or desktop), then the other options further down. Which options
+  exist is set on the server (config/settings.py):
+    NATIVE_APP_ANDROID_APK_URL    the Android app file (GitHub Releases)
+    NATIVE_APP_ANDROID_STORE_URL  the Google Play page, once published
+    NATIVE_APP_IOS_STORE_URL      the App Store page, once published
+  With none of them set it still works: every device gets the steps to
+  add the website to its home screen.
+{% endcomment %}
+
+{% block title %}Get the app — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/get_app.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ui ga">
+  <section class="ui-hero ui-hero--green">
+    <div class="wrap">
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128241;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Learn anywhere, even offline</p>
+            <h1 class="ui-hero__title">Get the Diction Masters app</h1>
+            <p class="ui-hero__lede">Your lessons, practice and progress in one tap from your home screen. Download lessons once and keep learning without the internet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body ui-stack ga-body">
+
+    {# ---------------- Android ---------------- #}
+    <section class="ui-panel ga-card{% if device == 'android' %} ga-card--mine{% endif %}" id="android" style="order: {% if device == 'android' %}1{% else %}2{% endif %}">
+      <header class="ga-card__head">
+        <span class="ga-card__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="30" height="30"><path fill="#3DDC84" d="M17.6 9.48l1.84-3.18a.38.38 0 0 0-.66-.38l-1.86 3.22A11.4 11.4 0 0 0 12 8.2c-1.77 0-3.43.38-4.92 1.04L5.22 6.02a.38.38 0 0 0-.66.38L6.4 9.48A10.8 10.8 0 0 0 1 18h22a10.8 10.8 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"/></svg>
+        </span>
+        <div>
+          <h2 class="ui-section__title">Android phones and tablets</h2>
+          {% if device == 'android' %}<p class="ga-card__tag">This is your device</p>{% endif %}
+        </div>
+      </header>
+
+      {% if downloads.android_store %}
+        <p><a href="{{ downloads.android_store }}" class="ui-btn ui-btn--gold ui-btn--large" rel="noopener">Get it on Google Play</a></p>
+      {% endif %}
+
+      {% if downloads.android_apk %}
+        <p>
+          <a href="{{ downloads.android_apk }}" class="ui-btn {% if downloads.android_store %}ui-btn--ghost{% else %}ui-btn--gold ui-btn--large{% endif %}" data-apk-download>
+            &#11015;&#65039; Download the Android app
+          </a>
+        </p>
+        <ol class="ga-steps">
+          <li>Tap <strong>Download the Android app</strong>. If Chrome asks whether to keep the file, tap <strong>Download anyway</strong>.</li>
+          <li>Open the downloaded file, <strong>diction-masters.apk</strong> (from the notification, or your Downloads folder).</li>
+          <li>If your phone says it can't install unknown apps, tap <strong>Settings</strong>, turn on <strong>Allow from this source</strong>, and go back.</li>
+          <li>Tap <strong>Install</strong>, then <strong>Open</strong>. If Play Protect asks, choose <strong>Install anyway</strong>.</li>
+        </ol>
+        <p class="ui-note">New version out? Download it the same way and install it over the old one — your account and downloaded lessons stay.</p>
+      {% elif not downloads.android_store %}
+        <p class="ui-panel__lede">Add Diction Masters to your home screen — it opens like an app and works offline:</p>
+        <ol class="ga-steps">
+          <li>Open this page in <strong>Chrome</strong>.</li>
+          <li>Tap the menu <strong>&#8942;</strong>, then <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+          <li>Tap <strong>Install</strong>.</li>
+        </ol>
+        {% if device == 'android' %}<p><button type="button" class="ui-btn ui-btn--gold" data-install-app>Install now</button></p>{% endif %}
+      {% endif %}
+    </section>
+
+    {# ---------------- iPhone / iPad ---------------- #}
+    <section class="ui-panel ga-card{% if device == 'ios' %} ga-card--mine{% endif %}" id="iphone" style="order: {% if device == 'ios' %}1{% else %}3{% endif %}">
+      <header class="ga-card__head">
+        <span class="ga-card__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.8-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.3.9-1.3 1.3-2.6 1.3-2.6s-2.5-1-2.5-3.8zM14.1 5.8c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.7-1.3z"/></svg>
+        </span>
+        <div>
+          <h2 class="ui-section__title">iPhone and iPad</h2>
+          {% if device == 'ios' %}<p class="ga-card__tag">This is your device</p>{% endif %}
+        </div>
+      </header>
+
+      {% if downloads.ios_store %}
+        <p><a href="{{ downloads.ios_store }}" class="ui-btn ui-btn--gold ui-btn--large" rel="noopener">Download on the App Store</a></p>
+      {% else %}
+        <p class="ui-panel__lede">Add Diction Masters to your home screen — it opens full-screen like an app and works offline:</p>
+        <ol class="ga-steps">
+          <li>Open this page in <strong>Safari</strong>.</li>
+          <li>Tap <strong>Share</strong> <span aria-hidden="true">(the square with an arrow &#11014;&#65039;)</span> at the bottom of the screen.</li>
+          <li>Scroll down and tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+        </ol>
+        <p class="ui-note">The Diction Masters icon appears on your home screen. Open it from there.</p>
+      {% endif %}
+    </section>
+
+    {# ---------------- Computer ---------------- #}
+    <section class="ui-panel ga-card{% if device == 'desktop' %} ga-card--mine{% endif %}" id="computer" style="order: {% if device == 'desktop' %}1{% else %}4{% endif %}">
+      <header class="ga-card__head">
+        <span class="ga-card__icon" aria-hidden="true">&#128187;</span>
+        <div>
+          <h2 class="ui-section__title">On a computer?</h2>
+          {% if device == 'desktop' %}<p class="ga-card__tag">This is your device</p>{% endif %}
+        </div>
+      </header>
+      <div class="ga-qr">
+        <div class="ga-qr__code">{{ qr|safe }}</div>
+        <div>
+          <p class="ui-panel__lede"><strong>Scan this with your phone's camera</strong> to open this page there and get the app.</p>
+          <p class="ui-note">Or open <strong>{{ page_url }}</strong> on your phone.</p>
+          <p><button type="button" class="ui-btn ui-btn--ghost" data-install-app>Install on this computer</button></p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}

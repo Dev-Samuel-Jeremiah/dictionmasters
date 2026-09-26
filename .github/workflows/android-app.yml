@@ -2,21 +2,35 @@
 #
 # Run it: GitHub > your repo > Actions > "Android app" > Run workflow.
 # (It also runs by itself when anything in mobile/ changes.)
-# When it finishes, download the files under "Artifacts":
-#   diction-masters-apk  → install on a phone to test
-#   diction-masters-aab  → upload to Google Play
 #
-# For a Play-Store-ready (signed) .aab, add these repository secrets
-# (Settings > Secrets and variables > Actions), see MOBILE_APP_GUIDE.md §5:
+# Every build leaves these under "Artifacts" on the run's Summary page:
+#   diction-masters-apk-test  → a test copy to install on your own phone
+#   diction-masters-apk       → the signed app (when the signing key is set up)
+#   diction-masters-aab       → the file for Google Play
+#
+# With the signing key set up (MOBILE_APP_GUIDE.md, section 12), each build
+# on "main" is also published on the Releases page, and this address always
+# downloads the newest one — the website's "Get the app" button uses it:
+#   https://github.com/<owner>/<repo>/releases/latest/download/diction-masters.apk
+#
+# Repository secrets (Settings > Secrets and variables > Actions > Secrets):
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# Only if this repository is private (so its releases can't be downloaded by
+# the public), publish to a separate public repository instead:
+#   variable APK_RELEASE_REPO = "<owner>/<public-repo>"  (Settings > ... > Variables)
+#   secret   RELEASE_TOKEN    = a token allowed to write to that repository
 name: Android app
 
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - "mobile/**"
       - ".github/workflows/android-app.yml"
+
+permissions:
+  contents: write # to publish the app on the Releases page
 
 jobs:
   build:
@@ -26,6 +40,8 @@ jobs:
         working-directory: mobile
     env:
       KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      # Every build gets a higher version number, so phones accept it as an update.
+      DM_BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v5
 
@@ -64,14 +80,50 @@ jobs:
         working-directory: mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug bundleRelease
+          ./gradlew assembleDebug assembleRelease bundleRelease
+
+      - name: Name the files
+        working-directory: mobile/android/app/build/outputs
+        run: |
+          mkdir -p "$RUNNER_TEMP/out"
+          cp apk/debug/*.apk "$RUNNER_TEMP/out/diction-masters-test.apk"
+          if [ -f apk/release/app-release.apk ]; then
+            cp apk/release/app-release.apk "$RUNNER_TEMP/out/diction-masters.apk"
+          fi
+          cp bundle/release/*.aab "$RUNNER_TEMP/out/diction-masters.aab"
+          VERSION=$(node -p "require('${{ github.workspace }}/mobile/app.settings.json').version")
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          ls -la "$RUNNER_TEMP/out"
 
       - uses: actions/upload-artifact@v5
         with:
+          name: diction-masters-apk-test
+          path: ${{ runner.temp }}/out/diction-masters-test.apk
+
+      - uses: actions/upload-artifact@v5
+        if: env.KEYSTORE_BASE64 != ''
+        with:
           name: diction-masters-apk
-          path: mobile/android/app/build/outputs/apk/debug/*.apk
+          path: ${{ runner.temp }}/out/diction-masters.apk
 
       - uses: actions/upload-artifact@v5
         with:
           name: diction-masters-aab
-          path: mobile/android/app/build/outputs/bundle/release/*.aab
+          path: ${{ runner.temp }}/out/diction-masters.aab
+
+      - name: Publish on the Releases page
+        if: env.KEYSTORE_BASE64 != '' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ vars.APK_RELEASE_REPO || github.repository }}
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+          tag_name: android-${{ env.APP_VERSION }}-build${{ github.run_number }}
+          name: Diction Masters for Android ${{ env.APP_VERSION }} (build ${{ github.run_number }})
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          body: |
+            Diction Masters for Android — version ${{ env.APP_VERSION }}, build ${{ github.run_number }}.
+
+            **Install:** download `diction-masters.apk` on your Android phone, open it, allow installing from this source if asked, then tap Install.
+            Already have the app? Install this over it — your account and downloaded lessons stay.
+          files: ${{ runner.temp }}/out/diction-masters.apk

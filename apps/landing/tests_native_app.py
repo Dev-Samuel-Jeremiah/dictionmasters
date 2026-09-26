@@ -77,3 +77,43 @@ class StoreRequirementsTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("storage", response["Clear-Site-Data"])
         self.assertFalse(User.objects.filter(pk=user.pk).exists())
+
+
+APK = "https://github.com/example/dictionmasters/releases/latest/download/diction-masters.apk"
+
+
+class GetTheAppTests(TestCase):
+    """/app/get/ and the "Get the app" links (apps/landing/native_app.py)."""
+
+    @override_settings(NATIVE_APP_ANDROID_APK_URL=APK)
+    def test_android_phones_get_the_download(self):
+        page = self.client.get("/app/get/", HTTP_USER_AGENT=BROWSER)
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual(page.context["device"], "android")
+        self.assertContains(page, APK)
+        self.assertContains(page, "Download the Android app")
+        self.assertContains(page, "data-android-app")  # install buttons lead here
+
+    @override_settings(NATIVE_APP_ANDROID_APK_URL="", NATIVE_APP_IOS_STORE_URL="")
+    def test_iphones_get_add_to_home_screen_steps(self):
+        iphone_safari = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1"
+        page = self.client.get("/app/get/", HTTP_USER_AGENT=iphone_safari)
+        self.assertEqual(page.context["device"], "ios")
+        self.assertContains(page, "Add to Home Screen")
+        self.assertNotContains(page, "Download the Android app")
+
+    def test_computers_get_a_qr_code(self):
+        page = self.client.get("/app/get/", HTTP_USER_AGENT="Mozilla/5.0 (X11; Linux x86_64) Chrome/130")
+        self.assertEqual(page.context["device"], "desktop")
+        self.assertContains(page, "<svg")
+
+    @override_settings(NATIVE_APP_ANDROID_APK_URL=APK)
+    def test_hidden_inside_the_app(self):
+        self.assertRedirects(self.client.get("/app/get/", HTTP_USER_AGENT=ANDROID),
+                             "/accounts/dashboard/", fetch_redirect_response=False)
+        welcome = self.client.get("/app/welcome/", HTTP_USER_AGENT=ANDROID)
+        self.assertNotContains(welcome, "Get the app")
+        self.assertNotContains(welcome, "data-android-app")
+
+    def test_the_footer_links_to_it_in_browsers(self):
+        self.assertContains(self.client.get("/", HTTP_USER_AGENT=BROWSER), "/app/get/")

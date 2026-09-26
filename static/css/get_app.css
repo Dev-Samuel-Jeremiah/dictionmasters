@@ -1,0 +1,28 @@
+/* The "Get the app" page (templates/native_app/get_app.html). */
+
+/* The card for the visitor's own device comes first (style="order: …"). */
+.ga-body { display: flex; flex-direction: column; }
+
+.ga-card__head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.ga-card__icon {
+  display: grid; place-items: center; flex: none;
+  width: 52px; height: 52px; border-radius: 16px;
+  background: var(--sky, #E7EFFF); color: var(--navy, #0B1A4A); font-size: 26px;
+}
+.ga-card__head .ui-section__title { margin: 0; }
+.ga-card__tag {
+  display: inline-block; margin: 4px 0 0; padding: 2px 10px; border-radius: 99px;
+  background: var(--butter, #FFF5D6); color: var(--navy, #0B1A4A); font-size: 13px; font-weight: 700;
+}
+.ga-card--mine { box-shadow: 0 0 0 3px var(--yellow, #FFC72C), var(--shadow, 0 6px 18px rgba(16, 40, 120, .08)); }
+
+.ga-steps { margin: 14px 0; padding-left: 22px; line-height: 1.6; }
+.ga-steps li { margin: 0 0 8px; padding-left: 4px; }
+
+.ga-qr { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.ga-qr__code {
+  flex: none; padding: 10px; border-radius: 16px; background: #fff;
+  border: 1px solid var(--line, #E3E8F4); line-height: 0;
+}
+.ga-qr__code svg { width: 180px; height: 180px; }
+

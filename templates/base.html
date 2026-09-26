@@ -1,5 +1,5 @@
 {% load static %}<!DOCTYPE html>
-<html lang="en-gb" data-site-url="{{ site_url }}"{% if native_app %} data-native-app="{{ native_app.platform }}"{% if native_app.hide_payments %} data-app-payments="off"{% endif %}{% endif %}>
+<html lang="en-gb" data-site-url="{{ site_url }}"{% if native_app %} data-native-app="{{ native_app.platform }}"{% if native_app.hide_payments %} data-app-payments="off"{% endif %}{% else %}{% if app_downloads.android_apk or app_downloads.android_store %} data-android-app{% endif %}{% if app_downloads.ios_store %} data-ios-app{% endif %}{% endif %}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

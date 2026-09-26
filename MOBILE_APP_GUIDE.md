@@ -319,6 +319,7 @@ separate project.
 | Change the website address | `siteUrl` and `appHosts` in `app.settings.json` → `npm run sync` | Yes |
 | Change the offline screen | `mobile/www/offline.html` → `npm run sync` | Yes |
 | Add a native feature (e.g. push notifications) | `npm install @capacitor/push-notifications` → `npm run sync` → use it from `native_app.js` via `Capacitor.Plugins.PushNotifications` | Yes |
+| Change where "Get the app" downloads from | `NATIVE_APP_ANDROID_APK_URL` / `…_STORE_URL` in the server's `.env` (§12) | No |
 | Publish an update to the stores | Raise `"build"` by 1 (and `"version"` if you like) in `app.settings.json` → `npm run release` → build (§5, §6) | — |
 
 **The rule of thumb:** after editing anything in `mobile/`, run `npm run sync`.
@@ -405,3 +406,120 @@ pictures and audio.
 In Chrome on your computer, open DevTools → **Application** → Service
 workers → tick **Offline**, then click around. On the phone, turn on
 aeroplane mode.
+
+---
+
+## 12. Your own download: signed APK, Releases page, "Get the app" button
+
+Once this is set up, it all happens automatically:
+
+1. You push a change to `mobile/` (or click **Run workflow**).
+2. GitHub builds the app, **signs it with your key**, and publishes it on
+   your repository's **Releases** page as `diction-masters.apk`.
+3. The website's **Get the app** page (`/app/get/`, linked in the footer and
+   from every "Install app" button) always offers the newest one:
+   - **Android:** a download button plus install steps
+   - **iPhone:** "Add to Home Screen" steps (or your App Store link, later)
+   - **Computer:** a QR code to open the page on a phone
+
+None of this appears inside the app itself.
+
+### Step A: make your signing key (once, ever)
+
+On your computer:
+
+```bash
+# keytool comes with Java; install it if "keytool" isn't found
+sudo apt install -y openjdk-21-jre-headless
+
+keytool -genkeypair -v -keystore ~/dictionmasters-upload.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+
+It asks for a password (twice), then your name and organisation. The
+Nigeria country code is **NG**. Type **yes** at the end.
+
+**Back up `dictionmasters-upload.jks` and its password somewhere safe**
+(a USB stick, or Google Drive). Never put it in git. Every update must be
+signed with this same key, or phones refuse to install it over the old app.
+
+Then turn the key into text for GitHub:
+
+```bash
+base64 -w0 ~/dictionmasters-upload.jks > ~/keystore-base64.txt
+```
+
+### Step B: give the key to GitHub
+
+On GitHub, go to your repo → **Settings** → **Secrets and variables** → **Actions** →
+**New repository secret**. Add these four, one at a time:
+
+| Name | Value |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | everything inside `keystore-base64.txt` (open it in VS Code, Ctrl+A, Ctrl+C) |
+| `ANDROID_KEYSTORE_PASSWORD` | the password you chose |
+| `ANDROID_KEY_ALIAS` | `upload` |
+| `ANDROID_KEY_PASSWORD` | the same password |
+
+Then delete the text copy: `rm ~/keystore-base64.txt`.
+
+### Step C: is your repository public or private?
+
+The download button needs a public download link.
+
+- **Public repository:** nothing to do.
+- **Private repository:** your code stays private, and the app is published
+  from a second, public repository that only holds the app:
+  1. Create a new **public** repository, for example `dictionmasters-app`,
+     and tick "Add a README" so it isn't empty.
+  2. Create a token: GitHub (your picture) → **Settings** → **Developer settings** →
+     **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
+     For *Repository access*, choose only `dictionmasters-app`. For *Permissions* →
+     *Contents*, choose **Read and write**.
+  3. In your main repo → Settings → Secrets and variables → Actions:
+     - **Secrets** tab: `RELEASE_TOKEN` = the token
+     - **Variables** tab: `APK_RELEASE_REPO` = `Dev-Samuel-Jeremiah/dictionmasters-app`
+
+### Step D: build and publish
+
+GitHub → **Actions** → **Android app** → **Run workflow**. When it's green,
+the **Releases** page shows *Diction Masters for Android …* with
+`diction-masters.apk`.
+
+### Step E: switch on the website button
+
+Add this to the server's `.env` (use `dictionmasters-app` instead if you did Step C
+for a private repository), then restart the site:
+
+```
+NATIVE_APP_ANDROID_APK_URL=https://github.com/Dev-Samuel-Jeremiah/dictionmasters/releases/latest/download/diction-masters.apk
+```
+
+That address always points to the **newest** release, so you never need to
+change it again. Later, when the apps are in the stores, add:
+
+```
+NATIVE_APP_ANDROID_STORE_URL=https://play.google.com/store/apps/details?id=app.dictionmasters.mobile
+NATIVE_APP_IOS_STORE_URL=https://apps.apple.com/app/idXXXXXXXXXX
+```
+
+### Also: deep links, with the same key
+
+Your key's fingerprint lets website links open straight in the app
+(section 7):
+
+```bash
+keytool -list -v -keystore ~/dictionmasters-upload.jks -alias upload | grep SHA256
+```
+
+Put the long `AB:CD:…` value in the server's `.env` as `NATIVE_APP_ANDROID_SHA256=...`.
+
+### Updating the app
+
+- **Website changes:** just deploy the site. The app shows them straight away.
+- **App changes** (anything in `mobile/`): push. GitHub builds and publishes a
+  new release with a higher version number. People download it from
+  `/app/get/` and install it over the old one; their account and lessons stay.
+- The **test** APK in each build's Artifacts is signed with a throwaway key,
+  so it can't update a phone that has the real app. Uninstall the real app first
+  if you want to try a test copy.
