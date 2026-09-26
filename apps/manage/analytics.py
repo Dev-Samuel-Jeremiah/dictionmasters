@@ -54,6 +54,7 @@ ACTIVITY_SOURCES = [
     ("tutor", "Reading tutor sessions", "tutor.TutorSession", "started_at"),
     ("modules", "Module days finished", "learning_modules.DayProgress", "completed_at"),
     ("reading", "Reading Club chapters", "reading_club.ChapterProgress", "completed_at"),
+    ("dialogues", "Dialogues practised", "conversational_dialogue.DialogueProgress", "completed_at"),
 ]
 
 

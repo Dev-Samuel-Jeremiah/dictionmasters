@@ -32,6 +32,7 @@ GATED_PREFIXES = (
     "/learning-modules/",
     "/reading-club/",
     "/assembly-recitals/",
+    "/conversational-dialogue/",
     "/echospell/",
     "/quick-words/",
     "/tutor/",

@@ -108,6 +108,7 @@ TEXT_FOR = {
     "learning_modules.lessonitem": lambda obj: plain_text(obj.body),
     "reading_club.chapter": lambda obj: plain_text(obj.body),
     "assembly_recitals.recital": lambda obj: "\n".join(" ".join(verse) for verse in obj.verses),
+    "conversational_dialogue.dialogue": lambda obj: "\n".join(text for _speaker, text in obj.lines),
 }
 
 
@@ -122,6 +123,7 @@ TEXT_FIELD = {
     "learning_modules.lessonitem": "body",
     "reading_club.chapter": "body",
     "assembly_recitals.recital": None,
+    "conversational_dialogue.dialogue": None,
 }
 
 

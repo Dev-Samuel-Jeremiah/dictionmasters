@@ -1,0 +1,67 @@
+/* The phonemic keyboard (static/js/ipa_keyboard.js). */
+
+.ipa-switch {
+  position: fixed; right: 16px; bottom: 20px; z-index: 210;
+  display: inline-flex; padding: 4px; gap: 2px; border-radius: 999px;
+  background: #0B1A4A; box-shadow: 0 10px 26px rgba(11, 26, 74, 0.35);
+}
+.ipa-switch[hidden] { display: none; }
+.ipa-switch__btn {
+  min-width: 52px; height: 36px; padding: 0 12px; border: 0; border-radius: 999px;
+  background: transparent; color: #C9D0E2; font: 800 0.9rem/1 "Plus Jakarta Sans", system-ui, sans-serif; cursor: pointer;
+}
+.ipa-switch__btn--ipa { font-family: "Noto Sans", "Plus Jakarta Sans", sans-serif; font-size: 1rem; }
+.ipa-switch__btn[aria-pressed="true"] { background: #FFC72C; color: #0B1A4A; }
+.ipa-switch__btn:focus-visible, .ipa-kb button:focus-visible { outline: 3px solid #FFC72C; outline-offset: 2px; }
+
+.ipa-kb {
+  position: fixed; left: 50%; bottom: 0; z-index: 205; transform: translateX(-50%);
+  width: min(100%, 860px); box-sizing: border-box;
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-radius: 20px 20px 0 0; background: #F2F5FC;
+  box-shadow: 0 -12px 34px rgba(11, 26, 74, 0.22); border-top: 3px solid #1846E0;
+  animation: ipa-up 0.22s cubic-bezier(.2, .8, .2, 1);
+}
+.ipa-kb[hidden] { display: none; }
+@keyframes ipa-up { from { transform: translate(-50%, 24px); opacity: 0; } }
+.ipa-kb-open body { padding-bottom: var(--ipa-kb-h, 300px); }
+
+.ipa-kb__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.ipa-kb__tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.ipa-kb__tab {
+  flex: none; min-height: 34px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; color: #55607E;
+  font: 700 0.82rem/1 "Plus Jakarta Sans", system-ui, sans-serif; cursor: pointer;
+}
+.ipa-kb__tab.is-on { background: #1846E0; color: #fff; }
+.ipa-kb__tool {
+  flex: none; min-height: 34px; padding: 0 12px; border: 1px solid #C9D0E2; border-radius: 999px; background: #fff; color: #0B1A4A;
+  font: 800 0.8rem/1 "Plus Jakarta Sans", system-ui, sans-serif; cursor: pointer;
+}
+
+.ipa-kb__keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 6px; }
+.ipa-kb__foot { display: grid; grid-template-columns: 1fr 4fr 1fr 1.3fr; gap: 6px; margin-top: 6px; }
+.ipa-kb__key {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-height: 54px; padding: 4px 2px; border: 0; border-radius: 12px;
+  background: #fff; color: #0B1A4A; cursor: pointer; user-select: none; -webkit-user-select: none;
+  box-shadow: 0 2px 0 #C9D0E2; transition: transform 0.06s ease, background 0.1s ease;
+  touch-action: manipulation;
+}
+.ipa-kb__key:hover { background: #E7EFFF; }
+.ipa-kb__key:active { transform: translateY(2px); box-shadow: 0 0 0 #C9D0E2; background: #FFC72C; }
+.ipa-kb__sym { font: 700 1.35rem/1.1 "Noto Sans", "Plus Jakarta Sans", sans-serif; }
+.ipa-kb__word { font: 600 0.62rem/1.1 "Plus Jakarta Sans", system-ui, sans-serif; color: #8A93AE; }
+.ipa-kb__foot .ipa-kb__key { min-height: 46px; font: 800 1.1rem/1 "Plus Jakarta Sans", system-ui, sans-serif; background: #E3E8F4; }
+.ipa-kb__foot .ipa-kb__key--back { background: #D6E3FF; }
+.ipa-kb__spacebar { font-size: 0.78rem; font-weight: 700; color: #55607E; }
+
+@media (max-width: 480px) {
+  .ipa-kb { padding-left: 6px; padding-right: 6px; border-radius: 16px 16px 0 0; }
+  .ipa-kb__keys { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+  .ipa-kb__key { min-height: 50px; border-radius: 10px; }
+  .ipa-kb__sym { font-size: 1.15rem; }
+  .ipa-kb__word { font-size: 0.56rem; }
+  .ipa-kb__foot { gap: 4px; }
+}
+@media (prefers-reduced-motion: reduce) { .ipa-kb { animation: none; } }
+@media print { .ipa-kb, .ipa-switch { display: none !important; } }

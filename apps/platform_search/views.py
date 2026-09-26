@@ -67,6 +67,13 @@ def _search_items(request, query, per_type=MAX_RESULTS_PER_TYPE):
         recitals = Recital.objects.filter(is_published=True, section__is_published=True).filter(Q(title__icontains=needle) | Q(summary__icontains=needle) | Q(lines__icontains=needle)).select_related("section")
         add(recitals, lambda x: x.title, "Assembly recital", lambda x: x.summary or x.section.name, lambda x: reverse("assembly_recitals:recital", args=[x.section.slug, x.slug]))
 
+        from apps.conversational_dialogue.models import Dialogue as ConversationDialogue
+        conversations = limit_to_levels(
+            ConversationDialogue.objects.filter(is_published=True, level__is_published=True).filter(
+                Q(title__icontains=needle) | Q(target_words__icontains=needle) | Q(script__icontains=needle)
+            ).select_related("level"), request.user, field="level__name", allow_blank=False)
+        add(conversations, lambda x: x.title, "Conversational dialogue", lambda x: f"{x.level.name} · {x.place}", lambda x: reverse("conversational_dialogue:dialogue", args=[x.level.slug, x.slug]))
+
         from apps.learning_modules.models import LearningModule, LessonItem
         modules = LearningModule.objects.filter(is_published=True).filter(Q(name__icontains=needle) | Q(description__icontains=needle) | Q(overview__icontains=needle))
         add(modules, lambda x: x.name, "Learning Module", lambda x: x.description or x.overview, lambda x: reverse("learning_modules:module_detail", args=[x.slug]))

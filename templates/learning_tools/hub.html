@@ -44,6 +44,11 @@
         <span class="px-item__it"><b>Learning Modules</b><span>Term by term, week by week, Monday to Friday.</span></span>
         <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
       </a>
+      <a href="{% url 'conversational_dialogue:hub' %}" class="px-item" data-cat="school">
+        <img class="px-thumb" src="{% static 'img/app/practiceGirl.jpg' %}" alt="">
+        <span class="px-item__it"><b>Conversational Dialogue</b><span>A short conversation for every school day, by level.</span></span>
+        <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+      </a>
       <a href="{% url 'assembly_recitals:hub' %}" class="px-item" data-cat="school">
         <img class="px-thumb" src="{% static 'img/app/teacher.jpg' %}" alt="">
         <span class="px-item__it"><b>Assembly Recitals</b><span>Days, months, numbers and diction songs to say together.</span></span>

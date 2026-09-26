@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ level.name }} — Conversational Dialogue{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/dialogues.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--green">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'conversational_dialogue:hub' %}">Conversational Dialogue</a></li>
+        <li>{{ level.name }}</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128172;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Conversational Dialogue</p>
+            <h1 class="ui-hero__title">{{ level.name }}</h1>
+            {% if level.description %}<p class="ui-hero__lede">{{ level.description }}</p>{% endif %}
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ total }} dialogue{{ total|pluralize }}</span>
+              {% if total %}<span class="ui-chip">{{ done_total }} practised</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+    <nav class="cd-terms" aria-label="Terms">
+      {% for t in terms %}
+      <a href="?term={{ t.number }}" class="cd-term{% if t.number == term %} is-on{% endif %}"{% if t.number == term %} aria-current="page"{% endif %}>{{ t.label }}<small>{{ t.count }}</small></a>
+      {% endfor %}
+    </nav>
+
+    <div class="cd-weeks">
+      {% for week in weeks %}
+      <section class="ui-panel cd-week{% if not week.count %} is-empty{% endif %}" aria-labelledby="week-{{ week.number }}">
+        <header class="cd-week__head">
+          <h2 id="week-{{ week.number }}" class="cd-week__title">{{ week.label }}</h2>
+          {% if week.count %}<span class="cd-week__meta">{{ week.done }}/{{ week.count }} practised</span>{% else %}<span class="cd-week__meta">Coming soon</span>{% endif %}
+        </header>
+        {% if week.titles %}<p class="cd-week__topics">{{ week.titles|join:" · " }}</p>{% endif %}
+        <ol class="cd-days">
+          {% for day in week.days %}
+          <li>
+            {% if day.dialogues %}
+            <a href="{% url 'conversational_dialogue:dialogue' level.slug day.dialogues.0.slug %}" class="cd-day{% if day.done %} is-done{% endif %}" title="{{ day.label }}: {{ day.dialogues.0.title }}">
+              <span class="cd-day__name">{{ day.short }}</span>
+              <span class="cd-day__topic">{{ day.dialogues.0.title }}{% if day.dialogues|length > 1 %} +{{ day.dialogues|length|add:"-1" }}{% endif %}</span>
+              {% if day.done %}<span class="cd-day__tick" aria-label="practised">&#10003;</span>{% endif %}
+            </a>
+            {% else %}
+            <span class="cd-day is-blank"><span class="cd-day__name">{{ day.short }}</span><span class="cd-day__topic">—</span></span>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+        {% if week.count %}<span class="ui-bar"><span class="ui-bar__fill" style="--p: {{ week.percent }}"></span></span>{% endif %}
+      </section>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

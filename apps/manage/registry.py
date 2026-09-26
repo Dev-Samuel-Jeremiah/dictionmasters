@@ -298,6 +298,24 @@ SECTIONS = [
         ],
     },
     {
+        "slug": "conversational-dialogue", "name": "Conversational Dialogue", "icon": "💬", "tone": "#1846E0",
+        "blurb": "A conversation for every school day: level, term, week and day, with target words and a script.",
+        "screens": [
+            {"key": "dialogue-levels", "model": "conversational_dialogue.DialogueLevel",
+             "columns": ["name", "is_published"], "search": ["name", "description"],
+             "children": ["dialogues"], "form": ["name", "description", "is_published"]},
+            {"key": "dialogues", "model": "conversational_dialogue.Dialogue",
+             "columns": ["title", "level", "term", "week", "day", "is_published"],
+             "search": ["title", "target_words", "script"], "parent": ("level", "dialogue-levels"),
+             "form": ["level", "term", "week", "day", "title", "target_words", "script", "notes",
+                      "audio_file", "audio_url", "video_file", "video_url", "video_caption",
+                      "video_duration_label", "video_poster", "order", "is_published"]},
+            {"key": "dialogue-progress", "model": "conversational_dialogue.DialogueProgress",
+             "columns": ["user", "dialogue", "completed_at"], "search": ["user__email", "dialogue__title"],
+             "readonly": True},
+        ],
+    },
+    {
         "slug": "assembly-recitals", "name": "Assembly Recitals", "icon": "📣", "tone": "#1846E0",
         "blurb": "Days & months, numerals, songs and more, said together at assembly.",
         "screens": [
@@ -466,6 +484,7 @@ QUICK_ADDS = [
     ("assessments", "Assessment", "📋"),
     ("chapters", "Reading chapter", "📚"),
     ("recitals", "Assembly recital", "📣"),
+    ("dialogues", "Conversational dialogue", "💬"),
     ("articles", "Library article", "📄"),
     ("diction-library-items", "Diction Library item", "📚"),
     ("radio-programs", "Radio programme", "📻"),

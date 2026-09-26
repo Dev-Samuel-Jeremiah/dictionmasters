@@ -44,6 +44,7 @@ urlpatterns = [
     path("learning-modules/", include("apps.learning_modules.urls")),
     path("reading-club/", include("apps.reading_club.urls")),
     path("assembly-recitals/", include("apps.assembly_recitals.urls")),
+    path("conversational-dialogue/", include("apps.conversational_dialogue.urls")),
     path("echospell/", include("apps.echospell.urls")),
     path("quick-words/", include("apps.quick_words.urls")),
     path("tutor/", include("apps.tutor.urls")),

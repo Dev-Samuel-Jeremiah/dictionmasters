@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Conversational Dialogue — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/dialogues.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero ui-hero--green">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
+        <li><a href="{% url 'learning_tools:hub' %}">Learning tools</a></li>
+        <li>Conversational Dialogue</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128172;</span>
+          <div>
+            <p class="ui-hero__eyebrow">Talk it through, every school day</p>
+            <h1 class="ui-hero__title">Conversational Dialogue</h1>
+            <p class="ui-hero__lede">A short everyday conversation for each day of the week. Learn the target words, listen to the dialogue, then act it out.</p>
+            <div class="ui-hero__chips">
+              <span class="ui-chip ui-chip--gold">{{ levels|length }} level{{ levels|length|pluralize }}</span>
+              <span class="ui-chip">{{ total }} dialogue{{ total|pluralize }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body">
+    {% if levels %}
+    <div class="ui-grid">
+      {% for level in levels %}
+      <a href="{% url 'conversational_dialogue:level' level.slug %}" class="ui-card ui-lift" style="--i: {{ forloop.counter0 }}">
+        <span class="ui-card__top">
+          <span class="ui-card__icon" aria-hidden="true">&#128172;</span>
+          {% if not level.dialogue_count %}<span class="ui-status">Coming soon</span>
+          {% elif level.done and level.done == level.dialogue_count %}<span class="ui-status ui-status--done">Complete</span>{% endif %}
+        </span>
+        <span class="ui-card__name">{{ level.name }}</span>
+        {% if level.description %}<span class="ui-card__desc">{{ level.description }}</span>{% endif %}
+        <span class="ui-card__foot">
+          <span class="ui-card__meta"><span>{{ level.dialogue_count }} dialogue{{ level.dialogue_count|pluralize }}</span>{% if level.dialogue_count %}<span>{{ level.percent }}%</span>{% endif %}</span>
+          <span class="ui-bar"><span class="ui-bar__fill" style="--p: {{ level.percent }}"></span></span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="ui-empty"><p>Dialogues for your level are on their way. Check back soon.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

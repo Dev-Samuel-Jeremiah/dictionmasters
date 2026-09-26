@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load static %}
+{% load rich_text %}
+{% load videos %}
+{% load read_along %}
+
+{% block title %}{{ dialogue.title }} — {{ level.name }} — Conversational Dialogue{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/book.css' %}">
+  <link rel="stylesheet" href="{% static 'css/dialogues.css' %}">
+{% endblock %}
+{% block extra_js %}
+  <script src="{% static 'js/read_along.js' %}" defer></script>
+  <script src="{% static 'js/dialogues.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="ui" data-dialogue>
+  <section class="ui-hero ui-hero--green">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'conversational_dialogue:hub' %}">Conversational Dialogue</a></li>
+        <li><a href="{% url 'conversational_dialogue:level' level.slug %}?term={{ dialogue.term }}">{{ level.name }}</a></li>
+        <li>{{ dialogue.place }}</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128172;</span>
+          <div>
+            <p class="ui-hero__eyebrow">{{ level.name }} &middot; {{ dialogue.place }}</p>
+            <h1 class="ui-hero__title">{{ dialogue.title }}</h1>
+            <div class="ui-hero__chips">
+              {% if words %}<span class="ui-chip ui-chip--gold">{{ words|length }} target word{{ words|length|pluralize }}</span>{% endif %}
+              {% if dialogue.audio_source %}<span class="ui-chip">&#127911; Recording</span>{% endif %}
+              {% if dialogue.video_source %}<span class="ui-chip">&#9654; Video</span>{% endif %}
+              {% if is_done %}<span class="ui-chip ui-chip--done">&#10003; Practised</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body ui-body--narrow ui-stack">
+    {% if words %}
+    <section class="ui-panel">
+      <p class="ui-panel__label">Target words</p>
+      <p class="ui-panel__lede">Say each one clearly before you start. Tap &#128266; to hear it.</p>
+      <ul class="cd-words">
+        {% for w in words %}
+        <li class="cd-word">
+          <button type="button" class="cd-word__say" data-say="{{ w.word }}" aria-label="Hear “{{ w.word }}”">&#128266;</button>
+          {% if w.slug %}<a href="{% url 'quick_words:word_detail' w.slug %}" class="cd-word__text">{{ w.word }}</a>{% else %}<span class="cd-word__text">{{ w.word }}</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if dialogue.video_source %}
+    <div class="video-card">
+      <div class="video-card__bar"><div><div class="video-card__title">{{ dialogue.video_caption|default:"Watch the dialogue" }}</div>{% if dialogue.video_duration_label %}<div class="video-card__meta">{{ dialogue.video_duration_label }}</div>{% endif %}</div></div>
+      <div class="video-card__stage">{% video_player dialogue %}</div>
+    </div>
+    {% endif %}
+
+    {% if lines %}
+    <section class="ui-panel cd-script"{% if dialogue.audio_source %} data-read-along{% read_along_sync dialogue %}{% endif %}>
+      <div class="cd-script__head">
+        <p class="ui-panel__label">The dialogue</p>
+        {% if speakers|length > 1 %}
+        <div class="cd-roles" role="group" aria-label="Act it out">
+          <span class="cd-roles__label">Act it out:</span>
+          {% for s in speakers %}<button type="button" class="cd-role" data-role="{{ s }}" aria-pressed="false">I'm {{ s }}</button>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% if dialogue.audio_source %}
+      <audio controls src="{{ dialogue.audio_source }}" data-ra-media class="cd-audio"></audio>
+      {% endif %}
+      <p class="cd-script__hint" data-role-hint hidden>Your lines are hidden. Say them from memory, then tap a bubble to check.</p>
+      <div class="cd-lines" data-ra-text>
+        {% for line in lines %}
+        <div class="cd-line cd-line--{{ line.side }}" data-ra-line data-speaker="{{ line.speaker }}">
+          <span class="cd-line__avatar" aria-hidden="true" data-ra-skip>{{ line.initial }}</span>
+          <div class="cd-line__bubble">
+            {% if line.speaker %}<p class="cd-line__name" data-ra-skip>{{ line.speaker }}</p>{% endif %}
+            <p class="cd-line__text">{{ line.text }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% elif not dialogue.video_source %}
+    <div class="ui-empty"><p>This dialogue is being written. Check back soon.</p></div>
+    {% endif %}
+
+    {% if dialogue.notes %}
+    <section class="ui-callout">
+      <p class="ui-panel__label">For the teacher</p>
+      <div class="dm-rich-content">{{ dialogue.notes|rich_text }}</div>
+    </section>
+    {% endif %}
+
+    <form method="post" action="{% url 'conversational_dialogue:toggle_done' level.slug dialogue.slug %}" class="ui-complete{% if is_done %} ui-complete--done{% endif %}">
+      {% csrf_token %}
+      <span class="ui-complete__mark" aria-hidden="true">{% if is_done %}&#10003;{% else %}&#9733;{% endif %}</span>
+      <div class="ui-complete__text">
+        {% if is_done %}<strong>Practised</strong><span>Well done. Come back to it any time.</span>
+        {% else %}<strong>Said it together?</strong><span>Mark it practised once you've acted it out.</span>{% endif %}
+      </div>
+      <button type="submit" class="ui-btn {% if is_done %}ui-btn--ghost{% else %}ui-btn--gold{% endif %}">{% if is_done %}Mark as not done{% else %}&#10003; Mark as practised{% endif %}</button>
+    </form>
+
+    {% if prev_dialogue or next_dialogue %}
+    <nav class="ui-pager" aria-label="Other days">
+      {% if prev_dialogue %}
+      <a href="{% url 'conversational_dialogue:dialogue' level.slug prev_dialogue.slug %}" class="ui-lift"><small>&larr; {{ prev_dialogue.place }}</small><strong>{{ prev_dialogue.title }}</strong></a>
+      {% endif %}
+      {% if next_dialogue %}
+      <a href="{% url 'conversational_dialogue:dialogue' level.slug next_dialogue.slug %}" class="ui-pager__next ui-lift"><small>{{ next_dialogue.place }} &rarr;</small><strong>{{ next_dialogue.title }}</strong></a>
+      {% endif %}
+    </nav>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
