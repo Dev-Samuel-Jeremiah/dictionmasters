@@ -26,6 +26,7 @@ urlpatterns = [
     # The Android and iPhone apps (apps/landing/native_app.py).
     path("app/welcome/", native_app.welcome, name="native_app_welcome"),
     path("app/get/", native_app.get_app, name="native_app_get"),
+    path("app/version.json", native_app.app_version, name="native_app_version"),
     path(".well-known/assetlinks.json", native_app.android_asset_links, name="native_app_assetlinks"),
     path(".well-known/apple-app-site-association", native_app.apple_app_site_association, name="native_app_aasa"),
     path("", include("apps.landing.urls")),

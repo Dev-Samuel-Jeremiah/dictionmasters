@@ -10,6 +10,10 @@
  *   - Everywhere, once a learner has downloaded lessons, it quietly
  *     refreshes them about twice a day when the device is online on Wi-Fi,
  *     and carries on a download that was interrupted by leaving the page.
+ *   - In the Android/iPhone app this starts by itself: the first time a
+ *     learner is signed in on Wi-Fi, their lessons (with pictures and audio)
+ *     are saved on the phone, so the app works with no internet from then
+ *     on. On mobile data it saves just the most-used pages, to spare data.
  *
  * Progress made offline (lessons completed, words saved, answers) is sent
  * by the service worker when the device reconnects (static/js/pwa.js asks
@@ -113,15 +117,35 @@
     onProgress: function (fn) { listeners.push(fn); } };
 
   // ------------------------------------------------ in the background
+  var inApp = document.documentElement.hasAttribute("data-native-app");
+  var KEY_ESSENTIALS = "dm-offline-essentials"; // when the mobile-data top-up last ran
+
   function background() {
     var settings = read(KEY_SETTINGS, null);
+    if (!settings && inApp) {
+      // The app works offline out of the box: switched on the first time.
+      settings = { media: true, auto: true, fromApp: true };
+      write(KEY_SETTINGS, settings);
+    }
     if (!settings || !settings.auto || !navigator.onLine) return;
     var unfinished = read(KEY_RUN, null);
     var last = read(KEY_LAST, 0);
     if (!unfinished && Date.now() - last < REFRESH_EVERY) return;
     onWifi().then(function (ok) {
-      if (!ok) return;
-      download({ media: settings.media, resume: unfinished }).catch(function () {});
+      if (ok) {
+        download({ media: settings.media, resume: unfinished }).catch(function () {});
+        return;
+      }
+      // Mobile data, in the app: just the front pages and the first lessons,
+      // once a day, without pictures or audio, so the app still opens offline.
+      if (inApp && !unfinished && Date.now() - read(KEY_ESSENTIALS, 0) > REFRESH_EVERY * 2) {
+        write(KEY_ESSENTIALS, Date.now());
+        download({ media: false, limit: 60 }).then(function (state) {
+          // Not a full download: the Wi-Fi one stays due.
+          write(KEY_LAST, last || 0);
+          return state;
+        }).catch(function () {});
+      }
     });
   }
   window.addEventListener("load", function () { setTimeout(background, 4000); });

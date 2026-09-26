@@ -117,3 +117,63 @@ class GetTheAppTests(TestCase):
 
     def test_the_footer_links_to_it_in_browsers(self):
         self.assertContains(self.client.get("/", HTTP_USER_AGENT=BROWSER), "/app/get/")
+
+
+class UpdateAvailableTests(TestCase):
+    """/app/version.json tells the installed app about a newer version."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    @override_settings(NATIVE_APP_ANDROID_APK_URL=APK, NATIVE_APP_ANDROID_LATEST_BUILD=7,
+                       NATIVE_APP_ANDROID_LATEST_VERSION="1.1.0", NATIVE_APP_ANDROID_UPDATE_NOTES="New icon.",
+                       NATIVE_APP_ANDROID_MIN_BUILD=3)
+    def test_the_newest_version_set_by_hand(self):
+        data = self.client.get("/app/version.json", HTTP_USER_AGENT=ANDROID).json()
+        self.assertEqual(data["android"], {"build": 7, "version": "1.1.0", "notes": "New icon.",
+                                           "url": APK, "min_build": 3})
+
+    @override_settings(NATIVE_APP_ANDROID_APK_URL="", NATIVE_APP_ANDROID_LATEST_BUILD=0)
+    def test_nothing_to_offer_without_a_download(self):
+        self.assertIsNone(self.client.get("/app/version.json").json()["android"])
+
+    @override_settings(NATIVE_APP_ANDROID_APK_URL=APK, NATIVE_APP_ANDROID_LATEST_BUILD=0)
+    def test_reads_the_newest_github_release(self):
+        import io
+        import json
+        from unittest import mock
+
+        release = {"tag_name": "android-1.0.0-build12",
+                   "body": "What's new: Faster lessons.\n\nDiction Masters for Android..."}
+        fake = mock.MagicMock()
+        fake.__enter__.return_value = io.BytesIO(json.dumps(release).encode())
+        with mock.patch("urllib.request.urlopen", return_value=fake) as opened:
+            data = self.client.get("/app/version.json").json()["android"]
+            self.client.get("/app/version.json")  # second time comes from the cache
+        self.assertEqual(opened.call_count, 1)
+        self.assertIn("api.github.com/repos/example/dictionmasters/releases/latest", opened.call_args[0][0].full_url)
+        self.assertEqual((data["build"], data["version"], data["notes"]), (12, "1.0.0", "Faster lessons."))
+
+    @override_settings(NATIVE_APP_ANDROID_APK_URL=APK, NATIVE_APP_ANDROID_LATEST_BUILD=0)
+    def test_github_unreachable_means_no_update_offered(self):
+        from unittest import mock
+
+        with mock.patch("urllib.request.urlopen", side_effect=OSError("offline")):
+            self.assertIsNone(self.client.get("/app/version.json").json()["android"])
+
+
+class StaySignedInTests(TestCase):
+    def test_the_app_keeps_people_signed_in(self):
+        user = get_user_model().objects.create_user("stay@example.com", "a-long-password-123", first_name="Ada")
+        self.client.force_login(user)
+        self.client.get("/accounts/dashboard/", HTTP_USER_AGENT=ANDROID)
+        self.assertGreater(self.client.session.get_expiry_age(), 150 * 24 * 60 * 60)
+
+    def test_browsers_keep_the_normal_session(self):
+        from django.conf import settings as dj
+
+        user = get_user_model().objects.create_user("web@example.com", "a-long-password-123", first_name="Ada")
+        self.client.force_login(user)
+        self.client.get("/accounts/dashboard/", HTTP_USER_AGENT=BROWSER)
+        self.assertEqual(self.client.session.get_expiry_age(), dj.SESSION_COOKIE_AGE)

@@ -32,32 +32,72 @@
       font: 700 17px/1 inherit; padding: 16px 34px; min-width: 200px;
     }
     button:active { transform: scale(.97); }
+    button.ghost { display: block; margin: 12px auto 0; background: transparent; color: var(--ink); border: 2px solid rgba(255,255,255,.6); }
     .status { margin-top: 18px; font-size: 14px; color: var(--muted); min-height: 1.5em; }
   </style>
 </head>
 <body>
   <main class="card">
     <img src="logo.png" alt="" class="logo">
-    <h1>You're offline</h1>
-    <p>Diction Masters needs the internet to open. Check your data or Wi-Fi, then try again. Lessons you saved for offline will open once the app reconnects.</p>
-    <button type="button" id="retry">Try again</button>
+    <div id="opening">
+      <h1>Opening your lessons…</h1>
+      <p>You're offline. Opening the lessons saved on this phone.</p>
+    </div>
+    <div id="first" hidden>
+      <h1>Connect once to get started</h1>
+      <p>The first time, Diction Masters needs the internet to sign you in and save your lessons on this phone. After that it works without the internet.</p>
+      <button type="button" id="retry">Try again</button>
+      <button type="button" id="saved" class="ghost">Open saved lessons</button>
+    </div>
     <div class="status" id="status" role="status"></div>
   </main>
   <script>
+    /*
+     * Shown by the app when a page can't be loaded from the internet.
+     *
+     * Lessons saved on the phone are kept by the website's service worker
+     * (templates/pwa/sw.js), which answers even with no connection, so the
+     * first thing to do is simply go back into the app: that normally opens
+     * the saved dashboard. Only if that fails too (nothing is saved yet —
+     * a brand-new install that has never been online) is the "connect once"
+     * message shown. A note in this screen's storage stops it from looping.
+     */
     (function () {
       var site = (window.DM_SETTINGS && window.DM_SETTINGS.siteUrl) || "https://www.dictionmasters.app";
       var status = document.getElementById("status");
       var plugins = (window.Capacitor && window.Capacitor.Plugins) || {};
       if (plugins.SplashScreen) plugins.SplashScreen.hide().catch(function () {});
 
+      var KEY = "dm-offline-tried";
+      function lastTry() { try { return Number(localStorage.getItem(KEY) || 0); } catch (e) { return 0; } }
+      function markTry() { try { localStorage.setItem(KEY, String(Date.now())); } catch (e) {} }
+
+      function openSaved() {
+        markTry();
+        window.location.replace(site + "/accounts/dashboard/");
+      }
+
+      function showFirstRun() {
+        document.getElementById("opening").hidden = true;
+        document.getElementById("first").hidden = false;
+      }
+
+      // Tried a moment ago and came straight back here: nothing is saved yet.
+      if (Date.now() - lastTry() < 15000) showFirstRun();
+      else setTimeout(openSaved, 600);
+
       function retry() {
         status.textContent = "Connecting…";
-        // A tiny request first, so we don't swap this screen for a browser error.
+        // A tiny request first, so we don't swap this screen for another error.
         fetch(site + "/manifest.webmanifest", { cache: "no-store", mode: "no-cors" })
-          .then(function () { window.location.href = site + "/"; })
-          .catch(function () { status.textContent = "Still no connection. We'll reconnect automatically."; });
+          .then(function () {
+            try { localStorage.removeItem(KEY); } catch (e) {}
+            window.location.href = site + "/";
+          })
+          .catch(function () { status.textContent = "Still no connection. We'll carry on as soon as you're online."; });
       }
       document.getElementById("retry").addEventListener("click", retry);
+      document.getElementById("saved").addEventListener("click", openSaved);
       window.addEventListener("online", retry);
       if (plugins.Network) {
         plugins.Network.addListener("networkStatusChange", function (s) { if (s.connected) retry(); });

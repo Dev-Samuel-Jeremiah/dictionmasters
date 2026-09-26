@@ -66,7 +66,16 @@ const QUEUEABLE_PROGRESS = [
   /^\/quick-words\/lists\/\d+\/toggle\/[^/]+\/$/,
   /^\/quick-words\/lists\/\d+\/delete\/$/,
   /^\/assessments\/attempt\/\d+\/save\/$/,
+  // Lesson activities (44 Academy, Tricks, EchoSpell): marked on the server
+  // from the answers alone, so they can be sent later and marked then.
+  /^\/book\/44-academy\/[^/]+\/assessment\/[^/]+\/$/,
+  /^\/tricks\/lessons\/[^/]+\/assessment\/[^/]+\/$/,
+  /^\/echospell\/[^/]+\/[^/]+\/activities\/[^/]+\/$/,
 ];
+
+function isActivity(pathname) {
+  return /\/(assessment|activities)\/[^/]+\/$/.test(pathname);
+}
 
 function canQueueProgress(request, pathname) {
   return request.method === "POST" && QUEUEABLE_PROGRESS.some((pattern) => pattern.test(pathname));
@@ -431,7 +440,10 @@ async function queuedResponse(request) {
   const cached = await cachedPath(referrer.pathname);
   if (!cached) return Response.redirect(new URL(OFFLINE_URL, self.location.origin).href, 303);
   const html = await cached.text();
-  const notice = '<div role="status" style="position:sticky;top:0;z-index:99999;padding:12px 18px;background:#14213d;color:#fffdf8;text-align:center;font:600 15px system-ui">Saved on this device. Your progress will sync when you are online.</div>';
+  const message = isActivity(new URL(request.url).pathname)
+    ? "Your answers are saved on this device. They will be sent and marked as soon as you are online."
+    : "Saved on this device. Your progress will sync when you are online.";
+  const notice = '<div role="status" style="position:sticky;top:0;z-index:99999;padding:12px 18px;background:#14213d;color:#fffdf8;text-align:center;font:600 15px system-ui">' + message + '</div>';
   const updated = html.includes("</body>") ? html.replace("</body>", notice + "</body>") : html + notice;
   return new Response(updated, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
 }

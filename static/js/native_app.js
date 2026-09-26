@@ -16,6 +16,9 @@
  *      made offline as soon as it reconnects or the app is reopened
  *   7. open website links (from WhatsApp, email...) inside the app
  *   8. show a thin loading line while the next page loads
+ *   9. "Update available": when a newer Android app is published, offer it
+ *      (the user taps Update; Android installs it over the old one, and
+ *      their account and downloaded lessons stay)
  *
  * Because this file lives on the website, changing it changes the apps
  * straight away. To test, open the app and (Android) chrome://inspect in
@@ -68,6 +71,13 @@
 
   // ---------------------------------------------------- 2. back button
   function closeSomethingOpen() {
+    // The "Update available" panel (section 9): back = Later. A required one stays.
+    var update = document.querySelector(".dm-update");
+    if (update) {
+      var later = update.querySelector(".dm-update__later");
+      if (later) later.click();
+      return true;
+    }
     // An open <dialog> (install steps, QR scanner, quick-look panel...)
     var dialogs = document.querySelectorAll("dialog[open]");
     if (dialogs.length) {
@@ -240,6 +250,130 @@
   window.addEventListener("beforeunload", function () { bar.classList.add("is-on"); });
   window.addEventListener("pageshow", function () { bar.classList.remove("is-on"); });
 
+  // ----------------------------------------------- 9. update available
+  //
+  // /app/version.json (apps/landing/native_app.py) says which Android app is
+  // the newest; App.getInfo() says which one this is. If this one is older,
+  // a panel offers the update. "Later" hides it for a day; a build older than
+  // NATIVE_APP_ANDROID_MIN_BUILD (server setting) can't be put off.
+  var UPDATE_SNOOZE = "dm-update-later";
+  var UPDATE_SEEN = "dm-update-latest";   // the last answer, so not every page asks the server
+  var CHECK_EVERY = 3 * 60 * 60 * 1000;   // ask the server at most every 3 hours
+
+  function remember(key, value) {
+    try {
+      if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) { /* storage unavailable: just ask again next time */ }
+  }
+  function recall(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "null"); } catch (error) { return null; }
+  }
+
+  function escapeText(text) {
+    var div = document.createElement("div");
+    div.textContent = text == null ? "" : String(text);
+    return div.innerHTML;
+  }
+
+  function showUpdate(latest, installed, required) {
+    if (document.querySelector(".dm-update")) return;
+    var sheet = document.createElement("div");
+    sheet.className = "dm-update" + (required ? " dm-update--required" : "");
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-modal", "true");
+    sheet.setAttribute("aria-labelledby", "dm-update-title");
+    sheet.innerHTML =
+      '<div class="dm-update__backdrop"></div>' +
+      '<div class="dm-update__card">' +
+        '<div class="dm-update__badge" aria-hidden="true">' +
+          '<svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</div>' +
+        '<h2 class="dm-update__title" id="dm-update-title">' + (required ? "Please update Diction Masters" : "Update available") + '</h2>' +
+        '<p class="dm-update__lede">' +
+          (latest.version ? "Version " + escapeText(latest.version) + " (build " + escapeText(latest.build) + ")" : "A new version") +
+          " is ready." + (required ? " This update is needed to keep using the app." : "") +
+        '</p>' +
+        (latest.notes ? '<div class="dm-update__notes"><strong>What\'s new</strong><p>' + escapeText(latest.notes) + '</p></div>' : "") +
+        '<p class="dm-update__safe">&#10003; Your account, progress and downloaded lessons stay. No need to uninstall.</p>' +
+        '<div class="dm-update__steps" hidden>' +
+          '<p><strong>Almost done:</strong></p>' +
+          '<ol><li>Wait for the download to finish.</li>' +
+          '<li>Tap <strong>diction-masters.apk</strong> in the notification (or your Downloads).</li>' +
+          '<li>Tap <strong>Update</strong>.</li></ol>' +
+        '</div>' +
+        '<div class="dm-update__actions">' +
+          '<button type="button" class="dm-update__go">Update now</button>' +
+          (required ? "" : '<button type="button" class="dm-update__later">Later</button>') +
+        '</div>' +
+        '<p class="dm-update__version">You have build ' + escapeText(installed) + '.</p>' +
+      '</div>';
+    document.body.appendChild(sheet);
+    document.documentElement.classList.add("dm-update-open");
+    requestAnimationFrame(function () { sheet.classList.add("is-on"); });
+
+    function close() {
+      sheet.classList.remove("is-on");
+      document.documentElement.classList.remove("dm-update-open");
+      setTimeout(function () { sheet.remove(); }, 250);
+    }
+    var later = sheet.querySelector(".dm-update__later");
+    if (later) {
+      later.addEventListener("click", function () {
+        remember(UPDATE_SNOOZE, { build: latest.build, until: Date.now() + 24 * 60 * 60 * 1000 });
+        close();
+      });
+      sheet.querySelector(".dm-update__backdrop").addEventListener("click", later.click.bind(later));
+    }
+    sheet.querySelector(".dm-update__go").addEventListener("click", function () {
+      var go = this;
+      // Don't ask again on every page while it downloads and installs.
+      if (!required) remember(UPDATE_SNOOZE, { build: latest.build, until: Date.now() + 60 * 60 * 1000 });
+      // The browser downloads the new app file; Android then installs it over this one.
+      openOutside(latest.url);
+      sheet.querySelector(".dm-update__steps").hidden = false;
+      go.textContent = "Download again";
+      if (!required) {
+        var laterButton = sheet.querySelector(".dm-update__later");
+        if (laterButton) laterButton.textContent = "Close";
+      }
+    });
+    call("Haptics", "impact", { style: "LIGHT" });
+  }
+
+  function newestKnown(force) {
+    var seen = recall(UPDATE_SEEN);
+    if (!force && seen && Date.now() - seen.at < CHECK_EVERY) return Promise.resolve(seen.data);
+    if (!navigator.onLine) return Promise.resolve(seen ? seen.data : null);
+    return fetch("/app/version.json", { credentials: "same-origin", cache: "no-store" })
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .then(function (data) {
+        if (data) remember(UPDATE_SEEN, { at: Date.now(), data: data });
+        return data;
+      });
+  }
+
+  function checkForUpdate(force) {
+    if (platform !== "android" || !P.App) return;
+    Promise.all([call("App", "getInfo"), newestKnown(force)]).then(function (results) {
+      var info = results[0];
+      var latest = results[1] && results[1].android;
+      if (!info || !latest || !latest.url) return;
+      var installed = parseInt(info.build, 10) || 0;
+      var newest = parseInt(latest.build, 10) || 0;
+      if (!installed || newest <= installed) return;
+      var required = installed < (parseInt(latest.min_build, 10) || 0);
+      var snoozed = recall(UPDATE_SNOOZE);
+      if (!required && snoozed && snoozed.build === latest.build && Date.now() < snoozed.until) return;
+      showUpdate(latest, installed, required);
+    }).catch(function () { /* offline or server busy: check again later */ });
+  }
+
+  // A moment after each page opens, so the page itself appears first.
+  setTimeout(function () { checkForUpdate(false); }, 2500);
+  if (P.App) {
+    P.App.addListener("resume", function () { setTimeout(function () { checkForUpdate(false); }, 1500); });
+  }
+
   // ------------------------------------------------------- public API
   window.DMApp = {
     platform: platform,
@@ -248,5 +382,6 @@
     saveFile: saveFile,
     share: function (data) { return call("Share", "share", data); },
     haptic: function (style) { return call("Haptics", "impact", { style: style || "LIGHT" }); },
+    checkForUpdate: function () { remember(UPDATE_SNOOZE, null); checkForUpdate(true); },
   };
 })();

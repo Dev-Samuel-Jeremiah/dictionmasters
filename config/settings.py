@@ -465,6 +465,21 @@ NATIVE_APP_ANDROID_APK_URL = os.environ.get("NATIVE_APP_ANDROID_APK_URL", "")
 NATIVE_APP_ANDROID_STORE_URL = os.environ.get("NATIVE_APP_ANDROID_STORE_URL", "")
 NATIVE_APP_IOS_STORE_URL = os.environ.get("NATIVE_APP_IOS_STORE_URL", "")
 
+# "Update available" in the Android app. The newest version is read from
+# GitHub Releases automatically; nothing to set. Optional:
+#   NATIVE_APP_ANDROID_MIN_BUILD  apps older than this build number MUST update
+#                                 before they carry on (for an important fix).
+#   NATIVE_APP_ANDROID_LATEST_BUILD / _LATEST_VERSION / _UPDATE_NOTES
+#                                 say the newest version by hand, if the app
+#                                 file isn't published on GitHub.
+# How long the phone apps stay signed in after the last use (so they open,
+# and work offline, without asking for the password again).
+NATIVE_APP_SESSION_DAYS = int(os.environ.get("NATIVE_APP_SESSION_DAYS", "180") or 180)
+NATIVE_APP_ANDROID_MIN_BUILD = int(os.environ.get("NATIVE_APP_ANDROID_MIN_BUILD", "0") or 0)
+NATIVE_APP_ANDROID_LATEST_BUILD = int(os.environ.get("NATIVE_APP_ANDROID_LATEST_BUILD", "0") or 0)
+NATIVE_APP_ANDROID_LATEST_VERSION = os.environ.get("NATIVE_APP_ANDROID_LATEST_VERSION", "")
+NATIVE_APP_ANDROID_UPDATE_NOTES = os.environ.get("NATIVE_APP_ANDROID_UPDATE_NOTES", "")
+
 # Hosts that lesson pictures and audio are served from (besides this site),
 # so the app can keep them for offline study. Cloudflare R2 is included;
 # add a custom media domain here if you use one. Each needs a CORS rule

@@ -523,3 +523,41 @@ Put the long `AB:CD:…` value in the server's `.env` as `NATIVE_APP_ANDROID_SHA
 - The **test** APK in each build's Artifacts is signed with a throwaway key,
   so it can't update a phone that has the real app. Uninstall the real app first
   if you want to try a test copy.
+
+---
+
+## 13. "Update available" in the app
+
+When GitHub publishes a newer Android app (section 12), everyone using an
+older one sees a panel the next time they open the app: **Update
+available**, what's new, and **Update now**. Tapping it downloads the new
+version, and Android asks **Update**. There's no uninstalling, and their
+account, progress and downloaded lessons stay. **Later** hides it for a day.
+
+- **What's new:** the sentence in `"releaseNotes"` in `mobile/app.settings.json`.
+  Change it with each app release.
+- **Force an important update:** set `NATIVE_APP_ANDROID_MIN_BUILD=<build number>`
+  in the server's `.env`. Apps older than that build must update, and the
+  panel has no Later button.
+- The website asks GitHub for the newest release (`/app/version.json`) at most
+  every 15 minutes. Nothing else to set up.
+- The check itself lives on the website (`static/js/native_app.js`), so it
+  already works in apps people installed before it existed.
+- Remember: only changes in `mobile/` need a new app. Website changes reach
+  everyone instantly, with no update.
+
+## 14. How the app behaves offline
+
+| | Offline |
+|---|---|
+| Opening the app | ✅ Opens on the saved dashboard |
+| Staying signed in | ✅ The app keeps people signed in for 180 days after they last used it (`NATIVE_APP_SESSION_DAYS`), so no password is needed offline |
+| Lessons, 44 Academy, Tricks, EchoSpell, Reading Club | ✅ Saved automatically: on Wi-Fi the first time you sign in (with pictures and audio), and refreshed twice a day. On mobile data just the main pages |
+| Saved videos | ✅ |
+| Marking lessons complete, word lists, assessment answers, lesson activities (44 Academy, Tricks, EchoSpell) | ✅ Saved on the phone, then sent and marked automatically when back online |
+| First ever sign-in, creating an account | ❌ Needs the internet once: the password has to be checked by the server |
+| AI feedback, the reading tutor, looking up new words, live Clash, submitting a timed assessment, paying | ❌ Need the server; the app says so clearly |
+
+A page that was never saved shows the "saved lessons" list instead of an error.
+The "Connect once to get started" screen only appears on a brand-new install
+that has never been online.

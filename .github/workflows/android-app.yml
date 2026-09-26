@@ -93,6 +93,8 @@ jobs:
           cp bundle/release/*.aab "$RUNNER_TEMP/out/diction-masters.aab"
           VERSION=$(node -p "require('${{ github.workspace }}/mobile/app.settings.json').version")
           echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          NOTES=$(node -p "(require('${{ github.workspace }}/mobile/app.settings.json').releaseNotes || 'Improvements and fixes.').replace(/\s+/g, ' ')")
+          echo "APP_NOTES=$NOTES" >> "$GITHUB_ENV"
           ls -la "$RUNNER_TEMP/out"
 
       - uses: actions/upload-artifact@v5
@@ -121,7 +123,10 @@ jobs:
           name: Diction Masters for Android ${{ env.APP_VERSION }} (build ${{ github.run_number }})
           target_commitish: ${{ github.sha }}
           make_latest: true
+          # The "What's new:" line is shown in the app's "Update available" message.
           body: |
+            What's new: ${{ env.APP_NOTES }}
+
             Diction Masters for Android — version ${{ env.APP_VERSION }}, build ${{ github.run_number }}.
 
             **Install:** download `diction-masters.apk` on your Android phone, open it, allow installing from this source if asked, then tap Install.

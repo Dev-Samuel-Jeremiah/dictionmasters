@@ -59,6 +59,24 @@ def hides_payments(request):
     return bool(platform) and platform in getattr(settings, "NATIVE_APP_HIDE_PAYMENTS", ("ios", "android"))
 
 
+def keep_signed_in(request):
+    """In the app, stay signed in for NATIVE_APP_SESSION_DAYS (default 180)
+    after the last visit, so the app opens (and works offline) without asking
+    for the password again. Renewed at most once a day, not on every page.
+    Logging out still logs out."""
+    user = getattr(request, "user", None)
+    session = getattr(request, "session", None)
+    if user is None or session is None or not user.is_authenticated:
+        return
+    from django.utils import timezone
+
+    today = timezone.now().date().isoformat()
+    if session.get("app_signed_in_on") == today:
+        return
+    session["app_signed_in_on"] = today
+    session.set_expiry(int(getattr(settings, "NATIVE_APP_SESSION_DAYS", 180)) * 24 * 60 * 60)
+
+
 class NativeAppMiddleware:
     """Only does anything for requests from the phone apps."""
 
@@ -82,6 +100,7 @@ class NativeAppMiddleware:
         if platform:
             # Pages differ between the app and the browser: keep caches apart.
             response["Vary"] = ", ".join(filter(None, [response.get("Vary"), "User-Agent"]))
+            keep_signed_in(request)
         return response
 
 
@@ -133,6 +152,83 @@ def get_app(request):
         "qr": svg(page, 180),
         "page_url": page,
     })
+
+
+# ------------------------------------------------------- app updates
+
+GITHUB_RELEASE = re.compile(r"github\.com/([^/]+)/([^/]+)/releases/")
+BUILD_IN_TAG = re.compile(r"build(\d+)")
+NOTES_LINE = re.compile(r"^What's new:\s*(.+)$", re.MULTILINE)
+
+
+def _latest_from_github(apk_url):
+    """The newest Android release on GitHub: its build number, version and
+    notes, read from the release the workflow published
+    (.github/workflows/android-app.yml). None if it can't be read."""
+    import json
+    import urllib.request
+
+    match = GITHUB_RELEASE.search(apk_url or "")
+    if not match:
+        return None
+    owner, repo = match.groups()
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{owner}/{repo}/releases/latest",
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "DictionMasters"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:
+            release = json.load(response)
+    except Exception:
+        return None
+    build = BUILD_IN_TAG.search(release.get("tag_name", ""))
+    if not build:
+        return None
+    version = re.search(r"android-([\w.]+)-build", release.get("tag_name", ""))
+    notes = NOTES_LINE.search(release.get("body") or "")
+    return {
+        "build": int(build.group(1)),
+        "version": version.group(1) if version else "",
+        "notes": notes.group(1).strip() if notes else "",
+    }
+
+
+def latest_android_release():
+    """What the newest Android app is. Set by hand with
+    NATIVE_APP_ANDROID_LATEST_BUILD, or read from GitHub Releases (kept for
+    15 minutes, so GitHub is asked at most a few times an hour)."""
+    from django.core.cache import cache
+
+    manual = int(getattr(settings, "NATIVE_APP_ANDROID_LATEST_BUILD", 0) or 0)
+    if manual:
+        return {"build": manual, "version": getattr(settings, "NATIVE_APP_ANDROID_LATEST_VERSION", ""),
+                "notes": getattr(settings, "NATIVE_APP_ANDROID_UPDATE_NOTES", "")}
+    apk = getattr(settings, "NATIVE_APP_ANDROID_APK_URL", "")
+    if not apk:
+        return None
+    key = "native-app:latest-android"
+    latest = cache.get(key)
+    if latest is None:
+        latest = _latest_from_github(apk) or {}
+        cache.set(key, latest, 15 * 60 if latest else 5 * 60)
+    return latest or None
+
+
+def app_version(request):
+    """/app/version.json — the newest app, so an installed app can offer to
+    update itself (static/js/native_app.js, "Update available")."""
+    latest = latest_android_release()
+    android = None
+    if latest and getattr(settings, "NATIVE_APP_ANDROID_APK_URL", ""):
+        android = {
+            **latest,
+            "url": settings.NATIVE_APP_ANDROID_APK_URL,
+            # Builds older than this must update before carrying on (0 = never forced).
+            "min_build": int(getattr(settings, "NATIVE_APP_ANDROID_MIN_BUILD", 0) or 0),
+        }
+    response = JsonResponse({"android": android})
+    response["Cache-Control"] = "no-cache"
+    return response
 
 
 def welcome(request):

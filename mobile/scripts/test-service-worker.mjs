@@ -115,8 +115,8 @@ const f = (p) => mod.followable(new URL(p, ORIGIN));
 for (const ok of ["/echospell/l/g/", "/book/44-academy/ee/", "/tricks/lessons/x/listen/", "/videos/offline/", "/accounts/dashboard/", "/assessments/some-quiz/"]) assert.ok(f(ok), ok);
 for (const no of ["/accounts/logout/", "/billing/", "/search/", "/echospell/l/g/c/qr.png", "/videos/play/abc/", "/assessments/attempt/3/", "/clash/5/", "/clash/sound/", "/manage/", "/echospell/l/g/complete/", "/assessments/q/start/", "/accounts/delete/", "/app/welcome/"]) assert.ok(!f(no), no);
 const post = (path, headers = {}) => new Request(ORIGIN + path, { method: "POST", headers, body: "a=1" });
-for (const q of ["/echospell/l/g/complete/", "/echospell/card-position/", "/quick-words/lists/4/toggle/cat/", "/quick-words/lists/new/", "/assessments/attempt/9/save/", "/learning-modules/a/b/c/monday/complete/", "/reading-club/a/b/c/complete/"]) assert.ok(mod.canQueueProgress(post(q), q), q);
-for (const q of ["/assessments/attempt/9/check/", "/tutor/start/", "/clash/start/", "/echospell/vocabulary/check-sentences/"]) assert.ok(!mod.canQueueProgress(post(q), q), q);
+for (const q of ["/echospell/l/g/complete/", "/echospell/card-position/", "/quick-words/lists/4/toggle/cat/", "/quick-words/lists/new/", "/assessments/attempt/9/save/", "/learning-modules/a/b/c/monday/complete/", "/reading-club/a/b/c/complete/", "/book/44-academy/ee/assessment/quiz-1/", "/tricks/lessons/linking/assessment/drill/", "/echospell/level-1/group-a/activities/spell-it/"]) assert.ok(mod.canQueueProgress(post(q), q), q);
+for (const q of ["/book/44-academy/ee/assessment/quiz-1/result/4/", "/assessments/attempt/9/check/", "/tutor/start/", "/clash/start/", "/echospell/vocabulary/check-sentences/"]) assert.ok(!mod.canQueueProgress(post(q), q), q);
 console.log("helpers ok");
 
 // download
