@@ -359,6 +359,23 @@ h1, h2, h3, h4 { font-family: inherit; font-weight: 800; letter-spacing: -0.02em
 @media (max-width: 380px) {
   .px-public .px-bar .tool-btn--scan { display: none; }
 }
+/* Signed in on a phone: scan sits beside search, with the buttons a size
+   smaller so menu, logo and all five fit on one row. */
+@media (max-width: 480px) {
+  .px-app .px-bar .tool-btn--scan { display: grid; }
+  .px-app .px-bar .site-header__inner { padding-left: 12px; padding-right: 12px; gap: 6px; }
+  .px-app .px-bar .header-actions { gap: 5px; }
+  .px-app .px-bar .px-iconbtn, .px-app .px-bar .phonemic-icon-btn { width: 40px; height: 40px; border-radius: 12px; }
+  .px-app .px-bar .px-iconbtn svg { width: 20px; height: 20px; }
+}
+@media (max-width: 374px) {
+  .px-app .px-bar .px-iconbtn, .px-app .px-bar .phonemic-icon-btn { width: 36px; height: 36px; border-radius: 11px; }
+  .px-app .px-bar .px-iconbtn svg { width: 18px; height: 18px; }
+  .px-app .px-bar .header-actions { gap: 4px; }
+  .px-app .px-bar .px-brand__mark svg { width: 28px; height: 32px; }
+  .px-app .px-bar .px-brand__name { font-size: 14px; }
+  .px-app .px-bar .px-brand { gap: 6px; }
+}
 
 /* inside the quick-look panel, a page is just the page */
 .is-embedded .px-side, .is-embedded .px-tabbar, .is-embedded .px-foot, .is-embedded .px-bar__menu, .is-embedded .px-scrim { display: none !important; }
