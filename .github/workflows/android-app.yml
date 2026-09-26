@@ -1,0 +1,77 @@
+# Builds the Android app on GitHub's computers — no Android Studio needed.
+#
+# Run it: GitHub > your repo > Actions > "Android app" > Run workflow.
+# (It also runs by itself when anything in mobile/ changes.)
+# When it finishes, download the files under "Artifacts":
+#   diction-masters-apk  → install on a phone to test
+#   diction-masters-aab  → upload to Google Play
+#
+# For a Play-Store-ready (signed) .aab, add these repository secrets
+# (Settings > Secrets and variables > Actions), see MOBILE_APP_GUIDE.md §5:
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+name: Android app
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/android-app.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install
+        run: npm install
+
+      - name: Create the Android project (first time only)
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+            npm run assets
+          fi
+
+      - name: Apply app.settings.json (release mode)
+        run: npm run release
+
+      - name: Signing key
+        if: env.KEYSTORE_BASE64 != ''
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "DM_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          echo "DM_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "DM_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "DM_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug bundleRelease
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diction-masters-apk
+          path: mobile/android/app/build/outputs/apk/debug/*.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diction-masters-aab
+          path: mobile/android/app/build/outputs/bundle/release/*.aab
