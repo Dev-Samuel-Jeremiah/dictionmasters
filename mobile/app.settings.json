@@ -20,9 +20,9 @@
   "paymentHosts": ["checkout.paystack.com", "paystack.com", "*.paystack.com"],
 
   "colors": {
-    "brand": "#14213D",
-    "splashBackground": "#14213D",
-    "splashBackgroundDark": "#0C1428",
+    "brand": "#005FE1",
+    "splashBackground": "#005FE1",
+    "splashBackgroundDark": "#005FE1",
     "statusBar": "#0B1A4A"
   },
 

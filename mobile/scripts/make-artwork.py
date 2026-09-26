@@ -1,79 +1,101 @@
 """
-Draws the app icon and splash screen artwork into mobile/resources/.
+Makes every app icon and splash screen from ONE logo picture.
 
+    cd mobile
     python3 scripts/make-artwork.py
+    npm run assets            (only if you build on your own computer)
 
-You only need this if you want to redraw the default Diction Masters mark.
-To use your OWN logo instead, just replace the PNG files in resources/
-(same names, same sizes) and run:  npm run assets
+To change the logo: replace  mobile/resources/logo-source.jpg  (or .png)
+with your new picture — the logo on a plain, single-colour background,
+like the one there now — and run the command above. The background colour
+is read from the picture's corner, so any colour works.
 
 Files made:
-  resources/icon-only.png        1024x1024  full icon (iPhone + old Android)
-  resources/icon-foreground.png  1024x1024  Android adaptive icon, the mark only
-  resources/icon-background.png  1024x1024  Android adaptive icon, the background
-  resources/splash.png           2732x2732  splash screen (light mode)
-  resources/splash-dark.png      2732x2732  splash screen (dark mode)
+  mobile/resources/icon-only.png        1024x1024  full icon (iPhone + older Android)
+  mobile/resources/icon-foreground.png  1024x1024  Android adaptive icon: the logo only
+  mobile/resources/icon-background.png  1024x1024  Android adaptive icon: the colour
+  mobile/resources/splash.png           2732x2732  splash screen
+  mobile/resources/splash-dark.png      2732x2732  splash screen (dark mode)
+  static/pwa/*.png                      the website's own "installed app" icons
+                                        (Add to Home Screen, browser tab)
+
+After running it: commit and push. GitHub builds the app with the new
+artwork, and the website uses the new icons as soon as it's deployed.
+(A logo uploaded in the control room's Branding page still takes priority
+for the website's icons.)
+
+Needs Pillow:  pip install Pillow
 """
 
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-OUT = Path(__file__).resolve().parent.parent / "resources"
-OUT.mkdir(exist_ok=True)
+MOBILE = Path(__file__).resolve().parent.parent
+RESOURCES = MOBILE / "resources"
+WEB_ICONS = MOBILE.parent / "static" / "pwa"
 
-NAVY_TOP = (36, 55, 95)
-NAVY_BOTTOM = (20, 33, 61)
-GOLD = (243, 211, 141)
-S = 8  # draw 8x bigger than the 512 design, then shrink: smooth edges
+APP_NAME = "Diction Masters"
 
 
-def gradient(size):
-    """Navy background, lighter top-left to darker bottom-right."""
-    small = Image.new("RGB", (256, 256))
-    px = small.load()
-    for y in range(256):
-        for x in range(256):
-            t = (x + y) / 510
-            px[x, y] = tuple(round(a + (b - a) * t) for a, b in zip(NAVY_TOP, NAVY_BOTTOM))
-    return small.resize((size, size), Image.BICUBIC)
+def load_source():
+    for name in ("logo-source.png", "logo-source.jpg", "logo-source.jpeg"):
+        path = RESOURCES / name
+        if path.exists():
+            return Image.open(path).convert("RGB")
+    raise SystemExit("Put your logo in mobile/resources/logo-source.png (or .jpg) first.")
 
 
-def mark(size, scale=1.0):
-    """The gold circle-and-F mark on a transparent square of `size` px.
-    `scale` shrinks the mark inside the square (1.0 = same as the web icon)."""
-    big = 512 * S
-    img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
+def cut_out_logo(source):
+    """The logo on a transparent background, trimmed to its edges.
 
-    def p(v):  # a 512-design coordinate, scaled around the centre
-        return (256 + (v - 256) * scale) * S
+    Every pixel's distance from the background colour becomes how solid it
+    is, so the logo's smooth edges stay smooth."""
+    background = source.getpixel((2, 2))
+    width, height = source.size
+    out = Image.new("RGBA", source.size)
+    src, dst = source.load(), out.load()
+    full = 140.0  # this far from the background colour = fully solid
+    for y in range(height):
+        for x in range(width):
+            r, g, b = src[x, y]
+            dr, dg, db = r - background[0], g - background[1], b - background[2]
+            alpha = min(1.0, (dr * dr + dg * dg + db * db) ** 0.5 / full)
+            if alpha < 0.04:
+                dst[x, y] = (0, 0, 0, 0)
+                continue
+            # Take the background back out of the edge pixels' colour.
+            colour = tuple(
+                max(0, min(255, round(background[i] + (c - background[i]) / alpha)))
+                for i, c in enumerate((r, g, b))
+            )
+            dst[x, y] = colour + (round(alpha * 255),)
+    return out.crop(out.getbbox()), background
 
-    w = 15 * scale * S  # stroke width
-    r = w / 2
 
-    # Ring
-    R = 118.5 * scale * S
-    c = 256 * S
-    d.ellipse([c - R - r, c - R - r, c + R + r, c + R + r], outline=GOLD, width=round(w))
+def logo_at(logo, height):
+    width = round(logo.width * height / logo.height)
+    return logo.resize((width, height), Image.LANCZOS)
 
-    def line(x1, y1, x2, y2):
-        d.line([p(x1), p(y1), p(x2), p(y2)], fill=GOLD, width=round(w))
-        for x, y in ((x1, y1), (x2, y2)):  # round caps
-            d.ellipse([p(x) - r, p(y) - r, p(x) + r, p(y) + r], fill=GOLD)
 
-    # The F: upright, top bar ending in a dot, middle bar
-    line(202.5, 196.5, 202.5, 296)   # upright (round cap = rounded corner)
-    line(202.5, 196.5, 300, 196.5)   # top bar
-    line(202.5, 252, 268.5, 252)     # middle bar
-    dot = 13.5 * scale * S
-    d.ellipse([p(310) - dot, p(195.5) - dot, p(310) + dot, p(195.5) + dot], fill=GOLD)
+def square(size, colour, logo, logo_height, dy=0):
+    canvas = Image.new("RGBA", (size, size), colour + (255,) if colour else (0, 0, 0, 0))
+    mark = logo_at(logo, logo_height)
+    canvas.alpha_composite(mark, ((size - mark.width) // 2, (size - mark.height) // 2 + dy))
+    return canvas
 
-    return img.resize((size, size), Image.LANCZOS)
+
+def rounded(image, radius_ratio=0.22):
+    mask = Image.new("L", image.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, image.width - 1, image.height - 1],
+                                           radius=round(image.width * radius_ratio), fill=255)
+    out = image.copy()
+    out.putalpha(mask)
+    return out
 
 
 def font(px):
-    for name in ("DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf", "Arial Bold.ttf"):
+    for name in ("DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf", "Arial Bold.ttf", "arialbd.ttf"):
         try:
             return ImageFont.truetype(name, px)
         except OSError:
@@ -81,29 +103,43 @@ def font(px):
     return ImageFont.load_default()
 
 
-def splash(dark):
+def splash(logo, colour):
     size = 2732
-    bg = Image.new("RGB", (size, size), (12, 20, 40) if dark else NAVY_BOTTOM)
-    if not dark:
-        bg = gradient(size)
-    logo = mark(900)
-    bg.paste(logo, ((size - 900) // 2, (size - 900) // 2 - 120), logo)
-    d = ImageDraw.Draw(bg)
+    canvas = square(size, colour, logo, 760, dy=-110)
+    draw = ImageDraw.Draw(canvas)
     f = font(120)
-    text = "Diction Masters"
-    tw = d.textlength(text, font=f)
-    d.text(((size - tw) / 2, size / 2 + 360), text, font=f, fill=GOLD)
-    return bg
+    width = draw.textlength(APP_NAME, font=f)
+    draw.text(((size - width) / 2, size / 2 + 360), APP_NAME, font=f, fill=(255, 255, 255))
+    return canvas.convert("RGB")
 
 
 if __name__ == "__main__":
-    full = gradient(1024).convert("RGBA")
-    full.alpha_composite(mark(1024))
-    full.convert("RGB").save(OUT / "icon-only.png")
-    # Android crops adaptive icons to a circle/squircle: keep the mark a
-    # little smaller so it sits inside the safe zone.
-    mark(1024, scale=0.9).save(OUT / "icon-foreground.png")
-    gradient(1024).save(OUT / "icon-background.png")
-    splash(False).save(OUT / "splash.png")
-    splash(True).save(OUT / "splash-dark.png")
-    print("Artwork written to", OUT)
+    logo, colour = cut_out_logo(load_source())
+
+    # The app (Capacitor makes every Android and iPhone size from these).
+    square(1024, colour, logo, 600).convert("RGB").save(RESOURCES / "icon-only.png")
+    # Android crops its icons to a circle or squircle: keep the logo inside the safe zone.
+    square(1024, None, logo, 470).save(RESOURCES / "icon-foreground.png")
+    Image.new("RGB", (1024, 1024), colour).save(RESOURCES / "icon-background.png")
+    splash(logo, colour).save(RESOURCES / "splash.png")
+    splash(logo, colour).save(RESOURCES / "splash-dark.png")
+
+    # The website's "installed app" icons.
+    if WEB_ICONS.exists():
+        big = square(1024, colour, logo, 600)
+        rounded(big).resize((512, 512), Image.LANCZOS).save(WEB_ICONS / "icon-512.png")
+        rounded(big).resize((192, 192), Image.LANCZOS).save(WEB_ICONS / "icon-192.png")
+        # "maskable": the phone cuts its own shape, so fill edge to edge, logo smaller.
+        mask = square(1024, colour, logo, 500)
+        mask.convert("RGB").resize((512, 512), Image.LANCZOS).save(WEB_ICONS / "maskable-512.png")
+        mask.convert("RGB").resize((192, 192), Image.LANCZOS).save(WEB_ICONS / "maskable-192.png")
+        big.convert("RGB").resize((180, 180), Image.LANCZOS).save(WEB_ICONS / "apple-touch-icon.png")
+        square(1024, colour, logo, 800).convert("RGB").resize((32, 32), Image.LANCZOS).save(WEB_ICONS / "favicon-32.png")
+
+    # The app's built-in offline screen shows the logo too.
+    www = MOBILE / "www"
+    if www.exists():
+        logo_at(logo, 240).save(www / "logo.png")
+
+    print(f"Done. Background colour #{colour[0]:02X}{colour[1]:02X}{colour[2]:02X}.")
+    print("Now commit and push; GitHub builds the app with the new icon.")

@@ -2,5 +2,5 @@
 window.DM_SETTINGS = {
   "siteUrl": "https://www.dictionmasters.app",
   "appName": "Diction Masters",
-  "brand": "#14213D"
+  "brand": "#005FE1"
 };
