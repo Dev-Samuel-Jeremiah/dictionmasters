@@ -13,15 +13,15 @@
     <div class="wrap">
       <ol class="ui-crumbs">
         <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
-        <li>Offline videos</li>
+        <li>Offline lessons &amp; videos</li>
       </ol>
       <div class="ui-hero__inner">
         <div class="ui-hero__main">
           <span class="ui-hero__icon" aria-hidden="true">&#128246;</span>
           <div>
-            <p class="ui-hero__eyebrow">Watch without the internet</p>
-            <h1 class="ui-hero__title">Offline videos</h1>
-            <p class="ui-hero__lede">Videos you've saved on this device. Each one stays for {{ days }} day{{ days|pluralize }}, and renews itself whenever you're online and signed in.</p>
+            <p class="ui-hero__eyebrow">Learn without the internet</p>
+            <h1 class="ui-hero__title">Offline lessons &amp; videos</h1>
+            <p class="ui-hero__lede">Download lessons once, then open them anywhere. What you do offline is sent automatically when you're back online.</p>
           </div>
         </div>
       </div>
@@ -30,9 +30,34 @@
 
   <div class="wrap ui-body ui-stack">
     <form hidden>{% csrf_token %}</form>
+
+    {# Lessons on this device (static/js/offline_sync.js, templates/pwa/sw.js). #}
+    <section class="ui-panel os-panel" data-offline-sync>
+      <header class="ui-section__head">
+        <h2 class="ui-section__title">Lessons on this device</h2>
+      </header>
+      <p class="ui-panel__lede">Download your lessons once, ideally on Wi-Fi, and open them anywhere without the internet. Lessons you complete, words you save and answers you give while offline wait on this device and are sent automatically when you reconnect.</p>
+      <dl class="os-stats">
+        <div><dt>Pages saved</dt><dd data-os-pages>&ndash;</dd></div>
+        <div><dt>Pictures &amp; audio</dt><dd data-os-media>&ndash;</dd></div>
+        <div><dt>Waiting to sync</dt><dd data-os-pending>&ndash;</dd></div>
+        <div><dt>Last download</dt><dd data-os-last>&ndash;</dd></div>
+      </dl>
+      <label class="os-check"><input type="checkbox" data-os-media-toggle> Also save pictures and audio <small>(uses more data and space)</small></label>
+      <label class="os-check"><input type="checkbox" data-os-auto checked> Keep them up to date automatically on Wi-Fi</label>
+      <progress class="os-progress" data-os-progress hidden></progress>
+      <p class="os-status" data-os-status role="status" aria-live="polite"></p>
+      <div class="os-actions">
+        <button type="button" class="ui-btn ui-btn--gold" data-os-download>Download lessons</button>
+        <button type="button" class="ui-btn ui-btn--ghost" data-os-sync>Sync now</button>
+        <button type="button" class="ui-btn ui-btn--ghost ui-btn--small" data-os-clear>Remove downloads</button>
+      </div>
+      <p class="ui-note">Things that need our servers — AI feedback, the reading tutor, looking up new words and live Clash matches — still need the internet.</p>
+    </section>
+
     <section class="ui-panel">
       <header class="ui-section__head">
-        <h2 class="ui-section__title">On this device</h2>
+        <h2 class="ui-section__title">Saved videos</h2>
       </header>
       <ul class="vid-keptlist" data-offline-list>
         <li class="vid-kept__none">Looking for your saved videos&hellip;</li>

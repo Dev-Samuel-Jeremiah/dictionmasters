@@ -1,5 +1,5 @@
 {% load static %}<!DOCTYPE html>
-<html lang="en-gb" data-site-url="{{ site_url }}">
+<html lang="en-gb" data-site-url="{{ site_url }}"{% if native_app %} data-native-app="{{ native_app.platform }}"{% if native_app.hide_payments %} data-app-payments="off"{% endif %}{% endif %}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,6 +31,8 @@
   {% block extra_css %}{% endblock %}
   {# The app look (blue, yellow and white, from the prototype): loaded last so it sits over every page's own styles. #}
   <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+  {# Inside the Android/iPhone app (apps/landing/native_app.py). #}
+  {% if native_app %}<link rel="stylesheet" href="{% static 'css/native_app.css' %}">{% endif %}
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if user.is_authenticated %}px-app{% else %}px-public{% endif %}{% if request.path|slice:':6' == '/book/' or request.path|slice:':8' == '/tricks/' or request.path|slice:':13' == '/quick-words/' or request.path|slice:':7' == '/tutor/' or request.path|slice:':16' == '/daily-practice/' or request.path|slice:':13' == '/assessments/' or request.path|slice:':7' == '/radio/' %} px-ringed{% endif %} {% block body_class %}{% endblock %}">
@@ -47,6 +49,7 @@
 
   {% comment %}Install Diction Masters as an app: a round button by the
   scrollbar, hidden once it is running as one (static/js/pwa.js).{% endcomment %}
+  {% if not native_app %}{# Already an app: no "Install app" button. #}
   <div class="install-fab" data-install-fab hidden>
     <button type="button" class="install-fab__btn" data-install-app aria-label="Install Diction Masters as an app">
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
@@ -84,8 +87,11 @@
       <button type="button" class="install-steps__done" data-close>Got it</button>
     </div>
   </dialog>
+  {% endif %}
   {% if user.is_authenticated %}<script src="{% static 'js/quick_tools.js' %}" defer></script>
-  <script src="{% static 'js/account_menu.js' %}" defer></script>{% endif %}
+  <script src="{% static 'js/account_menu.js' %}" defer></script>
+  <script src="{% static 'js/offline_sync.js' %}" defer></script>{% endif %}
+  {% if native_app %}<script src="{% static 'js/native_app.js' %}" defer></script>{% endif %}
   <script src="{% static 'js/pwa.js' %}" defer></script>
   <script src="{% static 'js/history_back.js' %}" defer></script>
   <script src="{% static 'js/platform_search.js' %}" defer></script>

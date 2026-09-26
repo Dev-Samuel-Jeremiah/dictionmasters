@@ -54,15 +54,17 @@
     var input = form.querySelector('[name="school_code"]');
     var found = form.querySelector("[data-school-found]");
     var select = form.querySelector('[name="plan"]');
+    // No plan list in the phone app (nothing is bought there): still show the school.
+    var options = select ? select.options : [];
     var help = form.querySelector("[data-plan-help]");
     input.closest(".field").appendChild(found);   // right under the code it describes
     found.style.margin = "8px 0 0";
     var base = {};
-    Array.prototype.forEach.call(select.options, function (option) { base[option.value] = option.textContent; });
+    Array.prototype.forEach.call(options, function (option) { base[option.value] = option.textContent; });
     var timer = null, last = "";
 
     function reset(message) {
-      Array.prototype.forEach.call(select.options, function (option) { option.textContent = base[option.value]; });
+      Array.prototype.forEach.call(options, function (option) { option.textContent = base[option.value]; });
       if (help) help.textContent = message;
     }
 
@@ -85,7 +87,7 @@
           found.textContent = "✓ " + data.school;
           var prices = {};
           data.options.forEach(function (option) { prices[option.period] = option.price + " " + option.text; });
-          Array.prototype.forEach.call(select.options, function (option) {
+          Array.prototype.forEach.call(options, function (option) {
             if (option.value && prices[option.value]) option.textContent = option.value + " — " + prices[option.value];
           });
           if (help) help.textContent = "Your price for " + data.school + ".";

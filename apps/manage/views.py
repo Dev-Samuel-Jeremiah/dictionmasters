@@ -43,6 +43,7 @@ from apps.quick_words.audio_zip import start_audio_zip_import
 from apps.quick_words.models import QuickWordAudioImportJob
 
 from .forms import ControlLoginForm, QuickWordAudioZipForm, build_form
+from . import analytics
 from .plan_field import FIELD as PLAN_FIELD, add_plan_field, check_plan
 from .school_login import add_login_fields, check_login, save_login
 from .bulk_questions import question_formset
@@ -586,6 +587,13 @@ def branding(request):
     # The preview comes from the saved row (the `branding` context
     # processor), not the form, so a rejected upload never shows as current.
     return render(request, "manage/branding.html", _base_context(request, "branding", form=form))
+
+
+@staff_only
+def analytics_view(request):
+    """Money, sign-ups, growth and learning activity for a chosen period."""
+    data = analytics.build(request.GET)
+    return render(request, "manage/analytics.html", _base_context(request, "analytics", data=data))
 
 
 @staff_only

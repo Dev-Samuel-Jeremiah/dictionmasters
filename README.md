@@ -8,6 +8,13 @@ Built so far: the public landing page; registration (schools,
 individuals, and code-based joining for teachers/students); and the
 first Learning Tool — 44 Academy.
 
+## Android & iPhone apps
+
+The `mobile/` folder holds the native apps. They open this website, so
+anything you deploy here shows up in the apps automatically. See
+**[MOBILE_APP_GUIDE.md](MOBILE_APP_GUIDE.md)** for building, publishing and
+editing them.
+
 ## Project layout
 
 ```

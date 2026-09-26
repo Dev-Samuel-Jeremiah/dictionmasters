@@ -13,4 +13,5 @@ urlpatterns = [
     path("login/", views.EmailLoginView.as_view(), name="login"),
     path("logout/", views.EmailLogoutView.as_view(), name="logout"),
     path("dashboard/", views.dashboard, name="dashboard"),
+    path("delete/", views.delete_account, name="delete_account"),
 ]

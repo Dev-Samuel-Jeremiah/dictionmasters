@@ -1,0 +1,99 @@
+/*
+ * Only loaded inside the Android and iPhone apps (templates/base.html,
+ * apps/landing/native_app.py). Makes the website feel like an app:
+ * no marketing links, no "install" buttons, no web-page quirks.
+ *
+ * <html data-native-app="android|ios"> is set on every app page, and
+ * data-app-payments="off" where buying is hidden, so you can target the
+ * apps from any stylesheet too:
+ *     html[data-native-app="ios"] .something { ... }
+ */
+
+/* ---- feel like an app, not a web page ---- */
+html[data-native-app] {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+html[data-native-app] a,
+html[data-native-app] button,
+html[data-native-app] .px-role,
+html[data-native-app] .px-side a,
+html[data-native-app] nav a {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+html[data-native-app] input,
+html[data-native-app] textarea,
+html[data-native-app] select {
+  font-size: max(16px, 1em); /* stops iPhone zooming into form fields */
+}
+
+/* ---- already an app: no install prompts ---- */
+html[data-native-app] [data-install-app],
+html[data-native-app] [data-install-fab] {
+  display: none !important;
+}
+
+/* ---- signed out: the marketing site's links lead nowhere in the app ---- */
+html[data-native-app] .px-public .main-nav,
+html[data-native-app] .px-public .site-footer {
+  display: none !important;
+}
+
+/* ---- app-store rules: nothing to buy where payments are off ---- */
+html[data-app-payments="off"] a[href^="/billing/plans"],
+html[data-app-payments="off"] a[href^="/billing/checkout"],
+html[data-app-payments="off"] a[href^="/billing/promo"],
+html[data-app-payments="off"] [data-pay-form] {
+  display: none !important;
+}
+
+/* ---- the app's welcome screen (templates/native_app/welcome.html) ---- */
+.app-welcome .px-bigbtn { width: 100%; justify-content: center; }
+.app-welcome__btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 56px; margin: 0 0 12px;
+  border-radius: 99px; font-weight: 800; font-size: 17px; text-decoration: none;
+}
+.app-welcome__btn--ghost {
+  border: 2px solid var(--line, #E3E8F4);
+  background: var(--card, #fff);
+  color: var(--blue, #1846E0);
+}
+.app-welcome__btn--ghost:active { background: var(--sky, #E7EFFF); }
+.app-welcome__scan { margin-top: 10px; }
+.app-welcome__link {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 0; background: none; padding: 10px 14px;
+  color: var(--blue, #1846E0); font: inherit; font-weight: 800; cursor: pointer;
+}
+@media (max-width: 760px) {
+  .app-welcome-page .px-auth__art img { max-height: 34vh; object-fit: cover; }
+  .app-welcome-page .px-auth__panel { padding: 24px 20px 32px; }
+}
+
+/* ---- small notices from static/js/native_app.js ---- */
+.dm-app-toast {
+  position: fixed; left: 16px; right: 16px; z-index: 10001;
+  bottom: calc(var(--tab-h, 76px) + 16px + env(safe-area-inset-bottom, 0px));
+  max-width: 520px; margin: 0 auto; padding: 14px 18px; border-radius: 14px;
+  background: #0B1A4A; color: #FFFDF8; text-align: center;
+  font: 600 15px/1.4 system-ui, sans-serif;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+  transform: translateY(20px); opacity: 0; transition: transform .25s, opacity .25s;
+  pointer-events: none;
+}
+.dm-app-toast.is-on { transform: none; opacity: 1; }
+.dm-app-toast--offline { background: #7A1F1F; }
+
+/* A thin progress line while the next page loads. */
+.dm-app-loading {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 10002;
+  background: var(--yellow, #FFC72C);
+  transition: width 8s cubic-bezier(.1, .7, .2, 1), opacity .3s;
+}
+.dm-app-loading.is-on { width: 85%; }
+.app-welcome__legal { margin: 8px 0 0; text-align: center; font-size: 14px; }
+.app-welcome__legal a { color: var(--muted, #55607E); }

@@ -9,7 +9,9 @@
  *    prompt where there is one, otherwise the steps for that device.
  */
 (function () {
-  var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  // Inside the Android/iPhone app (static/js/native_app.js) it is already installed.
+  var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true ||
+    document.documentElement.hasAttribute("data-native-app");
 
   // ---------------------------------------------------------------- updates
   if ("serviceWorker" in navigator) {

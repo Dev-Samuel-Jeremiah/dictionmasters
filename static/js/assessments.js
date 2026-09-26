@@ -78,7 +78,8 @@
             showSave("Time's up — submitting…", "warn");
             submitPaper(true);
           } else if (result.data.saved) {
-            showSave("All answers saved", "ok");
+            // Offline, the service worker keeps the answer and sends it later (templates/pwa/sw.js).
+            showSave(result.data.queued ? "Saved on this device — will sync when you're online" : "All answers saved", "ok");
           }
         })
         .catch(function () { showSave("Offline — your answers will send when you submit", "warn"); });

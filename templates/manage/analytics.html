@@ -1,0 +1,178 @@
+{% extends "manage/base.html" %}
+{% load static %}
+
+{% block title %}Analytics — Control room{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/analytics.css' %}">{% endblock %}
+
+{% block content %}
+<div class="an" data-analytics>
+  <header class="an-head">
+    <div>
+      <p class="cr-pagehead__eyebrow">&#128200; Analytics</p>
+      <h1 class="an-title">How Diction Masters is doing</h1>
+      <p class="an-sub">{{ data.period.label }} · compared with {{ data.period.prev_label }}</p>
+    </div>
+    <div class="an-head__actions">
+      <button type="button" class="cr-btn cr-btn--ghost" data-print>Print or save as PDF</button>
+    </div>
+  </header>
+
+  {# One filter row: it scopes every number and chart below it. #}
+  <form class="an-filters" method="get" aria-label="Period">
+    <div class="an-presets" role="group" aria-label="Date range">
+      {% for p in data.presets %}
+      <a href="?range={{ p.key }}{% if request.GET.grain %}&amp;grain={{ request.GET.grain }}{% endif %}" class="an-chip{% if data.period.preset == p.key %} is-on{% endif %}"{% if data.period.preset == p.key %} aria-current="true"{% endif %}>{{ p.label }}</a>
+      {% endfor %}
+    </div>
+    <div class="an-custom">
+      <label>From <input type="date" name="from" value="{{ data.period.from }}" class="cr-input"></label>
+      <label>To <input type="date" name="to" value="{{ data.period.to }}" class="cr-input"></label>
+      <label>Show by
+        <select name="grain" class="cr-input cr-select">
+          <option value="auto">Automatic</option>
+          <option value="day"{% if request.GET.grain == "day" %} selected{% endif %}>Day</option>
+          <option value="week"{% if request.GET.grain == "week" %} selected{% endif %}>Week</option>
+          <option value="month"{% if request.GET.grain == "month" %} selected{% endif %}>Month</option>
+        </select>
+      </label>
+      <button type="submit" class="cr-btn cr-btn--gold">Apply</button>
+    </div>
+  </form>
+
+  {# The headline, then the tiles. #}
+  <section class="an-top">
+    <div class="an-card an-hero">
+      <p class="an-label">Revenue · {{ data.period.label|lower }}</p>
+      <p class="an-hero__value" data-hero></p>
+      <p class="an-delta" data-hero-delta></p>
+      <div class="an-hero__spark" data-hero-spark></div>
+      <dl class="an-totals">
+        <div><dt>All-time revenue</dt><dd data-total="revenue_all"></dd></div>
+        <div><dt>Paying accounts now</dt><dd data-total="paying"></dd></div>
+        <div><dt>Schools</dt><dd data-total="schools"></dd></div>
+        <div><dt>Adult learners</dt><dd data-total="adults"></dd></div>
+        <div><dt>Students</dt><dd data-total="students"></dd></div>
+        <div><dt>Teachers</dt><dd data-total="teachers"></dd></div>
+      </dl>
+    </div>
+    <div class="an-tiles" data-tiles></div>
+  </section>
+
+  <section class="an-card an-chart" data-chart="revenue">
+    <header class="an-card__head">
+      <div>
+        <h2>Revenue over time</h2>
+        <p class="an-card__sub">Naira received per {{ data.period.grain }}</p>
+      </div>
+      <div class="an-card__tools">
+        <label class="an-toggle"><input type="checkbox" data-compare checked> Compare with previous period</label>
+        <button type="button" class="an-tool" data-view-table aria-pressed="false">Table</button>
+        <button type="button" class="an-tool" data-csv>CSV</button>
+      </div>
+    </header>
+    <div class="an-legend" data-legend></div>
+    <div class="an-plot" data-plot></div>
+    <div class="an-table-view" data-table hidden></div>
+  </section>
+
+  <div class="an-grid an-grid--2">
+    <section class="an-card an-chart" data-chart="signups">
+      <header class="an-card__head">
+        <div>
+          <h2>New sign-ups</h2>
+          <p class="an-card__sub">Accounts created per {{ data.period.grain }}</p>
+        </div>
+        <div class="an-card__tools">
+          <button type="button" class="an-tool" data-view-table aria-pressed="false">Table</button>
+          <button type="button" class="an-tool" data-csv>CSV</button>
+        </div>
+      </header>
+      <div class="an-chips" data-chips role="group" aria-label="Show sign-ups for"></div>
+      <div class="an-plot" data-plot></div>
+      <div class="an-table-view" data-table hidden></div>
+    </section>
+
+    <section class="an-card an-chart" data-chart="activity">
+      <header class="an-card__head">
+        <div>
+          <h2>Learning activity</h2>
+          <p class="an-card__sub">Things done on the site per {{ data.period.grain }}</p>
+        </div>
+        <div class="an-card__tools">
+          <button type="button" class="an-tool" data-view-table aria-pressed="false">Table</button>
+          <button type="button" class="an-tool" data-csv>CSV</button>
+        </div>
+      </header>
+      <div class="an-chips" data-chips role="group" aria-label="Show activity for"></div>
+      <div class="an-plot" data-plot></div>
+      <div class="an-table-view" data-table hidden></div>
+    </section>
+  </div>
+
+  <div class="an-grid an-grid--2">
+    <section class="an-card an-chart" data-chart="audience">
+      <header class="an-card__head">
+        <div><h2>Revenue by customer</h2><p class="an-card__sub">{{ data.period.label }}</p></div>
+        <div class="an-card__tools"><button type="button" class="an-tool" data-csv>CSV</button></div>
+      </header>
+      <div class="an-plot" data-plot></div>
+    </section>
+    <section class="an-card an-chart" data-chart="plans">
+      <header class="an-card__head">
+        <div><h2>Revenue by plan</h2><p class="an-card__sub">{{ data.period.label }}</p></div>
+        <div class="an-card__tools"><button type="button" class="an-tool" data-csv>CSV</button></div>
+      </header>
+      <div class="an-plot" data-plot></div>
+    </section>
+  </div>
+
+  <div class="an-grid an-grid--3">
+    <section class="an-card" data-subscriptions>
+      <header class="an-card__head"><div><h2>Subscriptions now</h2><p class="an-card__sub">Every account, as of today</p></div></header>
+      <div data-body></div>
+    </section>
+    <section class="an-card" data-health>
+      <header class="an-card__head"><div><h2>Payment health</h2><p class="an-card__sub">Checkouts started in the period</p></div></header>
+      <div data-body></div>
+    </section>
+    <section class="an-card an-chart" data-chart="levels">
+      <header class="an-card__head">
+        <div><h2>Students by level</h2><p class="an-card__sub">As of today</p></div>
+        <div class="an-card__tools"><button type="button" class="an-tool" data-csv>CSV</button></div>
+      </header>
+      <div class="an-plot" data-plot></div>
+    </section>
+  </div>
+
+  <section class="an-card" data-list="schools">
+    <header class="an-card__head">
+      <div><h2>Schools</h2><p class="an-card__sub">Ranked by revenue. Click a heading to sort.</p></div>
+      <div class="an-card__tools">
+        <input type="search" class="cr-input an-search" placeholder="Find a school…" aria-label="Find a school" data-search>
+        <button type="button" class="an-tool" data-csv>CSV</button>
+      </div>
+    </header>
+    <div class="an-scroll" data-body></div>
+  </section>
+
+  <section class="an-card" data-list="payments">
+    <header class="an-card__head">
+      <div><h2>Payments</h2><p class="an-card__sub">The latest 100 in the period</p></div>
+      <div class="an-card__tools">
+        <select class="cr-input cr-select an-filter" aria-label="Payment status" data-status>
+          <option value="">Every status</option>
+          <option>Paid</option><option>Failed</option><option>Not completed</option><option>Pending</option>
+        </select>
+        <input type="search" class="cr-input an-search" placeholder="Find a payment…" aria-label="Find a payment" data-search>
+        <button type="button" class="an-tool" data-csv>CSV</button>
+      </div>
+    </header>
+    <div class="an-scroll" data-body></div>
+  </section>
+
+  <div class="an-tip" role="tooltip" hidden data-tip></div>
+</div>
+{{ data|json_script:"analytics-data" }}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/analytics.js' %}" defer></script>{% endblock %}

@@ -28,7 +28,7 @@
     {% endif %}
     <a href="{% url 'videos:offline' %}" class="account-menu__item"{% if '/videos/offline/' in request.path %} aria-current="page"{% endif %}>
       <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="video" size=18 %}</span>
-      <span class="account-menu__text"><span>Offline videos</span><small>Watch without the internet</small></span>
+      <span class="account-menu__text"><span>Offline lessons &amp; videos</span><small>Download, and sync your progress</small></span>
     </a>
   </nav>
   <form method="post" action="{% url 'accounts:logout' %}" class="account-menu__logout">
@@ -38,4 +38,5 @@
       <span class="account-menu__text"><span>Log out</span></span>
     </button>
   </form>
+  <p class="account-menu__small"><a href="{% url 'landing:privacy' %}">Privacy</a> &middot; <a href="{% url 'accounts:delete_account' %}">Delete my account</a></p>
 </div>

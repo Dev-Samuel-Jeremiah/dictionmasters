@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
+from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect, render
@@ -114,6 +115,32 @@ class EmailLoginView(LoginView):
 
 class EmailLogoutView(LogoutView):
     next_page = reverse_lazy("landing:home")
+
+
+@login_required(login_url="accounts:login")
+def delete_account(request):
+    """Delete your own account and everything saved with it.
+
+    Required by the App Store and Google Play for any app where people can
+    sign up. The school itself stays (other teachers and students use it);
+    payment records are kept for the accounts, without the person attached.
+    Staff accounts are removed from the control room instead."""
+    user = request.user
+    error = ""
+    if request.method == "POST":
+        if user.is_staff or user.is_superuser:
+            error = "Staff accounts are removed from the control room, not here."
+        elif not user.check_password(request.POST.get("password", "")):
+            error = "That password isn't right. Please try again."
+        else:
+            auth_logout(request)
+            user.delete()
+            messages.success(request, "Your account and everything saved with it have been deleted.")
+            response = redirect("landing:home")
+            # Also wipe anything this device kept for offline use.
+            response["Clear-Site-Data"] = '"cache", "storage"'
+            return response
+    return render(request, "accounts/delete_account.html", {"error": error})
 
 
 @login_required(login_url="accounts:login")

@@ -1,5 +1,5 @@
 {% load static %}<!DOCTYPE html>
-<html lang="en-gb">
+<html lang="en-gb"{% if native_app %} data-native-app="{{ native_app.platform }}"{% endif %}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="{% static 'css/manage.css' %}">
   <link rel="stylesheet" href="{% static 'css/rich_text_editor.css' %}">
   <link rel="stylesheet" href="{% static 'css/upload_progress.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
 <body class="cr-body">
   <a href="#cr-main" class="cr-skip">Skip to content</a>
@@ -41,6 +42,7 @@
       <button type="button" class="cr-side__close" aria-label="Close menu">&times;</button>
       <a href="{% url 'manage:home' %}" class="cr-side__home {% if not current_key %}is-on{% endif %}">&#127968; Control room home</a>
       <a href="{% url 'manage:branding' %}" class="cr-side__home {% if current_key == 'branding' %}is-on{% endif %}">&#127912; Logo &amp; favicon</a>
+      <a href="{% url 'manage:analytics' %}" class="cr-side__home {% if current_key == 'analytics' %}is-on{% endif %}">&#128200; Analytics</a>
       <a href="{% url 'manage:billing_settings' %}" class="cr-side__home {% if current_key == 'billing-settings' %}is-on{% endif %}">&#128179; Billing settings</a>
       <a href="{% url 'manage:results' %}{% if to_mark %}?show=to-mark{% endif %}" class="cr-side__home {% if current_key == 'results' %}is-on{% endif %}">&#9997;&#65039; Results &amp; marking{% if to_mark %}<span class="cr-side__badge">{{ to_mark }}</span>{% endif %}</a>
       <a href="{% url 'manage:read_along' %}" class="cr-side__home {% if current_key == 'read-along' %}is-on{% endif %}">&#127911; Read-along timings</a>
@@ -73,9 +75,11 @@
     </main>
   </div>
 
+  {% if native_app %}<script src="{% static 'js/native_app.js' %}" defer></script>{% endif %}
   <script src="{% static 'js/upload_progress.js' %}" defer></script>
   <script src="{% static 'js/rich_text_editor.js' %}" defer></script>
   <script src="{% static 'js/manage_audio_feedback.js' %}" defer></script>
+  {% block extra_js %}{% endblock %}
   <script>
     // The only script here: the menu drawer on a phone.
     (function () {

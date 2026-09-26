@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+  Delete your own account (apps/accounts/views.py: delete_account).
+  The App Store and Google Play both require this for apps with sign-up.
+{% endcomment %}
+
+{% block title %}Delete my account — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <div class="wrap ui-body ui-stack">
+    <section class="ui-panel">
+      <p class="ui-panel__label">Your account</p>
+      <h1 class="ui-panel__title">Delete my account</h1>
+      <p class="ui-panel__lede">This permanently deletes <strong>{{ user.email }}</strong> and everything saved with it: your progress, results, recordings, word lists and offline videos. It can't be undone.</p>
+      {% if user.role == "school_admin" %}
+      <div class="ui-callout ui-callout--gold">
+        <p class="ui-callout__title">Your school stays</p>
+        <p>Your teachers and students keep their own accounts. If nobody else looks after the school, contact us first so we can hand it over.</p>
+      </div>
+      {% endif %}
+      {% if billing.state == "active" and billing.can_pay %}
+      <p class="ui-panel__lede">You still have a paid plan until {{ billing.access_until|date:"j F Y" }}. Deleting your account ends it too.</p>
+      {% endif %}
+
+      <form method="post" class="form-card" novalidate>
+        {% csrf_token %}
+        {% if error %}<ul class="non-field-errors"><li>{{ error }}</li></ul>{% endif %}
+        <div class="field">
+          <label for="delete-password">Type your password to confirm</label>
+          <input type="password" id="delete-password" name="password" class="field-input" autocomplete="current-password" required>
+        </div>
+        <p>
+          <button type="submit" class="ui-btn ui-btn--maroon">Delete my account for ever</button>
+          <a href="{% url 'accounts:dashboard' %}" class="ui-btn ui-btn--ghost">Keep my account</a>
+        </p>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

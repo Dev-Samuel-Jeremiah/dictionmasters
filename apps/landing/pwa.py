@@ -206,7 +206,10 @@ def service_worker(request):
         "version": app_version(),
         "offline_url": "/offline/",
         "static_prefix": "/" + settings.STATIC_URL.strip("/") + "/",
-        "precache": json.dumps(precache + [static("js/offline_pages.js"), static("js/offline_video.js")]),
+        "precache": json.dumps(precache + [static("js/offline_pages.js"), static("js/offline_video.js"),
+                                           static("js/offline_sync.js")]),
+        # Where lesson pictures and audio live besides this site, so they can be kept offline.
+        "media_hosts": json.dumps(list(getattr(settings, "OFFLINE_MEDIA_HOSTS", []))),
     }).content
     response = HttpResponse(body, content_type="application/javascript; charset=utf-8")
     response["Service-Worker-Allowed"] = "/"

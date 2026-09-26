@@ -178,3 +178,9 @@ def home(request):
         ],
     }
     return render(request, "landing/home.html", context)
+
+
+def privacy(request):
+    """The privacy policy. Both app stores need its address; edit the text in
+    templates/landing/privacy.html."""
+    return render(request, "landing/privacy.html")

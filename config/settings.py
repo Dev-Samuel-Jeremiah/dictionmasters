@@ -151,6 +151,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # The Android and iPhone apps: welcome screen, app-store payment rules (apps/landing/native_app.py).
+    "apps.landing.native_app.NativeAppMiddleware",
     # Learning tools need a running free trial or a paid plan (apps/billing).
     "apps.billing.middleware.SubscriptionRequiredMiddleware",
 ]
@@ -180,6 +182,7 @@ TEMPLATES = [
                 "apps.landing.context_processors.branding",
                 "apps.landing.context_processors.nav",
                 "apps.billing.context_processors.billing",
+                "apps.landing.native_app.context",
             ],
             # {{ colour|palette }} everywhere, for colours stored in the database.
             "builtins": ["apps.landing.templatetags.palette"],
@@ -431,6 +434,33 @@ LOGOUT_REDIRECT_URL = "landing:home"
 # room, not here. Point Paystack's webhook at /billing/webhook/paystack/.
 PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY", "")
 PAYSTACK_PUBLIC_KEY = os.environ.get("PAYSTACK_PUBLIC_KEY", "")
+
+
+# ---------------------------------------------------------------------------
+# The Android and iPhone apps (apps/landing/native_app.py, MOBILE_APP_GUIDE.md)
+# ---------------------------------------------------------------------------
+
+# Apple and Google Play don't allow selling digital subscriptions inside an
+# app through Paystack. In the apps listed here, plans can't be bought: people
+# pay on the website and use their plan in the app. "ios,android" is the safe
+# setting for the stores; set it to "ios" to allow Paystack in the Android app
+# only if Google Play allows it for you (see the guide, section 8).
+NATIVE_APP_HIDE_PAYMENTS = env_list("NATIVE_APP_HIDE_PAYMENTS", "ios,android")
+
+# So website links (WhatsApp, email) open straight in the app.
+NATIVE_APP_ANDROID_PACKAGE = os.environ.get("NATIVE_APP_ANDROID_PACKAGE", "app.dictionmasters.mobile")
+# Google Play Console > your app > Test and release > App integrity > App signing:
+# "SHA-256 certificate fingerprint". Several allowed, comma-separated.
+NATIVE_APP_ANDROID_SHA256 = env_list("NATIVE_APP_ANDROID_SHA256")
+# developer.apple.com > Account > Membership details > Team ID.
+NATIVE_APP_IOS_TEAM_ID = os.environ.get("NATIVE_APP_IOS_TEAM_ID", "")
+NATIVE_APP_IOS_BUNDLE_ID = os.environ.get("NATIVE_APP_IOS_BUNDLE_ID", NATIVE_APP_ANDROID_PACKAGE)
+
+# Hosts that lesson pictures and audio are served from (besides this site),
+# so the app can keep them for offline study. Cloudflare R2 is included;
+# add a custom media domain here if you use one. Each needs a CORS rule
+# allowing this site (MOBILE_APP_GUIDE.md, section 11).
+OFFLINE_MEDIA_HOSTS = env_list("OFFLINE_MEDIA_HOSTS", "r2.cloudflarestorage.com,r2.dev")
 
 
 # ---------------------------------------------------------------------------

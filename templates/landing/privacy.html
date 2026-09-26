@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% comment %}
+  The privacy policy, at /privacy/. The App Store and Google Play both ask
+  for this address when you publish the apps.
+
+  THIS IS A STARTING DRAFT written from what the site actually does.
+  Read it carefully, change anything that isn't true for you, and have it
+  checked (for Nigeria, the Nigeria Data Protection Act 2023 applies).
+  Update the date below whenever you change it.
+{% endcomment %}
+
+{% block title %}Privacy policy — Diction Masters{% endblock %}
+
+{% block content %}
+{% with contact=billing_settings.support_email|default:"hello@dictionmasters.app" %}
+<div class="ui">
+  <div class="wrap ui-body ui-stack">
+    <article class="ui-panel">
+      <h1 class="ui-panel__title">Privacy policy</h1>
+      <p class="ui-panel__lede">Last updated: 26 September 2026</p>
+
+      <p>Diction Masters ("we", "us") is a British English tutor for learners, teachers and schools, on the web and in our Android and iPhone apps. This policy explains what we collect, why, and the choices you have. Questions: <a href="mailto:{{ contact }}">{{ contact }}</a>.</p>
+
+      <h2>What we collect</h2>
+      <ul>
+        <li><strong>Account details</strong> — your name, email address, password (stored scrambled, never readable), your role, and your school if you joined one.</li>
+        <li><strong>Learning activity</strong> — lessons opened, answers, scores, streaks, word lists and results, so you and your teachers can see progress.</li>
+        <li><strong>Voice recordings</strong> — only when you press record in a speaking or reading activity. They are used to check your pronunciation and give feedback.</li>
+        <li><strong>Payment records</strong> — the plan, amount, date and reference of each payment. Card and bank details are handled by Paystack; we never see or store them.</li>
+        <li><strong>Device information</strong> — basic technical details (browser or app version, device type) needed to run the service securely, and a device record if you save videos for offline viewing.</li>
+      </ul>
+
+      <h2>Camera and microphone</h2>
+      <p>The app asks to use the microphone only for speaking practice, and the camera only to scan the QR codes in our books. Nothing is recorded unless you start it, and you can turn either off in your phone's settings.</p>
+
+      <h2>Who we share it with</h2>
+      <p>We don't sell your data or show advertising. We use trusted services to run Diction Masters, each only for its task:</p>
+      <ul>
+        <li><strong>OpenAI</strong> — turns your speech into text and helps write feedback.</li>
+        <li><strong>ElevenLabs</strong> — creates the spoken audio for words and the reading tutor.</li>
+        <li><strong>Paystack</strong> — processes payments.</li>
+        <li><strong>Cloudflare</strong> — stores lesson media and uploads.</li>
+        <li><strong>Our hosting and email providers</strong> — run the website and send account emails.</li>
+      </ul>
+      <p>If you joined through a school, your school admin and teachers can see your progress and results.</p>
+
+      <h2>Children</h2>
+      <p>Many of our learners are school children. Children join through their school, which is responsible for getting the consent it needs from parents or guardians. We collect only what is needed to teach and show progress.</p>
+
+      <h2>How long we keep it</h2>
+      <p>We keep your data while your account is open. When you delete your account, your details, progress and recordings are deleted. Payment records are kept, without your name attached, for as long as the law requires.</p>
+
+      <h2>Your choices</h2>
+      <ul>
+        <li>See and update your details from your dashboard.</li>
+        <li>Delete your account at any time{% if user.is_authenticated %} from <a href="{% url 'accounts:delete_account' %}">Delete my account</a>{% else %} from the account menu after logging in{% endif %}, or by emailing us.</li>
+        <li>Ask us for a copy of your data, or to correct it, by emailing <a href="mailto:{{ contact }}">{{ contact }}</a>.</li>
+      </ul>
+
+      <h2>Security</h2>
+      <p>All connections are encrypted (HTTPS). Media is stored privately and served through short-lived links. Videos saved for offline use are encrypted on your device.</p>
+
+      <h2>Changes</h2>
+      <p>If we change this policy we'll update the date at the top, and tell you in the app for important changes.</p>
+    </article>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}

@@ -48,19 +48,19 @@
         {% if status.state == "active" %}
           <p class="ui-panel__label">{% if sub.plan %}{{ sub.plan.name }} plan{% else %}Paid plan{% endif %}</p>
           <h2 class="bl-status__title">Active until {{ status.access_until|date:"j F Y" }}</h2>
-          <p class="ui-panel__lede">{{ status.days_left }} day{{ status.days_left|pluralize }} left.{% if status.renew_soon and status.can_pay %} Renew now and the new days are added after this date.{% endif %}</p>
+          <p class="ui-panel__lede">{{ status.days_left }} day{{ status.days_left|pluralize }} left.{% if status.renew_soon and status.can_pay and not native_app.hide_payments %} Renew now and the new days are added after this date.{% endif %}</p>
         {% elif status.state == "trial" %}
           <p class="ui-panel__label">Free trial</p>
           <h2 class="bl-status__title">{{ status.days_left }} day{{ status.days_left|pluralize }} of your free trial left</h2>
-          <p class="ui-panel__lede">It ends at {{ status.access_until|date:"g:i a" }} on {{ status.access_until|date:"j F Y" }}.{% if status.can_pay %} Pay any time: your plan starts straight away and replaces the trial.{% endif %}</p>
+          <p class="ui-panel__lede">It ends at {{ status.access_until|date:"g:i a" }} on {{ status.access_until|date:"j F Y" }}.{% if status.can_pay and not native_app.hide_payments %} Pay any time: your plan starts straight away and replaces the trial.{% endif %}</p>
         {% elif status.never_started %}
           <p class="ui-panel__label">Not started yet</p>
-          <h2 class="bl-status__title">{% if status.can_pay %}Start your free trial or choose a plan{% else %}Your school hasn't started its plan yet{% endif %}</h2>
-          <p class="ui-panel__lede">{% if status.can_pay %}{% if status.trial_available %}Try everything free for {{ status.settings.trial_days }} days with no card, or pay now below.{% else %}Choose a plan below to start learning.{% endif %}{% endif %}</p>
+          <h2 class="bl-status__title">{% if status.can_pay and native_app.hide_payments %}Your plan hasn't started yet{% elif status.can_pay %}Start your free trial or choose a plan{% else %}Your school hasn't started its plan yet{% endif %}</h2>
+          <p class="ui-panel__lede">{% if status.can_pay and not native_app.hide_payments %}{% if status.trial_available %}Try everything free for {{ status.settings.trial_days }} days with no card, or pay now below.{% else %}Choose a plan below to start learning.{% endif %}{% endif %}</p>
         {% else %}
           <p class="ui-panel__label">Access ended</p>
-          <h2 class="bl-status__title">{% if sub.paid_until %}Your plan ended on {{ sub.paid_until|date:"j F Y" }}{% elif sub.trial_ends_at %}Your free trial ended on {{ sub.trial_ends_at|date:"j F Y" }}{% else %}Choose a plan to start learning{% endif %}</h2>
-          <p class="ui-panel__lede">Your progress is safe. {% if status.can_pay %}Choose a plan below to pick up where you left off.{% endif %}</p>
+          <h2 class="bl-status__title">{% if sub.paid_until %}Your plan ended on {{ sub.paid_until|date:"j F Y" }}{% elif sub.trial_ends_at %}Your free trial ended on {{ sub.trial_ends_at|date:"j F Y" }}{% elif native_app.hide_payments %}No active plan{% else %}Choose a plan to start learning{% endif %}</h2>
+          <p class="ui-panel__lede">Your progress is safe. {% if status.can_pay and not native_app.hide_payments %}Choose a plan below to pick up where you left off.{% endif %}</p>
         {% endif %}
 
         {% if not status.can_pay %}
@@ -83,14 +83,19 @@
       {% if next_url %}
         {% if status.has_access or status.exempt %}
         <p class="bl-status__next"><a href="{{ next_url }}" class="ui-btn ui-btn--gold">Continue where you left off &rarr;</a></p>
-        {% elif status.can_pay %}
+        {% elif status.can_pay and not native_app.hide_payments %}
         <p class="bl-status__meta">Once you've paid, we'll take you straight back to where you were.</p>
         {% endif %}
       {% endif %}
     </section>
 
     {# ---- plans ---- #}
-    {% if table and table.rows or cards %}
+    {% if native_app.hide_payments %}
+    {# Android/iPhone app: app-store rules, no buying in the app (apps/landing/native_app.py). #}
+    {% if status.can_pay and not status.exempt %}
+    <section class="ui-panel"><p class="ui-panel__lede">Plans can't be bought in the app. Once your account has a plan, it works here automatically — just stay signed in with the same email address.</p></section>
+    {% endif %}
+    {% elif table and table.rows or cards %}
     {# While a paid plan has plenty of time left, renewing is tucked away; it opens in the last few days. #}
     <section class="ui-panel" aria-labelledby="bl-plans-title">
       {% if status.state == "active" and not status.renew_soon %}

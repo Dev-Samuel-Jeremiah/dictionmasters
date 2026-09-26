@@ -1,0 +1,7 @@
+node_modules/
+# Signing keys: NEVER commit these. Keep a safe backup elsewhere.
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+keystore.properties

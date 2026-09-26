@@ -2,7 +2,14 @@
   How to begin, at the end of a registration form: the free trial, or pay
   now for a plan. Needs a form using accounts.forms.StartChoiceMixin.
 {% endcomment %}
-{% if form.start.field.choices %}
+{% if native_app.hide_payments %}
+{# In the Android/iPhone app nothing is bought: every new account starts on the free trial (apps/landing/native_app.py). #}
+{% for radio in form.start %}{% if radio.data.value == "trial" %}<input type="hidden" name="{{ form.start.html_name }}" value="trial">{% endif %}{% endfor %}
+{% if form.start.field.choices|length == 1 and form.start.field.choices.0.0 == "pay" %}
+<div class="ui-callout ui-callout--gold"><p class="ui-callout__title">Accounts can't be started with a payment in the app</p><p>There is no free trial right now. If you already have an account with a plan, go back and log in.</p></div>
+{% endif %}
+{% if form.start.errors %}<ul class="field-errors">{% for error in form.start.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+{% elif form.start.field.choices %}
 <fieldset class="bl-start" data-start-choice>
   <legend class="bl-start__legend">How would you like to start?</legend>
   <div class="bl-start__options">

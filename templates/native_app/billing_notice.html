@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+  Shown in the Android/iPhone app instead of the buying pages (plans,
+  checkout, promo codes) while NATIVE_APP_HIDE_PAYMENTS includes that
+  platform. App-store rules: no buying and no "pay on our website" button
+  or link inside the app. Stating what someone has is fine.
+{% endcomment %}
+
+{% block title %}Your plan — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/billing.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <div class="wrap ui-body ui-stack">
+    <section class="ui-panel">
+      <p class="ui-panel__label">Your plan</p>
+      {% if billing.exempt or not billing.paywall %}
+        <h1 class="bl-status__title">You have full access.</h1>
+      {% elif billing.state == "active" %}
+        <h1 class="bl-status__title">Active until {{ billing.access_until|date:"j F Y" }}</h1>
+      {% elif billing.state == "trial" %}
+        <h1 class="bl-status__title">Free trial: {{ billing.days_left }} day{{ billing.days_left|pluralize }} left</h1>
+      {% elif billing %}
+        <h1 class="bl-status__title">Your access has ended</h1>
+      {% else %}
+        <h1 class="bl-status__title">Plans</h1>
+      {% endif %}
+      <p class="ui-panel__lede">Plans can't be bought in the app. Once your account has a plan, sign in here with the same email address and everything is unlocked.</p>
+      <p><a href="{% url 'accounts:dashboard' %}" class="ui-btn ui-btn--gold">Back to my dashboard</a></p>
+    </section>
+  </div>
+</div>
+{% endblock %}

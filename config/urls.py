@@ -11,7 +11,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from apps.landing import pwa
+from apps.landing import native_app, pwa
 
 urlpatterns = [
     path("manage/", include("apps.manage.urls")),
@@ -23,6 +23,10 @@ urlpatterns = [
     path("site-branding/<str:kind>/", pwa.brand_asset, name="pwa_brand_asset"),
     path("sw.js", pwa.service_worker, name="pwa_worker"),
     path("offline/", pwa.offline, name="pwa_offline"),
+    # The Android and iPhone apps (apps/landing/native_app.py).
+    path("app/welcome/", native_app.welcome, name="native_app_welcome"),
+    path(".well-known/assetlinks.json", native_app.android_asset_links, name="native_app_assetlinks"),
+    path(".well-known/apple-app-site-association", native_app.apple_app_site_association, name="native_app_aasa"),
     path("", include("apps.landing.urls")),
     path("accounts/", include("apps.accounts.urls")),
     path("school/", include("apps.schools.urls")),

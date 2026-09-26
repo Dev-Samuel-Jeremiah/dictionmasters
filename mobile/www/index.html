@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Diction Masters</title>
+  <!--
+    Normally never seen: the app opens the live site (siteUrl in
+    app.settings.json) directly. This page is only a safety net that sends
+    the app there.
+  -->
+  <script src="app-settings.js"></script>
+  <style>html,body{margin:0;height:100%;background:#14213D}</style>
+</head>
+<body>
+  <script>
+    window.location.replace(((window.DM_SETTINGS && window.DM_SETTINGS.siteUrl) || "https://www.dictionmasters.app") + "/");
+  </script>
+</body>
+</html>
