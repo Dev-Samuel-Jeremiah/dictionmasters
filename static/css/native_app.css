@@ -51,27 +51,49 @@ html[data-app-payments="off"] [data-pay-form] {
 }
 
 /* ---- the app's welcome screen (templates/native_app/welcome.html) ---- */
-.app-welcome .px-bigbtn { width: 100%; justify-content: center; }
-.app-welcome__btn {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; min-height: 56px; margin: 0 0 12px;
-  border-radius: 99px; font-weight: 800; font-size: 17px; text-decoration: none;
+.app-welcome .app-welcome__btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  box-sizing: border-box; width: 100%; min-height: 56px; margin: 0 0 12px; padding: 0 20px;
+  border-radius: 99px; font-weight: 800; font-size: 16px; line-height: 1.2;
+  text-decoration: none !important; text-align: center;
+  -webkit-tap-highlight-color: transparent; transition: transform .12s, background-color .15s;
 }
-.app-welcome__btn--ghost {
-  border: 2px solid var(--line, #E3E8F4);
+.app-welcome .app-welcome__btn:active { transform: scale(.98); }
+.app-welcome .app-welcome__btn--main { margin-bottom: 14px; }
+.app-welcome .app-welcome__btn--ghost {
+  border: 2px solid var(--blue, #1846E0);
   background: var(--card, #fff);
   color: var(--blue, #1846E0);
 }
-.app-welcome__btn--ghost:active { background: var(--sky, #E7EFFF); }
-.app-welcome__scan { margin-top: 10px; }
-.app-welcome__link {
-  display: inline-flex; align-items: center; gap: 8px;
-  border: 0; background: none; padding: 10px 14px;
-  color: var(--blue, #1846E0); font: inherit; font-weight: 800; cursor: pointer;
+.app-welcome .app-welcome__btn--ghost:active { background: var(--sky, #E7EFFF); }
+.app-welcome .app-welcome__btn--ghost .px-ic { flex: none; }
+@media (max-width: 374px) { .app-welcome .app-welcome__btn { font-size: 15px; padding: 0 14px; } }
+.app-welcome__legal { margin: 18px 0 0; text-align: center; }
+.app-welcome .app-welcome__legal-link {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 99px;
+  color: var(--muted, #55607E) !important; font-size: 14px; font-weight: 600; text-decoration: none !important;
 }
+.app-welcome .app-welcome__legal-link:active { background: var(--sky, #E7EFFF); }
 @media (max-width: 760px) {
-  .app-welcome-page .px-auth__art img { max-height: 34vh; object-fit: cover; }
-  .app-welcome-page .px-auth__panel { padding: 24px 20px 32px; }
+  .app-welcome-page .px-auth__art img { max-height: 30vh; object-fit: cover; }
+  .app-welcome-page .px-auth__panel { padding: 22px 20px 28px; }
+}
+
+/* ---- the top bar when signed out, in the app: Log in · scan · Get started ---- */
+html[data-native-app] .px-public .px-bar .header-actions { gap: 6px; }
+html[data-native-app] .px-public .px-bar .px-iconbtn--search { display: none !important; }
+html[data-native-app] .px-public .px-bar .px-bar__login { order: 1; }
+html[data-native-app] .px-public .px-bar .tool-btn--scan { display: grid !important; order: 2; }
+html[data-native-app] .px-public .px-bar .header-actions .btn--gold { order: 3; }
+@media (max-width: 420px) {
+  html[data-native-app] .px-public .px-bar .site-header__inner { padding-left: 12px; padding-right: 12px; }
+  html[data-native-app] .px-public .px-bar .px-bar__login { padding: 8px 6px; }
+  html[data-native-app] .px-public .px-bar .tool-btn--scan { width: 40px; height: 40px; }
+  html[data-native-app] .px-public .px-bar .header-actions .btn--gold { padding: 0 12px; min-height: 40px; font-size: .85rem; white-space: nowrap; }
+}
+/* Narrow phones: the logo alone, so the three buttons fit. */
+@media (max-width: 374px) {
+  html[data-native-app] .px-public .px-bar .px-brand__name { display: none; }
 }
 
 /* ---- small notices from static/js/native_app.js ---- */
@@ -95,8 +117,6 @@ html[data-app-payments="off"] [data-pay-form] {
   transition: width 8s cubic-bezier(.1, .7, .2, 1), opacity .3s;
 }
 .dm-app-loading.is-on { width: 85%; }
-.app-welcome__legal { margin: 8px 0 0; text-align: center; font-size: 14px; }
-.app-welcome__legal a { color: var(--muted, #55607E); }
 
 /* ---- "Update available" (static/js/native_app.js, section 9) ---- */
 html.dm-update-open { overflow: hidden; }

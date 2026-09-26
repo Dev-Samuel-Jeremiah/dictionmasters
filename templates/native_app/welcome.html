@@ -20,16 +20,17 @@
       <h1 class="px-auth__title">Welcome to Diction Masters</h1>
       <p class="px-auth__lede">Your private British English tutor: the 44 sounds, spelling, fluency and live reading practice, with progress you can see.</p>
 
-      <a href="{% url 'accounts:login' %}" class="px-bigbtn app-welcome__btn">Log in {% include "includes/icon.html" with name="chev" size=22 stroke="2.8" %}</a>
-      <a href="{% url 'accounts:register_choice' %}" class="app-welcome__btn app-welcome__btn--ghost">Create an account</a>
-      <a href="{% url 'accounts:join_with_code' %}" class="app-welcome__btn app-welcome__btn--ghost">I have a code from my school</a>
-
-      <p class="px-auth__foot app-welcome__scan">
-        <button type="button" class="app-welcome__link" data-scan-open aria-haspopup="dialog">
-          {% include "includes/icon.html" with name="scan" size=20 stroke="1.9" %} Scan a code from your book
-        </button>
+      <a href="{% url 'accounts:login' %}" class="px-bigbtn app-welcome__btn app-welcome__btn--main">Log in {% include "includes/icon.html" with name="chev" size=22 stroke="2.8" %}</a>
+      <a href="{% url 'accounts:register_choice' %}" class="app-welcome__btn app-welcome__btn--ghost">
+        {% include "includes/icon.html" with name="user" size=20 stroke="2.2" %} Create an account
+      </a>
+      <a href="{% url 'accounts:join_with_code' %}" class="app-welcome__btn app-welcome__btn--ghost">
+        {% include "includes/icon.html" with name="school" size=20 stroke="2.2" %} I have a code from my school
+      </a>
+      {# Scanning a code from the book: the scan button in the top bar. #}
+      <p class="app-welcome__legal">
+        <a href="{% url 'landing:privacy' %}" class="app-welcome__legal-link">{% include "includes/icon.html" with name="lock" size=14 stroke="2.2" %} Privacy policy</a>
       </p>
-      <p class="app-welcome__legal"><a href="{% url 'landing:privacy' %}">Privacy policy</a></p>
     </div>
   </div>
 </div>
