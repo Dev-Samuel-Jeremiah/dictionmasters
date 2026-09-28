@@ -95,3 +95,63 @@
   .vid__actions, .vid-kept__actions { width: 100%; }
   .vid__btn { flex: 1; justify-content: center; }
 }
+
+/* Replay and "Up next" on every player (static/js/media_extras.js) */
+.mx-stage { position: relative; width: 100%; }
+.mx-stage > video { display: block; width: 100%; }
+.mx-replay {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border: 0; border-radius: 999px; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .01em;
+  color: #0B1A4A; background: linear-gradient(135deg, #FFD86B, #FFC72C);
+  box-shadow: 0 6px 16px rgba(233, 174, 0, 0.3);
+  transition: transform .15s, box-shadow .15s;
+}
+.mx-replay:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(233, 174, 0, 0.38); }
+.mx-replay:focus-visible { outline: 3px solid #1846E0; outline-offset: 2px; }
+.mx-replay--audio { margin: 8px 0 4px; }
+.mx-replay--video {
+  position: absolute; top: 12px; left: 12px; z-index: 3;
+  opacity: 0; pointer-events: none; transform: translateY(-4px);
+  transition: opacity .2s, transform .2s;
+}
+.mx-stage.is-rewindable .mx-replay--video, .mx-stage:focus-within .mx-replay--video { opacity: 1; pointer-events: auto; transform: none; }
+
+.mx-next {
+  position: absolute; right: 14px; bottom: 64px; z-index: 4;
+  display: flex; align-items: stretch; gap: 4px;
+  max-width: min(320px, calc(100% - 28px));
+  animation: mx-next-in .35s cubic-bezier(.2, .9, .3, 1.15);
+}
+.mx-next[hidden] { display: none; }
+@keyframes mx-next-in { from { opacity: 0; transform: translateX(24px); } }
+.mx-next__go {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px 12px 18px; border-radius: 16px; text-decoration: none;
+  color: #0B1A4A; background: linear-gradient(135deg, #FFD86B, #FFC72C);
+  box-shadow: 0 14px 32px rgba(11, 26, 74, 0.45);
+}
+.mx-next__go:hover { filter: brightness(1.04); }
+.mx-next__go:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.mx-next__text { display: flex; flex-direction: column; min-width: 0; }
+.mx-next__text small { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+.mx-next__text strong { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mx-next__arrow { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; font-weight: 800; background: #0B1A4A; color: #FFC72C; animation: mx-nudge 1.4s ease-in-out infinite; }
+@keyframes mx-nudge { 50% { transform: translateX(4px); } }
+.mx-next__close {
+  flex: none; align-self: flex-start; width: 28px; height: 28px; border: 0; border-radius: 50%;
+  background: rgba(11, 26, 74, 0.75); color: #fff; font-size: 18px; line-height: 1; cursor: pointer;
+}
+@media (max-width: 560px) {
+  .mx-next { right: 8px; bottom: 54px; }
+  .mx-next__go { padding: 9px 10px 9px 14px; gap: 8px; }
+  .mx-next__text strong { font-size: 14px; }
+  .mx-next__arrow { width: 32px; height: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mx-next, .mx-next__arrow { animation: none; }
+}
+
+/* The offline bar shows only the buttons that fit the moment (offline_video.js
+   hides the rest); a button's own display must not bring them back. */
+.vid [hidden], .vid__btn[hidden] { display: none !important; }
