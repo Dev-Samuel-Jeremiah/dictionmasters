@@ -335,6 +335,13 @@ def object_for_token(token):
     return model.objects.filter(pk=pk).first()
 
 
+def needs_retry(row):
+    """Only the voice's pauses were kept because the word service failed
+    (no credit, a timeout…): usable, but worth measuring again later. A
+    recording with no speakable words at all has no error and isn't retried."""
+    return row.engine == "speech" and bool(row.error)
+
+
 def timing_for(obj, start=True):
     """(status, row) for `obj`. status is "ready", "pending" or
     "unavailable"; row is the ReadAlongTiming when ready. When nothing
@@ -351,7 +358,7 @@ def timing_for(obj, start=True):
     now = timezone.now()
 
     if row and row.fingerprint == fingerprint:
-        if row.status == ReadAlongTiming.STATUS_READY:
+        if row.status == ReadAlongTiming.STATUS_READY and not (needs_retry(row) and now - row.updated_at >= RETRY_FAILED_AFTER):
             return "ready", row
         if row.status == ReadAlongTiming.STATUS_WORKING and now - row.updated_at < WORKING_FOR:
             # Whatever is known so far — usually where the voice speaks —

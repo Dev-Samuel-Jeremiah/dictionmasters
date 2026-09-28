@@ -48,12 +48,21 @@ class Command(BaseCommand):
         for obj in read_along.candidates():
             label = f"{obj._meta.verbose_name} {obj.pk} ({str(obj)[:50]})"
             if not options["all"]:
-                status, _row = read_along.timing_for(obj, start=False)
-                if status == "ready":
+                status, existing = read_along.timing_for(obj, start=False)
+                # Only the voice's pauses because the word service failed last
+                # time: try the words again.
+                if status == "ready" and not read_along.needs_retry(existing):
                     skipped += 1
                     continue
             row = read_along.measure(obj)
-            if row and row.status == ReadAlongTiming.STATUS_READY:
+            if row and row.status == ReadAlongTiming.STATUS_READY and read_along.needs_retry(row):
+                # Usable (the highlight follows the voice), but the words
+                # didn't come back: say why, so it can be put right.
+                failed += 1
+                self.stdout.write(self.style.WARNING(
+                    f"  ~ {label}: no words — following the voice only. Why: {row.error}"
+                ))
+            elif row and row.status == ReadAlongTiming.STATUS_READY:
                 done += 1
                 self.stdout.write(f"  ✓ {label}: {len(row.words)} words, {len(row.speech)} speech runs, {row.quality_label} via {row.engine or 'silence'}")
             else:
