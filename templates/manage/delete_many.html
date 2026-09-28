@@ -1,0 +1,41 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Delete {{ objs|length }} {{ title|lower }} — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">{{ screen.section.icon }} {{ screen.section.name }}</p>
+    <h1 class="cr-pagehead__title">Delete {{ objs|length }} {% if objs|length == 1 %}{{ singular }}{% else %}{{ title|lower }}{% endif %}?</h1>
+  </div>
+</header>
+
+<section class="cr-card">
+  <p>These will be deleted for good. This can't be undone.</p>
+  <ul class="cr-delete-list">
+    {% for obj in objs|slice:":50" %}<li>{{ obj }}</li>{% endfor %}
+    {% if objs|length > 50 %}<li class="cr-help">…and {{ objs|length|add:"-50" }} more</li>{% endif %}
+  </ul>
+  {% if also %}
+  <div class="cr-delete-also">
+    <p><strong>Deleted along with them:</strong></p>
+    <ul>{% for item in also %}<li>{{ item.count }} {{ item.name }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  <form method="post" action="{% url 'manage:delete_many' screen.key %}" class="cr-formactions">
+    {% csrf_token %}
+    <input type="hidden" name="confirm" value="yes">
+    <input type="hidden" name="next" value="{{ back }}">
+    {% for obj in objs %}<input type="hidden" name="pk" value="{{ obj.pk }}">{% endfor %}
+    <button type="submit" class="cr-btn cr-btn--danger">Yes, delete {{ objs|length }}</button>
+    <a href="{{ back }}" class="cr-link">Cancel</a>
+  </form>
+</section>
+
+<style>
+  .cr-delete-list { max-height: 360px; overflow: auto; margin: 12px 0; padding: 10px 14px 10px 32px; border: 1px solid var(--cr-line); border-radius: 12px; background: #F2F5FC; }
+  .cr-delete-list li { padding: 3px 0; }
+  .cr-delete-also { margin: 12px 0; padding: 12px 16px; border-radius: 12px; background: #FFF5D6; border: 1px solid #FFC72C; }
+  .cr-delete-also ul { margin: 6px 0 0; padding-left: 20px; }
+</style>
+{% endblock %}

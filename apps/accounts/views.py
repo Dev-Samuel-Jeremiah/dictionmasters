@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.views.decorators.http import require_POST
 
 from apps.billing.access import subscription_for
 from apps.billing.models import Plan
@@ -18,6 +19,7 @@ from .forms import (
     SchoolRegistrationForm,
     StudentRegistrationForm,
 )
+from . import switcher
 from .models import DashboardCardImage, User
 
 
@@ -33,9 +35,43 @@ def _post_login_redirect(user):
     return "accounts:dashboard"
 
 
+TOUR_DONE = "signup_tour_done"
+
+
+def through_tour(view):
+    """Sign-up pages are only reached through the welcome tour (/welcome/).
+    Arriving any other way (a Get started button, a bookmarked or shared
+    sign-up link) goes to the tour first, then on to the page asked for."""
+    from functools import wraps
+    from urllib.parse import urlencode
+
+    from django.urls import reverse
+
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if request.method == "GET" and not request.user.is_authenticated and not request.session.get(TOUR_DONE):
+            return redirect(f"{reverse('landing:tour')}?{urlencode({'next': request.get_full_path()})}")
+        return view(request, *args, **kwargs)
+    return wrapped
+
+
 def register_choice(request):
-    """The hub: school, individual, or "I have a code from my school"."""
-    return render(request, "accounts/register_choice.html")
+    """The hub: school, individual, or "I have a code from my school".
+
+    Only the welcome tour's last button leads here (?welcomed=1). Every
+    other visit — Get started, a sign-up link — goes through the tour first."""
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    if request.GET.get("welcomed") == "1":
+        request.session[TOUR_DONE] = True
+        wanted = request.GET.get("next", "")
+        if wanted and url_has_allowed_host_and_scheme(wanted, allowed_hosts={request.get_host()}) and wanted.startswith("/"):
+            return redirect(wanted)
+        return render(request, "accounts/register_choice.html")
+    if request.user.is_authenticated:
+        return render(request, "accounts/register_choice.html")
+    request.session.pop(TOUR_DONE, None)
+    return redirect("landing:tour")
 
 
 def _chosen_plan(form, audience):
@@ -43,6 +79,7 @@ def _chosen_plan(form, audience):
     return Plan.objects.filter(slug=slug, audience=audience, is_active=True).first() if slug else None
 
 
+@through_tour
 def register_school(request):
     if request.method == "POST":
         form = SchoolRegistrationForm(request.POST)
@@ -68,6 +105,7 @@ def register_school(request):
     return render(request, "accounts/register_school.html", {"form": form})
 
 
+@through_tour
 def register_individual(request):
     if request.method == "POST":
         form = IndividualRegistrationForm(request.POST)
@@ -82,20 +120,21 @@ def register_individual(request):
     return render(request, "accounts/register_individual.html", {"form": form})
 
 
+@through_tour
 def register_student(request):
     if request.method == "POST":
         form = StudentRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
             auth_login(request, user)
-            messages.success(request, f"Welcome, {user.first_name}! You're now part of {user.school.name}.")
-            return redirect(begin_access(request, user, form.cleaned_data.get("start"), form.chosen_plan(user),
-                                          form.cleaned_data.get("promo_code", "")))
+            messages.success(request, f"Welcome, {user.first_name}! You're now part of {user.school.name}, and your school's plan covers you.")
+            return redirect("accounts:dashboard")
     else:
         form = StudentRegistrationForm(initial={"school_code": request.GET.get("school", "")})
     return render(request, "accounts/register_student.html", {"form": form})
 
 
+@through_tour
 def join_with_code(request):
     if request.method == "POST":
         form = TeacherRegistrationForm(request.POST)
@@ -114,6 +153,19 @@ class EmailLoginView(LoginView):
     authentication_form = EmailAuthenticationForm
     redirect_authenticated_user = True
 
+    def form_valid(self, form):
+        # "Remember me on this device" unticked: leave it off the switcher.
+        if not self.request.POST.get("remember_device"):
+            self.request._dm_no_remember = True
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Accounts already on this device: continue as one of them.
+        context["device_accounts"] = [row.user for row in switcher.device_accounts(self.request)]
+        context["adding"] = bool(self.request.GET.get("add"))
+        return context
+
     def get_success_url(self):
         # Where they were heading before signing in — scanning a QR code on
         # a card, following a link — wins over the usual home page.
@@ -123,6 +175,63 @@ class EmailLoginView(LoginView):
 
 class EmailLogoutView(LogoutView):
     next_page = reverse_lazy("landing:home")
+
+
+@require_POST
+def switch_account(request):
+    """Move to another account remembered on this device (the account
+    switcher on the dashboard, or "Continue as" on the log-in page)."""
+    try:
+        wanted = int(request.POST.get("user", ""))
+    except ValueError:
+        wanted = 0
+    row = switcher.find(request, wanted)
+    if row is None:
+        messages.error(request, "That account isn't on this device any more. Please sign in to it.")
+        return redirect("accounts:login")
+    if request.user.is_authenticated and request.user.pk == row.user_id:
+        return redirect(_post_login_redirect(row.user))
+    auth_login(request, row.user, backend="django.contrib.auth.backends.ModelBackend")
+    messages.success(request, f"Switched to {row.user.get_full_name() or row.user.login_name}.")
+    return redirect(_post_login_redirect(row.user))
+
+
+@require_POST
+def add_account(request):
+    """Sign another account in on this device, keeping the ones already
+    remembered: the current one is signed out, then the log-in page."""
+    if request.user.is_authenticated:
+        auth_logout(request)
+    return redirect(f"{reverse_lazy('accounts:login')}?add=1")
+
+
+@require_POST
+def remove_account(request):
+    """Take an account off this device's switcher. It isn't signed out if
+    it's the one in use; it just won't be offered for switching."""
+    try:
+        wanted = int(request.POST.get("user", ""))
+    except ValueError:
+        wanted = 0
+    back = request.POST.get("next") or ""
+    response = redirect(back if back.startswith("/") and not back.startswith("//") else "accounts:dashboard")
+    row = switcher.find(request, wanted)
+    switcher.forget(request, response, wanted)
+    if row is not None:
+        messages.success(request, f"{row.user.get_full_name() or row.user.login_name} was removed from this device.")
+    return response
+
+
+@require_POST
+def forget_accounts(request):
+    """Take every account off this device and sign out: for handing a
+    device on, or a shared computer."""
+    if request.user.is_authenticated:
+        auth_logout(request)
+    response = redirect("accounts:login")
+    switcher.forget(request, response)
+    messages.success(request, "Every account was removed from this device.")
+    return response
 
 
 @login_required(login_url="accounts:login")
@@ -163,4 +272,5 @@ def dashboard(request):
         for card in DashboardCardImage.objects.exclude(image="")
         if card.image
     }
+    dashboard["switcher"] = switcher.context(request)
     return render(request, "accounts/dashboard.html", dashboard)

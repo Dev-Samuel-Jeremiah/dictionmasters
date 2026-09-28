@@ -1,0 +1,85 @@
+{# The account switcher (apps/accounts/switcher.py): the chip on the dashboard, and its panel. Needs `switcher`. #}
+{% with s=switcher me=request.user %}
+<button type="button" class="px-switch-chip" data-switch-open aria-haspopup="dialog" aria-controls="px-switch">
+  <span class="px-switch-chip__faces" aria-hidden="true">
+    <span class="px-switch__face px-switch__face--a">{{ me.first_name|first|upper }}{{ me.last_name|first|upper }}</span>
+    {% for p in s.here|slice:":2" %}<span class="px-switch__face px-switch__face--{% if p.pk|divisibleby:2 %}b{% else %}c{% endif %}">{{ p.first_name|first|upper }}{{ p.last_name|first|upper }}</span>{% endfor %}
+  </span>
+  <span class="px-switch-chip__text">Switch account</span>
+  {% if s.count > 1 %}<span class="px-switch-chip__n" aria-label="{{ s.count }} accounts on this device">{{ s.count }}</span>{% endif %}
+</button>
+
+<dialog class="px-switch" id="px-switch" aria-labelledby="px-switch-title">
+  <div class="px-switch__sheet">
+    <header class="px-switch__head">
+      <button type="button" class="px-switch__back" data-switch-back hidden aria-label="Back">&lsaquo;</button>
+      <h2 class="px-switch__title" id="px-switch-title">Accounts on this device</h2>
+      <button type="button" class="px-switch__close" data-switch-close aria-label="Close">&times;</button>
+    </header>
+
+    {# ---- the signed-in account and the others at the same school ---- #}
+    <section class="px-switch__pane" data-pane="main">
+      <div class="px-switch__me">
+        <span class="px-switch__face px-switch__face--a px-switch__face--big" aria-hidden="true">{{ me.first_name|first|upper }}{{ me.last_name|first|upper }}</span>
+        <span class="px-switch__who">
+          <strong>{{ me.get_full_name|default:me.login_name }}</strong>
+          <small>{{ me.get_role_display }}{% if me.level %} · {{ me.level }}{% endif %}</small>
+          <small>{{ s.here_name }}</small>
+        </span>
+        <span class="px-switch__badge">Signed in</span>
+      </div>
+
+      <p class="px-switch__label">Switch to someone at {{ s.here_name }}</p>
+      {% if s.here %}
+      <ul class="px-switch__list">{% for p in s.here %}{% include "accounts/_switch_person.html" %}{% endfor %}</ul>
+      {% else %}
+      <p class="px-switch__empty">No one else from {{ s.here_name }} is on this device yet. Add a brother's or sister's account below; after that, switching is one tap.</p>
+      {% endif %}
+
+      {% if s.schools %}
+      <button type="button" class="px-switch__school-btn" data-go="schools">
+        <span class="px-switch__schoolicon" aria-hidden="true">&#127979;</span>
+        <span class="px-switch__who"><strong>Switch school</strong><small>{{ s.schools|length }} other school{{ s.schools|length|pluralize }} on this device</small></span>
+        <span class="px-switch__arrow" aria-hidden="true">&rsaquo;</span>
+      </button>
+      {% endif %}
+    </section>
+
+    {# ---- other schools with accounts on this device ---- #}
+    {% if s.schools %}
+    <section class="px-switch__pane" data-pane="schools" hidden>
+      <p class="px-switch__label">Choose a school</p>
+      <ul class="px-switch__list">
+        {% for g in s.schools %}
+        <li class="px-switch__row">
+          <button type="button" class="px-switch__pick" data-go="school-{{ g.key }}">
+            <span class="px-switch__face px-switch__face--school" aria-hidden="true">{% if g.school %}{{ g.name|first|upper }}{% else %}&#128100;{% endif %}</span>
+            <span class="px-switch__who"><strong>{{ g.name }}</strong><small>{{ g.people|length }} account{{ g.people|length|pluralize }}{% if g.school %} · {{ g.school.code }}{% endif %}</small></span>
+            <span class="px-switch__arrow" aria-hidden="true">&rsaquo;</span>
+          </button>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% for g in s.schools %}
+    <section class="px-switch__pane" data-pane="school-{{ g.key }}" hidden>
+      <p class="px-switch__label">Switch to someone at {{ g.name }}</p>
+      <ul class="px-switch__list">{% for p in g.people %}{% include "accounts/_switch_person.html" %}{% endfor %}</ul>
+    </section>
+    {% endfor %}
+    {% endif %}
+
+    <footer class="px-switch__foot">
+      <form method="post" action="{% url 'accounts:add_account' %}">
+        {% csrf_token %}
+        <button type="submit" class="px-switch__add"><span aria-hidden="true">+</span> Add another account</button>
+      </form>
+      <p class="px-switch__note">{% if s.can_remember %}You'll sign in to the other account once; {{ me.first_name|default:"you" }} stays on this device, so switching back is one tap.{% else %}Staff accounts aren't kept on the switcher; you'll need your password to come back.{% endif %}</p>
+      <form method="post" action="{% url 'accounts:forget_accounts' %}">
+        {% csrf_token %}
+        <button type="submit" class="px-switch__forget" data-confirm="Sign out and remove every account from this device?">Remove all accounts from this device</button>
+      </form>
+    </footer>
+  </div>
+</dialog>
+{% endwith %}

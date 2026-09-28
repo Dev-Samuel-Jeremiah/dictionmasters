@@ -7,4 +7,5 @@ app_name = "landing"
 urlpatterns = [
     path("", views.home, name="home"),
     path("privacy/", views.privacy, name="privacy"),
+    path("welcome/", views.tour, name="tour"),
 ]

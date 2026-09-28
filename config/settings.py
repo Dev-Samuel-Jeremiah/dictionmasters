@@ -152,6 +152,8 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    # The account switcher: accounts remembered on this device (apps/accounts/switcher.py).
+    "apps.accounts.switcher.DeviceAccountsMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # The Android and iPhone apps: welcome screen, app-store payment rules (apps/landing/native_app.py).
     "apps.landing.native_app.NativeAppMiddleware",

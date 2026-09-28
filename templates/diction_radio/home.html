@@ -41,7 +41,7 @@
           </div>
         </div>
       </div>
-      <details class="radio-transcript" data-radio-transcript-wrap hidden><summary>Read the transcript</summary><div data-radio-transcript></div></details>
+      <details class="radio-transcript" data-radio-transcript-wrap hidden open><summary>Read along with the transcript</summary><div data-radio-transcript></div></details>
     </section>
 
     <section class="radio-lineup" aria-labelledby="radio-lineup-title">
@@ -75,4 +75,4 @@
 {{ queue|json_script:"diction-radio-queue" }}
 {% endblock %}
 
-{% block extra_js %}<script src="{% static 'js/diction_radio.js' %}" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/read_along.js' %}" defer></script><script src="{% static 'js/diction_radio.js' %}" defer></script>{% endblock %}

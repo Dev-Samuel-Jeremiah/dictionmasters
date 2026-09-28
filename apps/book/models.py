@@ -382,6 +382,11 @@ class MinimalPair(OrderedForSound):
     word_a = models.CharField(max_length=100)
     word_b = models.CharField(max_length=100)
     notes = models.TextField(blank=True, help_text="What makes these two easy to confuse.")
+    # A recording of each word, so learners can hear the difference.
+    audio_a_file = models.FileField("Audio: first word (upload)", upload_to="book/audio/%Y/%m/", blank=True)
+    audio_a_url = models.URLField("Audio: first word (link)", blank=True, help_text="Instead of an upload, a link to hosted audio.")
+    audio_b_file = models.FileField("Audio: second word (upload)", upload_to="book/audio/%Y/%m/", blank=True)
+    audio_b_url = models.URLField("Audio: second word (link)", blank=True, help_text="Instead of an upload, a link to hosted audio.")
 
     class Meta(OrderedForSound.Meta):
         abstract = False
@@ -389,6 +394,14 @@ class MinimalPair(OrderedForSound):
 
     def __str__(self):
         return f"{self.word_a} / {self.word_b}"
+
+    @property
+    def audio_a(self):
+        return self.audio_a_url or (self.audio_a_file.url if self.audio_a_file else "")
+
+    @property
+    def audio_b(self):
+        return self.audio_b_url or (self.audio_b_file.url if self.audio_b_file else "")
 
 
 # ---------------------------------------------------------------------------

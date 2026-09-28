@@ -1,0 +1,73 @@
+{% comment %}
+  The rows of "Schools with their own trial" / "Learners with their own trial"
+  on Billing settings: each with Edit (more time, a new reason), End now and
+  Use general trial. `rows` from manage.views.billing_settings.
+{% endcomment %}
+<div class="cr-tablewrap">
+  <table class="cr-table cr-trials">
+    <thead><tr><th>{{ who }}</th><th>Trial given</th><th>Reason</th><th>Set on</th><th>Trial ends</th><th>Now</th><th></th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>
+          {% if row.school %}<a href="{% url 'manage:edit' 'schools' row.school.pk %}">{{ row.school.name }}</a>
+          {% else %}<a href="{% url 'manage:edit' 'users' row.sub.user.pk %}">{{ row.sub.user.get_full_name|default:row.sub.user.email }}</a><br><small class="cr-help">{{ row.sub.user.email }}</small>{% endif %}
+        </td>
+        <td>{{ row.label }}</td>
+        <td>{% if row.reason %}<span class="cr-trial-reason">{{ row.reason }}</span>{% else %}<span class="cr-help">—</span>{% endif %}</td>
+        <td>{{ row.set_at|date:"d M Y" }}</td>
+        <td>{{ row.ends|date:"d M Y"|default:"—" }}</td>
+        <td>{% if row.state == "trial" %}<span class="cr-trial-state is-on">On trial</span>{% elif row.state == "active" %}<span class="cr-trial-state">Paid</span>{% else %}<span class="cr-trial-state is-off">Ended</span>{% endif %}</td>
+        <td class="cr-trials__actions">
+          <details class="cr-trial-edit"{% if row.open %} open{% endif %}>
+            <summary class="cr-btn cr-btn--gold cr-btn--small">Edit</summary>
+            <div class="cr-trial-edit__panel">
+              <form method="post" class="cr-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_trial">
+                <input type="hidden" name="target" value="{{ row.target }}">
+                <div class="cr-field {% if row.form.reason.errors %}has-error{% endif %}">
+                  <label>Reason</label>
+                  <input type="text" name="reason" maxlength="120" required class="cr-input" value="{{ row.form.reason.value|default:'' }}">
+                  <p class="cr-help">They see this beside their trial days.</p>
+                </div>
+                <div class="cr-trial-edit__more">
+                  <div class="cr-field">
+                    <label>More time <span class="cr-help">(optional)</span></label>
+                    <input type="number" name="length" min="1" max="365" class="cr-input" value="{{ row.form.length.value|default:'' }}">
+                  </div>
+                  <div class="cr-field">
+                    <label>In</label>
+                    <select name="unit" class="cr-input cr-select">
+                      {% for value, label in row.form.fields.unit.choices %}<option value="{{ value }}"{% if row.form.unit.value == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                  </div>
+                </div>
+                <div class="cr-trial-edit__mode">
+                  <label><input type="radio" name="mode" value="add"{% if row.form.mode.value != "restart" %} checked{% endif %}> Add to the time left</label>
+                  <label><input type="radio" name="mode" value="restart"{% if row.form.mode.value == "restart" %} checked{% endif %}> Start again from today</label>
+                </div>
+                <button type="submit" class="cr-btn cr-btn--gold cr-btn--small">Save</button>
+              </form>
+              <div class="cr-trial-edit__danger">
+                {% if row.state == "trial" %}
+                <form method="post" onsubmit="return confirm('End this free trial now? Access stops straight away unless they have paid time.');">
+                  {% csrf_token %}<input type="hidden" name="action" value="end_trial"><input type="hidden" name="target" value="{{ row.target }}">
+                  <button type="submit" class="cr-btn cr-btn--ghost cr-btn--small">End trial now</button>
+                </form>
+                {% endif %}
+                <form method="post" onsubmit="return confirm('Put them back on the general {{ general_days }}-day trial and remove this special trial?');">
+                  {% csrf_token %}
+                  {% if row.school %}<input type="hidden" name="action" value="clear_school_trial"><input type="hidden" name="school" value="{{ row.school.pk }}">
+                  {% else %}<input type="hidden" name="action" value="clear_learner_trial"><input type="hidden" name="subscription" value="{{ row.sub.pk }}">{% endif %}
+                  <button type="submit" class="cr-btn cr-btn--ghost cr-btn--small">Use general trial</button>
+                </form>
+              </div>
+            </div>
+          </details>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

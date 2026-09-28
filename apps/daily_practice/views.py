@@ -14,6 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from apps.book.models import ACADEMY, Sound
+from apps.book import read_along
 
 # (tab slug, label, related_name on Sound) — also doubles as the link
 # back into the matching tab of the sound's full lesson page.
@@ -67,11 +68,15 @@ def _build_activity(kind, label, item):
     elif kind == "sentence-practice":
         activity["body"] = item.sentence
         activity["audio"] = item.audio_source
+        activity["sync"] = read_along.sync_url(item)
     elif kind == "twisters":
         activity["body"] = item.text
         activity["audio"] = item.audio_source
+        activity["sync"] = read_along.sync_url(item)
     elif kind == "minimal-pairs":
         activity["word_a"] = item.word_a
         activity["word_b"] = item.word_b
+        activity["audio_a"] = item.audio_a
+        activity["audio_b"] = item.audio_b
         activity["body"] = item.notes
     return activity

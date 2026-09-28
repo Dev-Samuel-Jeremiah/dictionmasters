@@ -51,14 +51,9 @@
     <section class="ui-panel" id="students" aria-labelledby="bl-students">
       <header class="ui-section__head">
         <h2 class="ui-section__title" id="bl-students">&#127890; Students at home</h2>
-        <p class="ui-section__aside">Per child, by how many children your school enrols</p>
+        <p class="ui-section__aside">Included in your school's plan</p>
       </header>
-      {% if student_table.rows %}
-      {% include "billing/_price_table.html" with table=student_table unit_heading="Children enrolled" %}
-      <p class="bl-sheet__note">Each student signs up with their school's code and pays the rate for their school's band. The more children a school enrols, the less each one pays.</p>
-      {% else %}
-      <div class="ui-empty"><p>Student packages are on their way.</p></div>
-      {% endif %}
+      <p class="bl-sheet__note">Students sign up with their school's code and are covered by the school's plan: there's nothing extra to pay. Ask your school for its code.</p>
       {% if not user.is_authenticated %}<p class="bl-sheet__cta"><a href="{% url 'accounts:register_student' %}" class="ui-btn ui-btn--gold">Sign up as a student</a></p>{% endif %}
     </section>
 

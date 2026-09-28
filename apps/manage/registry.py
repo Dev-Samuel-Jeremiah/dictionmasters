@@ -44,11 +44,12 @@ def lesson_screens(programme, prefix):
                   "parent": ("sound", prefix + "sounds"), "where": inside,
                   "limit": {"sound": lesson}, **extra}
         if programme == "tricks":
-            screen["labels"] = {"sound": ("Trick", "")}
+            screen["labels"] = {**screen.get("labels", {}), "sound": ("Trick", "")}
         return screen
 
     tabs = [prefix + key for key in ("articulation", "tab-videos", "word-bank", "sentences",
-                                     "book-passages", "conversations", "twisters", "minimal-pairs", "links")]
+                                     "book-passages", "conversations", "twisters", "minimal-pairs",
+                                     "minimal-pairs-audio", "links")]
     if programme == "tricks":
         # Tricks have no groups: just Trick 1, Trick 2, … Each is filed in
         # the one group the site keeps for them, out of sight.
@@ -92,7 +93,12 @@ def lesson_screens(programme, prefix):
         tab("book-passages", "book.Passage", ["title", "sound", "order"], ["title", "body"]),
         tab("conversations", "book.Conversation", ["title", "sound", "order"], ["title", "script"]),
         tab("twisters", "book.TongueTwister", ["text", "sound", "order"], ["text"]),
-        tab("minimal-pairs", "book.MinimalPair", ["word_a", "word_b", "sound", "order"], ["word_a", "word_b"]),
+        tab("minimal-pairs", "book.MinimalPair", ["word_a", "word_b", "sound", "order"], ["word_a", "word_b"],
+            form=["sound", "word_a", "word_b", "notes", "audio_a_file", "audio_a_url", "audio_b_file", "audio_b_url", "order"],
+            labels={"word_a": ("First word", "e.g. ship"), "word_b": ("Second word", "e.g. sheep")}),
+        tab("minimal-pairs-audio", "book.MinimalPairsAudio", ["sound", "audio_file"], ["sound__name"],
+            name="Minimal pairs audio (one per sound)", singular="minimal pairs audio",
+            form=["sound", "audio_file", "audio_url"]),
         tab("links", "book.ExternalLink", ["title", "sound", "url", "order"], ["title", "url"]),
         *(assessment_screens("tricks", "trick-sounds", "trick", "trick") if programme == "tricks"
           else assessment_screens(programme, prefix + "sounds", "sound", "sound")),
@@ -394,10 +400,20 @@ SECTIONS = [
         "blurb": "Learners, teachers, admins, schools and joining codes.",
         "screens": [
             {"key": "users", "model": "accounts.User",
-             "columns": ["email", "get_full_name", "role", "level", "school", "is_active"],
-             "search": ["email", "first_name", "last_name"],
-             "form": ["first_name", "last_name", "email", "role", "level", "school", "is_active", "is_staff"],
+             "columns": ["login_name", "get_full_name", "role", "level", "school", "is_active"],
+             "search": ["email", "username", "first_name", "last_name"],
+             "form": ["first_name", "last_name", "username", "email", "role", "level", "school", "is_active", "is_staff"],
              "plan_field": "user"},
+            # The same people, but only what they're called and where they
+            # belong: nothing here touches how they sign in (email, username,
+            # password), their role or their account.
+            {"key": "profiles", "model": "accounts.User", "name": "User profiles", "singular": "profile",
+             "columns": ["get_full_name", "login_name", "role", "level", "school"],
+             "search": ["first_name", "last_name", "email", "username"],
+             "form": ["first_name", "last_name", "level", "school"],
+             "labels": {"level": ("Level", "Teachers and students see only their level's lessons. Leave blank to see every level."),
+                        "school": ("School", "The school they belong to. Their sign-in details don't change.")},
+             "level_choices": True, "no_add": True, "no_delete": True},
             {"key": "schools", "model": "schools.School",
              "columns": ["name", "code", "email", "current_plan", "max_teachers", "max_students"], "search": ["name", "email", "code"],
              "plan_field": "school",

@@ -109,6 +109,11 @@ TEXT_FOR = {
     "reading_club.chapter": lambda obj: plain_text(obj.body),
     "assembly_recitals.recital": lambda obj: "\n".join(" ".join(verse) for verse in obj.verses),
     "conversational_dialogue.dialogue": lambda obj: "\n".join(text for _speaker, text in obj.lines),
+    "book.sentencepractice": lambda obj: plain_text(obj.sentence),
+    "book.tonguetwister": lambda obj: plain_text(obj.text),
+    "diction_radio.radioepisode": lambda obj: plain_text(obj.transcript),
+    # An EchoSpell card's "Full" recording reads its words out one by one.
+    "echospell.cardlesson": lambda obj: "\n".join(obj.word_list),
 }
 
 
@@ -124,6 +129,10 @@ TEXT_FIELD = {
     "reading_club.chapter": "body",
     "assembly_recitals.recital": None,
     "conversational_dialogue.dialogue": None,
+    "book.sentencepractice": "sentence",
+    "book.tonguetwister": "text",
+    "diction_radio.radioepisode": "transcript",
+    "echospell.cardlesson": None,
 }
 
 

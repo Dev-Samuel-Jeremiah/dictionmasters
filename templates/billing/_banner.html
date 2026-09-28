@@ -16,7 +16,7 @@
   {% elif billing.state == "trial" %}
   <div class="bl-banner bl-banner--trial{% if billing.renew_soon %} bl-banner--soon{% endif %}" role="status">
     <div class="wrap bl-banner__inner">
-      <p>&#127873; Free trial: <strong>{{ billing.days_left }} day{{ billing.days_left|pluralize }} left</strong>.</p>
+      <p>&#127873; Free trial: <strong>{{ billing.days_left }} day{{ billing.days_left|pluralize }} left</strong>.{% if billing.trial_reason %} <span class="bl-banner__reason">{{ billing.trial_reason }}</span>{% endif %}</p>
     </div>
   </div>
   {% endif %}
@@ -37,7 +37,7 @@
   {% elif billing.state == "trial" %}
   <div class="bl-banner bl-banner--trial{% if billing.renew_soon %} bl-banner--soon{% endif %}" role="status">
     <div class="wrap bl-banner__inner">
-      <p>&#127873; {% if billing.can_pay %}Free trial: <strong>{{ billing.days_left }} day{{ billing.days_left|pluralize }} left</strong>.{% else %}{{ billing.school.name }}'s free trial: <strong>{{ billing.days_left }} day{{ billing.days_left|pluralize }} left</strong>.{% endif %}</p>
+      <p>&#127873; {% if billing.can_pay %}Free trial: <strong>{{ billing.days_left }} day{{ billing.days_left|pluralize }} left</strong>.{% else %}{{ billing.school.name }}'s free trial: <strong>{{ billing.days_left }} day{{ billing.days_left|pluralize }} left</strong>.{% endif %}{% if billing.trial_reason %} <span class="bl-banner__reason">{{ billing.trial_reason }}</span>{% endif %}</p>
       {% if billing.can_pay %}<a href="{% url 'billing:account' %}" class="bl-banner__cta">See plans &rarr;</a>{% endif %}
     </div>
   </div>

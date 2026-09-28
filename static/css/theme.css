@@ -919,6 +919,9 @@ a.px-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
    place; the name below it is animated letter by letter */
 .px-hero__title { perspective: 700px; }
 .px-hero__title .px-hero__hello, .px-hero__title .px-hero__name { display: inline-block; transform-origin: 50% 100%; }
+/* one row each, never wrapping: a line too long for the column is shrunk to
+   fit by the script under the hero (templates/accounts/dashboard.html) */
+.px-hero__title .px-hero__hello, .px-hero__title .px-hero__name { white-space: nowrap; }
 .px-hero__title .px-hero__hello {
   color: #fff;
   text-shadow:
@@ -1376,3 +1379,24 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .sd-meter__fill { display: block; height: 100%; border-radius: 999px; background: var(--blue); }
 .sd-meter.is-full .sd-meter__fill { background: var(--yellow-deep); }
 @media (max-width: 480px) { .sd-link { flex-direction: column; } }
+
+/* why this learner or school has a special free trial */
+.bl-banner__reason { display: inline-block; margin-left: 6px; padding: 2px 10px; border-radius: 999px; background: var(--yellow); color: var(--navy); font-size: 0.8rem; font-weight: 800; }
+.bl-trial-reason { display: inline-block; margin: 6px 0 4px; padding: 5px 14px; border-radius: 999px; background: var(--butter); color: var(--navy); font-weight: 800; font-size: 0.92rem; }
+
+/* minimal pairs: a play button on each word */
+.pair-word { position: relative; flex: 1; display: flex; }
+.pair-word .pair-card__word { flex: 1; margin: 0; }
+.pair-word.has-audio .pair-card__word { padding-right: 58px; }
+.pair-word__play {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 42px; height: 42px; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--yellow); color: var(--navy); font-size: 1.05rem;
+  box-shadow: 0 3px 0 var(--yellow-deep);
+}
+.pair-word__play:active { transform: translateY(calc(-50% + 2px)); box-shadow: none; }
+.pair-word.is-playing .pair-card__word { outline: 3px solid var(--blue); outline-offset: -3px; }
+.pair-word.is-playing .pair-word__play { background: var(--blue); color: #fff; box-shadow: 0 3px 0 var(--blue-deep); }
+.pair-play-both { margin-top: 12px; min-height: 38px; padding: 0 16px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--sky); color: var(--blue); font: inherit; font-weight: 800; }
+.pair-play-both:hover { background: #D6E3FF; }

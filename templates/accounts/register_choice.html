@@ -16,7 +16,7 @@
       <nav class="px-roles" aria-label="Choose your role">
         <a href="{% url 'accounts:register_student' %}" class="px-role">
           <img src="{% static 'img/app/rStudent.jpg' %}" alt="">
-          <span class="px-role__t"><b>I'm a student at a school</b><span>Sign up with your school's code, then start a free trial or pay for your own access.</span></span>
+          <span class="px-role__t"><b>I'm a student at a school</b><span>Sign up with your school's code. Your school's plan covers you, so there's nothing to pay.</span></span>
           <span class="px-role__go" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=18 stroke="2.6" %}</span>
         </a>
         <a href="{% url 'accounts:join_with_code' %}" class="px-role">

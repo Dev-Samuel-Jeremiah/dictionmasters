@@ -52,6 +52,7 @@
         {% elif status.state == "trial" %}
           <p class="ui-panel__label">Free trial</p>
           <h2 class="bl-status__title">{{ status.days_left }} day{{ status.days_left|pluralize }} of your free trial left</h2>
+          {% if status.trial_reason %}<p class="bl-trial-reason">&#127873; {{ status.trial_reason }}</p>{% endif %}
           <p class="ui-panel__lede">It ends at {{ status.access_until|date:"g:i a" }} on {{ status.access_until|date:"j F Y" }}.{% if status.can_pay and not native_app.hide_payments %} Pay any time: your plan starts straight away and replaces the trial.{% endif %}</p>
         {% elif status.never_started %}
           <p class="ui-panel__label">Not started yet</p>

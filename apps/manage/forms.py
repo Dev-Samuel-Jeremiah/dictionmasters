@@ -108,3 +108,68 @@ class QuickWordAudioZipForm(forms.Form):
         except AudioZipError as error:
             raise forms.ValidationError(str(error)) from error
         return upload
+
+
+class SchoolTrialForm(ControlFormMixin, forms.Form):
+    """Billing settings: give one school its own free trial."""
+
+    school = forms.ModelChoiceField(queryset=None, empty_label="Choose a school", label="School")
+    length = forms.IntegerField(min_value=1, max_value=365, label="Trial length")
+    unit = forms.ChoiceField(choices=[("days", "Days"), ("weeks", "Weeks"), ("months", "Months")], label="In", initial="months")
+
+    reason = forms.CharField(
+        max_length=120, label="Reason",
+        help_text="They see this beside their free trial, e.g. \"Promo\" or \"Onboarded after old app issues\".",
+    )
+
+    def __init__(self, *args, **kwargs):
+        from apps.schools.models import School
+
+        super().__init__(*args, **kwargs)
+        self.fields["school"].queryset = School.objects.order_by("name")
+        self.fields["school"].label_from_instance = lambda s: (
+            f"{s.name} ({s.code}) — own trial: {s.custom_trial_label}" if s.trial_length else f"{s.name} ({s.code})"
+        )
+        self.polish()
+
+
+class LearnerTrialForm(ControlFormMixin, forms.Form):
+    """Billing settings: give one individual learner their own free trial."""
+
+    learner = forms.ModelChoiceField(queryset=None, empty_label="Choose a learner", label="Individual learner")
+    length = forms.IntegerField(min_value=1, max_value=365, label="Trial length")
+    unit = forms.ChoiceField(choices=[("days", "Days"), ("weeks", "Weeks"), ("months", "Months")], label="In", initial="months")
+
+    reason = forms.CharField(
+        max_length=120, label="Reason",
+        help_text="They see this beside their free trial, e.g. \"Promo\" or \"Onboarded after old app issues\".",
+    )
+
+    def __init__(self, *args, **kwargs):
+        from django.db.models import Q
+
+        from apps.accounts.models import User
+
+        super().__init__(*args, **kwargs)
+        # Everyone who pays for themselves: adults, and any student with no school.
+        self.fields["learner"].queryset = (
+            User.objects.filter(is_staff=False, is_superuser=False)
+            .filter(Q(role="individual") | Q(role="student", school__isnull=True))
+            .order_by("first_name", "last_name", "email")
+        )
+        self.fields["learner"].label_from_instance = lambda u: f"{u.get_full_name() or u.email} ({u.email})"
+        self.polish()
+
+
+class EditTrialForm(ControlFormMixin, forms.Form):
+    """Billing settings: change a school's or a learner's own trial."""
+
+    MODES = [("add", "Add to the time left"), ("restart", "Start again from today")]
+    reason = forms.CharField(max_length=120, label="Reason")
+    length = forms.IntegerField(min_value=1, max_value=365, required=False, label="More time")
+    unit = forms.ChoiceField(choices=[("days", "Days"), ("weeks", "Weeks"), ("months", "Months")], label="In", initial="days")
+    mode = forms.ChoiceField(choices=MODES, initial="add", label="How", widget=forms.RadioSelect)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.polish()

@@ -135,9 +135,9 @@
       {% if entries %}
       <div class="entry-list">
         {% for entry in entries %}
-        <div class="content-card entry-card">
-          <div class="entry-card__text dm-rich-content">{{ entry.sentence|rich_text }}</div>
-          {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}"></audio>{% endif %}
+        <div class="content-card entry-card"{% if entry.audio_source %} data-read-along{% read_along_sync entry %}{% endif %}>
+          <div class="entry-card__text dm-rich-content" data-ra-text>{{ entry.sentence|rich_text }}</div>
+          {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}" data-ra-media></audio>{% endif %}
         </div>
         {% endfor %}
       </div>
@@ -179,9 +179,9 @@
       {% if entries %}
       <div class="entry-list">
         {% for entry in entries %}
-        <div class="content-card entry-card">
-          <div class="twister-card__text dm-rich-content">{{ entry.text|rich_text }}</div>
-          {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}"></audio>{% endif %}
+        <div class="content-card entry-card"{% if entry.audio_source %} data-read-along{% read_along_sync entry %}{% endif %}>
+          <div class="twister-card__text dm-rich-content" data-ra-text>{{ entry.text|rich_text }}</div>
+          {% if entry.audio_source %}<audio controls src="{{ entry.audio_source }}" data-ra-media></audio>{% endif %}
         </div>
         {% endfor %}
       </div>
@@ -201,9 +201,10 @@
         {% for entry in entries %}
         <div class="content-card">
           <div class="pair-card__row">
-            <p class="pair-card__word">{{ entry.word_a }}</p>
-            <p class="pair-card__word">{{ entry.word_b }}</p>
+            {% include "book/_pair_word.html" with word=entry.word_a audio=entry.audio_a %}
+            {% include "book/_pair_word.html" with word=entry.word_b audio=entry.audio_b %}
           </div>
+          {% if entry.audio_a and entry.audio_b %}<button type="button" class="pair-play-both" data-pair-both>&#9654; Hear both</button>{% endif %}
           {% if entry.notes %}<div class="pair-card__notes dm-rich-content">{{ entry.notes|rich_text }}</div>{% endif %}
         </div>
         {% endfor %}
@@ -239,5 +240,6 @@
 {% endblock %}
 
 {% block extra_js %}
+  <script src="{% static 'js/pair_audio.js' %}" defer></script>
   <script src="{% static 'js/read_along.js' %}" defer></script>
 {% endblock %}

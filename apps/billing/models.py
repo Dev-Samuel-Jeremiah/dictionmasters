@@ -199,6 +199,12 @@ class Subscription(models.Model):
         help_text="The plan last paid for.",
     )
     trial_ends_at = models.DateTimeField(null=True, blank=True)
+    # A special trial given to this learner in the control room (Billing
+    # settings), instead of the general trial. Schools keep theirs on School.
+    custom_trial_length = models.PositiveIntegerField(null=True, blank=True)
+    custom_trial_unit = models.CharField(max_length=10, default="days")
+    custom_trial_set_at = models.DateTimeField(null=True, blank=True)
+    custom_trial_reason = models.CharField(max_length=120, blank=True, help_text="Shown to the learner beside their trial days.")
     paid_until = models.DateTimeField(null=True, blank=True, help_text="Paid access runs until this moment.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

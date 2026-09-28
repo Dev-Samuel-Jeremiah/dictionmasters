@@ -30,7 +30,7 @@
           <div>
             <p class="ui-hero__eyebrow">School dashboard</p>
             <h1 class="ui-hero__title">{{ school.name }}</h1>
-            <p class="ui-hero__lede">Teachers and students both sign up with your school code, {{ school.code }}. Teachers choose the level they teach; students pay for their own access.</p>
+            <p class="ui-hero__lede">Teachers and students both sign up with your school code, {{ school.code }}. Both choose their level, and your plan covers everyone, so nobody pays separately.</p>
             <div class="ui-hero__chips">
               <span class="ui-chip ui-chip--gold">School code: {{ school.code }}</span>
               <span class="ui-chip">{{ teachers|length }}{% if school.teacher_limit is not None %} of {{ school.teacher_limit }}{% endif %} teacher{{ teachers|length|pluralize }}</span>

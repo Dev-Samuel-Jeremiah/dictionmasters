@@ -1,0 +1,94 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en-gb"{% if native_app %} data-native-app="{{ native_app.platform }}"{% endif %}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Welcome to Diction Masters</title>
+  <meta name="description" content="Diction Masters: video lessons, audio practice, speaking practice and interactive exercises for students, teachers and schools.">
+  {% if branding.favicon %}<link rel="icon" href="{% url 'pwa_brand_asset' 'favicon' %}?v={{ branding.updated_at|date:'U' }}">{% else %}<link rel="icon" type="image/png" href="{% static 'pwa/favicon-32.png' %}">{% endif %}
+  <link rel="manifest" href="{% url 'pwa_manifest' %}">
+  <meta name="theme-color" content="#1846E0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Sans:wght@700&display=swap" rel="stylesheet">
+  {% for slide in slides %}<link rel="preload" as="image" href="{% static slide.image %}">{% endfor %}
+  <link rel="stylesheet" href="{% static 'css/tour.css' %}">
+  {% if native_app %}<link rel="stylesheet" href="{% static 'css/native_app.css' %}">{% endif %}
+</head>
+<body class="tour-body">
+{% comment %}
+  The welcome tour: three screens before signing up (apps/landing/views.py,
+  TOUR_SLIDES). Swipe, use the arrow keys, the dots, or Next. Skip jumps to
+  the last screen; only Get Started goes on to sign-up.
+{% endcomment %}
+<main class="tour" data-tour aria-roledescription="carousel" aria-label="Welcome to Diction Masters">
+ <div class="tour__frame">
+  <header class="tour__bar">
+    <span class="tour__mark" aria-label="Diction Masters">
+      {% if branding.logo %}
+      <img src="{% url 'pwa_brand_asset' 'logo' %}?v={{ branding.updated_at|date:'U' }}" alt="Diction Masters" class="tour__logo">
+      {% else %}
+      <svg viewBox="0 0 60 64" width="60" height="64" aria-hidden="true"><path d="M6 4l24 19L54 4v26c0 14-11 22-24 22S6 44 6 30z" fill="#fff"/><path d="M17 27c3 6 8 9 13 9s10-3 13-9" stroke="#1846E0" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M16 50l14 7-14 7zM44 50l-14 7 14 7z" fill="#FFC72C"/></svg>
+      {% endif %}
+    </span>
+    <a href="#last" class="tour__skip" data-skip>Skip <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </header>
+
+  <div class="tour__viewport" data-viewport>
+    <div class="tour__track" data-track>
+      {% for slide in slides %}
+      <section class="tour__slide{% if forloop.first %} is-active{% endif %}" data-slide aria-roledescription="slide" aria-label="{{ forloop.counter }} of {{ slides|length }}"{% if not forloop.first %} aria-hidden="true"{% endif %}>
+        <div class="tour__art">
+          <svg class="tour__wave tour__wave--gold" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60 C 90 10, 170 110, 260 70 S 360 20, 400 50 L400 120 L0 120Z"/></svg>
+          <img class="tour__photo" src="{% static slide.image %}" alt="" style="object-position: {{ slide.focus }}"{% if not forloop.first %} loading="lazy"{% endif %}>
+          <ul class="tour__cards" aria-hidden="true">
+            {% for icon, top, bottom, tone in slide.cards %}
+            <li class="tour__card tour__card--{{ tone }}" style="--i: {{ forloop.counter0 }}">
+              <span class="tour__card-ic">{% include "includes/icon.html" with name=icon size=22 stroke="2.2" %}</span>
+              <span class="tour__card-t">{{ top }}<br>{{ bottom }}</span>
+              <svg class="tour__card-chev" viewBox="0 0 24 24" width="14" height="14"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </li>
+            {% endfor %}
+          </ul>
+          <svg class="tour__wave tour__wave--sheet" viewBox="0 0 400 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 C 80 0, 150 60, 240 42 S 350 0, 400 30 L400 90 L0 90Z"/></svg>
+        </div>
+
+        <div class="tour__sheet">
+          <h1 class="tour__title">
+            {% if slide.title %}<span class="tour__title-lead">{{ slide.title }}</span>{% endif %}
+            {% if slide.title_strong %}<span class="tour__title-strong">{{ slide.title_strong }}</span>{% endif %}
+            <span class="tour__title-gold">{{ slide.title_gold }}</span>
+          </h1>
+          <p class="tour__lede">{{ slide.lede }}</p>
+          <ul class="tour__tiles">
+            {% for icon, label, tone in slide.tiles %}
+            <li class="tour__tile" style="--i: {{ forloop.counter0 }}">
+              <span class="tour__tile-ic tour__tile-ic--{{ tone }}">{% include "includes/icon.html" with name=icon size=30 stroke="2" %}</span>
+              <span class="tour__tile-t">{{ label }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+      {% endfor %}
+    </div>
+  </div>
+
+  <footer class="tour__foot">
+    <div class="tour__dots" role="tablist" aria-label="Choose a screen">
+      {% for slide in slides %}
+      <button type="button" class="tour__dot{% if forloop.first %} is-on{% endif %}" data-dot="{{ forloop.counter0 }}" role="tab" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" aria-label="Screen {{ forloop.counter }}"></button>
+      {% endfor %}
+    </div>
+    <a href="{{ finish_url }}" class="tour__next" data-next data-last-label="Get Started">
+      <span data-next-label>Next</span>
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <p class="tour__login">Already have an account? <a href="{% url 'accounts:login' %}">Log in</a></p>
+  </footer>
+ </div>
+</main>
+<script src="{% static 'js/tour.js' %}" defer></script>
+{% if native_app %}<script src="{% static 'js/native_app.js' %}" defer></script>{% endif %}
+</body>
+</html>

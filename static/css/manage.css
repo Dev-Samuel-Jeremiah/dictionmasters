@@ -438,3 +438,29 @@ select[multiple].cr-input { background-image: none; padding-right: 14px; min-hei
 
 input, textarea, [contenteditable] { caret-color: #1846E0; }
 input[type="checkbox"], input[type="radio"], input[type="range"], progress { accent-color: #1846E0; color: #0B1A4A; }
+
+.cr-trialform { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+.cr-trialform .cr-formactions { margin: 0; }
+@media (max-width: 760px) { .cr-trialform { grid-template-columns: 1fr; } }
+.cr-trials td { vertical-align: top; }
+.cr-trials__actions { width: 1%; white-space: nowrap; }
+.cr-trial-reason { display: inline-block; max-width: 220px; padding: 3px 10px; border-radius: 999px; background: #FFF5D6; color: #0B1A4A; font-size: .82rem; font-weight: 600; white-space: normal; }
+.cr-trial-state { font-weight: 700; }
+.cr-trial-state.is-on { color: #1846E0; }
+.cr-trial-state.is-off { color: #8A93AE; }
+.cr-trial-edit > summary { list-style: none; cursor: pointer; }
+.cr-trial-edit > summary::-webkit-details-marker { display: none; }
+.cr-trial-edit[open] > summary { background: #0B1A4A; color: #fff; }
+.cr-trial-edit__panel { position: relative; z-index: 2; width: min(360px, 80vw); margin-top: 8px; margin-left: auto; padding: 14px; border: 1px solid var(--cr-line); border-radius: 14px; background: #fff; box-shadow: 0 14px 30px rgba(11, 26, 74, .14); white-space: normal; }
+.cr-trial-edit__more { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cr-trial-edit__mode { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 12px; font-size: .86rem; }
+.cr-trial-edit__danger { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--cr-line); }
+
+/* ticking rows to delete several at once */
+.cr-table__tick { width: 1%; padding-right: 0 !important; }
+.cr-table__tick input { width: 18px; height: 18px; cursor: pointer; accent-color: #1846E0; }
+.cr-table tr.is-picked td { background: #E7EFFF; }
+.cr-bulkbar { position: sticky; top: 76px; z-index: 5; display: flex; align-items: center; gap: 14px; margin-bottom: 12px; padding: 10px 16px; border-radius: 14px; background: #0B1A4A; color: #fff; box-shadow: 0 10px 24px rgba(11, 26, 74, .25); }
+.cr-bulkbar[hidden] { display: none; }
+.cr-bulkbar .cr-link { color: #C9D0E2; background: none; border: 0; cursor: pointer; font: inherit; }
+.cr-bulkbar .cr-btn--danger { margin-left: auto; }

@@ -1,0 +1,8 @@
+{# One word of a minimal pair, with a play button when it has a recording. #}
+<div class="pair-word{% if audio %} has-audio{% endif %}">
+  <p class="pair-card__word">{{ word }}</p>
+  {% if audio %}
+  <button type="button" class="pair-word__play" data-pair-play aria-label="Hear “{{ word }}”">&#128266;</button>
+  <audio preload="none" src="{{ audio }}" data-pair-audio></audio>
+  {% endif %}
+</div>

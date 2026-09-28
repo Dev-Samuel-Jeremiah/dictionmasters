@@ -15,6 +15,9 @@ from django.core.validators import FileExtensionValidator
 from django.db import models
 
 
+INTERNAL_EMAIL_DOMAIN = "students.dictionmasters.app"
+
+
 class UserManager(BaseUserManager):
     use_in_migrations = True
 
@@ -54,6 +57,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         INDIVIDUAL = "individual", "Individual learner"
 
     email = models.EmailField(unique=True)
+    # Students can sign in with a username instead of an email (bulk-added
+    # students, or any student who signs up without one). An account with no
+    # email of its own keeps an internal one, ending in INTERNAL_EMAIL_DOMAIN,
+    # that is never shown or used for mail.
+    username = models.CharField(
+        max_length=40, unique=True, null=True, blank=True,
+        help_text="Optional. Students can sign in with this instead of an email: letters, numbers, dots and dashes.",
+    )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150, blank=True)
 
@@ -101,6 +112,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.first_name
 
     @property
+    def has_real_email(self):
+        return bool(self.email) and not self.email.endswith("@" + INTERNAL_EMAIL_DOMAIN)
+
+    @property
+    def login_name(self):
+        """What they type to sign in: their username, or their email."""
+        return self.username or self.email
+
+    @property
     def is_school_admin(self):
         return self.role == self.Role.SCHOOL_ADMIN
 
@@ -115,6 +135,27 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_individual(self):
         return self.role == self.Role.INDIVIDUAL
+
+
+class DeviceLogin(models.Model):
+    """One account remembered on one device for the account switcher
+    (apps/accounts/switcher.py), e.g. a parent's device shared by two
+    children. The device keeps the key in a signed cookie; only its hash is
+    stored here. It stops working when it's removed, when the account's
+    password changes (auth_hash no longer matches) or the account is
+    switched off."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="device_logins")
+    key_hash = models.CharField(max_length=64, unique=True)
+    auth_hash = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-last_used_at"]
+
+    def __str__(self):
+        return f"{self.user} on a device"
 
 
 class DashboardCardImage(models.Model):

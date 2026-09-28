@@ -41,16 +41,42 @@ GATED_PREFIXES = (
 )
 
 
+TRIAL_UNITS = [("days", "Days"), ("weeks", "Weeks"), ("months", "Months")]
+
+
+def add_trial(start, length, unit):
+    """`start` plus `length` days, weeks or calendar months."""
+    if unit == "weeks":
+        return start + timedelta(weeks=length)
+    if unit == "months":
+        month = start.month - 1 + length
+        year, month = start.year + month // 12, month % 12 + 1
+        leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+        days_in = [31, 29 if leap else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
+        return start.replace(year=year, month=month, day=min(start.day, days_in))
+    return start + timedelta(days=length)
+
+
+def trial_label(length, unit):
+    if not length:
+        return ""
+    return f"{length} {unit if length != 1 else unit.rstrip('s')}"
+
+
 def is_exempt(user):
     return bool(user.is_staff or user.is_superuser)
 
 
 def pays_for_self(user):
-    return user.role in (user.Role.INDIVIDUAL, user.Role.STUDENT)
+    """Adults pay for themselves. A student who joined with a school code is
+    covered by the school's plan, like its teachers."""
+    if user.role == user.Role.INDIVIDUAL:
+        return True
+    return user.role == user.Role.STUDENT and not getattr(user, "school_id", None)
 
 
 def can_pay(user):
-    """Adults and students pay for themselves; a school admin pays for the school."""
+    """Adults pay for themselves; a school admin pays for the whole school."""
     return pays_for_self(user) or user.role == user.Role.SCHOOL_ADMIN
 
 
@@ -96,7 +122,11 @@ def _begin_trial(subscription):
     settings_ = BillingSettings.load()
     if not trial_available(subscription, settings_):
         return False
-    ends = timezone.now() + timedelta(days=settings_.trial_days)
+    school = subscription.school if subscription.school_id else None
+    if school is not None and school.trial_length:
+        ends = school.trial_end_from(timezone.now())      # this school's own trial length
+    else:
+        ends = timezone.now() + timedelta(days=settings_.trial_days)
     started = Subscription.objects.filter(pk=subscription.pk, trial_ends_at__isnull=True).update(
         trial_ends_at=ends, updated_at=timezone.now(),
     )
@@ -209,7 +239,15 @@ def status_for(user):
     now = timezone.now()
     state = subscription.state(now)
     days = subscription.days_left(now)
+    # Why they have a special trial (set in the control room), shown beside it.
+    reason = ""
+    if state == Subscription.STATE_TRIAL:
+        if subscription.school_id and subscription.school.trial_length:
+            reason = subscription.school.trial_reason
+        elif subscription.user_id and subscription.custom_trial_length:
+            reason = subscription.custom_trial_reason
     return {
+        "trial_reason": reason,
         "exempt": False,
         "paywall": settings_.paywall_enabled,
         "subscription": subscription,

@@ -11,8 +11,10 @@ Staff accounts only, with the control room's own sign-in page.
 """
 
 import json
+from datetime import timedelta
 from functools import wraps
 
+from django import forms
 from django.apps import apps as django_apps
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
@@ -42,7 +44,7 @@ from apps.landing.models import SiteBranding
 from apps.quick_words.audio_zip import start_audio_zip_import
 from apps.quick_words.models import QuickWordAudioImportJob
 
-from .forms import ControlLoginForm, QuickWordAudioZipForm, build_form
+from .forms import ControlLoginForm, QuickWordAudioZipForm, SchoolTrialForm, LearnerTrialForm, EditTrialForm, build_form
 from . import analytics
 from .plan_field import FIELD as PLAN_FIELD, add_plan_field, check_plan
 from .school_login import add_login_fields, check_login, save_login
@@ -344,6 +346,7 @@ def record_list(request, key):
         headings=headings, rows=table, page=page, query=query,
         parent_obj=parent_obj, parent_key=parent_key,
         readonly=screen.get("readonly", False), total=rows.count(),
+        deletable=not screen.get("readonly") and not screen.get("no_delete"),
         bulk_url=(reverse("manage:bulk_questions", args=[key]) + (f"?in={parent_obj.pk}" if parent_obj else ""))
         if screen.get("bulk_add") else "",
     ))
@@ -377,6 +380,16 @@ def record_form(request, key, pk=None):
     for name, (label, help_text) in screen.get("labels", {}).items():
         if name in form.fields:
             form.fields[name].label, form.fields[name].help_text = label, help_text
+    # Level as a dropdown of the real levels, keeping any older value on file.
+    if screen.get("level_choices") and "level" in form.fields:
+        from apps.echospell.models import LEVEL_NAME_CHOICES
+        current = getattr(obj, "level", "") or ""
+        choices = [("", "No level (sees every level)")] + list(LEVEL_NAME_CHOICES)
+        if current and current not in dict(choices):
+            choices.append((current, current))
+        old_field = form.fields["level"]
+        form.fields["level"] = forms.ChoiceField(choices=choices, required=False, label=old_field.label, help_text=old_field.help_text)
+        form.fields["level"].widget.attrs["class"] = "cr-input cr-select"
     # Dropdowns offer only what belongs here, e.g. a trick's group is a trick group.
     for name, condition in screen.get("limit", {}).items():
         if name in form.fields and hasattr(form.fields[name], "queryset"):
@@ -568,6 +581,66 @@ def record_delete(request, key, pk):
     ))
 
 
+@staff_only
+@require_POST
+def record_delete_many(request, key):
+    """Delete the rows ticked on a list: first a page saying what goes (and
+    what goes with it), then, once confirmed, all of them together."""
+    from django.contrib.admin.utils import NestedObjects
+    from django.db import router
+    from django.db.models import ProtectedError
+
+    screen = _screen_or_404(key)
+    model = _model_for(screen)
+    back = request.POST.get("next") or reverse("manage:list", args=[key])
+    if not back.startswith("/manage/"):
+        back = reverse("manage:list", args=[key])
+    if screen.get("readonly") or screen.get("no_delete"):
+        messages.info(request, f"{_title(screen)} cannot be deleted.")
+        return redirect(back)
+
+    from apps.accounts.models import User
+
+    chosen = _rows_for(screen).filter(pk__in=request.POST.getlist("pk"))
+    if model is User:
+        # Never your own account, and never a superuser, from here.
+        kept = chosen.filter(Q(pk=request.user.pk) | Q(is_superuser=True))
+        if kept.exists():
+            messages.warning(request, "Your own account and superuser accounts were left out: they can't be deleted from a list.")
+        chosen = chosen.exclude(pk__in=kept.values("pk"))
+    objs = list(chosen)
+    if not objs:
+        messages.info(request, "Nothing was selected to delete.")
+        return redirect(back)
+
+    if request.POST.get("confirm") == "yes":
+        count = len(objs)
+        try:
+            with transaction.atomic():
+                for obj in objs:
+                    _record(request, obj, DELETION, "Deleted in the control room (several at once)")
+                chosen.filter(pk__in=[o.pk for o in objs]).delete()
+        except ProtectedError as error:
+            blockers = sorted({str(o._meta.verbose_name_plural) for o in error.protected_objects})
+            messages.error(request, f"Nothing was deleted: some of these are still used by {', '.join(blockers)}. "
+                                    "Remove those first, or delete the items one at a time to see which.")
+            return redirect(back)
+        noun = _singular(screen) if count == 1 else _title(screen).lower()
+        messages.success(request, f"{count} {noun} deleted.")
+        return redirect(back)
+
+    collector = NestedObjects(using=router.db_for_write(model))
+    collector.collect(objs)
+    also = [
+        {"name": str(related._meta.verbose_name_plural), "count": len(instances)}
+        for related, instances in collector.model_objs.items() if related is not model
+    ]
+    return render(request, "manage/delete_many.html", _base_context(
+        request, key, screen=screen, title=_title(screen), singular=_singular(screen),
+        objs=objs, also=also, back=back,
+    ))
+
+
 # ---------------------------------------------------------------------------
 # Logo & favicon: one page, not a list, because the site has only one of each
 # ---------------------------------------------------------------------------
@@ -597,19 +670,238 @@ def analytics_view(request):
 
 
 @staff_only
+def bulk_students(request):
+    """Register a school's students from an Excel sheet and hand back their logins."""
+    return _bulk_people(request, "student")
+
+
+@staff_only
+def bulk_teachers(request):
+    """Register a school's teachers from an Excel sheet and hand back their logins."""
+    return _bulk_people(request, "teacher")
+
+
+def _bulk_people(request, kind):
+    from django.conf import settings as dj_settings
+    from django.http import HttpResponse
+
+    from apps.schools.models import School
+
+    from . import bulk_students as bulk
+
+    k = bulk.KINDS[kind]
+    schools = School.objects.order_by("name")
+    chosen = schools.filter(pk=request.GET.get("school") or request.POST.get("school") or 0).first()
+
+    if request.GET.get("template") and chosen:
+        response = HttpResponse(bulk.template_file(chosen, kind), content_type=bulk.XLSX)
+        response["Content-Disposition"] = f'attachment; filename="{chosen.code}-{k["many"]}-template.xlsx"'
+        return response
+
+    context = {"schools": schools, "chosen": chosen, "levels": bulk.LEVELS, "max_rows": bulk.MAX_ROWS,
+               "kind": kind, "k": k, "page_url": reverse(f"manage:bulk_{k['many']}")}
+    if chosen:
+        context["allowed"], context["have"] = bulk.room_for(chosen, kind)
+    if request.method == "POST":
+        upload = request.FILES.get("file")
+        if chosen is None:
+            messages.error(request, f"Choose the school the {k['many']} belong to.")
+        elif not upload:
+            messages.error(request, "Choose the filled-in Excel file to upload.")
+        else:
+            try:
+                rows = bulk.read_rows(upload, kind)
+            except ValueError as error:
+                messages.error(request, str(error))
+                rows = None
+            if rows is not None:
+                if not rows:
+                    messages.error(request, f"There are no {k['many']} in that file.")
+                else:
+                    clean, problems = bulk.check(chosen, rows, kind)
+                    if problems:
+                        context.update(problems=problems, row_count=len(rows))
+                    else:
+                        made = bulk.create(chosen, clean, kind)
+                        site = getattr(dj_settings, "SITE_URL", "") or request.build_absolute_uri("/").rstrip("/")
+                        data_url, filename = bulk.logins_file(chosen, made, site, kind)
+                        _record(request, chosen, CHANGE, f"{len(made)} {k['many']} added in bulk")
+                        context.update(made=made, logins_url=data_url, logins_name=filename)
+    return render(request, "manage/bulk_students.html", _base_context(request, f"bulk-{k['many']}", **context))
+
+
+class _TrialHolder:
+    """A school's or a learner's own free trial, handled the same way: the
+    length, reason and when it was set live on the School (schools) or the
+    Subscription (learners); the end date always on the Subscription."""
+
+    def __init__(self, school=None, subscription=None):
+        from apps.billing.models import Subscription
+
+        self.school = school
+        if school is not None:
+            self.sub, _made = Subscription.objects.get_or_create(school=school)
+            self.name, self.log_obj = school.name, school
+        else:
+            self.sub = subscription
+            self.name = subscription.user.get_full_name() or subscription.user.email
+            self.log_obj = subscription.user
+
+    def _put(self, **values):
+        target = self.school if self.school is not None else self.sub
+        names = {"length": "trial_length", "unit": "trial_unit", "set_at": "trial_set_at", "reason": "trial_reason"} \
+            if self.school is not None else \
+            {"length": "custom_trial_length", "unit": "custom_trial_unit", "set_at": "custom_trial_set_at", "reason": "custom_trial_reason"}
+        for key, value in values.items():
+            setattr(target, names[key], value)
+        target.save(update_fields=[names[k] for k in values] + (["updated_at"] if target is self.sub else []))
+
+    def give(self, length, unit, reason, start=None):
+        from apps.billing.access import add_trial
+
+        now = timezone.now()
+        self.sub.trial_ends_at = add_trial(start or now, length, unit)
+        self.sub.save(update_fields=["trial_ends_at", "updated_at"])
+        self._put(length=length, unit=unit, set_at=now, reason=reason)
+
+    def extend(self, length, unit, reason):
+        from apps.billing.access import add_trial
+
+        now = timezone.now()
+        base = max(self.sub.trial_ends_at or now, now)
+        self.sub.trial_ends_at = add_trial(base, length, unit)
+        self.sub.save(update_fields=["trial_ends_at", "updated_at"])
+        self._put(reason=reason)
+
+    def end_now(self):
+        self.sub.trial_ends_at = timezone.now()
+        self.sub.save(update_fields=["trial_ends_at", "updated_at"])
+
+    def use_general(self, days):
+        self.sub.trial_ends_at = self.sub.created_at + timedelta(days=days)
+        self.sub.save(update_fields=["trial_ends_at", "updated_at"])
+        self._put(length=None, set_at=None, reason="")
+
+    def paid_note(self):
+        paid = self.sub.paid_until and self.sub.paid_until > timezone.now()
+        return " They also have paid time, so access runs to whichever ends later." if paid else ""
+
+    def ends(self):
+        return f"{timezone.localtime(self.sub.trial_ends_at):%d %b %Y}"
+
+
+def _trial_holder(target):
+    """"school:5" or "learner:12" (a subscription) from the edit forms."""
+    from apps.billing.models import Subscription
+    from apps.schools.models import School
+
+    kind, _sep, pk = (target or "").partition(":")
+    if kind == "school":
+        school = School.objects.filter(pk=pk).first()
+        return _TrialHolder(school=school) if school else None
+    if kind == "learner":
+        sub = Subscription.objects.filter(pk=pk, user__isnull=False).select_related("user").first()
+        return _TrialHolder(subscription=sub) if sub else None
+    return None
+
+
+@staff_only
 def billing_settings(request):
+    from apps.billing.access import subscription_for, trial_label
+    from apps.billing.models import Subscription
+    from apps.schools.models import School
+
     obj = BillingSettings.load()
     FormClass = build_form(BillingSettings, ["paywall_enabled", "trial_days", "reminder_days", "support_email"])
-    form = FormClass(request.POST or None, instance=obj)
+    action = request.POST.get("action", "") if request.method == "POST" else ""
+    form = FormClass(request.POST if action == "" and request.method == "POST" else None, instance=obj)
+    trial_form = SchoolTrialForm(request.POST if action == "school_trial" else None)
+    learner_form = LearnerTrialForm(request.POST if action == "learner_trial" else None)
+    edit_target = request.POST.get("target", "") if action == "edit_trial" else ""
+    edit_form = EditTrialForm(request.POST if action == "edit_trial" else None)
 
-    if request.method == "POST" and form.is_valid():
-        saved = form.save()
-        _record(request, saved, CHANGE, "Changed in the control room")
-        messages.success(request, "Billing settings saved.")
+    def done(message):
+        messages.success(request, message)
         return redirect("manage:billing_settings")
 
+    if action == "school_trial" and trial_form.is_valid():
+        d = trial_form.cleaned_data
+        holder = _TrialHolder(school=d["school"])
+        holder.give(d["length"], d["unit"], d["reason"])
+        _record(request, holder.log_obj, CHANGE, f"Own free trial set: {trial_label(d['length'], d['unit'])} ({d['reason']})")
+        return done(f"{holder.name} now has a {trial_label(d['length'], d['unit'])} free trial, until {holder.ends()}.{holder.paid_note()}")
+
+    if action == "learner_trial" and learner_form.is_valid():
+        d = learner_form.cleaned_data
+        holder = _TrialHolder(subscription=subscription_for(d["learner"]))
+        holder.give(d["length"], d["unit"], d["reason"])
+        _record(request, holder.log_obj, CHANGE, f"Own free trial set: {trial_label(d['length'], d['unit'])} ({d['reason']})")
+        return done(f"{holder.name} now has a {trial_label(d['length'], d['unit'])} free trial, until {holder.ends()}.{holder.paid_note()}")
+
+    if action == "edit_trial" and edit_form.is_valid():
+        holder = _trial_holder(edit_target)
+        if holder is None:
+            return redirect("manage:billing_settings")
+        d = edit_form.cleaned_data
+        if d["length"] and d["mode"] == "restart":
+            holder.give(d["length"], d["unit"], d["reason"])
+            note = f"a new {trial_label(d['length'], d['unit'])} trial from today"
+        elif d["length"]:
+            holder.extend(d["length"], d["unit"], d["reason"])
+            note = f"{trial_label(d['length'], d['unit'])} more"
+        else:
+            holder._put(reason=d["reason"])
+            note = "a new reason"
+        _record(request, holder.log_obj, CHANGE, f"Own free trial changed: {note} ({d['reason']})")
+        return done(f"{holder.name}: {note}. Their trial ends {holder.ends()}.{holder.paid_note() if d['length'] else ''}")
+
+    if action == "end_trial":
+        holder = _trial_holder(request.POST.get("target"))
+        if holder is not None:
+            holder.end_now()
+            _record(request, holder.log_obj, CHANGE, "Own free trial ended")
+            return done(f"{holder.name}'s free trial has ended." + (" Their paid time carries on." if holder.paid_note() else ""))
+        return redirect("manage:billing_settings")
+
+    if action in ("clear_school_trial", "clear_learner_trial"):
+        target = f"school:{request.POST.get('school')}" if action == "clear_school_trial" else f"learner:{request.POST.get('subscription')}"
+        holder = _trial_holder(target)
+        if holder is not None:
+            holder.use_general(obj.trial_days)
+            _record(request, holder.log_obj, CHANGE, "Own free trial removed")
+            return done(f"{holder.name} is back on the general {obj.trial_days}-day trial.")
+        return redirect("manage:billing_settings")
+
+    if request.method == "POST" and action == "" and form.is_valid():
+        saved = form.save()
+        _record(request, saved, CHANGE, "Changed in the control room")
+        return done("Billing settings saved.")
+
+    def row(target, label, reason, sub, set_at):
+        return {
+            "target": target, "label": label, "reason": reason, "set_at": set_at,
+            "ends": sub.trial_ends_at if sub else None, "state": sub.state() if sub else "none",
+            "form": edit_form if edit_target == target else EditTrialForm(initial={"reason": reason, "mode": "add", "unit": "days"}, prefix=None),
+            "open": edit_target == target,
+        }
+
+    custom = []
+    for school in School.objects.filter(trial_length__isnull=False).select_related("subscription").order_by("name"):
+        r = row(f"school:{school.pk}", school.custom_trial_label, school.trial_reason,
+                getattr(school, "subscription", None), school.trial_set_at)
+        r["school"] = school
+        custom.append(r)
+    learner_trials = []
+    for sub in Subscription.objects.filter(user__isnull=False, custom_trial_length__isnull=False) \
+            .select_related("user").order_by("user__first_name", "user__email"):
+        r = row(f"learner:{sub.pk}", trial_label(sub.custom_trial_length, sub.custom_trial_unit),
+                sub.custom_trial_reason, sub, sub.custom_trial_set_at)
+        r["sub"] = sub
+        learner_trials.append(r)
+
     return render(request, "manage/billing_settings.html", _base_context(
-        request, "billing-settings", form=form,
+        request, "billing-settings", form=form, trial_form=trial_form, custom_trials=custom,
+        learner_form=learner_form, learner_trials=learner_trials,
         paystack_ready=paystack.is_configured(), paystack_live=paystack.is_live(),
         webhook_url=request.build_absolute_uri(reverse("billing:webhook")),
     ))

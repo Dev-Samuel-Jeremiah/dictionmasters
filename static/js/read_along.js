@@ -586,9 +586,21 @@
   function setUp(box) {
     // The marked player wins: a lesson item can hold a video and the
     // read-aloud audio, and the words follow the audio.
-    var media = box.querySelector("[data-ra-media]") || box.querySelector("audio, video");
+    // A page with one shared player (Diction Radio) names it instead.
+    var player = box.getAttribute("data-ra-player");
+    var media = (player && document.querySelector(player)) || box.querySelector("[data-ra-media]") || box.querySelector("audio, video");
     var textBox = box.querySelector("[data-ra-text]");
     if (!media || !textBox) return;
+
+    // Every listener on the player and the page goes through listen(), so
+    // box.readAlong.destroy() can take them all away again.
+    var ctl = "AbortController" in window ? new AbortController() : null;
+    function listen(target, type, fn, extra) {
+      var opts = {};
+      if (extra) Object.keys(extra).forEach(function (k) { opts[k] = extra[k]; });
+      if (ctl) opts.signal = ctl.signal;
+      target.addEventListener(type, fn, opts);
+    }
 
     var words = measure(wordSpans(textBox));
     // Only words with something to say are ever highlighted: a lone dash
@@ -920,17 +932,17 @@
 
     // Ask again when the reader is most likely to notice: when they press
     // play, and when they come back to the page.
-    media.addEventListener("play", function () { if (mode !== "measured") sync(true); });
-    document.addEventListener("visibilitychange", function () {
+    listen(media, "play", function () { if (mode !== "measured") sync(true); });
+    listen(document, "visibilitychange", function () {
       if (!document.hidden && mode !== "measured") { syncWait = SYNC_FIRST; sync(true); }
     });
 
-    media.addEventListener("loadedmetadata", useEstimate);
-    media.addEventListener("durationchange", useEstimate);
+    listen(media, "loadedmetadata", useEstimate);
+    listen(media, "durationchange", useEstimate);
     if (media.readyState >= 1) useEstimate();
     sync(true);
 
-    media.addEventListener("play", function () {
+    listen(media, "play", function () {
       box.classList.add("is-playing");
       // Two voices at once helps nobody: quieten the rest of the page.
       document.querySelectorAll("audio, video").forEach(function (other) {
@@ -939,10 +951,10 @@
       latency = null;                       // re-read it: they may have switched to Bluetooth
       start();
     });
-    media.addEventListener("playing", start);
-    media.addEventListener("ratechange", start);
+    listen(media, "playing", start);
+    listen(media, "ratechange", start);
     ["pause", "ended"].forEach(function (event) {
-      media.addEventListener(event, function () {
+      listen(media, event, function () {
         box.classList.remove("is-playing");
         if (frame) window.cancelAnimationFrame(frame);
         frame = 0;
@@ -950,7 +962,7 @@
       });
     });
     ["seeking", "seeked"].forEach(function (event) {
-      media.addEventListener(event, function () { render(false); });
+      listen(media, event, function () { render(false); });
     });
 
     textBox.addEventListener("click", function (event) {
@@ -974,9 +986,9 @@
 
     // Only the reader's own scrolling pauses the follow — not ours.
     ["wheel", "touchmove"].forEach(function (type) {
-      window.addEventListener(type, function () { userScrolled = Date.now(); }, { passive: true });
+      listen(window, type, function () { userScrolled = Date.now(); }, { passive: true });
     });
-    window.addEventListener("keydown", function (event) {
+    listen(window, "keydown", function (event) {
       if (/^(ArrowUp|ArrowDown|PageUp|PageDown|Home|End| )$/.test(event.key) && event.target === document.body) {
         userScrolled = Date.now();
       }
@@ -986,19 +998,35 @@
     var reflow = function () {
       if (track[current]) place(track[current].node, false, 0);
     };
+    var watcher = null;
     if (window.ResizeObserver) {
-      new ResizeObserver(reflow).observe(textBox);
+      watcher = new ResizeObserver(reflow);
+      watcher.observe(textBox);
     } else {
-      window.addEventListener("resize", reflow);
+      listen(window, "resize", reflow);
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(reflow);
 
     box.classList.toggle("is-off", !on);
+
+    // Stop following: for a page that swaps what's being read (Radio).
+    box.readAlong.destroy = function () {
+      if (ctl) ctl.abort();
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = 0;
+      window.clearTimeout(syncTimer);
+      if (watcher) watcher.disconnect();
+      box.classList.remove("ra", "is-ready", "is-playing", "is-off");
+    };
   }
 
   function init() {
     document.querySelectorAll("[data-read-along]").forEach(setUp);
   }
+
+  // For content added after the page loads: DMReadAlong.setUp(box), and
+  // box.readAlong.destroy() before the box is replaced.
+  window.DMReadAlong = { setUp: setUp };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

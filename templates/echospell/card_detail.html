@@ -130,7 +130,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source %} data-read-along{% read_along_sync card.entry %}{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% include "echospell/_card_audio.html" with entry=card.entry %}
           <div class="circle-options">
@@ -148,7 +148,7 @@
           </button>
           <details class="reveal">
             <summary>Show word</summary>
-            <ol class="word-card__list" style="margin-top: 10px;">
+            <ol class="word-card__list" style="margin-top: 10px;" data-ra-text>
               {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
             </ol>
           </details>
@@ -165,21 +165,21 @@
       {% csrf_token %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source %} data-read-along{% read_along_sync card.entry %}{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
           {% include "echospell/_card_audio.html" with entry=card.entry %}
           {% if card.entry.image %}<img src="{{ card.entry.image.url }}" alt="" class="word-card__image">{% endif %}
-          <ul class="vocab-list">
+          <ul class="vocab-list" data-ra-text>
             {% for word, meaning in card.entry.word_meaning_pairs %}
             <li class="vocab-item">
               <p class="vocab-item__word">{{ word }}</p>
-              {% if meaning %}<p class="vocab-item__meaning">{{ meaning|cut:"**" }}</p>{% endif %}
-              <label class="vocab-item__prompt" for="vocab-sentence-{{ card.entry.id }}-{{ forloop.counter }}">
+              {% if meaning %}<p class="vocab-item__meaning" data-ra-skip>{{ meaning|cut:"**" }}</p>{% endif %}
+              <label class="vocab-item__prompt" data-ra-skip for="vocab-sentence-{{ card.entry.id }}-{{ forloop.counter }}">
                 Use &ldquo;{{ word }}&rdquo; in a sentence
               </label>
               <input type="text" id="vocab-sentence-{{ card.entry.id }}-{{ forloop.counter }}" class="vocab-item__input" placeholder="Write your sentence here&hellip;">
-              <p class="vocab-item__feedback" aria-live="polite"></p>
+              <p class="vocab-item__feedback" aria-live="polite" data-ra-skip></p>
             </li>
             {% endfor %}
           </ul>
@@ -199,10 +199,10 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card word-card--center">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card word-card--center"{% if card.entry.audio_source %} data-read-along{% read_along_sync card.entry %}{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.image %}<img src="{{ card.entry.image.url }}" alt="{{ card.entry.word }}" class="word-card__image">{% endif %}
-          <ol class="word-card__list">
+          <ol class="word-card__list" data-ra-text>
             {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
           </ol>
           {% include "echospell/_card_audio.html" with entry=card.entry %}
@@ -223,7 +223,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source %} data-read-along{% read_along_sync card.entry %}{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa word-card__ipa--big">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
           {% include "echospell/_card_audio.html" with entry=card.entry %}
@@ -235,7 +235,7 @@
           {% endif %}
           <details class="reveal">
             <summary>Reveal spelling</summary>
-            <ol class="word-card__list" style="margin-top: 10px;">
+            <ol class="word-card__list" style="margin-top: 10px;" data-ra-text>
               {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
             </ol>
           </details>
@@ -251,7 +251,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source %} data-read-along{% read_along_sync card.entry %}{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           <ol class="word-card__list word-card__list--puzzle">
             {% for w in card.display_list %}<li>{{ w|upper }}</li>{% endfor %}
@@ -259,7 +259,7 @@
           {% include "echospell/_card_audio.html" with entry=card.entry %}
           <details class="reveal">
             <summary>Reveal the word</summary>
-            <ol class="word-card__list" style="margin-top: 10px;">
+            <ol class="word-card__list" style="margin-top: 10px;" data-ra-text>
               {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
             </ol>
             {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
@@ -276,16 +276,16 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card">
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source %} data-read-along{% read_along_sync card.entry %}{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
           {% include "echospell/_card_audio.html" with entry=card.entry %}
           <details class="reveal" open>
             <summary><span class="reveal__closed">Reveal the spelling</span><span class="reveal__opened">Hide the spelling</span></summary>
-            <ol class="word-card__list" style="margin-top: 10px;">
+            <ol class="word-card__list" style="margin-top: 10px;" data-ra-text>
               {% for w in card.entry.word_list %}<li>{{ w }}</li>{% endfor %}
             </ol>
-            {% if card.entry.example_sentence %}<div class="word-card__example dm-rich-content">{{ card.entry.example_sentence|rich_text }}</div>{% endif %}
+            {% if card.entry.example_sentence %}<div class="word-card__example dm-rich-content" data-ra-skip>{{ card.entry.example_sentence|rich_text }}</div>{% endif %}
           </details>
           {% if card.entry.body %}<div class="word-card__note-body dm-rich-content">{{ card.entry.body|rich_text }}</div>{% endif %}
         </div>

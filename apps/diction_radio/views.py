@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Prefetch, Q
 from django.shortcuts import render
 
+from apps.book import read_along
 from apps.manage.rich_text import sanitize_rich_text
 
 from .models import RadioEpisode, RadioProgram
@@ -22,6 +23,8 @@ def home(request):
             "title": episode.title,
             "description": sanitize_rich_text(episode.description),
             "transcript": sanitize_rich_text(episode.transcript),
+            # The transcript highlights along with the episode (static/js/read_along.js).
+            "sync": read_along.sync_url(episode) if episode.transcript and episode.audio_source else "",
             "program": program.title,
             "programId": program.pk,
             "programSlug": program.slug,

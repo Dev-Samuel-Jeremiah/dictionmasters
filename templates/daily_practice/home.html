@@ -47,7 +47,7 @@
     {% if activities %}
     <div class="entry-list">
       {% for activity in activities %}
-      <article class="content-card entry-card" style="animation: ui-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: {{ forloop.counter0 }}00ms;">
+      <article class="content-card entry-card"{% if activity.sync and activity.audio %} data-read-along data-ra-sync="{{ activity.sync }}"{% endif %} style="animation: ui-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: {{ forloop.counter0 }}00ms;">
         <p class="ui-panel__label">{{ forloop.counter }} &middot; {{ activity.label }}</p>
 
         {% if activity.kind == "word-bank" %}
@@ -57,17 +57,18 @@
           {% if activity.body %}<div class="entry-card__body dm-rich-content">{{ activity.body|rich_text }}</div>{% endif %}
         {% elif activity.kind == "minimal-pairs" %}
           <div class="pair-card__row">
-            <p class="pair-card__word">{{ activity.word_a }}</p>
-            <p class="pair-card__word">{{ activity.word_b }}</p>
+            {% include "book/_pair_word.html" with word=activity.word_a audio=activity.audio_a %}
+            {% include "book/_pair_word.html" with word=activity.word_b audio=activity.audio_b %}
           </div>
+          {% if activity.audio_a and activity.audio_b %}<button type="button" class="pair-play-both" data-pair-both>&#9654; Hear both</button>{% endif %}
           {% if activity.body %}<div class="pair-card__notes dm-rich-content">{{ activity.body|rich_text }}</div>{% endif %}
         {% elif activity.kind == "twisters" %}
-          <div class="twister-card__text dm-rich-content">{{ activity.body|rich_text }}</div>
+          <div class="twister-card__text dm-rich-content" data-ra-text>{{ activity.body|rich_text }}</div>
         {% else %}
-          <div class="entry-card__text dm-rich-content">{{ activity.body|rich_text }}</div>
+          <div class="entry-card__text dm-rich-content" data-ra-text>{{ activity.body|rich_text }}</div>
         {% endif %}
 
-        {% if activity.audio %}<audio controls src="{{ activity.audio }}" style="margin-top: 12px;"></audio>{% endif %}
+        {% if activity.audio %}<audio controls src="{{ activity.audio }}" style="margin-top: 12px;"{% if activity.sync %} data-ra-media{% endif %}></audio>{% endif %}
 
         <p style="margin-top: 14px;">
           <a href="{% url 'book:sound_detail_tab' sound.slug activity.tab_slug %}" class="ui-link">See it in the full lesson &rarr;</a>
@@ -94,3 +95,5 @@
   </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/pair_audio.js' %}" defer></script><script src="{% static 'js/read_along.js' %}" defer></script>{% endblock %}

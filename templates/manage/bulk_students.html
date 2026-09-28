@@ -1,0 +1,92 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Bulk add {{ k.many }} — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#128101; People &amp; schools</p>
+    <h1 class="cr-pagehead__title">Bulk add {{ k.many }}</h1>
+  </div>
+  <div class="cr-pagehead__actions">
+    <a href="{% if kind == 'teacher' %}{% url 'manage:bulk_students' %}{% else %}{% url 'manage:bulk_teachers' %}{% endif %}{% if chosen %}?school={{ chosen.pk }}{% endif %}" class="cr-btn cr-btn--ghost">Bulk add {% if kind == 'teacher' %}students{% else %}teachers{% endif %} instead</a>
+    <a href="{% url 'manage:list' 'users' %}" class="cr-btn cr-btn--ghost">All users</a>
+  </div>
+</header>
+
+{% if made %}
+<section class="cr-card bk-done">
+  <h2 class="cr-card__title">&#10003; {{ made|length }} {% if made|length == 1 %}{{ k.one }}{% else %}{{ k.many }}{% endif %} added to {{ chosen.name }}</h2>
+  <p>Download the logins now and send them to the school. <strong>The passwords are only in this sheet</strong> — they're stored securely and can't be shown again. (You can always set a new password on the person's page in Users.)</p>
+  <p><a href="{{ logins_url }}" download="{{ logins_name }}" class="cr-btn cr-btn--gold">&#11015; Download the logins (Excel)</a>
+     <button type="button" class="cr-btn cr-btn--ghost" onclick="window.print()">Print</button></p>
+  <div class="cr-tablewrap">
+    <table class="cr-table">
+      <thead><tr><th>#</th><th>Name</th><th>{% if kind == "teacher" %}Level taught{% else %}Level{% endif %}</th><th>Username</th><th>Password</th><th>Email</th></tr></thead>
+      <tbody>
+        {% for m in made %}
+        <tr><td>{{ forloop.counter }}</td><td>{{ m.first }} {{ m.last }}</td><td>{{ m.level }}</td><td><code class="cr-code">{{ m.username }}</code></td><td><code class="cr-code">{{ m.password }}</code></td><td>{{ m.email|default:"—" }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="cr-help">They sign in on the main site's Log in page with their <strong>username and password</strong> — no email needed. Their school's plan covers them, and each sees only {% if kind == 'teacher' %}the level they teach{% else %}their own level's lessons{% endif %}.</p>
+  <p><a href="{{ page_url }}?school={{ chosen.pk }}" class="cr-link">Add more {{ k.many }}</a></p>
+</section>
+{% else %}
+
+<section class="cr-card">
+  <h2 class="cr-card__title">1. Choose the school and download the template</h2>
+  <form method="get" class="cr-form bk-pick">
+    <div class="cr-field">
+      <label for="bk-school">School</label>
+      <select id="bk-school" name="school" class="cr-input cr-select" onchange="this.form.submit()">
+        <option value="">Choose a school</option>
+        {% for s in schools %}<option value="{{ s.pk }}"{% if chosen and chosen.pk == s.pk %} selected{% endif %}>{{ s.name }} ({{ s.code }})</option>{% endfor %}
+      </select>
+    </div>
+    {% if chosen %}
+    <div class="cr-formactions">
+      <a href="?school={{ chosen.pk }}&amp;template=1" class="cr-btn cr-btn--gold">&#11015; Download Excel template</a>
+    </div>
+    {% endif %}
+  </form>
+  {% if chosen %}
+  <p class="cr-help">{{ chosen.name }} has {{ have }} {% if have == 1 %}{{ k.one }}{% else %}{{ k.many }}{% endif %}{% if allowed is not None %} of {{ allowed }} allowed{% if kind == 'teacher' %} on its plan{% endif %}{% endif %}.
+    One row per {{ k.one }}: <strong>First name</strong> and <strong>{% if kind == 'teacher' %}Level taught{% else %}Level{% endif %}</strong> ({{ levels|first }} to {{ levels|last }}) are required; <strong>Last name</strong> and <strong>Email</strong> are optional. Up to {{ max_rows }} at a time.</p>
+  {% endif %}
+</section>
+
+{% if chosen %}
+<form method="post" enctype="multipart/form-data" class="cr-card cr-form">
+  {% csrf_token %}
+  <input type="hidden" name="school" value="{{ chosen.pk }}">
+  <h2 class="cr-card__title">2. Upload the filled-in sheet</h2>
+  <div class="cr-field">
+    <label for="bk-file">Excel file (.xlsx) or .csv</label>
+    <input id="bk-file" type="file" name="file" accept=".xlsx,.csv" required class="cr-file">
+  </div>
+  {% if problems %}
+  <div class="bk-problems" role="alert">
+    <p><strong>Nothing was added.</strong> Fix {{ problems|length }} problem{{ problems|length|pluralize }} in the file ({{ row_count }} row{{ row_count|pluralize }} read) and upload it again:</p>
+    <ul>{% for n, msg in problems %}<li>{% if n %}<strong>Row {{ n }}:</strong> {% endif %}{{ msg }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  <div class="cr-formactions">
+    <button type="submit" class="cr-btn cr-btn--gold">Add the {{ k.many }} and make their logins</button>
+  </div>
+  <p class="cr-help">Every row is checked first. If anything is wrong, nothing is added and the problems are listed by row. Every {{ k.one }} gets a username (e.g. ada.okafor) and a simple password (e.g. mango47) to sign in with; email is optional.</p>
+</form>
+{% endif %}
+{% endif %}
+
+<style>
+  .bk-pick { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+  .bk-pick .cr-field { flex: 1; min-width: 260px; margin: 0; }
+  .bk-pick .cr-formactions { margin: 0; }
+  .bk-problems { margin: 12px 0; padding: 14px 16px; border-radius: 12px; background: #FFF5D6; border: 1px solid #FFC72C; }
+  .bk-problems ul { margin: 8px 0 0; padding-left: 20px; }
+  .bk-done .cr-code { font-size: .95rem; }
+  @media print { .cr-top, .cr-side, .bk-done .cr-btn, .bk-done .cr-link { display: none !important; } }
+</style>
+{% endblock %}

@@ -62,19 +62,38 @@
       cover.hidden = true;
       artPlaceholder.hidden = false;
     }
-    if (item.transcript) {
-      transcript.innerHTML = item.transcript;
-      transcriptWrap.hidden = false;
-    } else {
-      transcript.textContent = "";
-      transcriptWrap.hidden = true;
-    }
+    showTranscript(item);
     trackButtons.forEach((button) => {
       const current = Number(button.dataset.radioTrack) === activeIndex;
       button.classList.toggle("is-playing", current);
       if (current) button.setAttribute("aria-current", "true");
       else button.removeAttribute("aria-current");
     });
+  }
+
+  // The transcript highlights word by word as the episode plays: a fresh
+  // read-along box for each episode, following the station's one player.
+  let reading = null;
+  function showTranscript(item) {
+    if (reading && reading.readAlong && reading.readAlong.destroy) reading.readAlong.destroy();
+    reading = null;
+    transcript.textContent = "";
+    transcriptWrap.hidden = !item.transcript;
+    if (!item.transcript) return;
+    const box = document.createElement("div");
+    const words = document.createElement("div");
+    words.className = "dm-rich-content";
+    words.setAttribute("data-ra-text", "");
+    words.innerHTML = item.transcript;
+    box.appendChild(words);
+    transcript.appendChild(box);
+    if (item.sync && window.DMReadAlong) {
+      box.setAttribute("data-read-along", "");
+      box.setAttribute("data-ra-sync", item.sync);
+      box.setAttribute("data-ra-player", "[data-radio-audio]");
+      window.DMReadAlong.setUp(box);
+      reading = box;
+    }
   }
 
   async function start(index = activeIndex) {

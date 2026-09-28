@@ -31,15 +31,27 @@
 {% endif %}
 
 {% if rows %}
+{% with can_delete=deletable %}
+<form method="post" action="{% url 'manage:delete_many' screen.key %}" id="cr-bulk" data-bulk>
+{% csrf_token %}
+<input type="hidden" name="next" value="{{ request.get_full_path }}">
+{% if can_delete %}
+<div class="cr-bulkbar" data-bulkbar hidden>
+  <span><strong data-bulk-count>0</strong> selected</span>
+  <button type="button" class="cr-link" data-bulk-clear>Clear</button>
+  <button type="submit" class="cr-btn cr-btn--danger cr-btn--small">Delete selected</button>
+</div>
+{% endif %}
 <div class="cr-card cr-card--flush">
   <div class="cr-tablewrap">
     <table class="cr-table cr-table--rows">
       <thead>
-        <tr>{% for heading in headings %}<th>{{ heading }}</th>{% endfor %}<th class="cr-table__end">{% if not readonly %}Actions{% endif %}</th></tr>
+        <tr>{% if can_delete %}<th class="cr-table__tick"><input type="checkbox" class="cr-check" data-bulk-all aria-label="Select all on this page"></th>{% endif %}{% for heading in headings %}<th>{{ heading }}</th>{% endfor %}<th class="cr-table__end">{% if not readonly %}Actions{% endif %}</th></tr>
       </thead>
       <tbody>
         {% for row in rows %}
         <tr>
+          {% if can_delete %}<td class="cr-table__tick"><input type="checkbox" class="cr-check" name="pk" value="{{ row.pk }}" data-bulk-row aria-label="Select {{ row.label }}"></td>{% endif %}
           {% for cell in row.cells %}
           <td>
             {% if cell.kind == "bool" %}<span class="cr-bool {% if cell.on %}is-yes{% else %}is-no{% endif %}">{% if cell.on %}Yes{% else %}No{% endif %}</span>
@@ -65,6 +77,8 @@
     </table>
   </div>
 </div>
+</form>
+{% endwith %}
 
 {% if page.has_other_pages %}
 <nav class="cr-pages" aria-label="Pages">
@@ -79,5 +93,28 @@
   <p>Nothing here yet{% if query %} for “{{ query }}”{% endif %}.</p>
   {% if not readonly and not screen.no_add %}<a href="{% url 'manage:add' screen.key %}{% if parent_obj %}?in={{ parent_obj.pk }}{% endif %}" class="cr-btn cr-btn--gold">+ Add the first {{ singular }}</a>{% endif %}
 </div>
+{% endif %}
+{% if deletable %}
+<script>
+  // Tick rows, then "Delete selected" (manage.views.record_delete_many).
+  (function () {
+    var form = document.querySelector("[data-bulk]");
+    if (!form) return;
+    var bar = form.querySelector("[data-bulkbar]"), count = form.querySelector("[data-bulk-count]");
+    var all = form.querySelector("[data-bulk-all]"), rows = [].slice.call(form.querySelectorAll("[data-bulk-row]"));
+    function sync() {
+      var n = rows.filter(function (r) { return r.checked; }).length;
+      count.textContent = n;
+      bar.hidden = n === 0;
+      all.checked = n > 0 && n === rows.length;
+      all.indeterminate = n > 0 && n < rows.length;
+      rows.forEach(function (r) { r.closest("tr").classList.toggle("is-picked", r.checked); });
+    }
+    all.addEventListener("change", function () { rows.forEach(function (r) { r.checked = all.checked; }); sync(); });
+    rows.forEach(function (r) { r.addEventListener("change", sync); });
+    form.querySelector("[data-bulk-clear]").addEventListener("click", function () { rows.forEach(function (r) { r.checked = false; }); sync(); });
+    sync();
+  })();
+</script>
 {% endif %}
 {% endblock %}

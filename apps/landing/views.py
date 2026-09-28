@@ -94,8 +94,8 @@ def home(request):
                 "title": "Students learning at home",
                 "body": "Keep practising after school with the lessons your school uses. "
                         "Sign up with your school's code — a parent can do it for you.",
-                "points": ["Joins your school with its code", "The right work for your level", "Termly or yearly, per child"],
-                "plan": lowest(Plan.AUDIENCE_STUDENT),
+                "points": ["Joins your school with its code", "The right work for your level", "Covered by your school's plan"],
+                "plan": None,
                 "cta": "Sign up as a student", "url": "accounts:register_student",
             },
             {
@@ -178,6 +178,61 @@ def home(request):
         ],
     }
     return render(request, "landing/home.html", context)
+
+
+# The welcome tour's three screens (templates/landing/tour.html). Icons are
+# names from templates/includes/icon.html; tones are the site's blue and
+# yellow tints.
+TOUR_SLIDES = [
+    {
+        "image": "img/app/heroBoy.jpg", "focus": "72% 30%",
+        "title": "Your complete", "title_strong": "English learning", "title_gold": "platform",
+        "lede": "Videos, audio, speaking practice and interactive exercises for students, teachers and schools.",
+        "cards": [("video", "Expert", "Video Lessons", "butter"), ("phones", "Clear", "Audio Practice", "sky"),
+                  ("mic", "Speak", "with Confidence", "butter"), ("chart", "Track", "Your Progress", "sky")],
+        "tiles": [("video", "Video Lessons", "butter"), ("phones", "Audio Practice", "sky"),
+                  ("mic", "Speaking Practice", "butter"), ("chart", "Track Progress", "sky")],
+    },
+    {
+        "image": "img/app/heroGirl.jpg", "focus": "58% 30%",
+        "title": "Explore", "title_strong": "engaging lessons", "title_gold": "for every level",
+        "lede": "From beginner to advanced. Lessons that make learning English simple, practical and fun.",
+        "cards": [("ipa", "Pronunciation", "Lessons", "butter"), ("abc", "Vocabulary", "& Spelling", "sky"),
+                  ("mic", "Conversations", "& Dialogues", "butter"), ("book", "Reading", "Passages", "sky")],
+        "tiles": [("chart", "Levels for All Ages", "butter"), ("cap", "Structured Curriculum", "sky"),
+                  ("bulb", "Fun & Interactive", "butter"), ("target", "Real-life English Skills", "sky")],
+    },
+    {
+        "image": "img/app/practiceGirl.jpg", "focus": "45% 25%",
+        "title": "Make learning", "title_strong": "", "title_gold": "fun and rewarding",
+        "lede": "Practise, play, earn points and stay motivated with interactive lessons designed for real progress.",
+        "cards": [("task", "Interactive", "Exercises", "butter"), ("swords", "Fun", "Activities", "sky"),
+                  ("cert", "Earn", "Achievements", "butter"), ("user", "Learn", "with Friends", "sky")],
+        "tiles": [("spark", "Fun Activities", "butter"), ("flame", "Earn Points", "sky"),
+                  ("chart", "Track Progress", "butter"), ("school", "Learn Together", "sky")],
+    },
+]
+
+
+def tour(request):
+    """/welcome/ — three screens that show what Diction Masters is, seen
+    once before signing up (accounts.views.register_choice sends people
+    here the first time)."""
+    from django.shortcuts import redirect
+
+    from urllib.parse import urlencode
+
+    from django.urls import reverse
+
+    if request.user.is_authenticated:
+        return redirect("accounts:dashboard")
+    after = {"welcomed": "1"}
+    if request.GET.get("next", "").startswith("/"):
+        after["next"] = request.GET["next"]
+    return render(request, "landing/tour.html", {
+        "slides": TOUR_SLIDES,
+        "finish_url": f"{reverse('accounts:register_choice')}?{urlencode(after)}",
+    })
 
 
 def privacy(request):

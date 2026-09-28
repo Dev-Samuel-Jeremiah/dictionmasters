@@ -31,6 +31,13 @@ class School(models.Model):
         "Students allowed", null=True, blank=True,
         help_text="How many students this school may register. Leave blank for no limit.",
     )
+    # A trial set for this school in the control room (Billing settings),
+    # instead of the general trial length. Blank = the general trial.
+    TRIAL_UNITS = [("days", "days"), ("weeks", "weeks"), ("months", "months")]
+    trial_length = models.PositiveIntegerField(null=True, blank=True)
+    trial_unit = models.CharField(max_length=10, choices=TRIAL_UNITS, default="days")
+    trial_set_at = models.DateTimeField(null=True, blank=True)
+    trial_reason = models.CharField(max_length=120, blank=True, help_text="Shown to the school beside its trial days.")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -111,6 +118,19 @@ class School(models.Model):
         band = f" · {plan.band_label}" if plan.band_label else ""
         return f"{plan.name}{band} (until {timezone.localtime(self.subscription.paid_until):%d %b %Y})"
     current_plan.short_description = "Current plan"
+
+    @property
+    def custom_trial_label(self):
+        if not self.trial_length:
+            return ""
+        unit = self.trial_unit if self.trial_length != 1 else self.trial_unit.rstrip("s")
+        return f"{self.trial_length} {unit}"
+
+    def trial_end_from(self, start):
+        """When a trial of this school's own length, begun at `start`, ends."""
+        from apps.billing.access import add_trial
+
+        return add_trial(start, self.trial_length or 0, self.trial_unit)
 
     @property
     def students_full(self):

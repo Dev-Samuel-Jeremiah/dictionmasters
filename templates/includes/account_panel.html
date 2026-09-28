@@ -4,7 +4,7 @@
     <span class="account-menu__avatar account-menu__avatar--big" aria-hidden="true">{{ user.first_name|default:user.email|slice:":1"|upper }}</span>
     <span class="account-menu__identity">
       <strong>{{ user.get_full_name|default:user.first_name|default:"Signed in" }}</strong>
-      <small>{{ user.email }}</small>
+      <small>{% if user.has_real_email %}{{ user.email }}{% else %}@{{ user.username }}{% endif %}</small>
     </span>
   </div>
   <nav class="account-menu__list" aria-label="Your account">

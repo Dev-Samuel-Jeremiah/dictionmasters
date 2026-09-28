@@ -2,6 +2,8 @@
 {% load static %}
 
 {% block title %}My dashboard — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/switcher.js' %}" defer></script>{% endblock %}
 
 {% block content %}
 <div class="px-page px-home">
@@ -28,7 +30,29 @@
       {% with name=user.first_name|default:"there" %}
       <h1 class="px-hero__title"><span class="px-hero__hello">{{ greeting }},</span><br><span class="px-hero__name"><span class="px-sr">{{ name }}</span>{% for ch in name %}<span class="px-hero__ch" data-c="{{ ch }}" style="--i: {{ forloop.counter0 }}" aria-hidden="true">{{ ch }}</span>{% endfor %}</span></h1>
       {% endwith %}
+      <script>
+        // The greeting and the name each stay on one row: a line wider than
+        // the column (a long name, a narrow phone) is scaled down to fit.
+        (function () {
+          var box = document.currentScript.parentNode;
+          var lines = [].slice.call(box.querySelectorAll(".px-hero__hello, .px-hero__name"));
+          function fit() {
+            lines.forEach(function (line) {
+              line.style.fontSize = "";
+              var room = box.clientWidth, wide = line.offsetWidth;
+              if (wide > room) {
+                var size = parseFloat(getComputedStyle(line).fontSize);
+                line.style.fontSize = Math.max(14, Math.floor(size * room / wide)) + "px";
+              }
+            });
+          }
+          fit();
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+          window.addEventListener("resize", fit);
+        })();
+      </script>
       <p class="px-hero__sub">{% if user.school %}{{ user.get_role_display }} at {{ user.school.name }}{% if level %}, {{ level }}{% endif %}{% else %}Individual learner{% endif %}</p>
+      {% include "accounts/_switcher.html" %}
       {% if user.is_teacher %}<p class="px-hero__note">Your class dashboard is on its way. Until then, every learning tool is open to you.</p>{% endif %}
       <div class="px-hero__actions">
         <a href="{% url 'clash:hub' %}" class="px-chipbtn">{% include "includes/icon.html" with name="swords" size=18 %} Play Diction Clash</a>

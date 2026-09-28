@@ -2,6 +2,8 @@
 {% load static %}
 
 {% block title %}Log in — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/switcher.js' %}" defer></script>{% endblock %}
 
 {% block content %}
 <div class="px-page px-authpage">
@@ -28,6 +30,14 @@
       <h1 class="px-auth__title">Log in</h1>
       <p class="px-auth__lede">Use the email address you registered with. Your lessons, your streak and everything you have practised are waiting.</p>
       <div class="form-card px-auth__form">
+        {% if adding %}<p class="px-adding"><strong>Add an account to this device.</strong> Sign in with the other account below. Everyone already on this device stays on it, so switching between you is one tap from the dashboard.</p>{% endif %}
+        {% if device_accounts %}
+        <div class="px-continue">
+          <p class="px-continue__title">Continue as</p>
+          <ul class="px-switch__list">{% for p in device_accounts %}{% include "accounts/_switch_person.html" with action="Continue" %}{% endfor %}</ul>
+          <p class="px-continue__or">or sign in to another account</p>
+        </div>
+        {% endif %}
         <form method="post" novalidate>
           {% csrf_token %}
           {% if form.non_field_errors %}
@@ -36,6 +46,10 @@
           </ul>
           {% endif %}
           {% include "includes/form_fields.html" %}
+          <label class="px-remember">
+            <input type="checkbox" name="remember_device" value="1"{% if not form.is_bound or request.POST.remember_device %} checked{% endif %}>
+            <span>Remember me on this device<small>Family and shared devices: switch between accounts from the dashboard without typing passwords. Untick on a public computer.</small></span>
+          </label>
           <button type="submit" class="px-bigbtn">Log in {% include "includes/icon.html" with name="chev" size=22 stroke="2.8" %}</button>
         </form>
       </div>

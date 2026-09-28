@@ -38,4 +38,48 @@
     <a href="{% url 'manage:home' %}" class="cr-link">Cancel</a>
   </div>
 </form>
+
+<section class="cr-card">
+  <h2 class="cr-card__title">A school's own free trial</h2>
+  <p class="cr-help">Give one school a different free trial from the general {{ form.instance.trial_days }} days, e.g. 2 months for a pilot school. It starts today and replaces that school's current trial. Its teachers and students share it.</p>
+  <form method="post" class="cr-form cr-trialform">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="school_trial">
+    {% for field in trial_form %}
+    <div class="cr-field {% if field.errors %}has-error{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<ul class="cr-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+    {% endfor %}
+    <div class="cr-formactions"><button type="submit" class="cr-btn cr-btn--gold">Set this school's trial</button></div>
+  </form>
+
+  {% if custom_trials %}
+  <h3 class="cr-card__title" style="margin-top: 22px; font-size: 1rem;">Schools with their own trial</h3>
+  {% include "manage/_trial_rows.html" with rows=custom_trials who="School" general_days=form.instance.trial_days %}
+  {% endif %}
+</section>
+
+<section class="cr-card">
+  <h2 class="cr-card__title">An individual learner's own free trial</h2>
+  <p class="cr-help">Give one adult learner (or a student with no school) a different free trial from the general {{ form.instance.trial_days }} days, e.g. 1 month for a competition winner. It starts today and replaces their current trial.</p>
+  <form method="post" class="cr-form cr-trialform">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="learner_trial">
+    {% for field in learner_form %}
+    <div class="cr-field {% if field.errors %}has-error{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<ul class="cr-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+    {% endfor %}
+    <div class="cr-formactions"><button type="submit" class="cr-btn cr-btn--gold">Set this learner's trial</button></div>
+  </form>
+
+  {% if learner_trials %}
+  <h3 class="cr-card__title" style="margin-top: 22px; font-size: 1rem;">Learners with their own trial</h3>
+  {% include "manage/_trial_rows.html" with rows=learner_trials who="Learner" general_days=form.instance.trial_days %}
+  {% endif %}
+</section>
 {% endblock %}
