@@ -56,3 +56,15 @@ def connect():
     # ready before a learner opens the lesson.
     for model in read_along.read_along_models():
         post_save.connect(read_along.measure_when_saved, sender=model, dispatch_uid="dm-read-along-measure")
+
+    # Saving a card saves its Quick recording too; Django only tells the
+    # real model, so pass it on to the Quick stand-in.
+    try:
+        from apps.echospell.models import CardLesson, CardLessonQuick
+    except ImportError:
+        return
+
+    def measure_quick(sender, instance, raw=False, **kwargs):
+        read_along.measure_when_saved(CardLessonQuick, CardLessonQuick.from_lesson(instance), raw=raw)
+
+    post_save.connect(measure_quick, sender=CardLesson, weak=False, dispatch_uid="dm-read-along-measure-quick")

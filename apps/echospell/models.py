@@ -232,6 +232,11 @@ class CardLesson(VideoContent, AudioContent):
         return self.quick_audio_url or (self.quick_audio_file.url if self.quick_audio_file else "")
 
     @property
+    def quick_read_along(self):
+        """This card as its Quick recording, for the read-along highlight."""
+        return CardLessonQuick.from_lesson(self)
+
+    @property
     def word_list(self):
         """self.word parsed into individual words, in entry order — one
         per line, falling back to commas for a single-line entry, with
@@ -565,3 +570,27 @@ class CardPosition(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.group} · {self.category}"
+
+
+class CardLessonQuick(CardLesson):
+    """A card's "Quick" recording, for the read-along highlight.
+
+    A card has two recordings of the same words, Full and Quick, said at
+    different speeds, so each needs its own word timings. The timings are
+    kept per model and object (book.ReadAlongTiming), so the Quick one is
+    filed under this stand-in: the same row, no table of its own, with
+    READ_ALONG_MEDIA pointing the measuring at the quick fields."""
+
+    READ_ALONG_MEDIA = (("quick_audio_file", "quick_audio_url"),)
+
+    class Meta:
+        proxy = True
+        verbose_name = "card lesson (quick recording)"
+        verbose_name_plural = "card lessons (quick recording)"
+
+    @classmethod
+    def from_lesson(cls, lesson):
+        """The same card, without asking the database again."""
+        quick = cls.__new__(cls)
+        quick.__dict__.update(lesson.__dict__)
+        return quick

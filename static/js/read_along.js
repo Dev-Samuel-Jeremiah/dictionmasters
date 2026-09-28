@@ -583,14 +583,17 @@
 
   /* ---- one read-along block ---------------------------------------- */
 
-  function setUp(box) {
+  function setUp(box, prefer) {
     // The marked player wins: a lesson item can hold a video and the
     // read-aloud audio, and the words follow the audio.
     // A page with one shared player (Diction Radio) names it instead.
     var player = box.getAttribute("data-ra-player");
-    var media = (player && document.querySelector(player)) || box.querySelector("[data-ra-media]") || box.querySelector("audio, video");
+    var media = prefer || (player && document.querySelector(player)) || box.querySelector("[data-ra-media]") || box.querySelector("audio, video");
     var textBox = box.querySelector("[data-ra-text]");
     if (!media || !textBox) return;
+    // Each recording can carry its own timings (an EchoSpell card's Full and
+    // Quick say the same words at different speeds); otherwise the box's.
+    var syncUrl = media.getAttribute("data-ra-sync") || box.getAttribute("data-ra-sync");
 
     // Every listener on the player and the page goes through listen(), so
     // box.readAlong.destroy() can take them all away again.
@@ -628,13 +631,16 @@
     var audio = null;
 
     // A handle for measuring how closely the highlight tracks the voice.
-    box.readAlong = { words: words, track: track, mode: function () { return mode; } };
+    box.readAlong = { words: words, track: track, media: media, mode: function () { return mode; } };
     box.classList.add("ra", "is-ready");
     textBox.classList.add("ra-text");
     if (textBox.querySelector("[data-ra-line]")) textBox.classList.add("ra-text--lines");
 
     // ---- the bar above the text
-    var bar = box.querySelector("[data-ra-bar]") || box.insertBefore(el("div"), textBox);
+    // Just above the words, wherever they sit: on an EchoSpell card they're
+    // inside the "Hide the spelling" fold, not directly in the box.
+    var madeBar = !box.querySelector("[data-ra-bar]");
+    var bar = box.querySelector("[data-ra-bar]") || textBox.parentNode.insertBefore(el("div"), textBox);
     bar.classList.add("ra-bar");
 
     var toggle = el("button", "ra-toggle");
@@ -891,7 +897,7 @@
     var syncing = false;
 
     function sync(again) {
-      var url = box.getAttribute("data-ra-sync");
+      var url = syncUrl;
       if (!url || !window.fetch || mode === "measured" || syncing) return;
       syncing = true;
       fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } })
@@ -1016,12 +1022,53 @@
       frame = 0;
       window.clearTimeout(syncTimer);
       if (watcher) watcher.disconnect();
-      box.classList.remove("ra", "is-ready", "is-playing", "is-off");
+      clear();
+      // Put the page back as it was: plain words, no bar, no marker, so the
+      // box can be set up again (for another recording) or left alone.
+      words.forEach(function (word) {
+        if (word.node.parentNode) word.node.parentNode.replaceChild(document.createTextNode(word.text), word.node);
+      });
+      if (marker.parentNode) marker.parentNode.removeChild(marker);
+      textBox.normalize();
+      textBox.classList.remove("ra-text", "ra-text--lines");
+      if (madeBar) { if (bar.parentNode) bar.parentNode.removeChild(bar); } else { bar.innerHTML = ""; }
+      box.classList.remove("ra", "is-ready", "is-playing", "is-off", "is-timed", "is-measured", "is-preparing");
+      delete box.readAlong;
     };
   }
 
+  function mount(box) {
+    // One block that can't be set up must never stop the rest of the page.
+    try {
+      setUp(box);
+    } catch (error) {
+      if (window.console) console.error("Read along couldn't start here:", error);
+      return;
+    }
+    // Several recordings of the same words (an EchoSpell card's Full and
+    // Quick): the highlight follows whichever one is played.
+    var players = box.querySelectorAll("[data-ra-media]");
+    if (players.length < 2 || box.raSwitching) return;
+    box.raSwitching = true;
+    Array.prototype.forEach.call(players, function (player) {
+      player.addEventListener("play", function () {
+        if (box.readAlong && box.readAlong.media === player) return;
+        // Two voices at once helps nobody: the other recording stops.
+        document.querySelectorAll("audio, video").forEach(function (other) {
+          if (other !== player && !other.paused) other.pause();
+        });
+        try {
+          if (box.readAlong && box.readAlong.destroy) box.readAlong.destroy();
+          setUp(box, player);
+        } catch (error) {
+          if (window.console) console.error("Read along couldn't switch recordings:", error);
+        }
+      });
+    });
+  }
+
   function init() {
-    document.querySelectorAll("[data-read-along]").forEach(setUp);
+    document.querySelectorAll("[data-read-along]").forEach(mount);
   }
 
   // For content added after the page loads: DMReadAlong.setUp(box), and

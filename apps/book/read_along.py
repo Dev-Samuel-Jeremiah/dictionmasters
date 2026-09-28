@@ -112,8 +112,10 @@ TEXT_FOR = {
     "book.sentencepractice": lambda obj: plain_text(obj.sentence),
     "book.tonguetwister": lambda obj: plain_text(obj.text),
     "diction_radio.radioepisode": lambda obj: plain_text(obj.transcript),
-    # An EchoSpell card's "Full" recording reads its words out one by one.
+    # An EchoSpell card's recordings read its words out one by one: "Full"
+    # here, "Quick" filed separately (echospell.CardLessonQuick).
     "echospell.cardlesson": lambda obj: "\n".join(obj.word_list),
+    "echospell.cardlessonquick": lambda obj: "\n".join(obj.word_list),
 }
 
 
@@ -133,6 +135,7 @@ TEXT_FIELD = {
     "book.tonguetwister": "text",
     "diction_radio.radioepisode": "transcript",
     "echospell.cardlesson": None,
+    "echospell.cardlessonquick": None,
 }
 
 
@@ -258,11 +261,25 @@ def text_for(obj):
     return (getter(obj) or "").strip() if getter else ""
 
 
+# Where a model keeps the recording its words follow, in order of choice. A
+# model can say otherwise with READ_ALONG_MEDIA (e.g. a card's Quick one).
+MEDIA_FIELDS = (("audio_file", "audio_url"), ("video_file", "video_url"))
+
+
+def _media_fields(obj_or_model):
+    return getattr(obj_or_model, "READ_ALONG_MEDIA", MEDIA_FIELDS)
+
+
+def _content_type(obj):
+    # Stand-ins like CardLessonQuick keep timings of their own.
+    return ContentType.objects.get_for_model(obj, for_concrete_model=False)
+
+
 def _media(obj):
     """(identity, where ffmpeg reads it) for the recording the words follow:
     the audio if there is any, otherwise the video — the same choice the
     page makes."""
-    for file_field, url_field in (("audio_file", "audio_url"), ("video_file", "video_url")):
+    for file_field, url_field in _media_fields(obj):
         stored = getattr(obj, file_field, None)
         url = getattr(obj, url_field, "") or ""
         if url:
@@ -329,7 +346,7 @@ def timing_for(obj, start=True):
     if not fingerprint:
         return "unavailable", None
 
-    content_type = ContentType.objects.get_for_model(obj)
+    content_type = _content_type(obj)
     row = ReadAlongTiming.objects.filter(content_type=content_type, object_id=obj.pk).first()
     now = timezone.now()
 
@@ -385,7 +402,7 @@ def measure_when_saved(sender, instance, raw=False, **kwargs):
             return
         from .models import ReadAlongTiming
 
-        content_type = ContentType.objects.get_for_model(instance)
+        content_type = _content_type(instance)
         row = ReadAlongTiming.objects.filter(content_type=content_type, object_id=instance.pk).first()
         if row and row.fingerprint == fingerprint and row.status != ReadAlongTiming.STATUS_FAILED:
             return                     # already measured, or being measured now
@@ -444,7 +461,7 @@ def measure(obj):
     from .models import ReadAlongTiming
 
     fingerprint = _fingerprint(obj)
-    content_type = ContentType.objects.get_for_model(obj)
+    content_type = _content_type(obj)
     row, _created = ReadAlongTiming.objects.get_or_create(
         content_type=content_type, object_id=obj.pk, defaults={"fingerprint": fingerprint}
     )
@@ -851,9 +868,10 @@ def candidates():
         model = apps.get_model(label)
         names = {f.name for f in model._meta.fields}
         has_media = Q()
-        for field in ("audio_file", "audio_url", "video_file", "video_url"):
-            if field in names:
-                has_media |= ~Q(**{field: ""})
+        for pair in _media_fields(model):
+            for field in pair:
+                if field in names:
+                    has_media |= ~Q(**{field: ""})
         for obj in model.objects.filter(has_media):
             if _fingerprint(obj):
                 yield obj
