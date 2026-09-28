@@ -94,7 +94,7 @@
         </header>
         <div class="ui-sounds">
           {% for sound in group.sounds %}
-          <a href="{% url programme.lesson_tab sound.slug section.slug %}" class="ui-sound ui-lift" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
+          <a href="{% url programme.lesson_tab sound.slug section.slug %}" class="ui-sound ui-lift{% if sound.card_image %} has-bg{% endif %}" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }};{% if sound.card_image %} --card-bg: url('{{ sound.card_image.url }}');{% endif %}">
             <span class="ui-sound__symbol">{{ sound.symbol|default:programme.icon }}</span>
             <span class="ui-sound__name">{{ sound.name }}</span>
             <span class="ui-sound__words">

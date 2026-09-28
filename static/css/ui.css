@@ -1519,3 +1519,32 @@ html.qs-open { overflow: hidden; }
 .os-status { min-height: 1.5em; margin: 6px 0 12px; font-weight: 600; }
 .os-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
 .ga-footer-link { font-weight: 700; }
+
+/* Previous / Next at the foot of a lesson section (templates/book/_tab_steps.html) */
+.tab-steps { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 32px 0 8px; padding-top: 20px; border-top: 1px solid #E3E8F4; }
+.tab-steps__spacer { flex: 0 1 300px; }
+.tab-steps__btn {
+  flex: 0 1 300px; min-width: 0; display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px; border-radius: 18px; text-decoration: none; color: #0B1A4A;
+  background: #fff; border: 2px solid transparent;
+  background: linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, rgba(24, 70, 224, .35), rgba(255, 199, 44, .55)) border-box;
+  box-shadow: 0 8px 20px rgba(16, 40, 120, 0.08);
+  transition: transform .18s, box-shadow .18s;
+}
+.tab-steps__btn:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(16, 40, 120, 0.14); }
+.tab-steps__btn:focus-visible { outline: 3px solid #FFC72C; outline-offset: 3px; }
+.tab-steps__btn--next { justify-content: flex-end; text-align: right; background: linear-gradient(135deg, #FFD86B, #FFC72C); box-shadow: 0 10px 24px rgba(233, 174, 0, 0.3); }
+.tab-steps__text { display: flex; flex-direction: column; min-width: 0; }
+.tab-steps__text small { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; opacity: .7; }
+.tab-steps__text strong { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tab-steps__arrow { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; font-weight: 800; background: #E7EFFF; color: #1846E0; }
+.tab-steps__btn--next .tab-steps__arrow { background: #0B1A4A; color: #FFC72C; }
+.tab-steps__count { flex: 1; text-align: center; font-size: 13px; font-weight: 700; color: #55607E; }
+@media (max-width: 560px) {
+  .tab-steps { gap: 8px; }
+  .tab-steps__btn, .tab-steps__spacer { flex: 1 1 0; }
+  .tab-steps__btn { padding: 10px 12px; gap: 8px; }
+  .tab-steps__text strong { font-size: 14px; white-space: normal; line-height: 1.2; }
+  .tab-steps__arrow { width: 30px; height: 30px; font-size: 15px; }
+  .tab-steps__count { display: none; }
+}

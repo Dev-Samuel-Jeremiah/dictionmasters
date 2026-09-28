@@ -1400,3 +1400,31 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .pair-play-both { margin-top: 12px; min-height: 38px; padding: 0 16px; border: 0; border-radius: 999px; cursor: pointer;
   background: var(--sky); color: var(--blue); font: inherit; font-weight: 800; }
 .pair-play-both:hover { background: #D6E3FF; }
+
+/* Cards with a background picture from the control room (card_image on an
+   EchoSpell level or group, or a 44 Academy / Tricks sound): the picture
+   under a navy shade that deepens towards the words, which turn white. */
+.es .es-level.has-bg, .es .es-group.has-bg, .ui-sound.has-bg {
+  background: linear-gradient(180deg, rgba(11, 26, 74, 0.18) 0%, rgba(11, 26, 74, 0.55) 48%, rgba(11, 26, 74, 0.9) 100%),
+              var(--card-bg) center / cover no-repeat;
+  background-color: #0B1A4A;
+  color: #fff;
+}
+.es .es-level.has-bg::before { color: rgba(255, 255, 255, 0.16); }
+.es .es-level.has-bg .es-level__name, .es .es-group.has-bg .es-group__name, .ui-sound.has-bg .ui-sound__name {
+  color: #fff; text-shadow: 0 2px 10px rgba(11, 26, 74, 0.6);
+}
+.es .es-level.has-bg .es-level__age { color: #FFC72C; }
+.es .es-level.has-bg .es-level__desc, .es .es-level.has-bg .es-level__meta,
+.es .es-group.has-bg .es-group__title, .es .es-group.has-bg .es-group__meta,
+.ui-sound.has-bg .ui-sound__words, .ui-sound.has-bg .ui-sound__lock { color: rgba(255, 255, 255, 0.86); }
+.es .es-level.has-bg .es-bar { background: rgba(255, 255, 255, 0.22); }
+.es .es-level.has-bg .es-level__foot { position: relative; z-index: 2; }
+.es .es-level.has-bg .es-level__top, .es .es-level.has-bg .es-level__name, .es .es-level.has-bg .es-level__age, .es .es-level.has-bg .es-level__desc { position: relative; z-index: 2; }
+.es .es-group.has-bg { min-height: 170px; justify-content: flex-end; }
+.ui-sound.has-bg { min-height: 150px; justify-content: flex-end; }
+.ui-sound--current.has-bg { outline: 2px solid var(--yellow); }
+.ui-sound--locked.has-bg { filter: grayscale(0.7); opacity: 0.8; }
+.es .es-level.has-bg .es-status, .es .es-group.has-bg .es-status { color: #0B1A4A; background: rgba(255, 255, 255, 0.92); box-shadow: 0 4px 12px rgba(11, 26, 74, 0.25); }
+.es .es-level.has-bg .es-status--current, .es .es-group.has-bg .es-status--current { background: #FFC72C; }
+.ui-sound.has-bg .ui-sound__symbol { color: #FFC72C; text-shadow: 0 2px 10px rgba(11, 26, 74, 0.85), 0 0 2px rgba(11, 26, 74, 0.9); }

@@ -27,6 +27,7 @@ marking.py.
 import re
 
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils.text import slugify
 
@@ -106,6 +107,11 @@ class Level(models.Model):
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     age_range = models.CharField(max_length=100, blank=True, help_text='e.g. "Nursery 1-2"')
     description = models.CharField(max_length=255, blank=True)
+    card_image = models.ImageField(
+        "Card background image", upload_to="echospell/cards/levels/", blank=True,
+        validators=[FileExtensionValidator(["png", "jpg", "jpeg", "webp"])],
+        help_text="The picture behind this level's card on the EchoSpell page. Wide pictures work best; the words sit on a soft shade so they stay easy to read. Leave empty for the plain card.",
+    )
     categories = models.ManyToManyField(
         Category, blank=True, related_name="levels",
         help_text="Which cards are available for every group in this level.",
@@ -139,6 +145,11 @@ class Group(models.Model):
         choices=GROUP_NUMBER_CHOICES, help_text="Group number within the level, e.g. 1"
     )
     title = models.CharField(max_length=150, blank=True, help_text="Optional, shown alongside the number.")
+    card_image = models.ImageField(
+        "Card background image", upload_to="echospell/cards/groups/", blank=True,
+        validators=[FileExtensionValidator(["png", "jpg", "jpeg", "webp"])],
+        help_text="The picture behind this group's card on its level's page. Wide pictures work best; the words sit on a soft shade so they stay easy to read. Leave empty for the plain card.",
+    )
     slug = models.SlugField(max_length=120, blank=True)
 
     class Meta:

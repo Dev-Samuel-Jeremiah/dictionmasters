@@ -235,11 +235,32 @@ def card_detail(request, level_slug, group_slug, category_slug):
 
     # Its own QR code, for printing beside this card in the book. Shown to
     # the people who make the books, not to every learner.
+    context.update(_card_steps(level, group, category))
     context["card_url"] = _card_link(level, group, category)
     context["qr_filename"] = _qr_filename(level, group, category)
     context["show_qr"] = _makes_materials(request.user)
 
     return render(request, "echospell/card_detail.html", context)
+
+
+def _card_steps(level, group, category):
+    """Previous / Next at the foot of a card page, through the group's card
+    types in the order the group page lists them. After the last one: the
+    group's practice activities if it has any, otherwise the next group."""
+    categories = list(level.categories.all())
+    at = next((i for i, c in enumerate(categories) if c.id == category.id), -1)
+    steps = {
+        "step_at": at + 1, "step_count": len(categories),
+        "prev_category": categories[at - 1] if at > 0 else None,
+        "next_category": categories[at + 1] if 0 <= at < len(categories) - 1 else None,
+        "practise_next": False, "next_group": None,
+    }
+    if steps["next_category"] is None:
+        if activities_for(group):
+            steps["practise_next"] = True
+        else:
+            steps["next_group"] = level.groups.filter(number__gt=group.number).order_by("number").first()
+    return steps
 
 
 def _card_link(level, group, category):

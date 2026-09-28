@@ -166,6 +166,26 @@ def phonemic_chart(request):
     return render(request, "book/phonemic_chart.html", context)
 
 
+def _tab_steps(programme, info, sound, tabs, tab):
+    """Previous / Next at the foot of a lesson section, in the tabs' order.
+    After the last section the 44 Academy goes on to the next sound; Tricks
+    go back to the list, since the next trick may still be locked."""
+    slugs = [slug for slug, _label in tabs]
+    at = slugs.index(tab) if tab in slugs else -1
+    steps = {
+        "step_at": at + 1, "step_count": len(slugs),
+        "prev_tab": tabs[at - 1] if at > 0 else None,
+        "next_tab": tabs[at + 1] if 0 <= at < len(slugs) - 1 else None,
+        "next_sound": None,
+    }
+    if steps["next_tab"] is None and not info["numbered"]:
+        order = [s for group in lesson_groups(programme) for s in group["sounds"]]
+        ids = [s.pk for s in order]
+        if sound.pk in ids and ids.index(sound.pk) + 1 < len(order):
+            steps["next_sound"] = order[ids.index(sound.pk) + 1]
+    return steps
+
+
 def lesson_detail(request, programme, slug, tab="lens", sound=None, extra_tabs=(), extra=None):
     """One lesson and its eight tabs, in either programme. A lesson is only
     ever found in its own programme, so an address never crosses over.
@@ -200,6 +220,7 @@ def lesson_detail(request, programme, slug, tab="lens", sound=None, extra_tabs=(
         # Any number of videos for this tab, in the order the admin set.
         "section_videos": list(sound.videos.filter(section=tab)),
     }
+    context.update(_tab_steps(programme, info, sound, context["tabs"], tab))
 
     if tab == "lens":
         context["articulation"] = getattr(sound, "articulation", None)

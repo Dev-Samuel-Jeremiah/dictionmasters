@@ -64,8 +64,8 @@
       <div class="es-groups">
         {% for row in group_rows %}
         <a href="{% url 'echospell:group_detail' level.slug row.group.slug %}"
-           class="es-group es-lift{% if row.is_complete %} es-group--done{% elif row.is_current %} es-group--current{% endif %}"
-           style="--i: {{ forloop.counter0 }}">
+           class="es-group es-lift{% if row.is_complete %} es-group--done{% elif row.is_current %} es-group--current{% endif %}{% if row.group.card_image %} has-bg{% endif %}"
+           style="--i: {{ forloop.counter0 }};{% if row.group.card_image %} --card-bg: url('{{ row.group.card_image.url }}');{% endif %}">
           {% if row.is_current %}<span class="es-status es-status--current">Now</span>{% elif row.is_complete %}<span class="es-status es-status--done">Done</span>{% endif %}
           <span class="es-group__node">{% if row.is_complete %}&#10003;{% else %}{{ row.group.number }}{% endif %}</span>
           <span class="es-group__name">Group {{ row.group.number }}</span>

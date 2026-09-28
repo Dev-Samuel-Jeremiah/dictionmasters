@@ -1,0 +1,30 @@
+{# Previous / Next at the foot of a lesson section (book.views._tab_steps). #}
+{% if step_count > 1 %}
+<nav class="tab-steps" aria-label="Lesson sections">
+  {% if prev_tab %}
+  <a href="{% url programme.lesson_tab sound.slug prev_tab.0 %}" class="tab-steps__btn tab-steps__btn--back" rel="prev">
+    <span class="tab-steps__arrow" aria-hidden="true">&larr;</span>
+    <span class="tab-steps__text"><small>Previous</small><strong>{{ prev_tab.1 }}</strong></span>
+  </a>
+  {% else %}<span class="tab-steps__spacer"></span>{% endif %}
+
+  <span class="tab-steps__count" aria-label="Section {{ step_at }} of {{ step_count }}">{{ step_at }} / {{ step_count }}</span>
+
+  {% if next_tab %}
+  <a href="{% url programme.lesson_tab sound.slug next_tab.0 %}" class="tab-steps__btn tab-steps__btn--next" rel="next">
+    <span class="tab-steps__text"><small>Next</small><strong>{{ next_tab.1 }}</strong></span>
+    <span class="tab-steps__arrow" aria-hidden="true">&rarr;</span>
+  </a>
+  {% elif next_sound %}
+  <a href="{% url programme.lesson next_sound.slug %}" class="tab-steps__btn tab-steps__btn--next">
+    <span class="tab-steps__text"><small>Next sound</small><strong>{% if next_sound.symbol %}{{ next_sound.symbol }} {% endif %}{{ next_sound.name }}</strong></span>
+    <span class="tab-steps__arrow" aria-hidden="true">&rarr;</span>
+  </a>
+  {% else %}
+  <a href="{% url programme.list %}" class="tab-steps__btn tab-steps__btn--next">
+    <span class="tab-steps__text"><small>Finished</small><strong>Back to all {% if programme.numbered %}tricks{% else %}sounds{% endif %}</strong></span>
+    <span class="tab-steps__arrow" aria-hidden="true">&rarr;</span>
+  </a>
+  {% endif %}
+</nav>
+{% endif %}

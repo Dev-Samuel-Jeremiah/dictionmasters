@@ -90,13 +90,13 @@
         {% for row in group.rows %}
         {% with sound=row.sound step=row.step %}
         {% if step and not step.unlocked %}
-        <div class="ui-sound ui-sound--locked" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}" aria-disabled="true">
+        <div class="ui-sound ui-sound--locked{% if sound.card_image %} has-bg{% endif %}" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }};{% if sound.card_image %} --card-bg: url('{{ sound.card_image.url }}');{% endif %}" aria-disabled="true">
           <span class="ui-sound__symbol">{{ sound.symbol|default:programme.icon }}</span>
           <span class="ui-sound__name">{{ sound.name }}</span>
           <span class="ui-sound__lock" aria-label="Locked"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" fill="currentColor"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg> Locked</span>
         </div>
         {% else %}
-        <a href="{% url programme.lesson sound.slug %}" class="ui-sound ui-lift{% if step %} ui-sound--{{ step.state }}{% endif %}" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }}">
+        <a href="{% url programme.lesson sound.slug %}" class="ui-sound ui-lift{% if step %} ui-sound--{{ step.state }}{% endif %}{% if sound.card_image %} has-bg{% endif %}" style="--tone: {{ tone }}; --i: {{ forloop.counter0 }};{% if sound.card_image %} --card-bg: url('{{ sound.card_image.url }}');{% endif %}">
           {% if step.state == "done" %}<span class="ui-sound__badge" aria-label="Complete">&#10003;</span>{% elif step.state == "current" %}<span class="ui-sound__badge ui-sound__badge--next" aria-label="Up next">Next</span>{% endif %}
           <span class="ui-sound__symbol">{{ sound.symbol|default:programme.icon }}</span>
           <span class="ui-sound__name">{{ sound.name }}</span>

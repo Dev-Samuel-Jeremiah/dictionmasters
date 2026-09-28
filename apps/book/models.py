@@ -17,6 +17,7 @@ filled in wins; see the `*_source` properties.
 """
 
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
@@ -142,6 +143,11 @@ class Sound(models.Model):
         max_length=255,
         blank=True,
         help_text="Comma-separated, e.g. seat, feel, sheep, clean, dream, reach, teach",
+    )
+    card_image = models.ImageField(
+        "Card background image", upload_to="book/cards/sounds/", blank=True,
+        validators=[FileExtensionValidator(["png", "jpg", "jpeg", "webp"])],
+        help_text="The picture behind this lesson's tile in the list of sounds (or tricks). Wide pictures work best; the words sit on a soft shade so they stay easy to read. Leave empty for the plain card.",
     )
     order = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(

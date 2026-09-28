@@ -1,0 +1,38 @@
+{# Previous / Next at the foot of an EchoSpell card page (echospell.views._card_steps). Same look as the 44 Academy's. #}
+<nav class="tab-steps" aria-label="Card types in this group">
+  {% if prev_category %}
+  <a href="{% url 'echospell:card_detail' level.slug group.slug prev_category.slug %}" class="tab-steps__btn tab-steps__btn--back" rel="prev">
+    <span class="tab-steps__arrow" aria-hidden="true">&larr;</span>
+    <span class="tab-steps__text"><small>Previous</small><strong>{{ prev_category.name }}</strong></span>
+  </a>
+  {% else %}
+  <a href="{% url 'echospell:group_detail' level.slug group.slug %}" class="tab-steps__btn tab-steps__btn--back">
+    <span class="tab-steps__arrow" aria-hidden="true">&larr;</span>
+    <span class="tab-steps__text"><small>Back to</small><strong>{{ group.display_name }}</strong></span>
+  </a>
+  {% endif %}
+
+  {% if step_count > 1 %}<span class="tab-steps__count" aria-label="Card type {{ step_at }} of {{ step_count }}">{{ step_at }} / {{ step_count }}</span>{% endif %}
+
+  {% if next_category %}
+  <a href="{% url 'echospell:card_detail' level.slug group.slug next_category.slug %}" class="tab-steps__btn tab-steps__btn--next" rel="next">
+    <span class="tab-steps__text"><small>Next</small><strong>{{ next_category.name }}</strong></span>
+    <span class="tab-steps__arrow" aria-hidden="true">&rarr;</span>
+  </a>
+  {% elif practise_next %}
+  <a href="{% url 'echospell:group_detail' level.slug group.slug %}#practise" class="tab-steps__btn tab-steps__btn--next">
+    <span class="tab-steps__text"><small>Next</small><strong>Practise activities</strong></span>
+    <span class="tab-steps__arrow" aria-hidden="true">&rarr;</span>
+  </a>
+  {% elif next_group %}
+  <a href="{% url 'echospell:group_detail' level.slug next_group.slug %}" class="tab-steps__btn tab-steps__btn--next">
+    <span class="tab-steps__text"><small>Next group</small><strong>{{ next_group.display_name }}</strong></span>
+    <span class="tab-steps__arrow" aria-hidden="true">&rarr;</span>
+  </a>
+  {% else %}
+  <a href="{% url 'echospell:level_detail' level.slug %}" class="tab-steps__btn tab-steps__btn--next">
+    <span class="tab-steps__text"><small>Finished</small><strong>Back to {{ level.name }}</strong></span>
+    <span class="tab-steps__arrow" aria-hidden="true">&rarr;</span>
+  </a>
+  {% endif %}
+</nav>

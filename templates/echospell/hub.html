@@ -69,8 +69,8 @@
       <div class="es-levels">
         {% for card in level_cards %}
         <a href="{% url 'echospell:level_detail' card.level.slug %}"
-           class="es-level es-lift{% if card.is_current %} es-level--current{% elif card.is_done %} es-level--done{% endif %}"
-           data-num="{{ forloop.counter }}" style="--i: {{ forloop.counter0 }}">
+           class="es-level es-lift{% if card.is_current %} es-level--current{% elif card.is_done %} es-level--done{% endif %}{% if card.level.card_image %} has-bg{% endif %}"
+           data-num="{{ forloop.counter }}" style="--i: {{ forloop.counter0 }};{% if card.level.card_image %} --card-bg: url('{{ card.level.card_image.url }}');{% endif %}">
           <span class="es-level__top">
             <span class="es-level__badge">{% if card.is_done %}&#10003;{% else %}{{ forloop.counter }}{% endif %}</span>
             {% if card.is_current %}<span class="es-status es-status--current">Continue here</span>
