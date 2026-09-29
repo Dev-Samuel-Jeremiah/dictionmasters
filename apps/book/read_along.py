@@ -116,6 +116,8 @@ TEXT_FOR = {
     # here, "Quick" filed separately (echospell.CardLessonQuick).
     "echospell.cardlesson": lambda obj: "\n".join(obj.word_list),
     "echospell.cardlessonquick": lambda obj: "\n".join(obj.word_list),
+    # A Diction Library book, read aloud a chapter at a time.
+    "diction_library.librarychapter": lambda obj: obj.text,
 }
 
 
@@ -136,6 +138,7 @@ TEXT_FIELD = {
     "diction_radio.radioepisode": "transcript",
     "echospell.cardlesson": None,
     "echospell.cardlessonquick": None,
+    "diction_library.librarychapter": None,
 }
 
 
@@ -618,6 +621,11 @@ def explain(error):
     return "The word service couldn't measure the words. The details are below."
 
 
+def _self_timed(obj):
+    check = getattr(obj, "read_along_self_timed", None)
+    return bool(check and check())
+
+
 def needs_retry(row):
     """Only the voice's pauses were kept because the word service failed
     (no credit, a timeout…): usable, but worth measuring again later. A
@@ -650,7 +658,7 @@ def timing_for(obj, start=True):
         if row.status == ReadAlongTiming.STATUS_FAILED and now - row.updated_at < RETRY_FAILED_AFTER:
             return "unavailable", None
 
-    if not start or not is_configured():
+    if not start or not is_configured() or _self_timed(obj):
         return "unavailable", None
 
     if _claim(obj, content_type, row, fingerprint):
@@ -684,7 +692,7 @@ def measure_when_saved(sender, instance, raw=False, **kwargs):
     minute of the lesson without the highlight."""
     from django.conf import settings
 
-    if raw or getattr(settings, "TESTING", False) or not is_configured():
+    if raw or getattr(settings, "TESTING", False) or not is_configured() or _self_timed(instance):
         return
     try:
         fingerprint = _fingerprint(instance)
@@ -750,6 +758,9 @@ def measure(obj):
     """Measure `obj` now and save the result. Returns the ReadAlongTiming."""
     from .models import ReadAlongTiming
 
+    if _self_timed(obj):
+        # Read aloud here, with its timings from the voice: nothing to measure.
+        return ReadAlongTiming.objects.filter(content_type=_content_type(obj), object_id=obj.pk).first()
     fingerprint = _fingerprint(obj)
     content_type = _content_type(obj)
     row, _created = ReadAlongTiming.objects.get_or_create(

@@ -1,0 +1,80 @@
+/* Control room > Schools & people (templates/manage/schools_directory.html, school_people.html) */
+.sd2 { --sd-blue: #1846E0; --sd-navy: #0B1A4A; --sd-gold: #FFC72C; --sd-line: #E3E8F4; --sd-muted: #55607E; --sd-sky: #E7EFFF; }
+
+.sd2-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 6px 0 18px; }
+.sd2-tile { padding: 14px 16px; border-radius: 16px; background: #fff; box-shadow: 0 6px 18px rgba(16, 40, 120, .07); border: 1px solid var(--sd-line); }
+.sd2-tile span { display: block; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--sd-muted); }
+.sd2-tile strong { display: block; margin-top: 4px; font-size: 28px; line-height: 1.1; color: var(--sd-navy); }
+.sd2-tile--gold { background: linear-gradient(135deg, #FFF5D6, #fff); border-color: var(--sd-gold); }
+.sd2-tile--muted strong { color: var(--sd-muted); }
+
+.sd2-search { margin-bottom: 16px; }
+.sd2-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+.sd2-card {
+  position: relative; display: flex; flex-direction: column; gap: 12px; padding: 18px;
+  border-radius: 20px; text-decoration: none; color: var(--sd-navy); background: #fff;
+  border: 2px solid transparent;
+  background: linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, rgba(24, 70, 224, .35), rgba(255, 199, 44, .55)) border-box;
+  box-shadow: 0 8px 22px rgba(16, 40, 120, .08); transition: transform .15s, box-shadow .15s;
+}
+.sd2-card:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(16, 40, 120, .14); }
+.sd2-card:focus-visible { outline: 3px solid var(--sd-gold); outline-offset: 3px; }
+.sd2-card__top { display: flex; align-items: center; gap: 12px; }
+.sd2-card__badge { flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-weight: 800; font-size: 20px; color: #fff; background: linear-gradient(135deg, var(--sd-blue), #0F31AE); }
+.sd2-card__badge--solo { background: linear-gradient(135deg, var(--sd-gold), #E9AE00); color: var(--sd-navy); }
+.sd2-card__who { display: flex; flex-direction: column; min-width: 0; }
+.sd2-card__who strong { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sd2-card__who small { color: var(--sd-muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sd2-counts { display: flex; gap: 18px; }
+.sd2-counts span { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px; }
+.sd2-counts strong { font-size: 22px; }
+.sd2-counts em { font-style: normal; color: var(--sd-muted); font-weight: 700; }
+.sd2-counts small { width: 100%; font-size: 12px; color: var(--sd-muted); }
+.sd2-meter { height: 6px; border-radius: 99px; background: var(--sd-sky); overflow: hidden; }
+.sd2-meter span { display: block; height: 100%; max-width: 100%; background: linear-gradient(90deg, var(--sd-blue), var(--sd-gold)); }
+.sd2-card__foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--sd-muted); }
+.sd2-card__note { align-self: flex-start; margin-top: -4px; font-size: 12px; font-weight: 700; color: var(--sd-muted); }
+
+.sd2-plan { display: inline-block; align-self: flex-start; padding: 4px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+.sd2-plan--good { background: var(--sd-blue); color: #fff; }
+.sd2-plan--trial { background: #FFF5D6; color: var(--sd-navy); border: 1px solid var(--sd-gold); }
+.sd2-plan--bad { background: var(--sd-navy); color: var(--sd-gold); }
+.sd2-plan--muted { background: #F2F5FC; color: var(--sd-muted); }
+
+.sd2-info dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 20px; margin: 0; }
+.sd2-info dt { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--sd-muted); }
+.sd2-info dd { margin: 2px 0 0; font-weight: 600; color: var(--sd-navy); overflow-wrap: anywhere; }
+
+.sd2-levels ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sd2-levels li { display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 12px; }
+.sd2-levels__name { font-weight: 700; color: var(--sd-blue); text-decoration: none; }
+.sd2-levels__bar { height: 10px; border-radius: 99px; background: var(--sd-sky); overflow: hidden; }
+.sd2-levels__bar span { display: block; height: 100%; min-width: 4px; background: linear-gradient(90deg, var(--sd-blue), var(--sd-gold)); border-radius: 99px; }
+.sd2-levels__n { font-size: 13px; color: var(--sd-muted); white-space: nowrap; }
+
+.sd2-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--sd-line); }
+.sd2-filters .cr-input { width: auto; min-width: 150px; flex: 0 1 auto; }
+.sd2-filters input[type=search] { flex: 1 1 220px; }
+.sd2-roles { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.sd2-chip { padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; text-decoration: none; color: var(--sd-navy); background: #F2F5FC; border: 1px solid var(--sd-line); }
+.sd2-chip.is-on { background: var(--sd-blue); color: #fff; border-color: var(--sd-blue); }
+.sd2-count { margin: 10px 16px 0; font-size: 13px; font-weight: 700; color: var(--sd-muted); }
+.sd2-empty { padding: 20px 16px; }
+.sd2-person { display: inline-flex; align-items: center; gap: 10px; }
+.sd2-avatar { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; color: #fff; background: var(--sd-blue); }
+.sd2-avatar--teacher { background: var(--sd-navy); color: var(--sd-gold); }
+.sd2-avatar--school_admin { background: var(--sd-gold); color: var(--sd-navy); }
+.sd2-role { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--sd-sky); color: var(--sd-blue); white-space: nowrap; }
+.sd2-role--teacher { background: var(--sd-navy); color: #fff; }
+.sd2-role--school_admin { background: #FFF5D6; color: var(--sd-navy); }
+.sd2-role--off { background: #F2F5FC; color: var(--sd-muted); }
+.sd2-table tr.is-off td { color: var(--sd-muted); }
+.sd2-table td .cr-btn { white-space: nowrap; }
+.sd2-table td:nth-child(3), .sd2-table td:nth-child(6), .sd2-table td:nth-child(7) { white-space: nowrap; }
+.sd2-table code { white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .sd2-levels li { grid-template-columns: 90px 1fr; }
+  .sd2-levels__n { grid-column: 1 / -1; }
+  .sd2-filters .cr-input { flex: 1 1 100%; }
+}

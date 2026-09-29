@@ -6,7 +6,8 @@ from .models import LibraryItem
 class LibraryItemForm(forms.ModelForm):
     class Meta:
         model = LibraryItem
-        fields = ["title", "kind", "summary", "description", "file", "external_url", "is_published", "order"]
+        fields = ["title", "kind", "summary", "description", "file", "narration_file", "narration_redo",
+                  "external_url", "is_published", "order"]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 6}),
             "summary": forms.Textarea(attrs={"rows": 2}),

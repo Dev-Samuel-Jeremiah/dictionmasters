@@ -385,10 +385,10 @@ SECTIONS = [
         "blurb": "Books, stories, audio and video shared with everyone or a selected school.",
         "screens": [
             {"key": "diction-library-items", "model": "diction_library.LibraryItem",
-             "columns": ["title", "kind", "school", "is_published", "updated_at"],
+             "columns": ["title", "kind", "school", "narration_label", "is_published", "updated_at"],
              "search": ["title", "summary", "description"], "order": ["-updated_at"],
-             "form": ["title", "kind", "summary", "description", "file", "external_url",
-                      "school", "is_published", "order"],
+             "form": ["title", "kind", "summary", "description", "file", "narration_file", "narration_redo",
+                      "external_url", "school", "is_published", "order"],
              "labels": {
                  "school": ("School (optional)", "Leave blank to publish this item to every user. Choose a school to limit it to that school's members."),
                  "file": ("Upload a file", "Books, documents, audio, video or a cover image. You can also add written content or an external link."),

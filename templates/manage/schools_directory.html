@@ -1,0 +1,73 @@
+{% extends "manage/base.html" %}
+{% load static %}
+
+{% block title %}Schools &amp; people — Control room{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/school_directory.css' %}">{% endblock %}
+
+{% block content %}
+<div class="sd2">
+  <header class="cr-pagehead">
+    <div>
+      <p class="cr-pagehead__eyebrow">&#127979; Schools &amp; people</p>
+      <h1 class="cr-pagehead__title">Schools and their people</h1>
+      <p class="cr-pagehead__note">Every school with its plan, teachers and students. Open one to see everyone in it.</p>
+    </div>
+  </header>
+
+  <section class="sd2-tiles" aria-label="Totals">
+    <div class="sd2-tile"><span>Schools</span><strong>{{ totals.schools }}</strong></div>
+    <div class="sd2-tile"><span>Teachers</span><strong>{{ totals.teachers }}</strong></div>
+    <div class="sd2-tile"><span>Students</span><strong>{{ totals.students }}</strong></div>
+    <div class="sd2-tile sd2-tile--gold"><span>Individual learners</span><strong>{{ totals.individuals }}</strong></div>
+  </section>
+
+  <form method="get" class="cr-filter sd2-search">
+    <input type="search" name="q" value="{{ query }}" placeholder="Search schools by name, code or email…" class="cr-input" aria-label="Search schools">
+    <button type="submit" class="cr-btn cr-btn--ghost">Search</button>
+    {% if query %}<a href="{% url 'manage:schools_directory' %}" class="cr-link">Clear</a>{% endif %}
+  </form>
+
+  <div class="sd2-grid">
+    {% for row in rows %}
+    {% with s=row.school %}
+    <a href="{% url 'manage:school_people' s.pk %}" class="sd2-card">
+      <span class="sd2-card__top">
+        <span class="sd2-card__badge" aria-hidden="true">{{ s.name|first|upper }}</span>
+        <span class="sd2-card__who">
+          <strong>{{ s.name }}</strong>
+          <small>{{ s.code }}{% if s.email %} · {{ s.email }}{% endif %}</small>
+        </span>
+      </span>
+      <span class="sd2-plan sd2-plan--{{ row.tone }}">{{ row.plan }}</span>
+      <span class="sd2-counts">
+        <span><strong>{{ s.teacher_n }}</strong>{% if row.teacher_limit is not None %}<em>/ {{ row.teacher_limit }}</em>{% endif %}<small>teachers</small></span>
+        <span><strong>{{ s.student_n }}</strong>{% if s.max_students is not None %}<em>/ {{ s.max_students }}</em>{% endif %}<small>students</small></span>
+        <span><strong>{{ s.admin_n }}</strong><small>admin{{ s.admin_n|pluralize }}</small></span>
+      </span>
+      {% if row.teacher_limit %}
+      <span class="sd2-meter" title="Teacher places used"><span style="width: {% widthratio s.teacher_n row.teacher_limit 100 %}%"></span></span>
+      {% endif %}
+      <span class="sd2-card__foot">
+        <span>Joined {{ s.created_at|date:"j M Y" }}</span>
+        <span>{% if s.last_seen %}Last active {{ s.last_seen|timesince }} ago{% else %}No one has signed in yet{% endif %}</span>
+      </span>
+      {% if s.removed_n %}<span class="sd2-card__note">{{ s.removed_n }} removed</span>{% endif %}
+    </a>
+    {% endwith %}
+    {% empty %}
+    <p class="cr-empty">{% if query %}No school matches “{{ query }}”.{% else %}No schools yet.{% endif %}</p>
+    {% endfor %}
+
+    {% if not query %}
+    <a href="{% url 'manage:school_people' 0 %}" class="sd2-card sd2-card--solo">
+      <span class="sd2-card__top">
+        <span class="sd2-card__badge sd2-card__badge--solo" aria-hidden="true">&#128100;</span>
+        <span class="sd2-card__who"><strong>Individual learners</strong><small>Signed up on their own, not with a school</small></span>
+      </span>
+      <span class="sd2-counts"><span><strong>{{ individual_count }}</strong><small>learners</small></span></span>
+      <span class="sd2-card__foot"><span>{% if individual_last %}Last active {{ individual_last|timesince }} ago{% endif %}</span></span>
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

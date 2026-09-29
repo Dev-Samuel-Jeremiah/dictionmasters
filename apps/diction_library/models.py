@@ -33,6 +33,29 @@ class LibraryItem(models.Model):
     )
     is_published = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0)
+
+    # Read aloud (apps/diction_library/narration.py): the book's own
+    # recording if one is uploaded, otherwise one made from its text, a
+    # chapter at a time, with the words highlighted as they're read.
+    narration_file = models.FileField(
+        "Narration (optional)", upload_to="diction_library/narration/%Y/%m/", blank=True,
+        validators=[FileExtensionValidator(["mp3", "m4a", "wav", "ogg"])],
+        help_text="Your own recording of the book read aloud. Leave empty and one is made automatically "
+                  "from the book's text, starting where the story starts (the contents pages are skipped).",
+    )
+    narration_redo = models.BooleanField(
+        "Make the read-aloud again", default=False,
+        help_text="Tick and save to make the read-aloud audio again from the current file (it uses voice credits).",
+    )
+    narration_status = models.CharField(max_length=12, blank=True, editable=False)
+    narration_note = models.CharField(max_length=255, blank=True, editable=False)
+    narration_chars = models.PositiveIntegerField(default=0, editable=False)
+    narration_source = models.CharField(max_length=64, blank=True, editable=False)
+    # Only one read-aloud works on a book at a time: whoever holds the claim,
+    # which it keeps fresh as it goes (a crashed one's claim runs out).
+    narration_owner = models.CharField(max_length=32, blank=True, editable=False)
+    narration_updated = models.DateTimeField(null=True, blank=True, editable=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -58,3 +81,56 @@ class LibraryItem(models.Model):
     @property
     def visibility_label(self):
         return self.school.name if self.school_id else "Everyone"
+
+    @property
+    def narration_label(self):
+        return {
+            "working": f"Being made — {self.narration_note}" if self.narration_note else "Being made",
+            "ready": "Ready", "failed": f"Failed — {self.narration_note}", "off": self.narration_note or "Off",
+        }.get(self.narration_status, "—")
+    narration_label.fget.short_description = "Read-aloud"
+
+    @property
+    def ready_chapters(self):
+        return [chapter for chapter in self.chapters.all() if chapter.audio_source]
+
+
+class LibraryChapter(models.Model):
+    """One chapter of a library book, read aloud: its words (the main text
+    only — no contents pages) and the recording of them. Its word timings
+    live in book.ReadAlongTiming like every other read-along."""
+
+    item = models.ForeignKey(LibraryItem, on_delete=models.CASCADE, related_name="chapters")
+    order = models.PositiveIntegerField(default=0)
+    title = models.CharField(max_length=255, blank=True)
+    text = models.TextField(help_text="The words read aloud, paragraphs separated by a blank line.")
+    audio_file = models.FileField(upload_to="diction_library/narration/%Y/%m/", blank=True)
+    audio_url = models.URLField(blank=True)
+    # Made here from the text (its timings come with the voice), rather
+    # than a recording someone uploaded (whose timings are measured).
+    generated = models.BooleanField(default=False)
+    source_hash = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        ordering = ["item", "order"]
+        constraints = [models.UniqueConstraint(fields=["item", "order"], name="one_chapter_per_place")]
+
+    def __str__(self):
+        return f"{self.item.title} — {self.title or f'Part {self.order + 1}'}"
+
+    @property
+    def audio_source(self):
+        if self.audio_url:
+            return self.audio_url
+        try:
+            return self.audio_file.url if self.audio_file else ""
+        except ValueError:
+            return ""
+
+    @property
+    def paragraphs(self):
+        return [p for p in self.text.split("\n\n") if p.strip()]
+
+    def read_along_self_timed(self):
+        """Timings came with the voice: never measured over."""
+        return self.generated

@@ -1,0 +1,72 @@
+/* The Diction Library reader (static/js/library_reader.js). */
+.lr { margin-top: 6px; }
+.lr__open { font-size: 1.05rem; }
+.lr__stage {
+  margin-top: 4px; border-radius: 18px; overflow: hidden;
+  background: #F2F5FC; border: 2px solid transparent;
+  background: linear-gradient(#F2F5FC, #F2F5FC) padding-box, linear-gradient(135deg, rgba(24, 70, 224, .35), rgba(255, 199, 44, .55)) border-box;
+}
+.lr__stage[hidden] { display: none; }
+.lr__stage:fullscreen { border-radius: 0; display: flex; flex-direction: column; }
+.lr__stage:fullscreen .lr__view { flex: 1; max-height: none; }
+.lr__bar {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 12px; background: #0B1A4A; color: #fff;
+}
+.lr__status { font-weight: 700; font-size: 14px; }
+.lr__tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.lr__tool {
+  border: 0; border-radius: 999px; padding: 7px 12px; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 700; color: #0B1A4A; background: #FFC72C;
+}
+.lr__tool[hidden] { display: none; }
+.lr__tool:hover { background: #FFD86B; }
+.lr__tool:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.lr__view { max-height: 78vh; overflow: auto; padding: 14px; -webkit-overflow-scrolling: touch; }
+.lr__view--pdf { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.lr__page { flex: none; max-width: 100%; background: #fff; box-shadow: 0 6px 18px rgba(16, 40, 120, .15); border-radius: 4px; overflow: hidden; width: min(100%, 1100px); }
+.lr__page canvas { display: block; max-width: none; }
+.lr__view--epub { height: 72vh; padding: 0; background: #fff; }
+.lr__view--doc { background: #fff; }
+.lr__doc { max-width: 760px; margin: 0 auto; padding: 8px 6px 24px; color: #0B1A4A; font-size: 1.05rem; line-height: 1.7; }
+.lr__doc--text { white-space: pre-wrap; font-family: inherit; }
+.lr__doc img { max-width: 100%; height: auto; }
+.lr__image { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: 8px; }
+.lr__fail, .lr__note { color: #55607E; }
+.lr__download { margin-top: 14px; }
+.lr__download[hidden] { display: none; }
+.lr__dl { color: #0F31AE; border: 1.5px solid #D6E3FF; background: #fff; }
+@media (max-width: 640px) {
+  .lr__view { max-height: 72vh; padding: 8px; }
+  .lr__tool { padding: 6px 10px; }
+}
+
+/* Listen and read along (static/js/library_listen.js) */
+.ll { margin-top: 26px; padding-top: 20px; border-top: 1px solid #E3E8F4; }
+.ll__heading { margin: 0 0 10px; font-size: 1.25rem; color: #0B1A4A; }
+.ll__making { padding: 10px 14px; border-radius: 12px; background: #FFF5D6; border: 1px solid #FFC72C; color: #0B1A4A; }
+.ll__nav { position: sticky; top: calc(var(--bar-h, 72px) + 6px); z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; margin-bottom: 12px; border-radius: 14px; background: #0B1A4A; color: #fff; }
+.ll__step { width: 40px; height: 40px; border: 0; border-radius: 50%; background: #FFC72C; color: #0B1A4A; font-size: 22px; font-weight: 800; cursor: pointer; }
+.ll__step:disabled { opacity: .4; cursor: default; }
+.ll__pick { flex: 1; min-width: 180px; }
+.ll__pick select { width: 100%; padding: 9px 12px; border-radius: 10px; border: 0; font: inherit; font-weight: 700; color: #0B1A4A; background: #fff; }
+.ll__auto { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.ll__auto input { accent-color: #FFC72C; width: 16px; height: 16px; }
+.ll__chapter[hidden] { display: none; }
+.ll__chapter audio { width: 100%; margin-bottom: 8px; }
+.ll__text { max-width: 760px; margin: 0 auto; color: #0B1A4A; font-size: 1.1rem; line-height: 1.8; }
+.ll__text p { margin: 0 0 1em; }
+.ll__title { margin: 6px 0 14px; font-size: 1.3rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 640px) {
+  .ll__nav { top: calc(var(--bar-h, 64px) + 4px); }
+  .ll__auto { width: 100%; }
+  .ll__text { font-size: 1.02rem; }
+}
+
+/* The Listen button (library_listen.js) */
+.ll-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 4px 0 14px; }
+.ll-cta__note { color: #55607E; font-size: 14px; }
+.ll-cta--wait { display: block; padding: 10px 14px; border-radius: 12px; background: #FFF5D6; border: 1px solid #FFC72C; color: #0B1A4A; }
+.lr__tool--listen { background: #fff; color: #1846E0; }

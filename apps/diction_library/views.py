@@ -38,7 +38,54 @@ def hub(request):
 @login_required
 def item_detail(request, slug):
     item = get_object_or_404(visible_items(request.user).select_related("school"), slug=slug)
-    return render(request, "diction_library/item_detail.html", {"item": item})
+    chapters = item.ready_chapters
+    return render(request, "diction_library/item_detail.html", {
+        "item": item, "reader": reader_for(item), "chapters": chapters, "listenable": bool(chapters),
+    })
+
+
+# How each kind of file is shown in the page (static/js/library_reader.js).
+READERS = {
+    "pdf": "pdf", "epub": "epub", "docx": "docx", "txt": "text",
+    "jpg": "image", "jpeg": "image", "png": "image", "webp": "image",
+}
+
+
+def _extension(item):
+    name = (item.file.name or "").lower()
+    return name.rsplit(".", 1)[-1] if "." in name else ""
+
+
+def reader_for(item):
+    """"pdf", "epub", "docx", "text", "image", or "" when the browser can't
+    show this file (an old .doc) and it can only be downloaded."""
+    if not item.file or item.kind in ("audio", "video"):
+        return ""
+    return READERS.get(_extension(item), "")
+
+
+@login_required
+def item_file(request, slug):
+    """The book's file, from this site's own address: shown in the page,
+    or saved (?download=1) under the book's title. Only for someone who
+    may see the item, exactly as its page."""
+    import mimetypes
+
+    from django.http import Http404
+    from django.utils.text import slugify
+
+    from apps.videos import streaming
+
+    item = get_object_or_404(visible_items(request.user), slug=slug)
+    if not item.file:
+        raise Http404("This item has no file.")
+    extension = _extension(item)
+    content_type = mimetypes.guess_type(item.file.name)[0] or "application/octet-stream"
+    if extension == "epub":
+        content_type = "application/epub+zip"
+    filename = f"{slugify(item.title) or 'book'}.{extension}" if extension else slugify(item.title) or "book"
+    return streaming.serve(request, item.file, content_type=content_type, filename=filename,
+                           as_download=bool(request.GET.get("download")))
 
 
 @role_required(User.Role.SCHOOL_ADMIN)

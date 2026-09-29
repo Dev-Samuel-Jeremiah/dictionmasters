@@ -531,3 +531,13 @@ ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_multilingual
 # The live reading tutor answers in the middle of a reading, so it uses the
 # fast model: under a second, where the default takes nearly two.
 TUTOR_VOICE_MODEL_ID = os.environ.get("TUTOR_VOICE_MODEL_ID", "eleven_turbo_v2_5")
+
+# Diction Library books read aloud (apps/diction_library/narration.py).
+# "all": every book or story is read aloud when uploaded; "platform": only
+# the shared library, not schools' own uploads; "off": only when asked for.
+LIBRARY_AUTO_NARRATE = os.environ.get("LIBRARY_AUTO_NARRATE", "all")
+# A book longer than this (characters) isn't read aloud automatically.
+LIBRARY_NARRATION_MAX_CHARS = int(os.environ.get("LIBRARY_NARRATION_MAX_CHARS", "300000"))
+# The voice model for books; blank uses ELEVENLABS_MODEL_ID. "eleven_flash_v2_5"
+# costs half the characters, a little less natural.
+LIBRARY_VOICE_MODEL_ID = os.environ.get("LIBRARY_VOICE_MODEL_ID", "")

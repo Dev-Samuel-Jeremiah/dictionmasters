@@ -1206,3 +1206,29 @@ def result_detail(request, source, pk):
         context.update(answers=answers, can_mark=any(a["is_recording"] for a in answers),
                        recording_marks=results.RECORDING_MARKS)
     return render(request, "manage/result_detail.html", _base_context(request, "results", **context))
+
+
+# ---------------------------------------------------------------------------
+# Schools & people
+# ---------------------------------------------------------------------------
+
+@staff_only
+def schools_directory(request):
+    """Every school at a glance: plan, people and limits."""
+    from . import school_directory
+
+    return render(request, "manage/schools_directory.html",
+                  _base_context(request, "schools-directory", **school_directory.directory(request)))
+
+
+@staff_only
+def school_people(request, pk):
+    """One school's teachers, students and admins, with their details."""
+    from django.http import HttpResponse
+
+    from . import school_directory
+
+    result = school_directory.people(request, pk)
+    if isinstance(result, HttpResponse):
+        return result
+    return render(request, "manage/school_people.html", _base_context(request, "schools-directory", **result))

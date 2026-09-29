@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% load rich_text %}
+{% load static %}
+{% load read_along %}
 
 {% block title %}{{ item.title }} — Diction Library{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/library_reader.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/library_reader.js' %}" defer></script><script src="{% static 'js/read_along.js' %}" defer></script><script src="{% static 'js/library_listen.js' %}" defer></script>{% endblock %}
 
 {% block content %}
 <div class="ui">
@@ -13,7 +17,69 @@
     {% if item.kind == "audio" and item.file %}<audio controls preload="metadata" style="width:100%"><source src="{{ item.file.url }}">Your browser does not support audio playback.</audio>{% endif %}
     {% if item.kind == "video" and item.file %}<video controls preload="metadata" style="width:100%;max-height:70vh"><source src="{{ item.file.url }}">Your browser does not support video playback.</video>{% endif %}
     {% if item.description %}<div class="ui-panel__lede dm-rich-content">{{ item.description|rich_text }}</div>{% endif %}
-    {% if item.file and item.kind != "audio" and item.kind != "video" %}<p><a class="ui-btn ui-btn--gold" href="{{ item.file.url }}" target="_blank" rel="noopener">Open or download {{ item.get_kind_display|lower }}</a></p>{% endif %}
+    {% with kind=item.get_kind_display|lower %}
+    {% if listenable %}
+    <p class="ll-cta">
+      <button type="button" class="ui-btn ui-btn--gold" data-ll-play><span data-ll-play-label>&#9654; Listen to this {{ kind }}</span></button>
+      <span class="ll-cta__note">Read aloud with the words highlighted{% if chapters|length > 1 %} · {{ chapters|length }} chapters{% endif %}</span>
+    </p>
+    {% elif item.narration_status == "working" %}
+    <p class="ll-cta ll-cta--wait">&#127911; The read-aloud for this {{ kind }} is being prepared ({{ item.narration_note|default:"starting" }}). Check back soon.</p>
+    {% elif user.is_staff and item.kind != "audio" and item.kind != "video" %}
+    <p class="ll-cta ll-cta--wait">&#127911; No read-aloud yet{% if item.narration_status == "failed" %}: {{ item.narration_note }}{% endif %}. In the control room, tick <strong>Make the read-aloud again</strong> on this item and save.</p>
+    {% endif %}
+    {% endwith %}
+    {% if item.file and item.kind != "audio" and item.kind != "video" %}
+    {% with kind=item.get_kind_display|lower %}
+    <section class="lr" data-lib-reader data-reader="{{ reader }}" data-src="{% url 'diction_library:file' item.slug %}" data-title="{{ item.title }}">
+      {% if reader %}
+      <button type="button" class="ui-btn ui-btn--gold lr__open" data-lr-open>&#128214; Open {{ kind }}</button>
+      <div class="lr__stage" data-lr-stage hidden>
+        <div class="lr__bar">
+          <span class="lr__status" data-lr-status aria-live="polite">Opening…</span>
+          <span class="lr__tools">
+            <button type="button" class="lr__tool" data-lr-prev hidden aria-label="Previous page">&lsaquo; Prev</button>
+            <button type="button" class="lr__tool" data-lr-next hidden aria-label="Next page">Next &rsaquo;</button>
+            <button type="button" class="lr__tool" data-lr-zoom-out hidden aria-label="Smaller">&minus;</button>
+            <button type="button" class="lr__tool" data-lr-zoom-in hidden aria-label="Larger">+</button>
+            {% if listenable %}<button type="button" class="lr__tool lr__tool--listen" data-ll-play>&#9654; Listen</button>{% endif %}
+            <button type="button" class="lr__tool" data-lr-full aria-label="Full screen">&#x26F6; Full screen</button>
+            <button type="button" class="lr__tool" data-lr-close aria-label="Close the {{ kind }}">&times; Close</button>
+          </span>
+        </div>
+        <div class="lr__view" data-lr-view></div>
+      </div>
+      {% else %}
+      <p class="lr__note">This file ({{ item.file.name|slice:"-5:"|cut:"." }}) can't be shown in the browser. Download it to read it on your device.</p>
+      {% endif %}
+      <p class="lr__download"{% if reader %} data-lr-download hidden{% endif %}>
+        <a class="ui-btn {% if reader %}ui-btn--glass lr__dl{% else %}ui-btn--gold{% endif %}" href="{% url 'diction_library:file' item.slug %}?download=1" download>&#11015; Download {{ kind }}</a>
+      </p>
+    </section>
+    {% endwith %}
+    {% endif %}
+    {% if chapters %}
+    <section class="ll" id="listen" data-listen data-book="{{ item.slug }}">
+      <h2 class="ll__heading">&#127911; Listen and read along</h2>
+      {% if item.narration_status == "working" %}
+      <p class="ll__making">More chapters are still being made ({{ item.narration_note|default:"starting" }}). The chapters below are ready to play now.</p>
+      {% endif %}
+      <div class="ll__nav">
+        <button type="button" class="ll__step" data-ll-prev aria-label="Previous chapter">&lsaquo;</button>
+        <label class="ll__pick"><span class="sr-only">Chapter</span>
+          <select data-ll-pick>{% for chapter in chapters %}<option value="{{ forloop.counter0 }}">{{ chapter.title }}</option>{% endfor %}</select>
+        </label>
+        <button type="button" class="ll__step" data-ll-next aria-label="Next chapter">&rsaquo;</button>
+        <label class="ll__auto"><input type="checkbox" data-ll-auto checked> Play the next chapter automatically</label>
+      </div>
+      {% for chapter in chapters %}
+      <article class="ll__chapter" data-ll-chapter{% read_along_sync chapter %}{% if not forloop.first %} hidden{% endif %}>
+        <audio controls preload="none" src="{{ chapter.audio_source }}" data-ra-media></audio>
+        <div class="ll__text" data-ra-text>{% for para in chapter.paragraphs %}{% if forloop.first and para == chapter.title %}<h3 class="ll__title">{{ para }}</h3>{% else %}<p>{{ para }}</p>{% endif %}{% endfor %}</div>
+      </article>
+      {% endfor %}
+    </section>
+    {% endif %}
     {% if item.external_url %}<p><a class="ui-btn ui-btn--glass" href="{{ item.external_url }}" target="_blank" rel="noopener">Open linked resource</a></p>{% endif %}
   </article></div>
 </div>

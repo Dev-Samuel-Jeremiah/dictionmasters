@@ -1,0 +1,122 @@
+{% extends "manage/base.html" %}
+{% load static %}
+
+{% block title %}{% if school %}{{ school.name }}{% else %}Individual learners{% endif %} — Schools &amp; people — Control room{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/school_directory.css' %}">{% endblock %}
+
+{% block content %}
+<div class="sd2">
+  <header class="cr-pagehead">
+    <div>
+      <p class="cr-pagehead__eyebrow">&#127979; <a href="{% url 'manage:schools_directory' %}">Schools &amp; people</a></p>
+      <h1 class="cr-pagehead__title">{% if school %}{{ school.name }}{% else %}Individual learners{% endif %}</h1>
+      {% if school %}<p class="cr-pagehead__note"><span class="sd2-plan sd2-plan--{{ tone }}">{{ plan }}</span></p>{% endif %}
+    </div>
+    <div class="cr-pagehead__actions">
+      <a href="?{% if role %}role={{ role }}&amp;{% endif %}{% if level %}level={{ level }}&amp;{% endif %}{% if query %}q={{ query|urlencode }}&amp;{% endif %}csv=1" class="cr-btn cr-btn--ghost">&#11015; Download list (CSV)</a>
+      {% if school %}<a href="{% url 'manage:edit' 'schools' school.pk %}" class="cr-btn cr-btn--gold">Edit school</a>{% endif %}
+    </div>
+  </header>
+
+  {% if school %}
+  <section class="sd2-info cr-card">
+    <dl>
+      <div><dt>School code</dt><dd><code class="cr-code">{{ school.code }}</code></dd></div>
+      <div><dt>Email</dt><dd>{{ school.email|default:"—" }}</dd></div>
+      <div><dt>Phone</dt><dd>{{ school.phone|default:"—" }}</dd></div>
+      <div><dt>Address</dt><dd>{{ school.address|default:"—" }}</dd></div>
+      <div><dt>Joined</dt><dd>{{ school.created_at|date:"j M Y" }}</dd></div>
+      <div><dt>Teacher places</dt><dd>{{ by_role.teacher }}{% if teacher_limit is not None %} of {{ teacher_limit }}{% else %} (no limit){% endif %}</dd></div>
+      <div><dt>Student places</dt><dd>{{ by_role.student }}{% if school.max_students is not None %} of {{ school.max_students }}{% else %} (no limit){% endif %}</dd></div>
+      {% if school.trial_reason %}<div><dt>Trial reason</dt><dd>{{ school.trial_reason }}</dd></div>{% endif %}
+    </dl>
+  </section>
+  {% endif %}
+
+  <section class="sd2-tiles" aria-label="People">
+    {% if school %}
+    <div class="sd2-tile"><span>Teachers</span><strong>{{ by_role.teacher }}</strong></div>
+    <div class="sd2-tile"><span>Students</span><strong>{{ by_role.student }}</strong></div>
+    <div class="sd2-tile"><span>School admins</span><strong>{{ by_role.school_admin }}</strong></div>
+    {% endif %}
+    <div class="sd2-tile sd2-tile--gold"><span>Active in the last 7 days</span><strong>{{ active_week }}</strong></div>
+    <div class="sd2-tile"><span>Never signed in</span><strong>{{ never_signed_in }}</strong></div>
+    {% if removed_n %}<div class="sd2-tile sd2-tile--muted"><span>Removed</span><strong>{{ removed_n }}</strong></div>{% endif %}
+  </section>
+
+  {% if levels %}
+  <section class="cr-card sd2-levels">
+    <h2 class="cr-card__title">People per level</h2>
+    <ul>
+      {% for l in levels %}
+      <li>
+        <a href="?level={{ l.level|urlencode }}" class="sd2-levels__name">{{ l.level }}</a>
+        <span class="sd2-levels__bar" aria-hidden="true"><span style="width: {{ l.width }}%"></span></span>
+        <span class="sd2-levels__n">{{ l.students }} student{{ l.students|pluralize }}{% if l.teachers %} · {{ l.teachers }} teacher{{ l.teachers|pluralize }}{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <section class="cr-card cr-card--flush sd2-people">
+    <form method="get" class="sd2-filters">
+      <div class="sd2-roles" role="group" aria-label="Show">
+        {% for value, label in roles %}
+        <a href="?{% if value %}role={{ value }}{% endif %}{% if level %}&amp;level={{ level|urlencode }}{% endif %}{% if query %}&amp;q={{ query|urlencode }}{% endif %}" class="sd2-chip{% if role == value %} is-on{% endif %}">{{ label }}</a>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="role" value="{{ role }}">
+      {% if level_options %}
+      <select name="level" class="cr-input cr-select" onchange="this.form.submit()" aria-label="Level">
+        <option value="">Every level</option>
+        {% for l in level_options %}<option value="{{ l }}"{% if l == level %} selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+      {% endif %}
+      <input type="search" name="q" value="{{ query }}" placeholder="Search by name, username or email…" class="cr-input" aria-label="Search people">
+      <select name="sort" class="cr-input cr-select" onchange="this.form.submit()" aria-label="Sort">
+        <option value="">Sort: role</option>
+        <option value="name"{% if sort == "name" %} selected{% endif %}>Sort: name</option>
+        <option value="level"{% if sort == "level" %} selected{% endif %}>Sort: level</option>
+        <option value="joined"{% if sort == "joined" %} selected{% endif %}>Sort: newest</option>
+        <option value="seen"{% if sort == "seen" %} selected{% endif %}>Sort: last active</option>
+      </select>
+      <button type="submit" class="cr-btn cr-btn--ghost">Search</button>
+    </form>
+    <p class="sd2-count">{{ total_shown }} {% if total_shown == 1 %}person{% else %}people{% endif %}</p>
+    {% if page.object_list %}
+    <div class="cr-tablewrap">
+      <table class="cr-table cr-table--rows sd2-table">
+        <thead><tr><th>Name</th><th>Role</th><th>Level</th><th>Signs in with</th><th>Email</th><th>Joined</th><th>Last signed in</th><th class="cr-table__end"></th></tr></thead>
+        <tbody>
+          {% for m in page.object_list %}
+          <tr class="{% if not m.is_active %}is-off{% endif %}">
+            <td><span class="sd2-person"><span class="sd2-avatar sd2-avatar--{{ m.role }}" aria-hidden="true">{{ m.first_name|first|upper }}{{ m.last_name|first|upper }}</span><strong>{{ m.get_full_name|default:"—" }}</strong></span></td>
+            <td><span class="sd2-role sd2-role--{{ m.role }}">{{ m.get_role_display }}</span>{% if not m.is_active %} <span class="sd2-role sd2-role--off">Removed</span>{% endif %}</td>
+            <td>{{ m.level|default:"—" }}</td>
+            <td><code class="cr-code">{{ m.login_name }}</code></td>
+            <td>{% if m.has_real_email %}{{ m.email }}{% else %}<span class="cr-blank">—</span>{% endif %}</td>
+            <td>{{ m.date_joined|date:"j M Y" }}</td>
+            <td>{% if m.last_login %}<span title="{{ m.last_login|date:'j M Y, H:i' }}">{{ m.last_login|timesince }} ago</span>{% else %}<span class="cr-blank">Never</span>{% endif %}</td>
+            <td class="cr-table__end">
+              <a href="{% url 'manage:edit' 'profiles' m.pk %}" class="cr-btn cr-btn--ghost cr-btn--small">Profile</a>
+              <a href="{% url 'manage:edit' 'users' m.pk %}" class="cr-btn cr-btn--ghost cr-btn--small">Account</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if page.has_other_pages %}
+    <nav class="cr-pages" aria-label="Pages">
+      {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if role %}&amp;role={{ role }}{% endif %}{% if level %}&amp;level={{ level|urlencode }}{% endif %}{% if query %}&amp;q={{ query|urlencode }}{% endif %}{% if sort %}&amp;sort={{ sort }}{% endif %}" class="cr-btn cr-btn--ghost cr-btn--small">&larr; Back</a>{% endif %}
+      <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if role %}&amp;role={{ role }}{% endif %}{% if level %}&amp;level={{ level|urlencode }}{% endif %}{% if query %}&amp;q={{ query|urlencode }}{% endif %}{% if sort %}&amp;sort={{ sort }}{% endif %}" class="cr-btn cr-btn--ghost cr-btn--small">Next &rarr;</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <p class="cr-empty sd2-empty">No one matches these filters.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

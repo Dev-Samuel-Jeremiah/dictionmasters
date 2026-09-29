@@ -44,6 +44,7 @@
       <a href="{% url 'manage:home' %}" class="cr-side__home {% if not current_key %}is-on{% endif %}">&#127968; Control room home</a>
       <a href="{% url 'manage:branding' %}" class="cr-side__home {% if current_key == 'branding' %}is-on{% endif %}">&#127912; Logo &amp; favicon</a>
       <a href="{% url 'manage:analytics' %}" class="cr-side__home {% if current_key == 'analytics' %}is-on{% endif %}">&#128200; Analytics</a>
+      <a href="{% url 'manage:schools_directory' %}" class="cr-side__home {% if current_key == 'schools-directory' %}is-on{% endif %}">&#127979; Schools &amp; people</a>
       <a href="{% url 'manage:bulk_students' %}" class="cr-side__home {% if current_key == 'bulk-students' %}is-on{% endif %}">&#128101; Bulk add students</a>
       <a href="{% url 'manage:bulk_teachers' %}" class="cr-side__home {% if current_key == 'bulk-teachers' %}is-on{% endif %}">&#127891; Bulk add teachers</a>
       <a href="{% url 'manage:billing_settings' %}" class="cr-side__home {% if current_key == 'billing-settings' %}is-on{% endif %}">&#128179; Billing settings</a>
