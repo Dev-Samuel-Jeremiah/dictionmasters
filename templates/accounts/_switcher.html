@@ -74,7 +74,7 @@
         {% csrf_token %}
         <button type="submit" class="px-switch__add"><span aria-hidden="true">+</span> Add another account</button>
       </form>
-      <p class="px-switch__note">{% if s.can_remember %}You'll sign in to the other account once; {{ me.first_name|default:"you" }} stays on this device, so switching back is one tap.{% else %}Staff accounts aren't kept on the switcher; you'll need your password to come back.{% endif %}</p>
+      <p class="px-switch__note">You'll sign in to the other account once. Every account stays on this device until you remove it{% if s.is_admin %} — {{ me.first_name|default:"yours" }} is an admin account, so switching back to it asks for its password{% else %}, so switching back is one tap{% endif %}.</p>
       <form method="post" action="{% url 'accounts:forget_accounts' %}">
         {% csrf_token %}
         <button type="submit" class="px-switch__forget" data-confirm="Sign out and remove every account from this device?">Remove all accounts from this device</button>

@@ -3,7 +3,9 @@
 
 {% block title %}{{ school.name }} — Diction Masters{% endblock %}
 
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}">{% endblock %}
 {% block extra_js %}
+<script src="{% static 'js/switcher.js' %}" defer></script>
 <script>
   // "Copy link" for the teacher sign-up link.
   document.addEventListener("click", function (e) {
@@ -36,6 +38,7 @@
               <span class="ui-chip">{{ teachers|length }}{% if school.teacher_limit is not None %} of {{ school.teacher_limit }}{% endif %} teacher{{ teachers|length|pluralize }}</span>
               <span class="ui-chip">{{ students|length }}{% if school.max_students is not None %} of {{ school.max_students }}{% endif %} student{{ students|length|pluralize }}</span>
             </div>
+            {% include "accounts/_switcher.html" %}
           </div>
         </div>
         <div class="ui-hero__side">
@@ -121,15 +124,16 @@
           <p class="ui-panel__lede" style="margin: 14px 0 0;">Browse Diction Masters resources and upload books, stories, audio or video for your school in the Diction Library. School uploads are only visible to members of {{ school.name }}.</p>
         </section>
 
-        <section class="ui-panel">
+        <section class="ui-panel" id="teachers">
           <p class="ui-panel__label">Teachers</p>
           {% if teachers %}
           <div class="ui-table-wrap">
-            <table class="ui-table">
-              <thead><tr><th>Name</th><th>Level</th><th>Email</th><th>Joined</th></tr></thead>
+            <table class="ui-table sd-people">
+              <thead><tr><th>Name</th><th>Level</th><th>Signs in with</th><th>Joined</th><th class="sd-actions"><span class="sr-only">Remove</span></th></tr></thead>
               <tbody>
                 {% for teacher in teachers %}
-                <tr><td>{{ teacher.get_full_name }}</td><td>{{ teacher.level|default:"—" }}</td><td>{{ teacher.email }}</td><td>{{ teacher.date_joined|date:"d M Y" }}</td></tr>
+                <tr><td class="sd-name">{{ teacher.get_full_name }}</td><td class="sd-meta">{{ teacher.level|default:"—" }}</td><td class="sd-meta sd-login">{{ teacher.login_name }}</td><td class="sd-meta"><span class="sd-phone-only">Joined </span>{{ teacher.date_joined|date:"d M Y" }}</td>
+                  <td class="sd-actions">{% include "schools/_remove_member.html" with member=teacher %}</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -139,15 +143,16 @@
           {% endif %}
         </section>
 
-        <section class="ui-panel">
+        <section class="ui-panel" id="students">
           <p class="ui-panel__label">Students</p>
           {% if students %}
           <div class="ui-table-wrap">
-            <table class="ui-table">
-              <thead><tr><th>Name</th><th>Email</th><th>Joined</th></tr></thead>
+            <table class="ui-table sd-people">
+              <thead><tr><th>Name</th><th>Level</th><th>Signs in with</th><th>Joined</th><th class="sd-actions"><span class="sr-only">Remove</span></th></tr></thead>
               <tbody>
                 {% for student in students %}
-                <tr><td>{{ student.get_full_name }}</td><td>{{ student.email }}</td><td>{{ student.date_joined|date:"d M Y" }}</td></tr>
+                <tr><td class="sd-name">{{ student.get_full_name }}</td><td class="sd-meta">{{ student.level|default:"—" }}</td><td class="sd-meta sd-login">{{ student.login_name }}</td><td class="sd-meta"><span class="sd-phone-only">Joined </span>{{ student.date_joined|date:"d M Y" }}</td>
+                  <td class="sd-actions">{% include "schools/_remove_member.html" with member=student %}</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -156,8 +161,63 @@
           <div class="ui-empty"><p>No students yet. Share your school code, <strong>{{ school.code }}</strong>, and the student sign-up link: {{ request.scheme }}://{{ request.get_host }}{% url 'accounts:register_student' %}?school={{ school.code }}</p></div>
           {% endif %}
         </section>
+
+        {% if removed %}
+        <section class="ui-panel" id="removed">
+          <p class="ui-panel__label">Removed</p>
+          <p class="ui-panel__lede">They can't sign in and don't take up a place. Their work is kept, so you can bring anyone back while your plan has room.</p>
+          <div class="ui-table-wrap">
+            <table class="ui-table sd-people">
+              <thead><tr><th>Name</th><th>Role</th><th>Level</th><th>Signs in with</th><th class="sd-actions"><span class="sr-only">Restore</span></th></tr></thead>
+              <tbody>
+                {% for member in removed %}
+                <tr class="sd-removed"><td class="sd-name">{{ member.get_full_name }}</td><td class="sd-meta">{{ member.get_role_display }}</td><td class="sd-meta">{{ member.level|default:"—" }}</td><td class="sd-meta sd-login">{{ member.login_name }}</td>
+                  <td class="sd-actions">
+                    <form method="post" action="{% url 'schools:restore_member' member.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="sd-btn sd-btn--restore">&#8634; Restore</button>
+                    </form>
+                  </td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        {% endif %}
       </div>
     </div>
   </div>
 </div>
+<style>
+  .sd-actions { width: 1%; white-space: nowrap; text-align: right; }
+  .sd-actions form { margin: 0; }
+  .sd-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s; }
+  .sd-btn--remove { border: 1.5px solid #D6E3FF; background: #fff; color: #0F31AE; }
+  .sd-btn--remove:hover, .sd-btn--remove:focus-visible { border-color: #1846E0; background: #1846E0; color: #fff; }
+  .sd-btn--restore { border: 0; background: #FFC72C; color: #0B1A4A; }
+  .sd-btn--restore:hover { background: #FFD86B; }
+  .sd-removed td { color: #55607E; }
+  .sd-people td { overflow-wrap: normal; word-break: normal; }
+  .sd-phone-only { display: none; }
+  .sd-people .sd-login { overflow-wrap: anywhere; }
+  /* Phones: each person becomes a small card, name first, details under it. */
+  @media (max-width: 640px) {
+    .sd-people thead { display: none; }
+    .sd-people, .sd-people tbody { display: block; }
+    .sd-people tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; padding: 12px 2px; border-bottom: 1px solid #E3E8F4; }
+    .sd-people td { display: block; padding: 0 !important; border: 0 !important; grid-column: 1; }
+    .sd-people .sd-name { font-weight: 700; color: #0B1A4A; }
+    .sd-people .sd-meta { font-size: 13px; color: #55607E; }
+    .sd-people .sd-actions { grid-column: 2; grid-row: 1 / span 4; align-self: center; width: auto; }
+    .sd-phone-only { display: inline; }
+  }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+<script>
+  // "Remove Ada?" before a remove form goes.
+  document.addEventListener("submit", function (event) {
+    var ask = event.target.getAttribute("data-confirm");
+    if (ask && !window.confirm(ask)) event.preventDefault();
+  });
+</script>
 {% endblock %}

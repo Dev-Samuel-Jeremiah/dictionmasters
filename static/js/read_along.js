@@ -455,9 +455,12 @@
     });
   }
 
-  function applyTiming(words, data) {
+  function applyTiming(words, data, isList) {
     /* Give every word on the page a start and an end. Returns the way it
-       was worked out: "measured", "speech" or "" when neither is possible. */
+       was worked out: "measured", "speech" or "" when neither is possible.
+       A word list (isList: an EchoSpell card) is said one word at a time
+       with spelling, repeats or a sentence between them, so its matches are
+       naturally far apart and aren't thrown out for being on their own. */
     var duration = Number(data.duration) || 0;
     var clock = speechClock(data.speech, duration);
 
@@ -480,7 +483,11 @@
     words.forEach(function (word, index) { if (word.key) page.push({ key: word.key, index: index }); });
     if (!page.length) return "";
 
-    var anchors = said.length ? withoutStrays(anchorsFor(page, said), said) : [];
+    var anchors = [];
+    if (said.length) {
+      anchors = anchorsFor(page, said);
+      if (!isList) anchors = withoutStrays(anchors, said);
+    }
     if (anchors.length >= Math.max(2, page.length * MIN_MATCHED)) {
       words.forEach(function (word) { word.start = word.end = null; });
       words.forEach(function (word) { word.heard = null; });
@@ -594,6 +601,9 @@
     // Each recording can carry its own timings (an EchoSpell card's Full and
     // Quick say the same words at different speeds); otherwise the box's.
     var syncUrl = media.getAttribute("data-ra-sync") || box.getAttribute("data-ra-sync");
+    // A list of words read one at a time (EchoSpell cards): each word stays
+    // lit until the next is said, through its spelling and example.
+    var isList = box.hasAttribute("data-ra-list");
 
     // Every listener on the player and the page goes through listen(), so
     // box.readAlong.destroy() can take them all away again.
@@ -787,6 +797,7 @@
       var word = track[index];
       if (time <= word.end) return index;
       var next = track[index + 1];
+      if (isList && mode === "measured") return index;   // stays lit until the next word is said
       var until = next ? Math.min(next.start, word.end + LINGER) : word.end + LINGER;
       return time <= until ? index : -1;
     }
@@ -909,7 +920,7 @@
           if (!data.duration && isFinite(media.duration)) data.duration = media.duration;
           if (data.status === "ready" || (data.words && data.words.length) ||
               (data.speech && data.speech.length)) {
-            var how = applyTiming(words, data);
+            var how = applyTiming(words, data, isList);
             if (how) becomeTimed(how);
           }
           if (data.status === "ready") { waiting(false); return; }

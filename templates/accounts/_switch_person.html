@@ -7,9 +7,9 @@
       <span class="px-switch__face px-switch__face--{% if p.pk|divisibleby:2 %}b{% else %}c{% endif %}" aria-hidden="true">{{ p.first_name|first|upper }}{{ p.last_name|first|upper }}</span>
       <span class="px-switch__who">
         <strong>{{ p.get_full_name|default:p.login_name }}</strong>
-        <small>{{ p.get_role_display }}{% if p.level %} · {{ p.level }}{% endif %}{% if p.username %} · {{ p.username }}{% endif %}</small>
+        <small>{% if p.is_staff or p.is_superuser %}Admin{% else %}{{ p.get_role_display }}{% endif %}{% if p.level %} · {{ p.level }}{% endif %}{% if p.username %} · {{ p.username }}{% endif %}</small>
       </span>
-      <span class="px-switch__arrow" aria-hidden="true">{{ action|default:"Switch" }} &rsaquo;</span>
+      <span class="px-switch__arrow" aria-hidden="true">{% if p.switch_locked %}&#128274; Password{% else %}{{ action|default:"Switch" }} &rsaquo;{% endif %}</span>
     </button>
   </form>
   <form method="post" action="{% url 'accounts:remove_account' %}" class="px-switch__drop">

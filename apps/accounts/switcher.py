@@ -11,9 +11,10 @@ How a device remembers an account:
 - The device keeps a signed cookie (COOKIE) listing {user id, key}. The
   server keeps only a hash of each key, in DeviceLogin, so a key can't be
   made up, and a copied cookie stops working once the account is removed.
-- An account drops out of the switcher when its password changes, when
-  it's switched off, or when it's removed from the device. Staff accounts
-  are never remembered.
+- An account stays on the switcher until someone removes it from the
+  device (or its school switches it off). An admin (staff) account, or one
+  whose password has changed since, stays listed but asks for its password
+  when chosen, so the control room is never one tap away.
 """
 
 import hashlib
@@ -27,7 +28,7 @@ from django.dispatch import receiver
 
 COOKIE = "dm_accounts"
 SALT = "dm.account-switcher"
-MAX_ACCOUNTS = 8
+MAX_ACCOUNTS = 30
 AGE = timedelta(days=180)
 
 
@@ -61,21 +62,23 @@ def _write(response, entries):
 
 
 def device_accounts(request):
-    """The DeviceLogins this device may switch to, in the device's order,
-    each with its .user (and school). Stale ones are left out."""
+    """The DeviceLogins remembered on this device, in the device's order,
+    each with its .user (and school) and .needs_password: an admin account,
+    or one whose password changed since, is listed but asks for it."""
     if hasattr(request, "_dm_device_accounts"):
         return request._dm_device_accounts
     from .models import DeviceLogin
 
     entries = _entries(request)
     by_hash = {_hash(e["k"]): e["u"] for e in entries}
-    rows = {
-        row.user_id: row
-        for row in DeviceLogin.objects.filter(key_hash__in=by_hash).select_related("user", "user__school")
-        if by_hash.get(row.key_hash) == row.user_id
-        and row.user.is_active and not row.user.is_staff
-        and secrets.compare_digest(row.auth_hash, row.user.get_session_auth_hash())
-    }
+    rows = {}
+    for row in DeviceLogin.objects.filter(key_hash__in=by_hash).select_related("user", "user__school"):
+        if by_hash.get(row.key_hash) != row.user_id or not row.user.is_active:
+            continue
+        current = secrets.compare_digest(row.auth_hash, row.user.get_session_auth_hash())
+        row.needs_password = row.user.is_staff or row.user.is_superuser or not current
+        row.user.switch_locked = row.needs_password
+        rows[row.user_id] = row
     found = [rows[e["u"]] for e in entries if e["u"] in rows]
     request._dm_device_accounts = found
     return found
@@ -85,8 +88,6 @@ def remember(request, response, user):
     """Put this account on the device's switcher (or refresh its key)."""
     from .models import DeviceLogin
 
-    if user.is_staff or user.is_superuser:
-        return
     entries = _entries(request)
     key = secrets.token_urlsafe(32)
     fresh = {"u": user.pk, "k": key}
@@ -142,7 +143,7 @@ def context(request):
         "schools": list(elsewhere.values()),
         "count": len(rows) + 1,
         "remembered": any(row.user_id == user.pk for row in device_accounts(request)),
-        "can_remember": not (user.is_staff or user.is_superuser),
+        "is_admin": user.is_staff or user.is_superuser,
     }
 
 

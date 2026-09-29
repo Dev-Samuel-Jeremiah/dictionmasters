@@ -130,7 +130,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along{% endif %}>
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along data-ra-list{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% include "echospell/_card_audio.html" with entry=card.entry %}
           <div class="circle-options">
@@ -165,7 +165,7 @@
       {% csrf_token %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along{% endif %}>
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along data-ra-list{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
           {% include "echospell/_card_audio.html" with entry=card.entry %}
@@ -199,7 +199,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card word-card--center"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along{% endif %}>
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card word-card--center"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along data-ra-list{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.image %}<img src="{{ card.entry.image.url }}" alt="{{ card.entry.word }}" class="word-card__image">{% endif %}
           <ol class="word-card__list" data-ra-text>
@@ -223,7 +223,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along{% endif %}>
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along data-ra-list{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa word-card__ipa--big">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
           {% include "echospell/_card_audio.html" with entry=card.entry %}
@@ -251,7 +251,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along{% endif %}>
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along data-ra-list{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           <ol class="word-card__list word-card__list--puzzle">
             {% for w in card.display_list %}<li>{{ w|upper }}</li>{% endfor %}
@@ -276,7 +276,7 @@
       {% if cards %}
       <div class="entry-list">
         {% for card in cards %}
-        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along{% endif %}>
+        <div id="card-{{ card.entry.id }}" data-card-lesson="{{ card.entry.id }}" class="content-card word-card"{% if card.entry.audio_source or card.entry.quick_audio_source %} data-read-along data-ra-list{% endif %}>
           {% if card.entry.title %}<p class="word-card__note-title">{{ card.entry.title }}</p>{% endif %}
           {% if card.entry.ipa %}<p class="word-card__ipa">/{{ card.entry.ipa|cut:"/" }}/</p>{% endif %}
           {% include "echospell/_card_audio.html" with entry=card.entry %}

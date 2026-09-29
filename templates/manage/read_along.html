@@ -8,9 +8,119 @@
   <div>
     <p class="cr-pagehead__eyebrow">&#127911; <a href="{% url 'manage:read_along' %}">Read-along timings</a></p>
     <h1 class="cr-pagehead__title">{{ object }}</h1>
+    {% if recording %}<p class="cr-pagehead__note">{{ recording }}</p>{% endif %}
   </div>
   <span class="cr-pill cr-pill--{% if timing.matches_text %}good{% else %}bad{% endif %}">{{ timing.quality_label }}</span>
 </header>
+
+{% if tap %}
+<section class="cr-card ta" data-tap-along>
+  <h2 class="cr-card__title">&#9757;&#65039; Tap along — exact timing</h2>
+  <p>Press <strong>Start</strong>, then press <strong>Tap</strong> (or the <kbd>space bar</kbd>) the moment you hear each word. Tap once per word, in order. When the last word is tapped, press <strong>Save</strong>. The highlight will then follow your taps exactly{% if tap.manual %} — this recording already uses tapped timing, shown below; tap again to redo it{% endif %}.</p>
+  {% if tap.src %}
+  <audio class="ta__audio" controls preload="auto" src="{{ tap.src }}" data-ta-audio data-no-replay></audio>
+  <div class="ta__controls">
+    <button type="button" class="cr-btn cr-btn--gold" data-ta-start>&#9654; Start</button>
+    <button type="button" class="ta__tap" data-ta-tap disabled>Tap<small data-ta-next>—</small></button>
+    <button type="button" class="cr-btn" data-ta-undo disabled>&#8630; Undo last tap</button>
+    <label class="ta__speed">Speed
+      <select data-ta-speed class="cr-input cr-select"><option value="1">Normal</option><option value="0.85">Slower</option><option value="0.7">Slowest</option></select>
+    </label>
+  </div>
+  <p class="cr-help" data-ta-status>{{ tap.items|length }} words to tap.</p>
+  <ol class="ta__items">
+    {% for item in tap.items %}<li data-ta-item><span class="ta__word">{{ item }}</span><span class="ta__time" data-ta-time>{% if tap.starts %}{% with t=tap.starts|slice:forloop.counter|last %}{% if t is not None %}{{ t|floatformat:1 }}s{% endif %}{% endwith %}{% endif %}</span></li>{% endfor %}
+  </ol>
+  <form method="post" data-ta-form>
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_taps">
+    <input type="hidden" name="taps" data-ta-taps>
+    <div class="cr-formactions">
+      <button type="submit" class="cr-btn cr-btn--gold" data-ta-save disabled>Save this timing</button>
+      <span class="cr-help">Your taps are saved a quarter of a second earlier than pressed, because we all tap a little after we hear.</span>
+    </div>
+  </form>
+  {% else %}
+  <p class="cr-empty">This recording has no file to play here.</p>
+  {% endif %}
+</section>
+<style>
+  .ta__audio { width: 100%; margin: 10px 0; }
+  .ta__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .ta__tap { min-width: 180px; min-height: 64px; padding: 8px 22px; border: 0; border-radius: 18px; cursor: pointer;
+    font: inherit; font-size: 20px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #1846E0, #0F31AE);
+    box-shadow: 0 10px 22px rgba(24, 70, 224, 0.35); display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+  .ta__tap small { font-size: 13px; font-weight: 700; color: #FFC72C; margin-top: 4px; }
+  .ta__tap:active { transform: scale(.97); }
+  .ta__tap:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+  .ta__speed { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+  .ta__items { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 14px 0; list-style: none; counter-reset: ta; }
+  .ta__items li { counter-increment: ta; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #F2F5FC; border: 1.5px solid #E3E8F4; }
+  .ta__items li::before { content: counter(ta) "."; font-weight: 700; color: #8A93AE; }
+  .ta__items li.is-next { border-color: #1846E0; background: #E7EFFF; box-shadow: 0 0 0 3px rgba(24, 70, 224, .15); }
+  .ta__items li.is-done { background: #FFF5D6; border-color: #FFC72C; }
+  .ta__word { font-weight: 700; color: #0B1A4A; }
+  .ta__time { font-size: 12px; color: #55607E; font-variant-numeric: tabular-nums; }
+</style>
+<script>
+  // Tap along: one tap per word as it's heard; saved as each word's start.
+  (function () {
+    var box = document.querySelector("[data-tap-along]");
+    var audio = box && box.querySelector("[data-ta-audio]");
+    if (!audio) return;
+    var REACTION = 0.25;
+    var items = [].slice.call(box.querySelectorAll("[data-ta-item]"));
+    var tapBtn = box.querySelector("[data-ta-tap]"), undo = box.querySelector("[data-ta-undo]");
+    var save = box.querySelector("[data-ta-save]"), status = box.querySelector("[data-ta-status]");
+    var next = box.querySelector("[data-ta-next]"), field = box.querySelector("[data-ta-taps]");
+    var taps = [], running = false;
+
+    function paint() {
+      items.forEach(function (li, i) {
+        li.classList.toggle("is-done", i < taps.length);
+        li.classList.toggle("is-next", running && i === taps.length);
+        if (running || taps.length) li.querySelector("[data-ta-time]").textContent = i < taps.length ? taps[i].toFixed(1) + "s" : "";
+      });
+      var left = items.length - taps.length;
+      next.textContent = left ? items[taps.length].querySelector(".ta__word").textContent : "all done";
+      tapBtn.disabled = !running || !left;
+      undo.disabled = !taps.length;
+      save.disabled = left !== 0;
+      field.value = JSON.stringify(taps.map(function (t) { return Math.round(t * 1000) / 1000; }));
+      status.textContent = left ? (running ? left + " to go. Tap when you hear “" + next.textContent + "”." : items.length + " words to tap.")
+                                : "All " + items.length + " tapped. Press Save, or Undo to fix the last ones.";
+    }
+    function tap() {
+      if (!running || taps.length >= items.length) return;
+      var t = Math.max(0, audio.currentTime - REACTION * (audio.playbackRate || 1));
+      if (taps.length && t < taps[taps.length - 1]) t = taps[taps.length - 1];
+      taps.push(t);
+      if (taps.length === items.length) audio.pause();
+      paint();
+    }
+    box.querySelector("[data-ta-start]").addEventListener("click", function () {
+      taps = []; running = true;
+      audio.currentTime = 0;
+      audio.play();
+      paint();
+      tapBtn.focus();
+    });
+    tapBtn.addEventListener("click", tap);
+    undo.addEventListener("click", function () {
+      var last = taps.pop();
+      if (last !== undefined) { running = true; audio.currentTime = Math.max(0, last - 2); audio.play(); }
+      paint();
+    });
+    box.querySelector("[data-ta-speed]").addEventListener("change", function (e) { audio.playbackRate = Number(e.target.value) || 1; });
+    document.addEventListener("keydown", function (e) {
+      if (e.code !== "Space" || !running || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+      e.preventDefault();
+      tap();
+    });
+    paint();
+  })();
+</script>
+{% endif %}
 
 {% if cover.head or cover.tail %}
 <section class="cr-card cr-note">
@@ -89,6 +199,20 @@
   {% if not configured %}<p class="cr-help">&#9888;&#65039; Measuring is switched off: ffmpeg, and an ElevenLabs or OpenAI key, are needed.</p>{% endif %}
 </section>
 
+{% if problem %}
+<section class="cr-card ra-problem" role="alert">
+  <h2 class="cr-card__title">&#9888;&#65039; The word service is failing{% if without_words %} — {{ without_words }} recording{{ without_words|pluralize }} {{ without_words|pluralize:"is,are" }} following the voice only{% endif %}</h2>
+  <p><strong>{{ problem.advice }}</strong></p>
+  <p class="cr-help">What it said ({{ problem.count }} time{{ problem.count|pluralize }}): <code class="cr-code">{{ problem.error }}</code></p>
+  <p class="cr-help">Until this is fixed, those lessons' highlight moves with the speaker's pauses, not word by word.</p>
+  <form method="post" class="cr-formactions">
+    {% csrf_token %}
+    <button type="submit" name="action" value="retry_failed" class="cr-btn cr-btn--gold">Measure everything again</button>
+  </form>
+</section>
+<style>.ra-problem { border: 1.5px solid #FFC72C; background: #FFF5D6; } .ra-problem code { white-space: normal; overflow-wrap: anywhere; }</style>
+{% endif %}
+
 <section class="cr-card">
   <div class="cr-table-wrap">
     <table class="cr-table">
@@ -96,9 +220,9 @@
       <tbody>
         {% for row in rows %}
         <tr>
-          <td><a href="{% url 'manage:read_along_detail' row.timing.pk %}">{{ row.object|default:"(deleted)" }}</a></td>
+          <td><a href="{% url 'manage:read_along_detail' row.timing.pk %}">{{ row.object|default:"(deleted)" }}</a>{% if row.recording %}<br><small class="cr-help">{{ row.recording }}</small>{% endif %}</td>
           <td><span class="cr-pill cr-pill--{% if row.matches %}good{% else %}bad{% endif %}">{{ row.timing.quality_label }}</span></td>
-          <td>{{ row.timing.engine|default:"—" }}</td>
+          <td>{% if row.timing.engine == "manual" %}tapped by hand{% else %}{{ row.timing.engine|default:"—" }}{% endif %}{% if row.timing.error %}<br><small class="cr-help" title="{{ row.timing.error }}">&#9888;&#65039; {{ row.timing.error|truncatechars:70 }}</small>{% endif %}</td>
           <td>{{ row.timing.updated_at|date:"j M Y, H:i" }}</td>
           <td><a href="{% url 'manage:read_along_detail' row.timing.pk %}" class="cr-link">{% if row.matches %}Open{% else %}Fix{% endif %}</a></td>
         </tr>

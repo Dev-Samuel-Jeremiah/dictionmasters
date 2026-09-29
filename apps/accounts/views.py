@@ -6,6 +6,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
+from urllib.parse import quote
 
 from apps.billing.access import subscription_for
 from apps.billing.models import Plan
@@ -159,6 +160,13 @@ class EmailLoginView(LoginView):
             self.request._dm_no_remember = True
         return super().form_valid(form)
 
+    def get_initial(self):
+        # Switching to an account that asks for its password: fill in who.
+        initial = super().get_initial()
+        if self.request.GET.get("as"):
+            initial["username"] = self.request.GET["as"][:254]
+        return initial
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Accounts already on this device: continue as one of them.
@@ -191,6 +199,15 @@ def switch_account(request):
         return redirect("accounts:login")
     if request.user.is_authenticated and request.user.pk == row.user_id:
         return redirect(_post_login_redirect(row.user))
+    if row.needs_password:
+        # An admin account (or a password changed since): stays on the
+        # switcher, but its password is asked for every time.
+        if request.user.is_authenticated:
+            auth_logout(request)
+        name = row.user.get_full_name() or row.user.login_name
+        why = "Admin accounts always ask for it." if row.user.is_staff or row.user.is_superuser else "Its password has changed."
+        messages.info(request, f"Enter the password for {name} to switch to it. {why}")
+        return redirect(f"{reverse_lazy('accounts:login')}?as={quote(row.user.login_name)}")
     auth_login(request, row.user, backend="django.contrib.auth.backends.ModelBackend")
     messages.success(request, f"Switched to {row.user.get_full_name() or row.user.login_name}.")
     return redirect(_post_login_redirect(row.user))

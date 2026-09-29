@@ -298,3 +298,39 @@ class TricksToSoundFluentTests(TestCase):
         section = self.client.get("/tricks/sections/passage/")
         self.assertContains(section, 'class="ui-numlist"')
         self.assertNotContains(section, "ui-section__title")
+
+
+class WordListTimingTests(TestCase):
+    """A spelling card's Full recording is a lesson, not a reading. Built from
+    a real one: "Number one … Today", "Number two … (Breakfast, which neither
+    transcript caught) … Repeat that … Breakfast", and "Number three … How do
+    you pronounce this word? … oven"."""
+
+    ITEMS = ["Today", "Breakfast", "Oven"]
+    RUNS = [(24.2, 24.8), (27.3, 28.1), (49.1, 49.8), (51.9, 52.7), (54.9, 55.6), (56.7, 57.6),
+            (60.2, 61.4), (318.4, 319.0), (320.9, 322.5), (326.2, 326.9)]
+    HINTED = [["Number", 23.2, 23.9], ["1", 24.6, 24.8], ["Today", 25.4, 25.9], ["Number", 47.6, 48.1],
+              ["2", 49.4, 49.6], ["Breakfast", 49.8, 50.2], ["Repeat", 54.5, 54.9], ["that", 55.2, 55.5],
+              ["Breakfast", 57.1, 57.6], ["Number", 318.0, 318.4], ["3", 318.7, 319.0], ["How", 321.0, 321.2],
+              ["do", 321.2, 321.4], ["you", 321.4, 321.6], ["pronounce", 322.0, 322.4], ["oven", 326.4, 326.8]]
+    PLAIN = [["Number", 23.0, 23.6], ["one", 25.0, 25.2], ["Today", 27.5, 28.0], ["Number", 48.0, 48.4],
+             ["two", 49.0, 49.4], ["Repeat", 55.0, 55.3], ["that", 55.3, 55.6], ["Breakfast", 60.3, 61.0],
+             ["Number", 318.2, 318.6], ["three", 318.8, 319.0], ["How", 321.0, 321.2], ["oven", 326.4, 326.8]]
+
+    def test_each_word_starts_when_the_teacher_says_it(self):
+        starts, placed = read_along.list_timing(self.ITEMS, [self.HINTED, self.PLAIN], self.RUNS)
+        self.assertEqual(placed, 3)
+        # Today: the voice after "number one", not the hinted 25.4 (a silence).
+        self.assertAlmostEqual(starts[0], 27.3, places=1)
+        # Breakfast: the untranscribed word right after "number two" — not
+        # "Repeat that" (which sounds like "today") nor a later repeat.
+        self.assertAlmostEqual(starts[1], 51.9, places=1)
+        # Oven: after the teacher's question, when the word is said.
+        self.assertAlmostEqual(starts[2], 326.2, places=1)
+
+    def test_a_word_said_with_its_number_in_one_breath(self):
+        # A quick run-through: "one, mirror" said in one breath, the
+        # transcript's time for the word a little late.
+        starts, _placed = read_along.list_timing(
+            ["Mirror"], [[["1", 93.7, 94.2], ["Mirror", 95.2, 95.2]]], [(93.5, 95.0)])
+        self.assertTrue(93.9 <= starts[0] <= 94.6, starts)

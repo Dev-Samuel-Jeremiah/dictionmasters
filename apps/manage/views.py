@@ -917,13 +917,31 @@ def read_along(request):
         rows.append({
             "timing": timing,
             "object": obj,
+            "recording": book_read_along.recording_name(obj) if obj is not None else "",
             "matches": timing.matches_text,
             "can_fix": obj is not None and book_read_along.can_replace_text(obj),
         })
+    # Why the words didn't come back, most common first, in plain words.
+    from collections import Counter
+
+    errors = Counter(row["timing"].error for row in rows if row["timing"].error)
+    problem = errors.most_common(1)[0] if errors else None
+    if request.method == "POST" and request.POST.get("action") == "retry_failed":
+        queued = 0
+        for row in rows:
+            if row["object"] is not None and (book_read_along.needs_retry(row["timing"])
+                                              or row["timing"].status == ReadAlongTiming.STATUS_FAILED):
+                book_read_along.measure_in_background(row["object"])
+                queued += 1
+        messages.success(request, f"Measuring {queued} recording{'s' if queued != 1 else ''} again in the background. "
+                                  "Refresh this page in a few minutes to see the results.")
+        return redirect("manage:read_along")
     return render(request, "manage/read_along.html", _base_context(
         request, "read-along", rows=rows,
         poor=sum(1 for row in rows if not row["matches"]),
         configured=book_read_along.is_configured(),
+        problem=problem and {"error": problem[0], "count": problem[1], "advice": book_read_along.explain(problem[0])},
+        without_words=sum(1 for row in rows if book_read_along.needs_retry(row["timing"])),
     ))
 
 
@@ -942,6 +960,23 @@ def read_along_detail(request, pk):
     can_fix = book_read_along.can_replace_text(obj)
 
     if request.method == "POST":
+        if request.POST.get("action") == "save_taps" and book_read_along.can_tap_along(obj):
+            try:
+                starts = json.loads(request.POST.get("taps") or "[]")
+                book_read_along.save_tapped(obj, starts)
+            except (ValueError, TypeError) as error:
+                messages.error(request, f"Those taps couldn't be saved: {error} Please tap along again.")
+            else:
+                _record(request, obj, CHANGE, "Read-along timed by hand (Tap along)")
+                messages.success(request, "Saved. The highlight now follows your taps exactly. "
+                                          "Open the card and press play to check it.")
+            return redirect("manage:read_along_detail", pk=timing.pk)
+        if request.POST.get("action") == "remeasure" and timing.engine == book_read_along.MANUAL:
+            # Let go of the hand-set timing and measure automatically again.
+            timing.delete()
+            book_read_along.measure_in_background(obj)
+            messages.success(request, "Your tapped timing was cleared; measuring automatically again. Refresh in a minute.")
+            return redirect("manage:read_along")
         if request.POST.get("action") == "trim" and can_fix:
             removed = book_read_along.trim_to_spoken(obj, timing)
             if removed:
@@ -968,10 +1003,23 @@ def read_along_detail(request, pk):
         return redirect("manage:read_along_detail", pk=timing.pk)
 
     page_text = book_read_along.text_for(obj)
+    tap = None
+    if book_read_along.can_tap_along(obj):
+        items = book_read_along.tap_items(obj)
+        # Where each item starts now, to show beside it (tapped or measured).
+        starts = []
+        if timing.engine == book_read_along.MANUAL:
+            at = 0
+            for item in items:
+                starts.append(timing.words[at][1] if at < len(timing.words) else None)
+                at += len(item.split())
+        tap = {"items": items, "src": book_read_along.media_url(obj), "starts": starts,
+               "manual": timing.engine == book_read_along.MANUAL}
     return render(request, "manage/read_along.html", _base_context(
         request, "read-along", timing=timing, object=obj, said=said, can_fix=can_fix,
         page_text=page_text, detail=True, cover=book_read_along.coverage(page_text, timing.words),
-        configured=book_read_along.is_configured(),
+        configured=book_read_along.is_configured(), tap=tap,
+        recording=book_read_along.recording_name(obj),
     ))
 
 

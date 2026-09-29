@@ -588,6 +588,9 @@ class CardLessonQuick(CardLesson):
         verbose_name = "card lesson (quick recording)"
         verbose_name_plural = "card lessons (quick recording)"
 
+    def __str__(self):
+        return f"{super().__str__()} (Quick)"
+
     @classmethod
     def from_lesson(cls, lesson):
         """The same card, without asking the database again."""

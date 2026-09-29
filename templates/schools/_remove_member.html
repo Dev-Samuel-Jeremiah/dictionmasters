@@ -1,0 +1,6 @@
+{# The Remove button for one teacher or student (schools.views.remove_member). Needs `member`. #}
+<form method="post" action="{% url 'schools:remove_member' member.pk %}"
+      data-confirm="Remove {{ member.get_full_name|default:member.login_name }}? They'll be signed out and won't be able to sign in. Their work is kept, and you can restore them from the Removed list.">
+  {% csrf_token %}
+  <button type="submit" class="sd-btn sd-btn--remove" aria-label="Remove {{ member.get_full_name|default:member.login_name }}">Remove</button>
+</form>

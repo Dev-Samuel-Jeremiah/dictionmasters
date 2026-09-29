@@ -174,11 +174,11 @@ def has_access(user):
 # ---------------------------------------------------------------------------
 
 def teacher_count(school):
-    return school.members.filter(role="teacher").count()
+    return school.teachers.count()
 
 
 def student_count(school):
-    return school.members.filter(role="student").count()
+    return school.students.count()
 
 
 def student_plans_for_count(count):

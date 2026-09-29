@@ -292,12 +292,19 @@ def _media(obj):
     return "", ""
 
 
-def _fingerprint(obj):
+# Word lists are placed item by item (list_timing); bumping this measures
+# them again without touching passages.
+LIST_VERSION = "L2"
+
+
+def _fingerprint(obj, version=None):
     identity, _source = _media(obj)
     text = text_for(obj)
     if not identity or not text:
         return ""
-    return hashlib.sha256(f"{VERSION}|{identity}|{text}".encode("utf-8")).hexdigest()
+    if version is None:
+        version = VERSION + (LIST_VERSION if _label(obj) in TAP_ALONG else "")
+    return hashlib.sha256(f"{version}|{identity}|{text}".encode("utf-8")).hexdigest()
 
 
 def is_configured():
@@ -333,6 +340,282 @@ def object_for_token(token):
     except LookupError:
         return None
     return model.objects.filter(pk=pk).first()
+
+
+# ---------------------------------------------------------------------------
+# Timing set by hand ("Tap along" in the control room)
+# ---------------------------------------------------------------------------
+
+# Word lists, read one item at a time: an admin can time them exactly by
+# tapping as each item is said. A long, slow recording (a word spelled out,
+# repeated and used in a sentence) is where automatic timing is least sure.
+TAP_ALONG = {"echospell.cardlesson", "echospell.cardlessonquick"}
+MANUAL = "manual"
+
+
+# ---------------------------------------------------------------------------
+# Word lists: each item found on its own
+# ---------------------------------------------------------------------------
+
+# A spelling card's Full recording is a lesson, not a reading: "Hello
+# friends… Number one: Today. Today. T-O-D-A-Y. Please don't say…". The
+# passage matcher (which forgives near-spellings and favours words heard
+# side by side) latches onto the wrong moment there — "that" sounds like
+# "today". So for a list each item is placed here instead, strictly:
+#   1. the teacher's own numbering — the word said right after "number 12"
+#      (or a bare "12") is item 12, however it was heard;
+#   2. otherwise the first time the item itself is said after the one before;
+#   3. both transcripts are used, so a word one of them missed isn't lost;
+#   4. the start is pulled back to where the voice starts saying it.
+_NUMBER_WORDS = {w: n for n, w in enumerate(
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen "
+    "sixteen seventeen eighteen nineteen twenty twentyone twentytwo twentythree twentyfour twentyfive "
+    "twentysix twentyseven twentyeight twentynine thirty".split())}
+
+
+def _norm(word):
+    return re.sub(r"[^a-z0-9]", "", unicodedata.normalize("NFKD", str(word)).lower())
+
+
+def _as_count(key):
+    if key.isdigit():
+        return int(key)
+    return _NUMBER_WORDS.get(key)
+
+
+def _close_enough(item, heard):
+    # Exact, or one letter out for a longer word ("breakfast"/"brekfast");
+    # never the loose sound-alike match passages use.
+    if item == heard:
+        return True
+    if len(item) < 5 or abs(len(item) - len(heard)) > 1:
+        return False
+    return SequenceMatcher(None, item, heard).ratio() >= 0.88
+
+
+def _list_marks(items, transcript):
+    """For each item, from one transcript: (when its number is said, when
+    the item itself is first said, when the number ends), each None if not
+    heard, always after the item before."""
+    heard = [(_norm(w), float(a), float(b)) for w, a, b in transcript if _norm(w)]
+    keys = [h[0] for h in heard]
+    marks, after = [], -1.0
+    for number, item in enumerate(items, start=1):
+        first = _norm(item.split()[0]) if item.split() else ""
+        numbered = numbered_end = None
+        for i, key in enumerate(keys):
+            if heard[i][1] <= after or _as_count(key) != number:
+                continue
+            if (i > 0 and keys[i - 1] == "number") or key.isdigit():
+                numbered, numbered_end = heard[i][1], heard[i][2]
+                break
+        said = next((h[1] for h in heard if h[1] > max(after, (numbered or after) - 0.5) and _close_enough(first, h[0])), None)
+        if said is not None and numbered is not None and said - numbered > 15:
+            said = None                          # that's a later mention, not this item
+        marks.append((numbered, said, numbered_end))
+        after = max(t for t in (numbered, said, after) if t is not None)
+    return marks
+
+
+EDGE = 0.4          # a word time this close to a stretch of speech belongs to it
+
+
+def _run_index(runs, moment):
+    """The stretch of speech `moment` falls in (or just before), or None."""
+    best = None
+    for i, (a, b) in enumerate(runs):
+        if a - 0.15 <= moment <= b + 0.15:
+            return i
+        if a <= moment:
+            best = i
+    return best
+
+
+def list_timing(items, transcripts, runs=()):
+    """When each item of a word list starts (seconds), using every
+    transcript heard and the stretches where the voice speaks, and how
+    many were placed from what was heard.
+
+    Transcripts are close about which word is where but loose about the
+    exact second; the stretches of speech are exact. A teacher says
+    "Number two", pauses, then "Breakfast" — so the item starts where the
+    voice starts again after its number."""
+    runs = [(float(a), float(b)) for a, b in runs or ()]
+    tries = [_list_marks(items, t) for t in transcripts if t]
+    heard_times = sorted({float(w[1]) for t in transcripts if t for w in t})
+    heard_words = [(_norm(w[0]), float(w[1])) for t in transcripts if t for w in t if _norm(w[0])]
+
+    def begins(run_start, t):
+        # Nothing else was heard between the start of this stretch of speech
+        # and the word: the word is what starts it (transcript times run late).
+        return not any(run_start - EDGE <= h < t - 0.05 for h in heard_times)
+
+    starts, previous = [], -1.0
+    for k in range(len(items)):
+        item_key = _norm(items[k].split()[0]) if items[k].split() else ""
+        numbers = sorted(m[k][0] for m in tries if m[k][0] is not None and m[k][0] > previous)
+        # When the number has finished being said: a long one ("thirteen")
+        # can be split in two by a breath, and its tail isn't the word.
+        number_end = max([m[k][2] for m in tries if m[k][0] is not None and m[k][2] is not None
+                          and numbers and m[k][0] <= numbers[0] + 1.0] or [0.0])
+        saids = sorted(m[k][1] for m in tries if m[k][1] is not None and m[k][1] > previous)
+        start = None
+        if numbers:
+            spoken = numbers[0]
+            at = _run_index(runs, spoken) if runs else None
+            if at is None:
+                start = next((t for t in saids if 0 < t - spoken <= 15), None)
+            else:
+                a, b = runs[at]
+                # 1. Said in the same breath as its number ("…eleven, cup"):
+                #    only if that breath is long enough to hold both.
+                same = [t for t in saids if spoken < t and a - EDGE <= t <= b + EDGE]
+                if same and (same[0] < b - 0.15 or b - a >= 1.0):
+                    start = max(a, min(same[0] - 0.05, max(spoken + 0.4, (spoken + b) / 2)))
+                # 2. The next time the voice speaks after the number is the
+                #    word — "Number two … Breakfast" — unless what was heard
+                #    there is other talk ("How do you pronounce this word?").
+                if start is None:
+                    following = next((r for r in runs[at + 1:] if r[0] > max(b, number_end - 0.15)), None)
+                    if following and following[0] - spoken <= 10:
+                        there = [key for key, h in heard_words if following[0] - EDGE <= h <= following[1] + EDGE]
+                        if not there or any(_close_enough(item_key, key) for key in there):
+                            start = following[0]
+                # 3. Otherwise the word itself, where the voice really is
+                #    speaking (a time in a silence is a loose one).
+                if start is None:
+                    for t in saids:
+                        if not 0 < t - spoken <= 15:
+                            continue
+                        where = _run_index(runs, t)
+                        if where is not None and not (runs[where][0] - EDGE <= t <= runs[where][1] + EDGE):
+                            ahead = where + 1 if where + 1 < len(runs) else None
+                            where = ahead if ahead is not None and runs[ahead][0] - EDGE <= t else None
+                        if where is None or where == at:
+                            continue
+                        ra_, rb_ = runs[where]
+                        start = ra_ if (t - ra_ <= 0.8 or begins(ra_, t)) else t - 0.05
+                        break
+                # 4. Nothing better: where the voice starts again.
+                if start is None:
+                    following = next((r for r in runs[at + 1:] if r[0] > max(b, number_end - 0.15)), None)
+                    if following and following[0] - spoken <= 10:
+                        start = following[0]
+        if start is None and saids:
+            t = saids[0]
+            at = _run_index(runs, t) if runs else None
+            start = t
+            if at is not None:
+                a, b = runs[at]
+                if a <= t <= b + 0.15 and (t - a <= 0.8 or begins(a, t)):
+                    start = a                  # the voice starts the word here
+                elif t > b:
+                    later = next((r for r in runs[at + 1:]), None)
+                    if later and later[0] - t <= 1.5:
+                        start = later[0]
+        if start is not None and start <= previous:
+            start = None
+        starts.append(start)
+        if start is not None:
+            previous = start
+    placed = sum(1 for s in starts if s is not None)
+    # Anything not heard at all: the stretch of speech nobody transcribed
+    # between its neighbours, or else halfway between them.
+    for k, start in enumerate(starts):
+        if start is not None:
+            continue
+        before = next((starts[j] for j in range(k - 1, -1, -1) if starts[j] is not None), 0.0)
+        after = next((starts[j] for j in range(k + 1, len(starts)) if starts[j] is not None), None)
+        gap = [r for r in runs if r[0] > before + 0.6 and (after is None or r[1] < after - 0.3)]
+        heard_at = {round(float(w[1]), 1) for t in transcripts if t for w in t}
+        unheard = [r for r in gap if not any(r[0] - EDGE <= h <= r[1] + EDGE for h in heard_at)]
+        if unheard:
+            starts[k] = unheard[0][0]
+        elif gap:
+            starts[k] = gap[0][0]
+        else:
+            starts[k] = before + 1.0 if after is None else (before + after) / 2
+    return starts, placed
+
+
+def _item_words(items, starts, duration):
+    """[[word, start, end], …] for list items starting at `starts`."""
+    words = []
+    for n, (item, start) in enumerate(zip(items, starts)):
+        stop = starts[n + 1] if n + 1 < len(starts) else (duration or start + 2.0)
+        span = max(0.3, min(stop - start, 2.0))
+        parts = item.split()
+        for k, part in enumerate(parts):
+            a = start + span * k / len(parts)
+            words.append([part, round(a, 3), round(a + span / len(parts), 3)])
+    return words
+
+
+def can_tap_along(obj):
+    return _label(obj) in TAP_ALONG
+
+
+def tap_items(obj):
+    """What gets one tap each: the items of the list, in order."""
+    return [line.strip() for line in text_for(obj).splitlines() if line.strip()]
+
+
+def recording_name(obj):
+    """Which recording a row is about, when a lesson has more than one."""
+    return {"echospell.cardlesson": "Full recording", "echospell.cardlessonquick": "Quick recording"}.get(_label(obj), "")
+
+
+def media_url(obj):
+    """An address the browser can play for the recording the words follow."""
+    for file_field, url_field in _media_fields(obj):
+        url = getattr(obj, url_field, "") or ""
+        if url:
+            return url
+        stored = getattr(obj, file_field, None)
+        if stored:
+            return stored.url
+    return ""
+
+
+def save_tapped(obj, starts):
+    """Keep timings tapped by hand: one start (seconds) per item. Each item
+    runs until the next one starts. Returns the ReadAlongTiming."""
+    from .models import ReadAlongTiming
+
+    items = tap_items(obj)
+    if len(starts) != len(items):
+        raise ValueError(f"Expected {len(items)} taps, got {len(starts)}.")
+    starts = [max(0.0, float(t)) for t in starts]
+    if any(later < earlier for earlier, later in zip(starts, starts[1:])):
+        raise ValueError("The taps must go forward in time.")
+    content_type = _content_type(obj)
+    row, _created = ReadAlongTiming.objects.get_or_create(
+        content_type=content_type, object_id=obj.pk, defaults={"fingerprint": _fingerprint(obj)}
+    )
+    words = _item_words(items, starts, row.duration)
+    row.fingerprint = _fingerprint(obj)
+    row.status, row.engine, row.words, row.quality, row.error = ReadAlongTiming.STATUS_READY, MANUAL, words, 1.0, ""
+    row.save()
+    return row
+
+
+def explain(error):
+    """A service error in plain words, with what to do about it."""
+    text = (error or "").lower()
+    if not text:
+        return ""
+    if "insufficient_quota" in text or "quota" in text or "billing" in text or "credit" in text:
+        return ("The word service's account has run out of credit. Add credit (OpenAI: platform.openai.com → "
+                "Settings → Billing), then press “Measure everything again” below.")
+    if "http 401" in text or "invalid_api_key" in text or "incorrect api key" in text:
+        return "The word service's API key is wrong or has been revoked. Put a working key in the server's settings (.env), restart, then measure again."
+    if "http 429" in text:
+        return "The word service is limiting how fast it can be used. Wait a few minutes, then measure again."
+    if "too long" in text:
+        return "Some recordings are too long for the word service (over 25 MB once converted). Split them into shorter recordings."
+    if "couldn't reach" in text or "timed out" in text:
+        return "The server couldn't reach the word service (a network problem). Try measuring again later."
+    return "The word service couldn't measure the words. The details are below."
 
 
 def needs_retry(row):
@@ -475,11 +758,18 @@ def measure(obj):
     if not fingerprint:
         row.delete()
         return None
+    if row.engine == MANUAL and row.fingerprint in (fingerprint, _fingerprint(obj, VERSION)):
+        # Timed by hand for this very recording and text: never guessed over.
+        if row.fingerprint != fingerprint:
+            row.fingerprint = fingerprint
+            row.save(update_fields=["fingerprint", "updated_at"])
+        return row
 
     text = text_for(obj)
     _identity, source = _media(obj)
     errors = []
     words, engine, runs, length = None, "", [], None
+    list_quality = None
     try:
         with tempfile.TemporaryDirectory(prefix="read-along-") as folder:
             audio = _extract_audio(source, folder)
@@ -491,7 +781,10 @@ def measure(obj):
             # word-by-word timings.
             if runs:
                 ReadAlongTiming.objects.filter(pk=row.pk).update(speech=runs, duration=length, updated_at=timezone.now())
-            if getattr(settings, "ELEVENLABS_API_KEY", ""):
+            is_list = _label(obj) in TAP_ALONG
+            # Forced alignment makes the text fit the recording; a spelling
+            # lesson says far more than its list, so lists are transcribed.
+            if getattr(settings, "ELEVENLABS_API_KEY", "") and not (is_list and getattr(settings, "OPENAI_API_KEY", "")):
                 try:
                     words, engine = _elevenlabs(audio, text), "elevenlabs"
                 except AlignmentUnavailable as error:
@@ -513,6 +806,12 @@ def measure(obj):
                     engine = "openai"
                 if words:
                     words = _recover_dropped(audio, words, runs, folder)
+                if words and is_list:
+                    # Each item placed on its own, from every transcript heard.
+                    items = tap_items(obj)
+                    starts, placed = list_timing(items, heard + [words], runs)
+                    words = _item_words(items, starts, length)
+                    list_quality = placed / len(items) if items else 0.0
     except AlignmentUnavailable as error:
         errors.append(str(error))
 
@@ -521,7 +820,7 @@ def measure(obj):
     row.duration = length
     if words:
         row.status, row.engine, row.words, row.error = ReadAlongTiming.STATUS_READY, engine, words, ""
-        row.quality = _spoken_share(text, words)
+        row.quality = list_quality if list_quality is not None else _spoken_share(text, words)
         if row.quality < ReadAlongTiming.MATCH_FLOOR:
             logger.warning(
                 "Read-along: %s %s says only %.0f%% of its text — the recording and the text look different.",

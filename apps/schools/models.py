@@ -51,13 +51,19 @@ class School(models.Model):
             self.code = generate_school_code(School)
         super().save(*args, **kwargs)
 
+    # Only accounts that are switched on take up a place. One the school
+    # admin removed from the dashboard is switched off (and can be restored).
     @property
     def teachers(self):
-        return self.members.filter(role="teacher")
+        return self.members.filter(role="teacher", is_active=True)
 
     @property
     def students(self):
-        return self.members.filter(role="student")
+        return self.members.filter(role="student", is_active=True)
+
+    @property
+    def removed_members(self):
+        return self.members.filter(role__in=("teacher", "student"), is_active=False).order_by("role", "first_name")
 
     def paid_plan(self):
         """The school plan being paid for right now, or None."""
