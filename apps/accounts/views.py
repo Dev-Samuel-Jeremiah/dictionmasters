@@ -202,24 +202,30 @@ def switch_account(request):
     if row.needs_password:
         # An admin account (or a password changed since): stays on the
         # switcher, but its password is asked for every time.
+        response = redirect(f"{reverse_lazy('accounts:login')}?as={quote(row.user.login_name)}")
+        switcher.keep_current(request, response)
         if request.user.is_authenticated:
             auth_logout(request)
         name = row.user.get_full_name() or row.user.login_name
         why = "Admin accounts always ask for it." if row.user.is_staff or row.user.is_superuser else "Its password has changed."
         messages.info(request, f"Enter the password for {name} to switch to it. {why}")
-        return redirect(f"{reverse_lazy('accounts:login')}?as={quote(row.user.login_name)}")
+        return response
+    response = redirect(_post_login_redirect(row.user))
+    switcher.keep_current(request, response)       # the account being left stays on the switcher
     auth_login(request, row.user, backend="django.contrib.auth.backends.ModelBackend")
     messages.success(request, f"Switched to {row.user.get_full_name() or row.user.login_name}.")
-    return redirect(_post_login_redirect(row.user))
+    return response
 
 
 @require_POST
 def add_account(request):
     """Sign another account in on this device, keeping the ones already
     remembered: the current one is signed out, then the log-in page."""
+    response = redirect(f"{reverse_lazy('accounts:login')}?add=1")
+    switcher.keep_current(request, response)       # the account being left stays on the switcher
     if request.user.is_authenticated:
         auth_logout(request)
-    return redirect(f"{reverse_lazy('accounts:login')}?add=1")
+    return response
 
 
 @require_POST

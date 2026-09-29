@@ -37,7 +37,11 @@ def _hash(key):
 
 
 def _entries(request):
-    """[{"u": user id, "k": key}] from the device's cookie, newest first."""
+    """[{"u": user id, "k": key}] from the device's cookie, newest first —
+    or, once this request has changed the list, the list as changed, so a
+    second change in the same request builds on the first."""
+    if hasattr(request, "_dm_entries"):
+        return list(request._dm_entries)
     raw = request.COOKIES.get(COOKIE)
     if not raw:
         return []
@@ -50,7 +54,11 @@ def _entries(request):
     return [e for e in data if isinstance(e, dict) and isinstance(e.get("u"), int) and isinstance(e.get("k"), str)]
 
 
-def _write(response, entries):
+def _write(response, entries, request=None):
+    if request is not None:
+        request._dm_entries = list(entries[:MAX_ACCOUNTS])
+        if hasattr(request, "_dm_device_accounts"):
+            del request._dm_device_accounts
     if entries:
         response.set_cookie(
             COOKIE, signing.dumps(entries[:MAX_ACCOUNTS], salt=SALT, compress=True),
@@ -103,7 +111,19 @@ def remember(request, response, user):
     DeviceLogin.objects.create(user=user, key_hash=_hash(key), auth_hash=user.get_session_auth_hash())
     for dropped in entries[MAX_ACCOUNTS:]:
         DeviceLogin.objects.filter(key_hash=_hash(dropped["k"])).delete()
-    _write(response, entries)
+    _write(response, entries, request)
+
+
+def keep_current(request, response):
+    """Before the switcher signs someone out (Add another account, or a
+    switch), make sure the account being left is on the device, so it can
+    always be switched back to — even one that signed in before accounts
+    were remembered, or with "Remember me" unticked."""
+    user = getattr(request, "user", None)
+    if user is None or not user.is_authenticated:
+        return
+    if not any(e["u"] == user.pk for e in _entries(request)):
+        remember(request, response, user)
 
 
 def forget(request, response, user_id=None):
@@ -113,7 +133,7 @@ def forget(request, response, user_id=None):
     entries = _entries(request)
     gone = [e for e in entries if user_id is None or e["u"] == user_id]
     DeviceLogin.objects.filter(key_hash__in=[_hash(e["k"]) for e in gone]).delete()
-    _write(response, [e for e in entries if e not in gone])
+    _write(response, [e for e in entries if e not in gone], request)
 
 
 def find(request, user_id):
