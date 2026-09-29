@@ -93,7 +93,7 @@
           <tr class="{% if not m.is_active %}is-off{% endif %}">
             <td><span class="sd2-person"><span class="sd2-avatar sd2-avatar--{{ m.role }}" aria-hidden="true">{{ m.first_name|first|upper }}{{ m.last_name|first|upper }}</span><strong>{{ m.get_full_name|default:"—" }}</strong></span></td>
             <td><span class="sd2-role sd2-role--{{ m.role }}">{{ m.get_role_display }}</span>{% if not m.is_active %} <span class="sd2-role sd2-role--off">Removed</span>{% endif %}</td>
-            <td>{{ m.level|default:"—" }}</td>
+            <td>{{ m.level_display|default:"—" }}</td>
             <td><code class="cr-code">{{ m.login_name }}</code></td>
             <td>{% if m.has_real_email %}{{ m.email }}{% else %}<span class="cr-blank">—</span>{% endif %}</td>
             <td>{{ m.date_joined|date:"j M Y" }}</td>

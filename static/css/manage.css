@@ -260,6 +260,20 @@ select[multiple].cr-input { background-image: none; padding-right: 14px; min-hei
 .cr-field > label.cr-option:hover { border-color: var(--cr-gold); }
 .cr-field > label.cr-option:has(input:checked) { border-color: var(--cr-gold); background: rgba(110, 141, 238, .08); }
 .cr-option .cr-check { flex: 0 0 auto; margin: 0; }
+/* The "Levels" tick-list (apps/manage/level_field.py): every level as its
+   own chip, so a teacher who covers several can have more than one
+   ticked, instead of a single dropdown. */
+.cr-levels { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.cr-levels > div { margin: 0; }
+.cr-levels label {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border: 1.5px solid var(--cr-line); border-radius: 999px;
+  background: #fff; font-size: .88rem; font-weight: 600; line-height: 1.2; cursor: pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+.cr-levels label:hover { border-color: var(--cr-gold); }
+.cr-levels label:has(input:checked) { border-color: var(--cr-gold); background: rgba(110, 141, 238, .08); }
+.cr-levels input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--cr-gold); }
 .cr-file { display: block; width: 100%; padding: 12px; border: 1.5px dashed var(--cr-line); border-radius: 12px; background: rgba(20, 33, 61, .02); font-size: .9rem; }
 .cr-code { display: inline-block; max-width: 100%; padding: 6px 10px; border-radius: 8px; background: rgba(20, 33, 61, .06); font-family: ui-monospace, Menlo, monospace; font-size: .86rem; overflow-wrap: anywhere; }
 .cr-help { margin: 6px 0 0; font-size: .82rem; color: var(--cr-dim); }

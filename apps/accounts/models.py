@@ -76,6 +76,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Left blank for individual learners and school admins, who see
     # every level.
     level = models.CharField(max_length=100, blank=True)
+    # A teacher who covers more than one level (a teacher who takes Level
+    # 1, Level 3 and Level 6, say) has the rest here, beyond the main one
+    # above — `level` stays whichever one page and joining code always
+    # show a single value for. Stored as ",Level 3,Level 6," (with the
+    # commas either side) so "Level 1" can never match inside "Level 12".
+    # Set from the control room (apps/manage/level_field.py); see
+    # `all_levels` below and apps/accounts/access.py, which gates on all
+    # of them together.
+    additional_levels = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="Other levels they also teach or study, besides the main one above.",
+    )
 
     # Set for school_admin, teacher and student. Left blank for an
     # individual learner who registered on their own.
@@ -135,6 +147,36 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_individual(self):
         return self.role == self.Role.INDIVIDUAL
+
+    @property
+    def additional_levels_list(self):
+        """The extra levels, unpacked from the stored ",Level 3,Level 6," form."""
+        return [lvl for lvl in self.additional_levels.split(",") if lvl]
+
+    @property
+    def all_levels(self):
+        """Every level this person may open: their main one first, then any
+        others they also teach, in the site's own level order. Empty means
+        every level — an individual learner, a school admin, or a school
+        account with no level set yet. This is what apps.accounts.access
+        gates on, so a teacher given several levels here can open all of
+        them."""
+        from apps.echospell.models import LEVEL_NAME_CHOICES
+
+        order = [value for value, _label in LEVEL_NAME_CHOICES]
+        levels = dict.fromkeys(([self.level] if self.level else []) + self.additional_levels_list)
+        return sorted(levels, key=lambda v: order.index(v) if v in order else len(order))
+
+    @property
+    def level_display(self):
+        """How their level(s) read on a page: "Level 3", or, for a teacher
+        given more than one, "Level 1, Level 3 and Level 6"."""
+        levels = self.all_levels
+        if not levels:
+            return ""
+        if len(levels) == 1:
+            return levels[0]
+        return ", ".join(levels[:-1]) + f" and {levels[-1]}"
 
 
 class DeviceLogin(models.Model):

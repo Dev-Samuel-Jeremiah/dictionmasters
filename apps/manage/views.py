@@ -46,6 +46,7 @@ from apps.quick_words.models import QuickWordAudioImportJob
 
 from .forms import ControlLoginForm, QuickWordAudioZipForm, SchoolTrialForm, LearnerTrialForm, EditTrialForm, build_form
 from . import analytics
+from .level_field import add_levels_field, save_levels
 from .plan_field import FIELD as PLAN_FIELD, add_plan_field, check_plan
 from .school_login import add_login_fields, check_login, save_login
 from .bulk_questions import question_formset
@@ -380,16 +381,10 @@ def record_form(request, key, pk=None):
     for name, (label, help_text) in screen.get("labels", {}).items():
         if name in form.fields:
             form.fields[name].label, form.fields[name].help_text = label, help_text
-    # Level as a dropdown of the real levels, keeping any older value on file.
-    if screen.get("level_choices") and "level" in form.fields:
-        from apps.echospell.models import LEVEL_NAME_CHOICES
-        current = getattr(obj, "level", "") or ""
-        choices = [("", "No level (sees every level)")] + list(LEVEL_NAME_CHOICES)
-        if current and current not in dict(choices):
-            choices.append((current, current))
-        old_field = form.fields["level"]
-        form.fields["level"] = forms.ChoiceField(choices=choices, required=False, label=old_field.label, help_text=old_field.help_text)
-        form.fields["level"].widget.attrs["class"] = "cr-input cr-select"
+    # Levels as a tick-list, so one person — a teacher who covers several,
+    # say — can be given more than just one.
+    if screen.get("levels_field"):
+        add_levels_field(form, obj)
     # Dropdowns offer only what belongs here, e.g. a trick's group is a trick group.
     for name, condition in screen.get("limit", {}).items():
         if name in form.fields and hasattr(form.fields[name], "queryset"):
@@ -415,6 +410,8 @@ def record_form(request, key, pk=None):
         with transaction.atomic():
             saved.save()
             form.save_m2m()
+            if screen.get("levels_field"):
+                save_levels(form, saved)
             login_note = save_login(saved, form) if login_fields else ""
         _record(request, saved, CHANGE if pk else ADDITION, "Changed in the control room" if pk else "Added in the control room")
         messages.success(request, f"{_singular(screen).capitalize()} “{saved}” {'updated' if pk else 'added'}.")

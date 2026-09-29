@@ -132,7 +132,7 @@
               <thead><tr><th>Name</th><th>Level</th><th>Signs in with</th><th>Joined</th><th class="sd-actions"><span class="sr-only">Remove</span></th></tr></thead>
               <tbody>
                 {% for teacher in teachers %}
-                <tr><td class="sd-name">{{ teacher.get_full_name }}</td><td class="sd-meta">{{ teacher.level|default:"—" }}</td><td class="sd-meta sd-login">{{ teacher.login_name }}</td><td class="sd-meta"><span class="sd-phone-only">Joined </span>{{ teacher.date_joined|date:"d M Y" }}</td>
+                <tr><td class="sd-name">{{ teacher.get_full_name }}</td><td class="sd-meta">{{ teacher.level_display|default:"—" }}</td><td class="sd-meta sd-login">{{ teacher.login_name }}</td><td class="sd-meta"><span class="sd-phone-only">Joined </span>{{ teacher.date_joined|date:"d M Y" }}</td>
                   <td class="sd-actions">{% include "schools/_remove_member.html" with member=teacher %}</td></tr>
                 {% endfor %}
               </tbody>
@@ -151,7 +151,7 @@
               <thead><tr><th>Name</th><th>Level</th><th>Signs in with</th><th>Joined</th><th class="sd-actions"><span class="sr-only">Remove</span></th></tr></thead>
               <tbody>
                 {% for student in students %}
-                <tr><td class="sd-name">{{ student.get_full_name }}</td><td class="sd-meta">{{ student.level|default:"—" }}</td><td class="sd-meta sd-login">{{ student.login_name }}</td><td class="sd-meta"><span class="sd-phone-only">Joined </span>{{ student.date_joined|date:"d M Y" }}</td>
+                <tr><td class="sd-name">{{ student.get_full_name }}</td><td class="sd-meta">{{ student.level_display|default:"—" }}</td><td class="sd-meta sd-login">{{ student.login_name }}</td><td class="sd-meta"><span class="sd-phone-only">Joined </span>{{ student.date_joined|date:"d M Y" }}</td>
                   <td class="sd-actions">{% include "schools/_remove_member.html" with member=student %}</td></tr>
                 {% endfor %}
               </tbody>
@@ -171,7 +171,7 @@
               <thead><tr><th>Name</th><th>Role</th><th>Level</th><th>Signs in with</th><th class="sd-actions"><span class="sr-only">Restore</span></th></tr></thead>
               <tbody>
                 {% for member in removed %}
-                <tr class="sd-removed"><td class="sd-name">{{ member.get_full_name }}</td><td class="sd-meta">{{ member.get_role_display }}</td><td class="sd-meta">{{ member.level|default:"—" }}</td><td class="sd-meta sd-login">{{ member.login_name }}</td>
+                <tr class="sd-removed"><td class="sd-name">{{ member.get_full_name }}</td><td class="sd-meta">{{ member.get_role_display }}</td><td class="sd-meta">{{ member.level_display|default:"—" }}</td><td class="sd-meta sd-login">{{ member.login_name }}</td>
                   <td class="sd-actions">
                     <form method="post" action="{% url 'schools:restore_member' member.pk %}">
                       {% csrf_token %}

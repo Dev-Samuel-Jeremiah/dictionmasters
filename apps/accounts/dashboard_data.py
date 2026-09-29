@@ -222,7 +222,7 @@ def learner_dashboard(user):
         "activity_average": round(echospell_attempts.aggregate(avg=Avg("percent"))["avg"] or 0) if echospell_attempts.exists() else None,
         "activities_done": echospell_attempts.count(),
         "saved_words": QuickWord.objects.filter(lists__user=user).distinct().count(),
-        "level": (user.level or "").strip(),
+        "level": user.level_display,
         "feed": [
             {"when": when, "recent": now - when < timedelta(minutes=1), "kind": kind, "title": title, "detail": detail, "url": url}
             for when, kind, title, detail, url in events[:FEED_SIZE]

@@ -17,8 +17,12 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.utils.text import slugify
 
+from apps.accounts import access
 from apps.accounts.models import User
+from apps.echospell.models import LEVEL_NAME_CHOICES
 from apps.schools.models import School
+
+LEVEL_ORDER = [value for value, _label in LEVEL_NAME_CHOICES]
 
 PER_PAGE = 50
 ROLES = [
@@ -94,7 +98,9 @@ def people(request, pk):
     elif role:
         shown = shown.filter(role=role, is_active=True)
     if level:
-        shown = shown.filter(level=level)
+        # A teacher given several levels from the control room shows up
+        # under each of them, not just their main one.
+        shown = access.in_level(shown, level)
     if query:
         shown = shown.filter(Q(first_name__icontains=query) | Q(last_name__icontains=query)
                              | Q(email__icontains=query) | Q(username__icontains=query))
@@ -107,8 +113,19 @@ def people(request, pk):
 
     active = members.filter(is_active=True)
     by_role = {r: active.filter(role=r).count() for r in ("teacher", "student", "school_admin")}
-    levels = list(active.exclude(level="").values("level").annotate(
-        students=Count("pk", filter=Q(role="student")), teachers=Count("pk", filter=Q(role="teacher"))).order_by("level"))
+
+    # Every level anyone here has, as a main level or an extra one — so a
+    # teacher given several levels shows up, and can be filtered on, under
+    # each of them, not just their first.
+    present = {lvl for lvl in active.exclude(level="").values_list("level", flat=True)}
+    for extra in active.exclude(additional_levels="").values_list("additional_levels", flat=True):
+        present.update(v for v in extra.split(",") if v)
+    present = sorted(present, key=lambda v: LEVEL_ORDER.index(v) if v in LEVEL_ORDER else len(LEVEL_ORDER))
+    levels = []
+    for lvl in present:
+        in_lvl = access.in_level(active, lvl)
+        levels.append({"level": lvl, "students": in_lvl.filter(role="student").count(),
+                       "teachers": in_lvl.filter(role="teacher").count()})
     top = max([l["students"] for l in levels] or [1]) or 1
     for l in levels:
         l["width"] = round(l["students"] * 100 / top)
@@ -120,7 +137,7 @@ def people(request, pk):
         "total_shown": shown.count(),
         "role": role, "level": level, "query": query, "sort": request.GET.get("sort", ""),
         "roles": ROLES if school else [("", "Everyone"), ("removed", "Switched off")],
-        "level_options": sorted({l for l in members.exclude(level="").values_list("level", flat=True)}),
+        "level_options": present,
         "by_role": by_role,
         "removed_n": members.filter(is_active=False).count(),
         "active_week": active.filter(last_login__gte=week_ago).count(),
@@ -143,7 +160,7 @@ def _csv(school, members):
     out.writerow(["First name", "Last name", "Role", "Level", "Signs in with", "Email", "Joined", "Last signed in", "Status"])
     for m in members:
         out.writerow([
-            m.first_name, m.last_name, m.get_role_display(), m.level, m.login_name,
+            m.first_name, m.last_name, m.get_role_display(), m.level_display, m.login_name,
             m.email if m.has_real_email else "",
             timezone.localtime(m.date_joined).strftime("%Y-%m-%d"),
             timezone.localtime(m.last_login).strftime("%Y-%m-%d %H:%M") if m.last_login else "Never",

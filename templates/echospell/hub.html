@@ -24,7 +24,7 @@
             <p class="es-hero__eyebrow">Spelling &amp; phonics</p>
             <h1 class="es-hero__title">EchoSpell</h1>
             {% if user.level %}
-            <p class="es-hero__lede">Your level is <strong>{{ user.level }}</strong>. Work through its groups, and practise each one with Spelling, Vocabulary, Transcription and scored activities.</p>
+            <p class="es-hero__lede">Your level: <strong>{{ user.level_display }}</strong>. Work through its groups, and practise each one with Spelling, Vocabulary, Transcription and scored activities.</p>
             {% else %}
             <p class="es-hero__lede">Level by level: pick a level, work through its groups, and practise each one with Spelling, Vocabulary, Transcription and scored activities.</p>
             {% endif %}
