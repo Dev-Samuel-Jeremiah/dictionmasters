@@ -3,6 +3,8 @@ Four ways to get an account:
 
 - SchoolRegistrationForm: creates a School and its first user, the
   school admin, together.
+- SchoolTeamRegistrationForm: creates a school, admin, and its first
+  teachers and students together.
 - IndividualRegistrationForm: an adult learner, no school.
 - StudentRegistrationForm: a pupil joining with their school's code and
   paying for their own access.
@@ -12,8 +14,8 @@ Every registration also asks how to begin: the free trial, or paying for
 a plan now (see StartChoiceMixin). Plans and prices come from billing.
 
 Login is handled by EmailAuthenticationForm, a thin wrapper over
-Django's AuthenticationForm so it speaks "email" instead of
-"username" and carries the same field styling as everything else.
+Django's AuthenticationForm. It accepts an email address or an account
+username and carries the same field styling as everything else.
 """
 
 import secrets
@@ -199,6 +201,98 @@ class SchoolRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
             school=school,
         )
         return user
+
+
+class SchoolTeamRegistrationForm(StyledFormMixin, forms.Form):
+    """School onboarding form for creating the school and its first team."""
+
+    school_name = forms.CharField(label="School name", max_length=255)
+    school_email = forms.EmailField(label="School contact email (optional)", required=False)
+    school_phone = forms.CharField(label="School phone number", max_length=120, required=False)
+    school_address = forms.CharField(label="School address", max_length=255, required=False)
+
+    admin_first_name = forms.CharField(label="First name", max_length=150)
+    admin_last_name = forms.CharField(label="Last name", max_length=150)
+    admin_email = forms.EmailField(label="Admin email", max_length=254)
+
+    def __init__(self, *args, **kwargs):
+        from apps.billing.models import Plan
+
+        super().__init__(*args, **kwargs)
+        plans = Plan.objects.filter(is_active=True, audience=Plan.AUDIENCE_SCHOOL).order_by("max_units", "name")
+        has_plans = plans.exists()
+        self.fields["plan"] = forms.ModelChoiceField(
+            queryset=plans,
+            empty_label="Choose a school plan" if has_plans else None,
+            required=has_plans,
+            label="School plan",
+        )
+        from apps.billing.templatetags.billing import naira
+
+        self.fields["plan"].label_from_instance = lambda plan: (
+            f"{plan.name}{' · ' + plan.band_label if plan.band_label else ''} — {naira(plan.price)}"
+        )
+        if not has_plans:
+            self.fields["plan"].help_text = "No active school plans are available right now. You can choose a plan after registration."
+        else:
+            self.fields["plan"].help_text = "Your plan sets how many teachers can be registered. You can activate payment from the school dashboard."
+        self._style_fields()
+
+    def clean_school_name(self):
+        from apps.schools.models import School
+
+        name = " ".join(self.cleaned_data["school_name"].split())
+        if School.objects.filter(name__iexact=name).exists():
+            raise forms.ValidationError("A school with this name is already registered. Please contact Diction Masters for help.")
+        return name
+
+    def clean_school_email(self):
+        return self.cleaned_data["school_email"].strip().lower()
+
+    def clean_admin_first_name(self):
+        return " ".join(self.cleaned_data["admin_first_name"].split())
+
+    def clean_admin_last_name(self):
+        return " ".join(self.cleaned_data["admin_last_name"].split())
+
+    def clean_admin_email(self):
+        email = self.cleaned_data["admin_email"].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account already uses this email address.")
+        return email
+
+class SchoolTeamMemberForm(StyledFormMixin, forms.Form):
+    """One teacher or student in the new school's initial roster."""
+
+    first_name = forms.CharField(label="First name", max_length=150)
+    last_name = forms.CharField(label="Last name", max_length=150, required=False)
+    level = forms.ChoiceField(label="Level", choices=[])
+    email = forms.EmailField(label="Email (optional)", max_length=254, required=False)
+
+    def __init__(self, *args, kind="student", **kwargs):
+        from apps.echospell.models import LEVEL_NAME_CHOICES
+
+        super().__init__(*args, **kwargs)
+        self.kind = kind
+        self.fields["level"].choices = [("", "Choose a level")] + list(LEVEL_NAME_CHOICES)
+        self.fields["level"].label = "Level taught" if kind == "teacher" else "Student level"
+        self.fields["first_name"].widget.attrs["placeholder"] = "First name"
+        self.fields["first_name"].widget.attrs["aria-label"] = "First name"
+        self.fields["last_name"].widget.attrs["placeholder"] = "Last name"
+        self.fields["last_name"].widget.attrs["aria-label"] = "Last name"
+        self.fields["level"].widget.attrs["aria-label"] = self.fields["level"].label
+        self.fields["email"].widget.attrs["placeholder"] = "Email (optional)"
+        self.fields["email"].widget.attrs["aria-label"] = "Email (optional)"
+        self._style_fields()
+
+    def clean_first_name(self):
+        return " ".join(self.cleaned_data["first_name"].split())
+
+    def clean_last_name(self):
+        return " ".join(self.cleaned_data["last_name"].split())
+
+    def clean_email(self):
+        return (self.cleaned_data.get("email") or "").strip().lower()
 
 
 class IndividualRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):

@@ -4,13 +4,14 @@ a school admin, a teacher, a student, or an individual learner who
 signed up on their own. `role` decides what they can do; `school`
 decides what they can see.
 
-Login is by email rather than a separate username, since that is
-what a school admin, a teacher, and a parent registering their child
-will all naturally type.
+Email is the account's unique identifier. Accounts with a username can
+also sign in with it, which is useful for school admins and students who
+receive generated credentials.
 """
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
+from django.contrib.auth.hashers import is_password_usable
 from django.core.validators import FileExtensionValidator
 from django.db import models
 
@@ -95,9 +96,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         "schools.School",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="members",
     )
+
+    # Passwords remain Django-hashed for authentication. This separate field
+    # keeps an encrypted copy only so school staff can re-download login
+    # details for accounts created or updated after credential recovery was
+    # enabled. It is never exposed in a form or admin fieldset.
+    encrypted_login_password = models.TextField(blank=True, default="", editable=False)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(
@@ -116,6 +123,48 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.get_full_name()} <{self.email}>"
+
+    def set_password(self, raw_password):
+        super().set_password(raw_password)
+        if (
+            raw_password is not None
+            and self.school_id
+            and self.role in {self.Role.SCHOOL_ADMIN, self.Role.TEACHER, self.Role.STUDENT}
+            and is_password_usable(self.password)
+        ):
+            from .credentials import encrypt_login_password
+
+            self.encrypted_login_password = encrypt_login_password(raw_password)
+        else:
+            self.encrypted_login_password = ""
+
+    def set_unusable_password(self):
+        super().set_unusable_password()
+        self.encrypted_login_password = ""
+
+    def check_password(self, raw_password):
+        """Keep the entered password encrypted after a valid school login.
+
+        This lets existing accounts become downloadable over time without
+        changing their password. The normal authentication hash remains the
+        source of truth for sign-in.
+        """
+        saved_ciphertext = self.encrypted_login_password
+        valid = super().check_password(raw_password)
+        if (
+            valid
+            and raw_password is not None
+            and self.school_id
+            and self.role in {self.Role.SCHOOL_ADMIN, self.Role.TEACHER, self.Role.STUDENT}
+        ):
+            from .credentials import decrypt_login_password, encrypt_login_password
+
+            if decrypt_login_password(saved_ciphertext) != raw_password:
+                encrypted = encrypt_login_password(raw_password)
+                if encrypted:
+                    self.encrypted_login_password = encrypted
+                    self.save(update_fields=["encrypted_login_password"])
+        return valid
 
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}".strip()

@@ -17,9 +17,10 @@
 {% if made %}
 <section class="cr-card bk-done">
   <h2 class="cr-card__title">&#10003; {{ made|length }} {% if made|length == 1 %}{{ k.one }}{% else %}{{ k.many }}{% endif %} added to {{ chosen.name }}</h2>
-  <p>Download the logins now and send them to the school. <strong>The passwords are only in this sheet</strong> — they're stored securely and can't be shown again. (You can always set a new password on the person's page in Users.)</p>
+  <p>Download these new logins now and send them to the school. A combined sheet of active school users’ current logins is also available from the school page at any time; downloading it never changes passwords. Earlier passwords are marked unavailable until that user signs in successfully.</p>
   <p><a href="{{ logins_url }}" download="{{ logins_name }}" class="cr-btn cr-btn--gold">&#11015; Download the logins (Excel)</a>
      <button type="button" class="cr-btn cr-btn--ghost" onclick="window.print()">Print</button></p>
+  <p><a href="{% url 'manage:school_people' chosen.pk %}" class="cr-link">Open {{ chosen.name }}’s school page</a></p>
   <div class="cr-tablewrap">
     <table class="cr-table">
       <thead><tr><th>#</th><th>Name</th><th>{% if kind == "teacher" %}Level taught{% else %}Level{% endif %}</th><th>Username</th><th>Password</th><th>Email</th></tr></thead>

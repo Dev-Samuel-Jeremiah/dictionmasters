@@ -12,6 +12,9 @@
       <h1 class="cr-pagehead__title">Schools and their people</h1>
       <p class="cr-pagehead__note">Every school with its plan, teachers and students. Open one to see everyone in it.</p>
     </div>
+    <div class="cr-pagehead__actions">
+      <a href="{% url 'manage:bulk_schools' %}" class="cr-btn cr-btn--gold">&#8593; Register schools from Excel</a>
+    </div>
   </header>
 
   <section class="sd2-tiles" aria-label="Totals">
@@ -22,7 +25,7 @@
   </section>
 
   <form method="get" class="cr-filter sd2-search">
-    <input type="search" name="q" value="{{ query }}" placeholder="Search schools by name, code or email…" class="cr-input" aria-label="Search schools">
+    <input type="search" name="q" value="{{ query }}" placeholder="Search by school, contact, email, phone or location…" class="cr-input" aria-label="Search schools">
     <button type="submit" class="cr-btn cr-btn--ghost">Search</button>
     {% if query %}<a href="{% url 'manage:schools_directory' %}" class="cr-link">Clear</a>{% endif %}
   </form>
@@ -38,6 +41,9 @@
           <small>{{ s.code }}{% if s.email %} · {{ s.email }}{% endif %}</small>
         </span>
       </span>
+      {% if s.address %}<span class="sd2-card__note">{{ s.address }}</span>{% endif %}
+      {% if s.contact_person %}<span class="sd2-card__note">Contact: {{ s.contact_person }}</span>{% endif %}
+      {% if s.relationship_status %}<span class="sd2-plan sd2-plan--muted">{{ s.relationship_status|title }}</span>{% endif %}
       <span class="sd2-plan sd2-plan--{{ row.tone }}">{{ row.plan }}</span>
       <span class="sd2-counts">
         <span><strong>{{ s.teacher_n }}</strong>{% if row.teacher_limit is not None %}<em>/ {{ row.teacher_limit }}</em>{% endif %}<small>teachers</small></span>

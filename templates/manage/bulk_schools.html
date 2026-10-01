@@ -1,0 +1,56 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Bulk register schools — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#127979; <a href="{% url 'manage:schools_directory' %}">Schools &amp; people</a></p>
+    <h1 class="cr-pagehead__title">Bulk register schools</h1>
+    <p class="cr-pagehead__note">Register schools and create their first admin logins from Excel.</p>
+  </div>
+  <div class="cr-pagehead__actions">
+    <a href="{% url 'manage:schools_directory' %}" class="cr-btn cr-btn--ghost">Back to schools</a>
+    <a href="{% url 'manage:bulk_schools' %}?template=1" class="cr-btn cr-btn--gold">&#11015; Download Excel template</a>
+  </div>
+</header>
+
+<section class="cr-card" style="max-width: 850px">
+  <h2 class="cr-card__title">Upload school details</h2>
+  <p>Upload the supplied school workbook or use the template. The importer reads visible sheets, merges repeated school names across tabs, and accepts blank email addresses.</p>
+  <ul>
+    <li>Required: school name. Optional: location, contact person, phone, school contact email and New/Returning status.</li>
+    <li>Each new school gets a school admin login. The contact person's name becomes their username; when it is blank, a school-based admin username is created.</li>
+    <li>A short 8-character password is generated automatically from one simple word and five random digits. Usernames and passwords download in a private Excel login sheet as soon as registration completes.</li>
+    <li>Every row is checked before anything is saved. If a row has an error, no schools are registered.</li>
+    <li>Schools already in the system are skipped without changing their details or logins. Their current credentials remain available from the school people page.</li>
+    <li>Admins sign in with the downloaded username and password. The school contact email is saved for reference and is not used as the login.</li>
+  </ul>
+  <form method="post" enctype="multipart/form-data" class="cr-form">
+    {% csrf_token %}
+    <div class="cr-field{% if form.workbook.errors %} has-error{% endif %}">
+      <label for="id_workbook">Excel workbook (.xlsx)</label>
+      <input id="id_workbook" type="file" name="workbook" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required class="cr-file">
+      {% if form.workbook.help_text %}<small>{{ form.workbook.help_text }}</small>{% endif %}
+      {% for error in form.workbook.errors %}<small class="cr-fileline">{{ error }}</small>{% endfor %}
+    </div>
+    {% if form.non_field_errors %}<div class="cr-fileline">{{ form.non_field_errors }}</div>{% endif %}
+  <p class="cr-help">Up to {{ max_schools }} school rows across visible sheets and 10 MB per workbook. Repeated rows with conflicting details need to be corrected before import.</p>
+    <div class="cr-formactions">
+      <button type="submit" class="cr-btn cr-btn--gold">Register schools &amp; download logins</button>
+      <a href="{% url 'manage:schools_directory' %}" class="cr-btn cr-btn--ghost">Cancel</a>
+    </div>
+  </form>
+</section>
+
+{% if row_errors %}
+<section class="cr-card" style="max-width: 850px; margin-top: 18px" aria-live="polite">
+  <h2 class="cr-card__title">Nothing was registered</h2>
+  <p>Fix these workbook issues and upload the file again:</p>
+  <ul class="cr-fileline">
+    {% for error in row_errors %}<li>{{ error }}</li>{% endfor %}
+  </ul>
+  {% if row_errors|length >= 100 %}<p class="cr-help">Up to 100 issues are shown.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

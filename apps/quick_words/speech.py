@@ -47,7 +47,7 @@ def synthesise(word, model_id=None):
     return speak(f"{str(word).strip()}.", model_id=model_id)
 
 
-def speak(text, model_id=None):
+def speak(text, model_id=None, *, max_audio_bytes=MAX_AUDIO_BYTES, timeout_seconds=TIMEOUT_SECONDS):
     """MP3 bytes of `text` read aloud, exactly as written. Used directly
     where the wording matters, such as a phonemic chart keyword followed
     by its example words."""
@@ -71,13 +71,13 @@ def speak(text, model_id=None):
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-            audio = response.read(MAX_AUDIO_BYTES + 1)
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+            audio = response.read(max_audio_bytes + 1)
     except urllib.error.HTTPError as error:
         raise SpeechUnavailable(f"ElevenLabs answered HTTP {error.code}.") from error
     except (urllib.error.URLError, TimeoutError, OSError) as error:
         raise SpeechUnavailable("Couldn't reach ElevenLabs.") from error
 
-    if not (MIN_AUDIO_BYTES <= len(audio) <= MAX_AUDIO_BYTES) or not _looks_like_mp3(audio):
+    if not (MIN_AUDIO_BYTES <= len(audio) <= max_audio_bytes) or not _looks_like_mp3(audio):
         raise SpeechUnavailable("ElevenLabs didn't return usable audio.")
     return audio

@@ -22,7 +22,7 @@ from django.contrib.auth import logout as auth_logout
 from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Max, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -340,6 +340,9 @@ def record_list(request, key):
             headings.append(str(model._meta.get_field(column).verbose_name).capitalize())
         except Exception:
             headings.append(column.replace("_", " ").replace("__str__", "Name").strip().capitalize())
+    for row in table:
+        for heading, cell in zip(headings, row["cells"]):
+            cell["heading"] = heading
 
     return render(request, "manage/list.html", _base_context(
         request, key,
@@ -347,6 +350,7 @@ def record_list(request, key):
         headings=headings, rows=table, page=page, query=query,
         parent_obj=parent_obj, parent_key=parent_key,
         readonly=screen.get("readonly", False), total=rows.count(),
+        wide_list=screen["key"] == "schools",
         deletable=not screen.get("readonly") and not screen.get("no_delete"),
         bulk_url=(reverse("manage:bulk_questions", args=[key]) + (f"?in={parent_obj.pk}" if parent_obj else ""))
         if screen.get("bulk_add") else "",
@@ -1219,6 +1223,149 @@ def schools_directory(request):
 
 
 @staff_only
+def bulk_schools(request):
+    """Register schools and generate first-login credentials from Excel."""
+    from io import BytesIO
+
+    from django.http import FileResponse
+
+    from apps.accounts.models import INTERNAL_EMAIL_DOMAIN, User
+    from apps.schools.models import School
+
+    from . import bulk_schools as school_import
+
+    if request.method == "GET" and request.GET.get("template") == "1":
+        response = FileResponse(
+            BytesIO(school_import.template_file()),
+            as_attachment=True,
+            filename="school-registration-template.xlsx",
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Cache-Control"] = "private, no-store"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
+
+    form = school_import.SchoolWorkbookForm(request.POST or None, request.FILES or None)
+    row_errors = []
+    if request.method == "POST" and form.is_valid():
+        upload = form.cleaned_data["workbook"]
+        try:
+            records, row_errors = school_import.parse_workbook(upload)
+        except school_import.SchoolWorkbookError as error:
+            form.add_error("workbook", str(error))
+        else:
+            if not row_errors:
+                existing = {
+                    school_import.normalize_school_name(name)
+                    for name in School.objects.values_list("name", flat=True)
+                }
+                new_records = [
+                    record for record in records
+                    if school_import.normalize_school_name(record["name"]) not in existing
+                ]
+                skipped = len(records) - len(new_records)
+                if not new_records:
+                    messages.info(request, f"No new schools needed registration; {skipped} existing school{'s' if skipped != 1 else ''} were skipped without changes.")
+                    return redirect("manage:schools_directory")
+
+                reserved_usernames = {
+                    username.casefold()
+                    for username in User.objects.exclude(username__isnull=True).values_list("username", flat=True)
+                    if username
+                }
+                reserved_emails = {
+                    email.casefold()
+                    for email in User.objects.filter(email__iendswith=f"@{INTERNAL_EMAIL_DOMAIN}")
+                    .values_list("email", flat=True)
+                }
+                reserved_codes = set(School.objects.values_list("code", flat=True))
+
+                credentials = []
+                school_objects = []
+                for record in new_records:
+                    login = school_import.new_school_admin_login(
+                        record["contact_person"], record["name"], reserved_usernames, reserved_emails,
+                    )
+                    school = School(
+                        code=school_import.new_school_code(reserved_codes),
+                        name=record["name"],
+                        address=record["address"],
+                        contact_person=record["contact_person"],
+                        phone=record["phone"],
+                        email=record["email"],
+                        relationship_status=record["relationship_status"],
+                    )
+                    school_objects.append(school)
+                    credentials.append({**login, "school": school})
+
+                password_hashes = school_import.hash_school_admin_passwords(credentials)
+                credential_workbook = school_import.credentials_file(credentials)
+                try:
+                    with transaction.atomic():
+                        School.objects.bulk_create(school_objects, batch_size=100)
+                        schools_by_code = School.objects.in_bulk(
+                            [school.code for school in school_objects], field_name="code",
+                        )
+                        if len(schools_by_code) != len(school_objects):
+                            raise IntegrityError("A school record could not be read back after bulk registration.")
+
+                        from apps.accounts.credentials import encrypt_login_password
+
+                        users = [
+                            User(
+                                email=account["email"],
+                                username=account["username"],
+                                password=password_hash,
+                                first_name=account["first_name"],
+                                last_name=account["last_name"],
+                                role=User.Role.SCHOOL_ADMIN,
+                                school=schools_by_code[account["school"].code],
+                                encrypted_login_password=encrypt_login_password(account["password"]),
+                            )
+                            for account, password_hash in zip(credentials, password_hashes)
+                        ]
+                        User.objects.bulk_create(users, batch_size=100)
+
+                        school_content_type = ContentType.objects.get_for_model(School)
+                        LogEntry.objects.bulk_create([
+                            LogEntry(
+                                user_id=request.user.pk,
+                                content_type_id=school_content_type.pk,
+                                object_id=str(schools_by_code[school.code].pk),
+                                object_repr=str(school)[:200],
+                                action_flag=ADDITION,
+                                change_message="Registered from Excel with generated school admin login",
+                            )
+                            for school in school_objects
+                        ], batch_size=100)
+                except IntegrityError:
+                    messages.error(request, "A database conflict stopped the import. No schools or admin accounts were saved; review the file and try again.")
+                else:
+                    note = f"Registered {len(new_records)} schools with new admin logins. The Excel credential sheet is downloading."
+                    if skipped:
+                        note += f" Skipped {skipped} schools already in the system."
+                    messages.success(request, note)
+                    stamp = timezone.localdate().strftime("%Y%m%d")
+                    response = FileResponse(
+                        BytesIO(credential_workbook),
+                        as_attachment=True,
+                        filename=f"school-login-details-{stamp}.xlsx",
+                        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
+                    response["Cache-Control"] = "private, no-store"
+                    response["X-Content-Type-Options"] = "nosniff"
+                    return response
+
+    return render(request, "manage/bulk_schools.html", _base_context(
+        request,
+        "schools-directory",
+        form=form,
+        row_errors=row_errors,
+        max_schools=school_import.MAX_SCHOOLS,
+    ))
+
+
+@staff_only
 def school_people(request, pk):
     """One school's teachers, students and admins, with their details."""
     from django.http import HttpResponse
@@ -1229,3 +1376,49 @@ def school_people(request, pk):
     if isinstance(result, HttpResponse):
         return result
     return render(request, "manage/school_people.html", _base_context(request, "schools-directory", **result))
+
+
+@staff_only
+@require_POST
+def school_login_sheet(request, pk):
+    """Download saved current passwords for active school members, without changing them."""
+    from django.conf import settings as dj_settings
+    from django.http import HttpResponse
+
+    from apps.accounts.models import User
+    from apps.accounts.credentials import decrypt_login_password
+    from apps.schools.models import School
+
+    from . import bulk_students as bulk
+
+    school = get_object_or_404(School, pk=pk)
+    members = list(
+        User.objects.filter(
+            school=school,
+            is_active=True,
+            is_staff=False,
+            is_superuser=False,
+        ).order_by("role", "first_name", "last_name", "pk")
+    )
+    if not members:
+        messages.warning(request, "This school has no active accounts to include in a login sheet.")
+        return redirect("manage:school_people", pk=school.pk)
+
+    accounts = []
+    for member in members:
+        password = decrypt_login_password(member.encrypted_login_password)
+        accounts.append({
+            "user": member,
+            "password": password if password is not None else "Unavailable — old password or recovery key unavailable",
+            "password_available": password is not None,
+        })
+
+    site_url = (getattr(dj_settings, "SITE_URL", "") or request.build_absolute_uri("/")).rstrip("/")
+    content, filename = bulk.school_logins_file(school, accounts, site_url)
+    _record(request, school, CHANGE, f"Downloaded current login sheet for {len(members)} active school accounts")
+
+    response = HttpResponse(content, content_type=bulk.XLSX)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Cache-Control"] = "private, no-store, max-age=0"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response

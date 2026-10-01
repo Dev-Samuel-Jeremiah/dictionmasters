@@ -44,16 +44,16 @@
 {% endif %}
 <div class="cr-card cr-card--flush">
   <div class="cr-tablewrap">
-    <table class="cr-table cr-table--rows">
+    <table class="cr-table cr-table--rows{% if wide_list %} cr-table--responsive{% endif %}">
       <thead>
         <tr>{% if can_delete %}<th class="cr-table__tick"><input type="checkbox" class="cr-check" data-bulk-all aria-label="Select all on this page"></th>{% endif %}{% for heading in headings %}<th>{{ heading }}</th>{% endfor %}<th class="cr-table__end">{% if not readonly %}Actions{% endif %}</th></tr>
       </thead>
       <tbody>
         {% for row in rows %}
         <tr>
-          {% if can_delete %}<td class="cr-table__tick"><input type="checkbox" class="cr-check" name="pk" value="{{ row.pk }}" data-bulk-row aria-label="Select {{ row.label }}"></td>{% endif %}
+          {% if can_delete %}<td class="cr-table__tick" data-label="Select"><input type="checkbox" class="cr-check" name="pk" value="{{ row.pk }}" data-bulk-row aria-label="Select {{ row.label }}"></td>{% endif %}
           {% for cell in row.cells %}
-          <td>
+          <td data-label="{{ cell.heading }}">
             {% if cell.kind == "bool" %}<span class="cr-bool {% if cell.on %}is-yes{% else %}is-no{% endif %}">{% if cell.on %}Yes{% else %}No{% endif %}</span>
             {% elif cell.kind == "file" %}<a href="{{ cell.url }}" target="_blank" rel="noopener" class="cr-fileline">{{ cell.text }}</a>
             {% elif cell.kind == "when" %}{{ cell.text|date:"j M Y, H:i" }}
@@ -61,7 +61,7 @@
             {% else %}{{ cell.text }}{% endif %}
           </td>
           {% endfor %}
-          <td class="cr-table__end">
+          <td class="cr-table__end" data-label="Actions">
             {% if screen.view %}
             <a href="{% url 'manage:result' screen.view row.pk %}" class="cr-btn cr-btn--ghost cr-btn--small">View</a>
             {% elif readonly %}

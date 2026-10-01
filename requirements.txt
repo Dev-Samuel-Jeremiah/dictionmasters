@@ -17,3 +17,4 @@ psycopg2-binary>=2.9        # PostgreSQL driver
 gunicorn>=21.2              # the application server
 whitenoise>=6.6             # serves the site's own CSS, JS and images
 openpyxl>=3.1
+cryptography>=42.0           # encrypts re-downloadable school login passwords at rest

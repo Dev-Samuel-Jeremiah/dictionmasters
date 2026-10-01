@@ -29,6 +29,11 @@
           <span class="px-role__t"><b>School owner or administrator</b><span>Set your school up and get your school code. Plans are priced by your number of teachers.</span></span>
           <span class="px-role__go" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=18 stroke="2.6" %}</span>
         </a>
+        <a href="{% url 'accounts:register_school_team' %}" class="px-role">
+          <img src="{% static 'img/app/rSchool.jpg' %}" alt="">
+          <span class="px-role__t"><b>Register a school and its whole team</b><span>Create the admin, teacher and student accounts together, then download every login in one Excel file.</span></span>
+          <span class="px-role__go" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=18 stroke="2.6" %}</span>
+        </a>
         <a href="{% url 'accounts:register_individual' %}" class="px-role">
           <img src="{% static 'img/app/rParent.jpg' %}" alt="">
           <span class="px-role__t"><b>Adult or individual learner</b><span>Not a student? Create your own account and learn at your own pace, no code needed.</span></span>

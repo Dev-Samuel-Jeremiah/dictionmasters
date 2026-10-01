@@ -12,8 +12,8 @@ class AccessCodeInline(admin.TabularInline):
 
 @admin.register(School)
 class SchoolAdmin(admin.ModelAdmin):
-    list_display = ["name", "code", "email", "phone", "created_at"]
-    search_fields = ["name", "code", "email"]
+    list_display = ["name", "code", "email", "contact_person", "phone", "relationship_status", "created_at"]
+    search_fields = ["name", "code", "email", "contact_person", "phone"]
     readonly_fields = ["code", "created_at"]
     inlines = [AccessCodeInline]
 

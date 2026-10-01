@@ -14,17 +14,26 @@
     </div>
     <div class="cr-pagehead__actions">
       <a href="?{% if role %}role={{ role }}&amp;{% endif %}{% if level %}level={{ level }}&amp;{% endif %}{% if query %}q={{ query|urlencode }}&amp;{% endif %}csv=1" class="cr-btn cr-btn--ghost">&#11015; Download list (CSV)</a>
+      {% if school %}
+      <form class="sd2-login-export" method="post" action="{% url 'manage:school_login_sheet' school.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="cr-btn cr-btn--gold">&#11015; Download current logins (Excel)</button>
+      </form>
+      {% endif %}
       {% if school %}<a href="{% url 'manage:edit' 'schools' school.pk %}" class="cr-btn cr-btn--gold">Edit school</a>{% endif %}
     </div>
   </header>
 
   {% if school %}
+  <p class="sd2-login-note"><strong>Current login sheet:</strong> downloading never changes passwords. New and changed passwords are included. Older passwords are available if they were saved securely or after that user signs in successfully; otherwise they are marked unavailable. Keep the downloaded sheet private.</p>
   <section class="sd2-info cr-card">
     <dl>
       <div><dt>School code</dt><dd><code class="cr-code">{{ school.code }}</code></dd></div>
       <div><dt>Email</dt><dd>{{ school.email|default:"—" }}</dd></div>
       <div><dt>Phone</dt><dd>{{ school.phone|default:"—" }}</dd></div>
       <div><dt>Address</dt><dd>{{ school.address|default:"—" }}</dd></div>
+      <div><dt>Contact person</dt><dd>{{ school.contact_person|default:"—" }}</dd></div>
+      <div><dt>Status</dt><dd>{{ school.relationship_status|title|default:"—" }}</dd></div>
       <div><dt>Joined</dt><dd>{{ school.created_at|date:"j M Y" }}</dd></div>
       <div><dt>Teacher places</dt><dd>{{ by_role.teacher }}{% if teacher_limit is not None %} of {{ teacher_limit }}{% else %} (no limit){% endif %}</dd></div>
       <div><dt>Student places</dt><dd>{{ by_role.student }}{% if school.max_students is not None %} of {{ school.max_students }}{% else %} (no limit){% endif %}</dd></div>

@@ -26,6 +26,7 @@
     <a href="{% url 'conversational_dialogue:hub' %}" class="px-side__sub{% if request.path|slice:':25' == '/conversational-dialogue/' %} is-on{% endif %}"><span class="px-side__dot t-butter">{% include "includes/icon.html" with name="mic" size=16 %}</span>Conversational Dialogue</a>
 
     <p class="px-side__label">Tools</p>
+    <a href="{% url 'learning_tools:book_scanner' %}" class="px-side__sub{% if request.resolver_match.url_name == 'book_scanner' %} is-on{% endif %}"><span class="px-side__dot t-sky">{% include "includes/icon.html" with name="scan" size=16 %}</span>Scan &amp; Listen</a>
     <a href="{% url 'book:phonemic_chart' %}" class="px-side__sub{% if request.resolver_match.url_name == 'phonemic_chart' %} is-on{% endif %}"><span class="px-side__dot t-sky">{% include "includes/icon.html" with name="ipa" size=16 %}</span>Phonemic chart</a>
     <a href="{% url 'quick_words:hub' %}" class="px-side__sub{% if request.path|slice:':13' == '/quick-words/' %} is-on{% endif %}"><span class="px-side__dot t-butter">{% include "includes/icon.html" with name="words" size=16 %}</span>Quick Words</a>
     <a href="{% url 'tutor:hub' %}" class="px-side__sub{% if request.path|slice:':7' == '/tutor/' %} is-on{% endif %}"><span class="px-side__dot t-sky">{% include "includes/icon.html" with name="robot" size=16 %}</span>Read with Yela</a>

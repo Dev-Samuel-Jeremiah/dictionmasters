@@ -37,7 +37,7 @@ is deliberate: a half-configured site should not serve traffic.
 
 ```bash
 sudo apt update
-sudo apt install -y python3-venv python3-pip postgresql nginx ffmpeg
+sudo apt install -y python3-venv python3-pip postgresql nginx ffmpeg tesseract-ocr tesseract-ocr-eng
 ```
 
 `ffmpeg` is what takes the thumbnail from an uploaded video. Without it
@@ -65,6 +65,7 @@ At the very least set:
 ```
 DJANGO_ENV=production
 DJANGO_SECRET_KEY=          # venv/bin/python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+SCHOOL_CREDENTIALS_ENCRYPTION_KEY=  # venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 DJANGO_ALLOWED_HOSTS=dictionmasters.com,www.dictionmasters.com
 DJANGO_CSRF_TRUSTED_ORIGINS=https://dictionmasters.com,https://www.dictionmasters.com
 POSTGRES_DB=diction_db
@@ -79,6 +80,14 @@ Keep `.env` readable only by the account that runs the site:
 ```bash
 chmod 600 .env
 ```
+
+Keep `SCHOOL_CREDENTIALS_ENCRYPTION_KEY` backed up securely and unchanged
+across deployments. It encrypts the extra password copy used by school
+login downloads; Django still stores its normal one-way password hash for
+sign-in. If the key is lost or changed, saved copies cannot be decrypted.
+Passwords set before this feature was enabled are listed as unavailable
+until that account signs in successfully; that login lets the app save its
+current password encrypted without changing it.
 
 ## 4. Create the database
 
@@ -239,6 +248,10 @@ R2, ElevenLabs and Groq are reachable from the server.
 **"Set DJANGO_SECRET_KEY before running in production."** `.env` still
 has the placeholder key, or systemd is not reading `.env`. Check
 `EnvironmentFile` in the service file.
+
+**"Set SCHOOL_CREDENTIALS_ENCRYPTION_KEY before running in production."**
+Generate a Fernet key as shown in section 3, save it in `.env`, and keep a
+secure backup so password exports continue to work after deployments.
 
 **A page says DisallowedHost.** Add the domain to
 `DJANGO_ALLOWED_HOSTS`, then restart.

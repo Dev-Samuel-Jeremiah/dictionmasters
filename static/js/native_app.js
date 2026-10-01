@@ -10,7 +10,7 @@
  *   2. make Android's back button go back a page (and close dialogs first)
  *   3. open other websites in an in-app browser, so the learner never
  *      gets stuck on a page with no way back
- *   4. save "download" links (e.g. EchoSpell QR codes) through the share sheet
+ *   4. save downloads and generated form attachments through the share sheet
  *   5. give Android the Web Share API (navigator.share) that iPhone has
  *   6. say when the phone goes offline / comes back, and send progress
  *      made offline as soon as it reconnects or the app is reopened
@@ -185,16 +185,100 @@
         if (!response.ok) throw new Error("HTTP " + response.status);
         return response.blob();
       })
-      .then(blobToBase64)
+      .then(function (blob) { return shareBlob(blob, name); })
+      .catch(function () { openOutside(href); });
+  }
+
+  function shareBlob(blob, name) {
+    if (!P.Filesystem || !P.Share) return Promise.reject(new Error("File sharing is unavailable"));
+    return blobToBase64(blob)
       .then(function (data) {
         var safe = String(name || "download").replace(/[^\w.\-]+/g, "_");
         return P.Filesystem.writeFile({ path: safe, data: data, directory: "CACHE" });
       })
       .then(function (written) {
         return P.Share.share({ title: name, files: [written.uri], dialogTitle: "Save or share" });
-      })
-      .catch(function () { openOutside(href); });
+      });
   }
+
+  function filenameFromResponse(response, fallback) {
+    var header = response.headers.get("Content-Disposition") || "";
+    var extended = header.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+    var plain = header.match(/filename\s*=\s*"?([^";]+)/i);
+    var value = extended ? extended[1] : (plain ? plain[1] : fallback);
+    try { return decodeURIComponent(value.replace(/^"|"$/g, "")); }
+    catch (error) { return value || fallback; }
+  }
+
+  function replaceMainWithResponse(html, responseUrl) {
+    var parsed = new DOMParser().parseFromString(html, "text/html");
+    var nextMain = parsed.querySelector("main");
+    var currentMain = document.querySelector("main");
+    if (!nextMain || !currentMain) {
+      document.open();
+      document.write(html);
+      document.close();
+      return;
+    }
+    currentMain.innerHTML = nextMain.innerHTML;
+    Array.prototype.forEach.call(
+      currentMain.querySelectorAll("script:not([src]):not([type]),script:not([src])[type='text/javascript']"),
+      function (oldScript) {
+        var script = document.createElement("script");
+        script.textContent = oldScript.textContent;
+        oldScript.replaceWith(script);
+      }
+    );
+    if (parsed.title) document.title = parsed.title;
+    if (responseUrl && new URL(responseUrl).host === siteHost) history.replaceState(null, "", responseUrl);
+  }
+
+  // A form can ask for a generated attachment in its POST response. Keep
+  // that flow inside the app and pass the workbook to Android's save/share
+  // sheet, just like a normal same-site download link.
+  document.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (!form.matches || !form.matches("form[data-native-download]") || !P.Filesystem || !P.Share) return;
+    event.preventDefault();
+    if (form.dataset.nativeSubmitting === "1") return;
+    form.dataset.nativeSubmitting = "1";
+
+    var button = form.querySelector('button[type="submit"], input[type="submit"]');
+    var originalText = button && (button.getAttribute("data-native-label") || button.value || button.textContent);
+    var status = document.querySelector("[role='status'][aria-live='polite']");
+    if (button) button.disabled = true;
+    if (status) status.textContent = "Preparing the login workbook for download…";
+
+    fetch(form.action || location.href, {
+      method: (form.method || "POST").toUpperCase(),
+      body: new FormData(form),
+      credentials: "same-origin"
+    }).then(function (response) {
+      var disposition = response.headers.get("Content-Disposition") || "";
+      if (response.ok && /attachment/i.test(disposition)) {
+        var name = filenameFromResponse(response, "school-logins.xlsx");
+        return response.blob().then(function (blob) {
+          toast("Your login workbook is ready. Choose where to save it.");
+          return shareBlob(blob, name).then(function () {
+            form.dataset.nativeSubmitting = "0";
+            if (button) { button.disabled = false; if (originalText) button.textContent = originalText; }
+            if (status) status.textContent = "Login workbook ready to save or share.";
+          }).catch(function () {
+            form.dataset.nativeSubmitting = "0";
+            if (button) button.disabled = false;
+            if (status) status.textContent = "The workbook was created, but Android could not open the save sheet. Please try again or open this page in Chrome.";
+          });
+        });
+      }
+      return response.text().then(function (html) {
+        replaceMainWithResponse(html, response.url);
+      });
+    }).catch(function () {
+      form.dataset.nativeSubmitting = "0";
+      if (button) { button.disabled = false; if (originalText) button.textContent = originalText; }
+      if (status) status.textContent = "We couldn't finish the registration. Check your connection and try again.";
+    });
+  }, false);
 
   // ---------------------------------------------------- 5. Web Share
   if (!navigator.share && P.Share) {

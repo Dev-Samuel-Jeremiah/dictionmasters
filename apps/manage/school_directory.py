@@ -62,7 +62,11 @@ def directory(request):
         .order_by("name")
     )
     if query:
-        schools = schools.filter(Q(name__icontains=query) | Q(code__icontains=query) | Q(email__icontains=query))
+        schools = schools.filter(
+            Q(name__icontains=query) | Q(code__icontains=query) | Q(email__icontains=query)
+            | Q(contact_person__icontains=query) | Q(phone__icontains=query)
+            | Q(address__icontains=query) | Q(relationship_status__icontains=query)
+        )
     rows = []
     for school in schools:
         label, tone = _plan_state(school)

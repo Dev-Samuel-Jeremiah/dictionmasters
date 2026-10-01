@@ -18,7 +18,10 @@ def school_admin(school):
 def add_login_fields(form, school):
     admin = school_admin(school)
     new = admin is None
-    keep = "" if new else " A password is already saved: leave these blank to keep it, or type a new one to change it."
+    keep = "" if new else (
+        " The current password is stored securely and can't be shown. Leave both fields blank to keep it, "
+        "or enter a new password in both fields to replace it."
+    )
     form.fields[NAME] = forms.CharField(
         label="School login: admin's name", max_length=150, required=False,
         initial=admin.get_full_name() if admin else "",
@@ -28,10 +31,9 @@ def add_login_fields(form, school):
         label="School login: email", required=False, initial=admin.email if admin else "",
         help_text="They sign in with this email on the main site's Log in page, then add teachers and share the school code.",
     )
-    # A saved password is stored one-way (hashed) and can't be shown again,
-    # so the box says one is set. What's typed stays in the box if the form
-    # comes back with an error; the eye button shows it.
-    saved = {"placeholder": "•••••••• saved — type a new one to change it"} if admin and admin.has_usable_password() else {}
+    # Passwords are stored one-way (hashed), so the current value can't be
+    # shown again. The placeholder explains that a password exists instead.
+    saved = {"placeholder": "Password saved securely — can't be shown"} if admin and admin.has_usable_password() else {}
     form.fields[PASSWORD] = forms.CharField(
         label="School login: password", required=False, strip=False,
         widget=forms.PasswordInput(attrs={"autocomplete": "new-password", **saved}, render_value=True),
@@ -39,7 +41,13 @@ def add_login_fields(form, school):
     )
     form.fields[CONFIRM] = forms.CharField(
         label="School login: confirm password", required=False, strip=False,
-        widget=forms.PasswordInput(attrs={"autocomplete": "new-password", **saved}, render_value=True),
+        widget=forms.PasswordInput(
+            attrs={
+                "autocomplete": "new-password",
+                "placeholder": "Only needed when changing the password" if not new else "",
+            },
+            render_value=True,
+        ),
     )
     for name in (NAME, EMAIL, PASSWORD, CONFIRM):
         form.fields[name].widget.attrs["class"] = "cr-input"

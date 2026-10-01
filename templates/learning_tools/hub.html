@@ -71,6 +71,7 @@
         {% elif tool.icon == "reading-club" %}{% firstof "t-lilac" as tone %}{% firstof "shelf" as icon %}{% firstof "spelling" as cat %}
         {% elif tool.icon == "diction-library" %}{% firstof "t-mint" as tone %}{% firstof "shelf" as icon %}{% firstof "library" as cat %}
         {% elif tool.icon == "diction-radio" %}{% firstof "t-butter" as tone %}{% firstof "radio" as icon %}{% firstof "library" as cat %}
+        {% elif tool.icon == "scan" %}{% firstof "t-sky" as tone %}{% firstof "scan" as icon %}{% firstof "spelling" as cat %}
         {% else %}{% firstof "t-stone" as tone %}{% firstof "search" as icon %}{% firstof "library" as cat %}{% endif %}
         {% if tool.available %}
         <a href="{% url tool.url_name %}" class="px-item" data-cat="{{ cat }}">

@@ -9,9 +9,9 @@ what differs.
    and the problems are listed by row. Otherwise each gets an account in
    that school, at that level, covered by the school's plan. Students are
    capped by "Students allowed", teachers by the school's teacher limit.
-4. The logins (login email + a new password) come back as an Excel sheet to
-   send to the school. Passwords are only ever in that sheet: they are
-   stored hashed like every other password and can't be shown again.
+4. The logins (username + a new password) come back as an Excel sheet to
+   send to the school. Django stores its normal one-way password hash; a
+   separate encrypted copy makes future school login downloads possible.
 
 Everyone signs in with a username made from their name (ada.okafor,
 then ada.okafor2 ...) and a very simple password (mango47). An email is
@@ -87,7 +87,10 @@ def _banner(ws, school, subtitle, last_col):
     ws["A1"].fill = PatternFill("solid", fgColor=NAVY)
     ws["A1"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
     ws.row_dimensions[1].height = 24
-    ws["A2"] = school.name
+    school_title = str(school.name or "")
+    if school_title.startswith(("=", "+", "-", "@", "\t", "\r")):
+        school_title = "'" + school_title
+    ws["A2"] = school_title
     ws["A2"].font = Font(name="Calibri", bold=True, size=20, color="FFFFFF")
     ws["A2"].fill = PatternFill("solid", fgColor=BLUE)
     ws["A2"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
@@ -397,3 +400,62 @@ def logins_file(school, made, site_url, kind="student"):
     wb.save(out)
     filename = f"{slugify(school.name) or 'school'}-{k['one']}-logins-{stamp:%Y-%m-%d}.xlsx"
     return f"data:{XLSX};base64,{base64.b64encode(out.getvalue()).decode()}", filename
+
+
+def school_logins_file(school, accounts, site_url):
+    """Build a combined, read-only login sheet for active school accounts."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "School logins"
+    head = FIRST_DATA_ROW - 1
+    available = sum(1 for account in accounts if account.get("password_available"))
+    _banner(
+        ws, school,
+        f"School code {school.code} · Current logins · Sign in at {site_url}/accounts/login/ · "
+        "Passwords are not changed by this download. "
+        "Unavailable entries are from before encrypted password recovery, or need the original recovery key.",
+        "H",
+    )
+    stamp = timezone.localtime()
+    ws["H4"] = f"{len(accounts)} active · {available} passwords available · {stamp:%d %b %Y}"
+    ws["H4"].font = Font(name="Calibri", bold=True, size=10, color=BLUE)
+    _heading_row(ws, head, ["#", "First name", "Last name", "Role", "Level", "Username / login", "Current password", "Email (if given)"],
+                 (6, 20, 20, 18, 16, 26, 54, 36))
+
+    def safe_cell(value):
+        text = str(value or "")
+        return "'" + text if text.startswith(("=", "+", "-", "@", "\t", "\r")) else text
+
+    for number, account in enumerate(accounts, start=1):
+        user = account["user"]
+        ws.append([
+            number,
+            safe_cell(user.first_name),
+            safe_cell(user.last_name),
+            safe_cell(user.get_role_display()),
+            safe_cell(user.level_display),
+            safe_cell(user.login_name),
+            account["password"],
+            safe_cell(user.email if user.has_real_email else ""),
+        ])
+        # Keep passwords exactly as entered while forcing Excel to treat them
+        # as text, including passwords that begin with a formula character.
+        password_cell = ws.cell(row=FIRST_DATA_ROW + number - 1, column=7)
+        password_cell.value = str(account["password"])
+        password_cell.data_type = "s"
+        password_cell.alignment = Alignment(vertical="center", wrap_text=True)
+    _body_rows(ws, FIRST_DATA_ROW, FIRST_DATA_ROW + len(accounts) - 1, 8)
+    for row in range(FIRST_DATA_ROW, FIRST_DATA_ROW + len(accounts)):
+        ws.cell(row=row, column=1).alignment = Alignment(horizontal="center", vertical="center")
+        ws.cell(row=row, column=6).font = Font(name="Consolas", bold=True, size=11, color=NAVY)
+        ws.cell(row=row, column=7).font = Font(name="Consolas", bold=True, size=11, color=BLUE)
+    ws.freeze_panes = f"B{FIRST_DATA_ROW}"
+    ws.auto_filter.ref = f"A{head}:H{FIRST_DATA_ROW + len(accounts) - 1}"
+    _print_setup(ws, school, "School logins", head)
+    out = io.BytesIO()
+    wb.save(out)
+    filename = f"{slugify(school.name) or 'school'}-logins-{stamp:%Y-%m-%d}.xlsx"
+    return out.getvalue(), filename

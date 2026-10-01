@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Register your school team — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui team-enrolment">
+  <div class="wrap">
+    <header class="team-enrolment__head">
+      <a class="team-enrolment__back" href="{% url 'accounts:register_choice' %}">&larr; Choose another option</a>
+      <p class="ui-auth__eyebrow">School registration</p>
+      <h1>Register your school and team</h1>
+      <p class="team-enrolment__lede">Enter the school admin, teachers and students in one form. When you submit, we create their accounts and immediately download one private Excel file with every username and password.</p>
+      <p class="team-enrolment__limit">Add up to {{ max_team_members }} teachers and students here. You can add more from the school dashboard later.</p>
+    </header>
+
+    <form method="post" class="team-enrolment__form" id="school-team-form" data-native-download="xlsx" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="team-enrolment__alert" role="alert">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+      {% endif %}
+
+      <section class="team-enrolment__card" aria-labelledby="school-section-title">
+        <div class="team-enrolment__sectionhead">
+          <span class="team-enrolment__number">1</span>
+          <div><h2 id="school-section-title">School details</h2><p>Use the name your staff and students will recognise.</p></div>
+        </div>
+        <div class="team-enrolment__grid">
+          <div class="field">
+            <label for="{{ form.school_name.id_for_label }}">{{ form.school_name.label }}</label>{{ form.school_name }}
+            {% for error in form.school_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}
+          </div>
+          <div class="field">
+            <label for="{{ form.school_email.id_for_label }}">{{ form.school_email.label }}</label>{{ form.school_email }}
+            {% for error in form.school_email.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}
+          </div>
+          <div class="field">
+            <label for="{{ form.school_phone.id_for_label }}">{{ form.school_phone.label }}</label>{{ form.school_phone }}
+            {% for error in form.school_phone.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}
+          </div>
+          <div class="field">
+            <label for="{{ form.school_address.id_for_label }}">{{ form.school_address.label }}</label>{{ form.school_address }}
+            {% for error in form.school_address.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="team-enrolment__card" aria-labelledby="admin-section-title">
+        <div class="team-enrolment__sectionhead">
+          <span class="team-enrolment__number">2</span>
+          <div><h2 id="admin-section-title">School admin</h2><p>The admin's name becomes their username. A simple password is generated automatically.</p></div>
+        </div>
+        <div class="team-enrolment__grid team-enrolment__grid--three">
+          <div class="field">
+            <label for="{{ form.admin_first_name.id_for_label }}">{{ form.admin_first_name.label }}</label>{{ form.admin_first_name }}
+            {% for error in form.admin_first_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}
+          </div>
+          <div class="field">
+            <label for="{{ form.admin_last_name.id_for_label }}">{{ form.admin_last_name.label }}</label>{{ form.admin_last_name }}
+            {% for error in form.admin_last_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}
+          </div>
+          <div class="field">
+            <label for="{{ form.admin_email.id_for_label }}">{{ form.admin_email.label }}</label>{{ form.admin_email }}
+            {% for error in form.admin_email.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}
+          </div>
+        </div>
+        <div class="team-enrolment__username-note">Login username is generated from the admin's name. Staff and students also receive usernames based on their names.</div>
+      </section>
+
+      <section class="team-enrolment__card" aria-labelledby="teacher-section-title">
+        <div class="team-enrolment__sectionhead team-enrolment__sectionhead--split">
+          <div class="team-enrolment__sectionlabel"><span class="team-enrolment__number">3</span><div><h2 id="teacher-section-title">Teachers <span class="team-enrolment__optional">Optional</span></h2><p>Add each teacher and the level they teach.</p></div></div>
+          <button type="button" class="team-enrolment__add" data-add-row="teachers">+ Add teacher</button>
+        </div>
+        {% for error in teachers.non_form_errors %}<p class="team-enrolment__error">{{ error }}</p>{% endfor %}
+        {{ teachers.management_form }}
+        <div class="team-enrolment__rows" id="teachers-rows">
+          {% for member in teachers %}
+          <div class="team-person-row">
+            <div class="team-person-row__main">
+              {{ member.DELETE }}
+              <div class="field"><label for="{{ member.first_name.id_for_label }}">First name</label>{{ member.first_name }}{% for error in member.first_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
+              <div class="field"><label for="{{ member.last_name.id_for_label }}">Last name</label>{{ member.last_name }}{% for error in member.last_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
+              <div class="field"><label for="{{ member.level.id_for_label }}">Level taught</label>{{ member.level }}{% for error in member.level.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
+              <div class="field"><label for="{{ member.email.id_for_label }}">Email (optional)</label>{{ member.email }}{% for error in member.email.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
+              <button type="button" class="team-person-row__remove" aria-label="Remove this teacher">Remove</button>
+            </div>
+            {% for error in member.non_field_errors %}<p class="field-errors">{{ error }}</p>{% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+        <template id="teachers-template">
+          <div class="team-person-row">
+            <div class="team-person-row__main">
+              {{ teachers.empty_form.DELETE }}
+              <div class="field"><label>First name</label>{{ teachers.empty_form.first_name }}</div>
+              <div class="field"><label>Last name</label>{{ teachers.empty_form.last_name }}</div>
+              <div class="field"><label>Level taught</label>{{ teachers.empty_form.level }}</div>
+              <div class="field"><label>Email (optional)</label>{{ teachers.empty_form.email }}</div>
+              <button type="button" class="team-person-row__remove" aria-label="Remove this teacher">Remove</button>
+            </div>
+          </div>
+        </template>
+        <p class="team-enrolment__empty" id="teachers-empty">No teachers added yet. You can add them now or after the school is set up.</p>
+      </section>
+
+      <section class="team-enrolment__card" aria-labelledby="student-section-title">
+        <div class="team-enrolment__sectionhead team-enrolment__sectionhead--split">
+          <div class="team-enrolment__sectionlabel"><span class="team-enrolment__number">4</span><div><h2 id="student-section-title">Students <span class="team-enrolment__optional">Optional</span></h2><p>Add each student and their level.</p></div></div>
+          <button type="button" class="team-enrolment__add" data-add-row="students">+ Add student</button>
+        </div>
+        {% for error in students.non_form_errors %}<p class="team-enrolment__error">{{ error }}</p>{% endfor %}
+        {{ students.management_form }}
+        <div class="team-enrolment__rows" id="students-rows">
+          {% for member in students %}
+          <div class="team-person-row">
+            <div class="team-person-row__main">
+              {{ member.DELETE }}
+              <div class="field"><label for="{{ member.first_name.id_for_label }}">First name</label>{{ member.first_name }}{% for error in member.first_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
+              <div class="field"><label for="{{ member.last_name.id_for_label }}">Last name</label>{{ member.last_name }}{% for error in member.last_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
+              <div class="field"><label for="{{ member.level.id_for_label }}">Student level</label>{{ member.level }}{% for error in member.level.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
+              <div class="field"><label for="{{ member.email.id_for_label }}">Email (optional)</label>{{ member.email }}{% for error in member.email.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
+              <button type="button" class="team-person-row__remove" aria-label="Remove this student">Remove</button>
+            </div>
+            {% for error in member.non_field_errors %}<p class="field-errors">{{ error }}</p>{% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+        <template id="students-template">
+          <div class="team-person-row">
+            <div class="team-person-row__main">
+              {{ students.empty_form.DELETE }}
+              <div class="field"><label>First name</label>{{ students.empty_form.first_name }}</div>
+              <div class="field"><label>Last name</label>{{ students.empty_form.last_name }}</div>
+              <div class="field"><label>Student level</label>{{ students.empty_form.level }}</div>
+              <div class="field"><label>Email (optional)</label>{{ students.empty_form.email }}</div>
+              <button type="button" class="team-person-row__remove" aria-label="Remove this student">Remove</button>
+            </div>
+          </div>
+        </template>
+        <p class="team-enrolment__empty" id="students-empty">No students added yet. You can add them now or after the school is set up.</p>
+      </section>
+
+      <section class="team-enrolment__card" aria-labelledby="plan-section-title">
+        <div class="team-enrolment__sectionhead">
+          <span class="team-enrolment__number">5</span>
+          <div><h2 id="plan-section-title">School plan</h2><p>The plan sets the teacher limit. No payment is taken on this form; the school admin can activate payment after signing in.</p></div>
+        </div>
+        <div class="field team-enrolment__plan">
+          {% if plan_available %}
+          <label for="{{ form.plan.id_for_label }}">{{ form.plan.label }}</label>{{ form.plan }}
+          {% if form.plan.help_text %}<p class="field-help">{{ form.plan.help_text }}</p>{% endif %}
+          {% for error in form.plan.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}
+          {% else %}
+          <p class="field-help">No school plans are available right now. You can choose a plan after registration.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <aside class="team-enrolment__privacy"><strong>Keep the login workbook private.</strong> It contains every account's current password. Save it after download and share each person's login only with them.</aside>
+      <button type="submit" class="ui-btn ui-btn--gold ui-btn--large team-enrolment__submit" id="school-team-submit" data-native-label="Create the school and download all logins">Create the school and download all logins</button>
+      <p class="team-enrolment__status" id="school-team-status" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</div>
+
+<style>
+  .team-enrolment { padding: 36px 0 72px; }
+  .team-enrolment__head { max-width: 860px; margin: 0 auto 24px; }
+  .team-enrolment__back { display: inline-block; margin-bottom: 18px; color: #4d00d8; font-weight: 700; text-decoration: none; }
+  .team-enrolment__head h1 { margin: 4px 0 10px; color: #17183d; font-size: clamp(1.8rem, 4vw, 2.7rem); }
+  .team-enrolment__lede { max-width: 760px; margin: 0; color: #596483; line-height: 1.65; }
+  .team-enrolment__limit { margin-top: 8px; color: #7b849f; font-size: .9rem; }
+  .team-enrolment__form { display: grid; gap: 16px; max-width: 1000px; margin: 0 auto; }
+  .team-enrolment__card { min-width: 0; padding: clamp(18px, 3vw, 28px); border: 1px solid #e1e5f2; border-radius: 18px; background: #fff; box-shadow: 0 12px 34px rgba(25, 28, 72, .06); }
+  .team-enrolment__sectionhead, .team-enrolment__sectionlabel { display: flex; align-items: flex-start; gap: 13px; }
+  .team-enrolment__sectionhead { margin-bottom: 20px; }
+  .team-enrolment__sectionhead h2 { margin: 0 0 4px; color: #17183d; font-size: 1.25rem; }
+  .team-enrolment__sectionhead p { margin: 0; color: #687392; line-height: 1.5; }
+  .team-enrolment__number { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%; color: #21144f; background: #ffe46c; font-weight: 800; }
+  .team-enrolment__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
+  .team-enrolment__grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .team-enrolment__grid .field, .team-person-row .field { min-width: 0; margin: 0; }
+  .team-enrolment .field input, .team-enrolment .field select { width: 100%; max-width: 100%; min-width: 0; }
+  .team-enrolment__username-note { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: #f3f1ff; color: #514b79; line-height: 1.5; }
+  .team-enrolment__sectionhead--split { justify-content: space-between; align-items: center; gap: 18px; }
+  .team-enrolment__sectionlabel { align-items: flex-start; }
+  .team-enrolment__optional { margin-left: 6px; color: #7e86a4; font-size: .76rem; font-weight: 600; }
+  .team-enrolment__add { flex: none; padding: 10px 14px; border: 1px solid #d6d9ea; border-radius: 10px; color: #3d18ae; background: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+  .team-enrolment__add:hover { background: #f3f1ff; }
+  .team-enrolment__rows { display: grid; gap: 10px; }
+  .team-person-row { padding: 14px; border: 1px solid #e5e8f2; border-radius: 12px; background: #fbfcff; }
+  .team-person-row__main { display: grid; grid-template-columns: 1fr 1fr 1fr 1.25fr auto; align-items: end; gap: 10px; }
+  .team-person-row__main > input[type="checkbox"] { display: none; }
+  .team-person-row__remove { padding: 10px; border: 0; color: #79505a; background: transparent; font: inherit; cursor: pointer; }
+  .team-person-row__remove:hover { color: #b42335; }
+  .team-enrolment__empty { margin: 12px 0 0; color: #7b849f; }
+  .team-enrolment__empty[hidden] { display: none; }
+  .team-enrolment__plan { max-width: 460px; margin: 0; }
+  .team-enrolment__privacy { padding: 15px 18px; border: 1px solid #f1d77f; border-radius: 12px; color: #665624; background: #fff9df; line-height: 1.55; }
+  .team-enrolment__submit { width: 100%; max-width: 1000px; }
+  .team-enrolment__status { min-height: 1.5em; margin: -8px 0 0; color: #574891; text-align: center; }
+  .team-enrolment__alert, .team-enrolment__error { padding: 12px 15px; border: 1px solid #f1d77f; border-radius: 10px; color: #6d4d00; background: #fff8dc; }
+  .team-enrolment__alert p { margin: 0; }
+  .team-enrolment__alert p + p { margin-top: 6px; }
+  .team-enrolment .field-errors { margin: 5px 0 0; color: #b42335; font-size: .87rem; }
+  @media (max-width: 800px) {
+    .team-enrolment { padding: 24px 0 48px; }
+    .team-enrolment__grid--three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .team-person-row__main { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .team-person-row__remove { justify-self: start; }
+  }
+  @media (max-width: 560px) {
+    .team-enrolment__grid, .team-enrolment__grid--three { grid-template-columns: 1fr; }
+    .team-enrolment__sectionhead--split { align-items: flex-start; flex-direction: column; }
+    .team-enrolment__add { align-self: flex-end; }
+    .team-person-row__main { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+  (() => {
+    const maxMembers = {{ max_team_members }};
+    const prefixes = ["teachers", "students"];
+    const visibleCount = prefix => [...document.querySelectorAll(`#${prefix}-rows .team-person-row`)]
+      .filter(row => row.style.display !== "none").length;
+    const refreshEmpty = prefix => {
+      const empty = document.getElementById(`${prefix}-empty`);
+      if (empty) empty.hidden = visibleCount(prefix) > 0;
+    };
+
+    prefixes.forEach(prefix => {
+      const list = document.getElementById(`${prefix}-rows`);
+      const total = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+      const template = document.getElementById(`${prefix}-template`);
+      document.querySelector(`[data-add-row="${prefix}"]`).addEventListener("click", () => {
+        const allRows = visibleCount("teachers") + visibleCount("students");
+        if (allRows >= maxMembers) {
+          window.alert(`You can add up to ${maxMembers} teachers and students in one registration.`);
+          return;
+        }
+        const index = Number(total.value || 0);
+        list.insertAdjacentHTML("beforeend", template.innerHTML.replaceAll("__prefix__", String(index)));
+        total.value = String(index + 1);
+        refreshEmpty(prefix);
+        list.lastElementChild.querySelector("input:not([type=checkbox]), select")?.focus();
+      });
+      list.addEventListener("click", event => {
+        const button = event.target.closest(".team-person-row__remove");
+        if (!button) return;
+        const row = button.closest(".team-person-row");
+        const deletion = row.querySelector("input[type=checkbox][name$='-DELETE']");
+        if (deletion) deletion.checked = true;
+        row.style.display = "none";
+        refreshEmpty(prefix);
+      });
+      refreshEmpty(prefix);
+    });
+
+    const form = document.getElementById("school-team-form");
+    const submit = document.getElementById("school-team-submit");
+    const status = document.getElementById("school-team-status");
+    form.addEventListener("submit", () => {
+      submit.disabled = true;
+      submit.textContent = "Creating accounts and preparing the download…";
+      status.textContent = "Please keep this page open while the secure login workbook is prepared.";
+      window.setTimeout(() => {
+        submit.disabled = false;
+        submit.textContent = "Create the school and download all logins";
+        status.textContent = "";
+      }, 20000);
+    });
+  })();
+</script>
+{% endblock %}

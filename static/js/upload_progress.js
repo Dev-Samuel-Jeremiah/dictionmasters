@@ -67,10 +67,10 @@
       },
       saving: function () {
         box.classList.add("is-saving");
-        box.querySelector(".up-progress__name").textContent = "Upload finished — saving…";
-        box.querySelector(".up-progress__percent").textContent = "100%";
+        box.querySelector(".up-progress__name").textContent = "Saving your data…";
+        box.querySelector(".up-progress__percent").textContent = "Saving";
         box.querySelector(".up-progress__fill").style.width = "100%";
-        box.querySelector(".up-progress__detail").textContent = "Just a moment while the server files it away.";
+        box.querySelector(".up-progress__detail").textContent = "Upload complete. The server is processing the file and preparing your result.";
         box.querySelector(".up-progress__cancel").hidden = true;
       },
       done: function () {
@@ -98,6 +98,34 @@
     document.close();
   }
 
+  function readBlob(blob, done) {
+    if (!blob) { done(""); return; }
+    var reader = new FileReader();
+    reader.onload = function () { done(String(reader.result || "")); };
+    reader.onerror = function () { done(""); };
+    reader.readAsText(blob, "UTF-8");
+  }
+
+  function attachmentName(header) {
+    var encoded = /filename\*=UTF-8''([^;]+)/i.exec(header || "");
+    var plain = /filename="?([^";]+)"?/i.exec(header || "");
+    var name = encoded ? encoded[1].trim() : (plain ? plain[1].trim() : "download");
+    try { name = decodeURIComponent(name); } catch (error) { /* use the header value as-is */ }
+    return name.replace(/[\\/]/g, "_");
+  }
+
+  function download(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.hidden = true;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  }
+
   function send(form, button) {
     var files = chosenFiles(form);
     if (!files.length) return false;
@@ -113,6 +141,7 @@
 
     var request = new XMLHttpRequest();
     request.open("POST", form.action || window.location.href, true);
+    request.responseType = "blob";
     request.setRequestHeader("X-DM-Upload", "1");
 
     request.upload.addEventListener("progress", function (event) {
@@ -124,8 +153,10 @@
     request.addEventListener("load", function () {
       if (request.status === 402) {          // access ran out mid-upload
         var where = "/billing/";
-        try { where = JSON.parse(request.responseText).url || where; } catch (error) { /* keep the default */ }
-        window.location.assign(where);
+        readBlob(request.response, function (text) {
+          try { where = JSON.parse(text).url || where; } catch (error) { /* keep the default */ }
+          window.location.assign(where);
+        });
         return;
       }
       if (request.status >= 400) {
@@ -133,14 +164,26 @@
         view.failed("The server answered " + request.status + ". Nothing was saved — please try again.");
         return;
       }
-      view.done();
-      var landed = request.responseURL || "";
-      var here = window.location.href.split("#")[0];
-      if (landed && landed.split("#")[0] !== here && landed.split("?")[0] !== (form.action || here).split("?")[0]) {
-        window.location.assign(landed);      // saved, and the server moved us on
-      } else {
-        show(request.responseText);          // same page again: it has something to say
+      var disposition = request.getResponseHeader("Content-Disposition") || "";
+      if (/attachment/i.test(disposition)) {
+        download(request.response, attachmentName(disposition));
+        view.done();
+        // The response also sets the success message. Reload after starting
+        // the download to show it and clear the uploaded file from the form.
+        window.setTimeout(function () { window.location.reload(); }, 1000);
+        return;
       }
+
+      readBlob(request.response, function (html) {
+        view.done();
+        var landed = request.responseURL || "";
+        var here = window.location.href.split("#")[0];
+        if (landed && landed.split("#")[0] !== here && landed.split("?")[0] !== (form.action || here).split("?")[0]) {
+          window.location.assign(landed);    // saved, and the server moved us on
+        } else {
+          show(html);                         // same page again: it has something to say
+        }
+      });
     });
 
     request.addEventListener("error", function () {

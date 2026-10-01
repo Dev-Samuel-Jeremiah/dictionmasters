@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Scan &amp; Listen — Diction Masters{% endblock %}
+{% block meta_description %}Turn a photographed page from a book into editable text and listen to it read aloud.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/book_scanner.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="bs-page" data-ocr-url="{% url 'learning_tools:book_scanner_recognize' %}" data-audio-url="{% url 'learning_tools:book_scanner_narrate' %}" data-audio-ready="{{ narration_configured|yesno:'true,false' }}">
+  <div class="bs-wrap">
+    <nav class="bs-breadcrumbs" aria-label="Breadcrumb">
+      <a href="{% url 'learning_tools:hub' %}">Learning tools</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">Scan &amp; Listen</span>
+    </nav>
+
+    <section class="bs-hero" aria-labelledby="bs-title">
+      <div class="bs-hero__copy">
+        <p class="bs-eyebrow"><span class="bs-eyebrow__dot"></span> Your books, made listenable</p>
+        <h1 id="bs-title">Read any page.<br><span>Hear every word.</span></h1>
+        <p>Capture a page from a printed book. We’ll turn the picture into text you can correct, then read it aloud for you.</p>
+        <div class="bs-hero__privacy"><span aria-hidden="true">&#128274;</span><span><strong>Private by design.</strong> Photos are processed securely and never stored.</span></div>
+      </div>
+      <div class="bs-hero__art" aria-hidden="true">
+        <div class="bs-art-page bs-art-page--back"><i></i><i></i><i></i><i></i></div>
+        <div class="bs-art-page bs-art-page--front"><span class="bs-art-corner"></span><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="bs-art-scan"><span></span><span></span></div>
+        <div class="bs-art-sound"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>
+        <span class="bs-art-label">TEXT <span aria-hidden="true">&#8594;</span> AUDIO</span>
+      </div>
+    </section>
+
+    <ol class="bs-steps" aria-label="How Scan and Listen works">
+      <li class="is-active"><span class="bs-step__num">1</span><span><strong>Capture a page</strong><small>Snap or choose a photo</small></span></li>
+      <li><span class="bs-step__num">2</span><span><strong>Review the text</strong><small>Correct anything you need</small></span></li>
+      <li><span class="bs-step__num">3</span><span><strong>Listen and follow</strong><small>Read at your own pace</small></span></li>
+    </ol>
+
+    <div class="bs-workspace">
+      <section class="bs-card bs-capture" aria-labelledby="bs-capture-title">
+        <div class="bs-card__head">
+          <div>
+            <p class="bs-card__eyebrow">STEP 1</p>
+            <h2 id="bs-capture-title">Capture a page</h2>
+          </div>
+          <span class="bs-card__icon" aria-hidden="true">{% include "includes/icon.html" with name="scan" size=24 %}</span>
+        </div>
+
+        <div class="bs-capture__intro">
+          <p>Place one page in good light and keep your camera parallel to the paper. Clear, flat pages give the best result.</p>
+          <ul class="bs-tips">
+            <li><span aria-hidden="true">&#10003;</span> Fill the frame with one page</li>
+            <li><span aria-hidden="true">&#10003;</span> Keep the text sharp and in focus</li>
+            <li><span aria-hidden="true">&#10003;</span> Avoid shadows across the writing</li>
+          </ul>
+        </div>
+
+        <div class="bs-capture__actions">
+          <button class="bs-button bs-button--primary" type="button" data-snap>
+            <span class="bs-button__icon" aria-hidden="true">{% include "includes/icon.html" with name="scan" size=19 %}</span>
+            <span>Take a photo</span>
+          </button>
+          <button class="bs-button bs-button--secondary" type="button" data-upload>
+            <span class="bs-button__icon" aria-hidden="true">{% include "includes/icon.html" with name="dl" size=19 %}</span>
+            <span>Choose a photo</span>
+          </button>
+          <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" data-camera-input hidden>
+          <input type="file" accept="image/jpeg,image/png,image/webp" data-file-input hidden>
+        </div>
+
+        <figure class="bs-preview" data-preview hidden>
+          <img data-preview-image alt="Preview of the selected book page">
+          <figcaption><span data-preview-name></span><button type="button" class="bs-text-button" data-remove-photo>Remove photo</button></figcaption>
+        </figure>
+
+        <div class="bs-processing" data-processing hidden>
+          <div class="bs-processing__top"><span class="bs-spinner" aria-hidden="true"></span><span data-processing-label>Preparing your page…</span><span data-progress-label>0%</span></div>
+          <progress max="100" value="0" data-progress-bar aria-label="Text recognition progress"></progress>
+          <p>Your compressed photo is sent securely for text recognition, then discarded. It is never saved to your account.</p>
+        </div>
+        <p class="bs-status" data-status role="status" aria-live="polite">Your page photo is sent securely for recognition and discarded after processing.</p>
+        <p class="bs-error" data-error role="alert" hidden></p>
+        <p class="bs-capture__limit">JPG, PNG or WebP · Up to 15 MB · One page per photo</p>
+      </section>
+
+      <section class="bs-card bs-transcript" aria-labelledby="bs-transcript-title">
+        <div class="bs-card__head">
+          <div>
+            <p class="bs-card__eyebrow">STEP 2</p>
+            <h2 id="bs-transcript-title">Review your text</h2>
+          </div>
+          <span class="bs-card__icon bs-card__icon--gold" aria-hidden="true">{% include "includes/icon.html" with name="abc" size=24 %}</span>
+        </div>
+        <p class="bs-transcript__hint">Check the words carefully. You can edit this text before listening.</p>
+        <label class="bs-visually-hidden" for="bs-transcript-text">Recognized book text</label>
+        <textarea id="bs-transcript-text" class="bs-textarea" data-transcript maxlength="24000" placeholder="Your scanned words will appear here. You can also type or paste text to listen to it."></textarea>
+        <div class="bs-transcript__meta"><span data-word-count>0 words</span><span data-char-count>0 / 24,000</span></div>
+        <div class="bs-transcript__actions">
+          <button type="button" class="bs-text-button" data-copy disabled>Copy text</button>
+          <button type="button" class="bs-text-button" data-download disabled>Download .txt</button>
+          <button type="button" class="bs-text-button bs-text-button--quiet" data-clear disabled>Clear text</button>
+        </div>
+        <p class="bs-quality" data-quality hidden></p>
+      </section>
+
+      <section class="bs-card bs-listen" aria-labelledby="bs-listen-title">
+        <div class="bs-card__head">
+          <div>
+            <p class="bs-card__eyebrow">STEP 3</p>
+            <h2 id="bs-listen-title">Listen and follow</h2>
+          </div>
+          <span class="bs-card__icon bs-card__icon--blue" aria-hidden="true">{% include "includes/icon.html" with name="vol" size=24 %}</span>
+        </div>
+        <p class="bs-listen__hint">Generate the complete narration first. Once it is ready, you can play it or download the MP3. Your reviewed text is sent securely to ElevenLabs with our configured voice; page photos are never sent.</p>
+        <div class="bs-listen__settings">
+          <div class="bs-narrator"><span class="bs-narrator__label">Reading voice</span><strong>Configured voice</strong><small>ElevenLabs</small></div>
+          <div class="bs-speed"><label for="bs-speed">Reading speed <output data-speed-label for="bs-speed">1×</output></label><input id="bs-speed" type="range" min="0.7" max="1.2" value="1" step="0.1" data-speed></div>
+        </div>
+        <div class="bs-player" data-player>
+          <button class="bs-play" type="button" data-play aria-label="Play complete narration" disabled>{% include "includes/icon.html" with name="play" size=20 %}</button>
+          <div class="bs-player__track"><span class="bs-player__title" data-player-title>Ready when you are</span><span class="bs-player__sub" data-player-sub>Scan a page or add text to get started</span></div>
+          <span class="bs-player__wave" data-wave aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <button class="bs-stop" type="button" data-stop aria-label="Stop reading" disabled>&#9632;</button>
+        </div>
+        <div class="bs-player__controls">
+          <button class="bs-button bs-button--primary" type="button" data-generate-audio disabled>Generate audio</button>
+          <button class="bs-button bs-button--secondary" type="button" data-download-audio disabled>Download audio (MP3)</button>
+          <span class="bs-local-audio"><span aria-hidden="true">&#9835;</span><span data-audio-download-status aria-live="polite">Generate the complete audio before playing · Up to 48,000 characters per hour</span></span>
+        </div>
+        <p class="bs-audio-note" data-audio-note{% if narration_configured %} hidden{% endif %}>ElevenLabs narration isn't configured yet. Please contact your Diction Masters administrator.</p>
+        <p class="bs-audio-error" data-audio-error role="alert" hidden></p>
+      </section>
+    </div>
+
+    <aside class="bs-footnote"><span class="bs-footnote__lock" aria-hidden="true">&#128274;</span><p><strong>Your privacy matters.</strong> Your compressed page photo is sent to Diction Masters for recognition, then discarded without being saved. When you choose Generate audio, the text is sent to ElevenLabs. Diction Masters doesn't save your transcript or generated audio. Generated audio stays in this tab until you leave; close the page to clear your work.</p></aside>
+    <form data-speech-token hidden>{% csrf_token %}</form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/book_scanner.js' %}" defer></script>
+{% endblock %}

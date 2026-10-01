@@ -19,9 +19,11 @@ from .utils import generate_access_code, generate_school_code
 class School(models.Model):
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=16, unique=True, editable=False)
-    email = models.EmailField()
-    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=120, blank=True)
     address = models.CharField(max_length=255, blank=True)
+    contact_person = models.CharField("Contact person", max_length=255, blank=True, default="")
+    relationship_status = models.CharField("Status", max_length=30, blank=True, default="")
     # Set in the control room. Blank means no limit.
     max_teachers = models.PositiveIntegerField(
         "Teachers allowed", null=True, blank=True,

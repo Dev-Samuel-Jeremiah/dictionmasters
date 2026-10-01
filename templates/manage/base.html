@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="{% static 'css/ipa_keyboard.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
-<body class="cr-body">
+<body class="cr-body{% if wide_list %} cr-body--wide-list{% endif %}">
   <a href="#cr-main" class="cr-skip">Skip to content</a>
 
   <header class="cr-top">

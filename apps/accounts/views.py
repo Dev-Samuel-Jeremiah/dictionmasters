@@ -16,6 +16,8 @@ from .dashboard_data import learner_dashboard
 from .forms import (
     EmailAuthenticationForm,
     IndividualRegistrationForm,
+    SchoolTeamMemberForm,
+    SchoolTeamRegistrationForm,
     TeacherRegistrationForm,
     SchoolRegistrationForm,
     StudentRegistrationForm,
@@ -104,6 +106,120 @@ def register_school(request):
     else:
         form = SchoolRegistrationForm()
     return render(request, "accounts/register_school.html", {"form": form})
+
+
+@through_tour
+def register_school_team(request):
+    """Register a school, its admin, and the first teacher/student roster."""
+    from io import BytesIO
+
+    from django.conf import settings as dj_settings
+    from django.db.models.functions import Lower
+    from django.forms import formset_factory
+    from django.http import FileResponse
+
+    from .school_enrollment import MAX_TEAM_MEMBERS, SchoolEnrollmentConflict, create_school_team
+
+    teacher_factory = formset_factory(
+        SchoolTeamMemberForm, extra=0, max_num=MAX_TEAM_MEMBERS, validate_max=True,
+        absolute_max=MAX_TEAM_MEMBERS + 5, can_delete=True,
+    )
+    student_factory = formset_factory(
+        SchoolTeamMemberForm, extra=0, max_num=MAX_TEAM_MEMBERS, validate_max=True,
+        absolute_max=MAX_TEAM_MEMBERS + 5, can_delete=True,
+    )
+    data = request.POST if request.method == "POST" else None
+    form = SchoolTeamRegistrationForm(data)
+    teachers = teacher_factory(data, prefix="teachers", form_kwargs={"kind": "teacher"})
+    students = student_factory(data, prefix="students", form_kwargs={"kind": "student"})
+
+    if request.method == "POST":
+        form_valid = form.is_valid()
+        teachers_valid = teachers.is_valid()
+        students_valid = students.is_valid()
+        valid = form_valid and teachers_valid and students_valid
+        teacher_rows = [item.cleaned_data for item in teachers.forms
+                        if item.cleaned_data and not item.cleaned_data.get("DELETE")]
+        student_rows = [item.cleaned_data for item in students.forms
+                        if item.cleaned_data and not item.cleaned_data.get("DELETE")]
+
+        if len(teacher_rows) + len(student_rows) > MAX_TEAM_MEMBERS:
+            form.add_error(None, f"Add up to {MAX_TEAM_MEMBERS} teachers and students in one registration.")
+
+        email_fields = []
+        if form.cleaned_data.get("admin_email"):
+            email_fields.append((form, "admin_email", form.cleaned_data["admin_email"]))
+        for formset in (teachers, students):
+            for member_form in formset.forms:
+                row = member_form.cleaned_data if member_form.is_bound else {}
+                if row and not row.get("DELETE") and row.get("email"):
+                    email_fields.append((member_form, "email", row["email"]))
+
+        emails_seen = set()
+        duplicated = set()
+        for _owner, _field, email in email_fields:
+            key = email.casefold()
+            if key in emails_seen:
+                duplicated.add(key)
+            emails_seen.add(key)
+        for owner, field_name, email in email_fields:
+            if email.casefold() in duplicated:
+                owner.add_error(field_name, "Use this email on one account only.")
+
+        lookup_emails = list(emails_seen)
+        if lookup_emails:
+            existing_emails = {
+                email.casefold()
+                for email in User.objects.annotate(normalized_email=Lower("email"))
+                .filter(normalized_email__in=lookup_emails).values_list("email", flat=True)
+            }
+            for owner, field_name, email in email_fields:
+                if email.casefold() in existing_emails:
+                    owner.add_error(field_name, "This email already belongs to an account.")
+
+        plan = form.cleaned_data.get("plan")
+        if plan is not None and plan.max_units is not None and len(teacher_rows) > plan.max_units:
+            form.add_error("plan", f"This plan allows {plan.max_units} teachers; the roster has {len(teacher_rows)}.")
+
+        valid = valid and not form.errors and not teachers.non_form_errors() and not students.non_form_errors()
+        valid = valid and all(not item.errors for item in teachers.forms + students.forms)
+        if valid:
+            admin_data = {
+                "first_name": form.cleaned_data["admin_first_name"],
+                "last_name": form.cleaned_data["admin_last_name"],
+                "email": form.cleaned_data["admin_email"],
+            }
+            site = getattr(dj_settings, "SITE_URL", "") or request.build_absolute_uri("/").rstrip("/")
+            try:
+                workbook, filename = create_school_team(
+                    form.cleaned_data,
+                    admin_data,
+                    teacher_rows,
+                    student_rows,
+                    site_url=site,
+                    plan=plan,
+                )
+            except SchoolEnrollmentConflict as error:
+                form.add_error(None, str(error))
+            else:
+                response = FileResponse(
+                    BytesIO(workbook),
+                    as_attachment=True,
+                    filename=filename,
+                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+                response["Cache-Control"] = "private, no-store, max-age=0"
+                response["Pragma"] = "no-cache"
+                response["X-Content-Type-Options"] = "nosniff"
+                return response
+
+    return render(request, "accounts/register_school_team.html", {
+        "form": form,
+        "teachers": teachers,
+        "students": students,
+        "max_team_members": MAX_TEAM_MEMBERS,
+        "plan_available": form.fields["plan"].queryset.exists(),
+    })
 
 
 @through_tour

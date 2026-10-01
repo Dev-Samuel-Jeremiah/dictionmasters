@@ -62,6 +62,22 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 # a code made on a laptop still works for a child holding the book.
 SITE_URL = os.environ.get("DJANGO_SITE_URL", "https://www.dictionmasters.app").rstrip("/")
 
+# School login sheets need to re-download the current password without
+# weakening Django's one-way password hashes. Keep this key separate from
+# DJANGO_SECRET_KEY and back it up: changing it makes saved credentials
+# unreadable. Existing hashed-only passwords become exportable only after
+# that account successfully signs in and supplies the current password.
+SCHOOL_CREDENTIALS_ENCRYPTION_KEY = os.environ.get("SCHOOL_CREDENTIALS_ENCRYPTION_KEY", "").strip()
+if SCHOOL_CREDENTIALS_ENCRYPTION_KEY:
+    from cryptography.fernet import Fernet
+
+    try:
+        Fernet(SCHOOL_CREDENTIALS_ENCRYPTION_KEY.encode("ascii"))
+    except (UnicodeEncodeError, TypeError, ValueError) as error:
+        raise ImproperlyConfigured("SCHOOL_CREDENTIALS_ENCRYPTION_KEY must be a valid Fernet key.") from error
+elif PRODUCTION and not TESTING:
+    raise ImproperlyConfigured("Set SCHOOL_CREDENTIALS_ENCRYPTION_KEY before running in production.")
+
 # Full origins, needed for form posts over HTTPS, e.g.
 # "https://dictionmasters.com,https://www.dictionmasters.com".
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
@@ -541,3 +557,6 @@ LIBRARY_NARRATION_MAX_CHARS = int(os.environ.get("LIBRARY_NARRATION_MAX_CHARS", 
 # The voice model for books; blank uses ELEVENLABS_MODEL_ID. "eleven_flash_v2_5"
 # costs half the characters, a little less natural.
 LIBRARY_VOICE_MODEL_ID = os.environ.get("LIBRARY_VOICE_MODEL_ID", "")
+# Scan & Listen prepares audio before playback and uses Flash for quicker generation.
+# The selected voice still comes from ELEVENLABS_VOICE_ID.
+BOOK_SCAN_VOICE_MODEL_ID = os.environ.get("BOOK_SCAN_VOICE_MODEL_ID", "eleven_flash_v2_5").strip() or "eleven_flash_v2_5"
