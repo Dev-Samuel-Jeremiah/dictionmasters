@@ -19,6 +19,8 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from apps.quick_words.speech import SpeechUnavailable, is_configured as speech_is_configured, speak
 
+from . import page_reader
+
 logger = logging.getLogger(__name__)
 
 BOOK_SCAN_CHUNK_CHARS = 4000
@@ -110,7 +112,7 @@ def _read_tesseract_tsv(tsv):
     """Restore Tesseract's word boxes into paragraphs and a rough confidence."""
     paragraphs = OrderedDict()
     confidences = []
-    for row in csv.DictReader(io.StringIO(tsv), delimiter="\t"):
+    for row in csv.DictReader(io.StringIO(tsv), delimiter="\t", quoting=csv.QUOTE_NONE):
         if row.get("level") != "5":
             continue
         word = (row.get("text") or "").strip()
@@ -125,58 +127,86 @@ def _read_tesseract_tsv(tsv):
                 confidences.append(confidence)
         except (TypeError, ValueError):
             pass
-    text = "\n\n".join(
-        "\n".join(" ".join(words) for words in lines.values())
-        for lines in paragraphs.values()
-    ).strip()
+    text = page_reader.reflow(
+        [[" ".join(words) for words in lines.values()] for lines in paragraphs.values()]
+    )
     confidence = round(sum(confidences) / len(confidences)) if confidences else 0
     return text, confidence
+
+
+def _tesseract(page_bytes):
+    """(text, confidence) from the server's Tesseract, or a JsonResponse error."""
+    if not shutil.which("tesseract"):
+        logger.error("Tesseract OCR is not available on the server handling Scan & Listen")
+        return JsonResponse({"error": "Page recognition is temporarily unavailable. Please contact your administrator."}, status=503)
+    try:
+        result = subprocess.run(
+            ["tesseract", "stdin", "stdout", "-l", "eng", "--oem", "1", "--psm", "3",
+             "-c", "preserve_interword_spaces=1", "tsv"],
+            input=page_bytes, capture_output=True, timeout=30, check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return JsonResponse({"error": "This page took too long to read. Try a sharper photo of one page."}, status=504)
+    except OSError:
+        logger.exception("Tesseract could not start for Scan & Listen")
+        return JsonResponse({"error": "Page recognition is temporarily unavailable. Please try again shortly."}, status=503)
+    if result.returncode:
+        logger.warning("Tesseract returned an error for Scan & Listen")
+        return JsonResponse({"error": "This page could not be read. Try a sharper photo in better light."}, status=422)
+    return _read_tesseract_tsv(result.stdout.decode("utf-8", errors="replace"))
 
 
 @login_required
 @require_POST
 def book_scanner_recognize(request):
-    """OCR one compressed page with the server's installed Tesseract binary.
+    """Read one photographed page into text.
 
-    The image is passed to Tesseract on stdin and is never written to storage.
+    The AI vision reader (page_reader.py) copies the page word for word; the
+    server's Tesseract is the fallback when it isn't configured or fails.
+    The image stays in memory and is never written to storage.
     """
     uploaded = request.FILES.get("image")
     if uploaded is None:
         return JsonResponse({"error": "Choose a page photo to scan."}, status=400)
     if uploaded.size > BOOK_SCAN_IMAGE_MAX_BYTES:
         return JsonResponse({"error": "This photo is larger than 15 MB. Choose a smaller page photo."}, status=413)
-    if not shutil.which("tesseract"):
-        return JsonResponse({"error": "Page recognition is temporarily unavailable. Please contact your administrator."}, status=503)
 
     try:
         with Image.open(uploaded) as original:
             if original.width * original.height > BOOK_SCAN_IMAGE_MAX_PIXELS:
                 return JsonResponse({"error": "This photo is too large to process. Choose a smaller page image."}, status=413)
             image = ImageOps.exif_transpose(original).convert("RGB")
-            image.thumbnail((2600, 2600), Image.Resampling.LANCZOS)
-            image = ImageOps.autocontrast(ImageOps.grayscale(image))
-            prepared = io.BytesIO()
-            image.save(prepared, format="JPEG", quality=92, optimize=True)
-            page_bytes = prepared.getvalue()
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError, Image.DecompressionBombWarning):
         return JsonResponse({"error": "This image could not be opened. Choose a clear JPG, PNG or WebP photo."}, status=400)
 
-    try:
-        result = subprocess.run(
-            ["tesseract", "stdin", "stdout", "-l", "eng", "--oem", "1", "--psm", "3", "tsv"],
-            input=page_bytes, capture_output=True, timeout=30, check=False,
-        )
-    except subprocess.TimeoutExpired:
-        return JsonResponse({"error": "This page took too long to read. Try a sharper photo of one page."}, status=504)
-    except OSError:
-        logger.exception("Tesseract could not start for Scan & Listen user %s", request.user.pk)
-        return JsonResponse({"error": "Page recognition is temporarily unavailable. Please try again shortly."}, status=503)
-    if result.returncode:
-        logger.warning("Tesseract returned an error for Scan & Listen user %s", request.user.pk)
-        return JsonResponse({"error": "This page could not be read. Try a sharper photo in better light."}, status=422)
+    if page_reader.ai_configured():
+        # The vision model looks at the page at up to 2048px, so a sharp
+        # photo at that size gives it every detail it can use.
+        for_ai = image.copy()
+        for_ai.thumbnail((2048, 2048), Image.Resampling.LANCZOS)
+        prepared = io.BytesIO()
+        for_ai.save(prepared, format="JPEG", quality=90, optimize=True)
+        try:
+            text = page_reader.read_page(prepared.getvalue())
+            return JsonResponse({"text": text, "engine": "ai"})
+        except page_reader.PageReadUnavailable as exc:
+            logger.warning("Scan & Listen AI page reading failed for user %s, using Tesseract: %s", request.user.pk, exc)
 
-    text, confidence = _read_tesseract_tsv(result.stdout.decode("utf-8", errors="replace"))
-    return JsonResponse({"text": text, "confidence": confidence})
+    # Tesseract reads best with text around 30px tall: enlarge a small
+    # photo, shrink a huge one, and give it clean grey contrast.
+    longest = max(image.size)
+    if longest < 1800:
+        factor = 1800 / longest
+        image = image.resize((round(image.width * factor), round(image.height * factor)), Image.Resampling.LANCZOS)
+    image.thumbnail((3200, 3200), Image.Resampling.LANCZOS)
+    image = ImageOps.autocontrast(ImageOps.grayscale(image), cutoff=1)
+    prepared = io.BytesIO()
+    image.save(prepared, format="PNG")
+    found = _tesseract(prepared.getvalue())
+    if isinstance(found, JsonResponse):
+        return found
+    text, confidence = found
+    return JsonResponse({"text": text, "confidence": confidence, "engine": "ocr"})
 
 
 @login_required

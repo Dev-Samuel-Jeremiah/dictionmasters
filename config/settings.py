@@ -560,3 +560,8 @@ LIBRARY_VOICE_MODEL_ID = os.environ.get("LIBRARY_VOICE_MODEL_ID", "")
 # Scan & Listen prepares audio before playback and uses Flash for quicker generation.
 # The selected voice still comes from ELEVENLABS_VOICE_ID.
 BOOK_SCAN_VOICE_MODEL_ID = os.environ.get("BOOK_SCAN_VOICE_MODEL_ID", "eleven_flash_v2_5").strip() or "eleven_flash_v2_5"
+# Scan & Listen reads each photographed page with this OpenAI vision model
+# (apps/learning_tools/page_reader.py), which copies the page far more
+# faithfully than classic OCR. About $0.01 a page. Leave it blank to read
+# pages with the server's Tesseract only.
+BOOK_SCAN_OCR_MODEL = os.environ.get("BOOK_SCAN_OCR_MODEL", "gpt-4o").strip()

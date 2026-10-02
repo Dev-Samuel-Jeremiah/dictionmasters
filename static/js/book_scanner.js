@@ -233,7 +233,7 @@
       ocrRequest = request;
       request.open("POST", ocrEndpoint, true);
       request.responseType = "json";
-      request.timeout = 45000;
+      request.timeout = 100000;
       request.setRequestHeader("X-CSRFToken", csrfToken);
       request.upload.addEventListener("progress", function (event) {
         if (!event.lengthComputable) return;
@@ -331,7 +331,9 @@
       transcript.value = transcript.value.trimEnd() + separator + foundText;
       pageCount += 1;
       updateTranscript();
-      quality.textContent = "Page " + pageCount + " added · OCR confidence " + Math.round(result.confidence || 0) + "% · Please review names and punctuation.";
+      quality.textContent = result.engine === "ai"
+        ? "Page " + pageCount + " added · Read word for word from your photo · Glance over any names before listening."
+        : "Page " + pageCount + " added · OCR confidence " + Math.round(result.confidence || 0) + "% · Please review names and punctuation.";
       quality.hidden = false;
       setStatus("Page " + pageCount + " added to your reading. You can snap another page or review the text now.");
       transcript.focus({ preventScroll: true });

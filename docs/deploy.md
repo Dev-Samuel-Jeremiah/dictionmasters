@@ -33,6 +33,29 @@ The site refuses to start in production if `DJANGO_SECRET_KEY` is still
 the development placeholder, or if `DJANGO_ALLOWED_HOSTS` is empty. That
 is deliberate: a half-configured site should not serve traffic.
 
+Scan & Listen also needs the Tesseract OCR executable and its English
+language data installed on the same machine or container that runs Django.
+These are operating-system packages, so installing `requirements.txt` alone
+does not provide them. On Ubuntu or Debian, install them with:
+
+```bash
+sudo apt update
+sudo apt install -y tesseract-ocr tesseract-ocr-eng
+```
+
+Check that the Django process environment can find the executable and the
+English language data:
+
+```bash
+command -v tesseract
+tesseract --list-langs
+```
+
+The language list should include `eng`. Restart the Django development server
+or production service after installing the packages. If the page still reports
+that recognition is unavailable, check the Django server log for the
+`Tesseract OCR is not available` error.
+
 ## 1. Prepare the server
 
 ```bash
