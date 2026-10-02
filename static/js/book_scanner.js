@@ -627,17 +627,41 @@
     setStatus("Your narration was downloaded as an MP3 file.");
   }
 
-  page.querySelector("[data-snap]").addEventListener("click", function () { if (!isBusy) cameraInput.click(); });
+  // Every photo, from the camera or the gallery, goes through the crop
+  // tool first (static/js/book_scanner_capture.js), so only the page's
+  // writing is sent to be read.
+  function cropThenScan(file) {
+    if (!file) return;
+    var capture = window.DMPageCapture;
+    if (!capture || !/^image\/(jpeg|png|webp)$/i.test(file.type || "")) { scanFile(file); return; }
+    capture.crop(file).then(function (cropped) {
+      if (cropped) scanFile(cropped);
+      else setStatus("Cropping was cancelled. Take or choose a photo when you’re ready.");
+    }).catch(function () { scanFile(file); });
+  }
+
+  page.querySelector("[data-snap]").addEventListener("click", function () {
+    if (isBusy) return;
+    var capture = window.DMPageCapture;
+    if (!capture || !capture.cameraSupported()) { cameraInput.click(); return; }
+    setError("");
+    capture.camera().then(function (photo) {
+      if (photo) cropThenScan(photo);
+    }).catch(function () {
+      // No camera could be opened in the page: use the device's own camera app.
+      cameraInput.click();
+    });
+  });
   page.querySelector("[data-upload]").addEventListener("click", function () { if (!isBusy) fileInput.click(); });
   cameraInput.addEventListener("change", function () {
     var selected = cameraInput.files && cameraInput.files[0];
     cameraInput.value = "";
-    scanFile(selected);
+    cropThenScan(selected);
   });
   fileInput.addEventListener("change", function () {
     var selected = fileInput.files && fileInput.files[0];
     fileInput.value = "";
-    scanFile(selected);
+    cropThenScan(selected);
   });
   page.querySelector("[data-remove-photo]").addEventListener("click", removePhoto);
   transcript.addEventListener("input", function () {
