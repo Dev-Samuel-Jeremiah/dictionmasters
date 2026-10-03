@@ -1,0 +1,35 @@
+{% comment %}
+  A lesson item's photo slideshow for children (static/js/photo_slides.js).
+  Needs `slides`. Without JavaScript it is simply the pictures in a row.
+{% endcomment %}
+<section class="ps" data-ps aria-roledescription="carousel" aria-label="Picture slides: {{ item.title }}" tabindex="0">
+  <div class="ps__stage" data-ps-stage>
+    <ol class="ps__track" data-ps-track>
+      {% for slide in slides %}
+      <li class="ps__slide" data-ps-slide aria-roledescription="slide" aria-label="{{ forloop.counter }} of {{ slides|length }}"{% if slide.audio_file %} data-sound="{{ slide.audio_file.url }}"{% endif %}>
+        <img src="{{ slide.image.url }}" alt="{{ slide.caption|default:'' }}" {% if not forloop.first %}loading="lazy"{% endif %} draggable="false">
+        {% if slide.caption %}<p class="ps__caption">{{ slide.caption }}</p>{% endif %}
+      </li>
+      {% endfor %}
+      <li class="ps__slide ps__slide--end" data-ps-end hidden>
+        <div class="ps__done">
+          <span class="ps__stars" aria-hidden="true">&#127775;&#11088;&#127775;</span>
+          <p class="ps__done-title">Well done!</p>
+          <p>You looked at all {{ slides|length }} picture{{ slides|length|pluralize }}.</p>
+          <button type="button" class="ps__again" data-ps-again>&#8635; Look again</button>
+        </div>
+      </li>
+    </ol>
+    <button type="button" class="ps__arrow ps__arrow--prev" data-ps-prev aria-label="Previous picture">&#10094;</button>
+    <button type="button" class="ps__arrow ps__arrow--next" data-ps-next aria-label="Next picture">&#10095;</button>
+    <span class="ps__count" data-ps-count aria-live="polite">1 / {{ slides|length }}</span>
+  </div>
+  <div class="ps__bar">
+    <button type="button" class="ps__tool" data-ps-play aria-pressed="false"><span data-ps-play-label>&#9654; Play</span></button>
+    <div class="ps__dots" data-ps-dots role="tablist" aria-label="Choose a picture">
+      {% for slide in slides %}<button type="button" role="tab" class="ps__dot" data-ps-dot="{{ forloop.counter0 }}" aria-label="Picture {{ forloop.counter }}{% if slide.caption %}: {{ slide.caption }}{% endif %}"><img src="{{ slide.image.url }}" alt="" loading="lazy"></button>{% endfor %}
+    </div>
+    <button type="button" class="ps__tool" data-ps-sound aria-pressed="true" hidden>&#128266; Sound on</button>
+    <button type="button" class="ps__tool" data-ps-full aria-label="Full screen">&#9974; Full screen</button>
+  </div>
+</section>

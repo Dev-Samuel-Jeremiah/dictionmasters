@@ -94,6 +94,18 @@
       </div>
     </div>
 
+    {% if user.is_teacher or user.is_school_admin %}
+    <a href="{% url 'lesson_audio:hub' %}" class="px-card px-lesson-audio">
+      <span class="px-lesson-audio__ic" aria-hidden="true">{% include "includes/icon.html" with name="note-audio" size=30 %}</span>
+      <span class="px-lesson-audio__t">
+        <span class="px-lesson-audio__lab">New for teachers</span>
+        <b>Lesson Notes to Audio</b>
+        <span>Turn your lesson note into clear audio and practise its key words before you teach.</span>
+      </span>
+      <span class="px-playbig" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
+    </a>
+    {% endif %}
+
     {# ================= Quick tools ================= #}
     <div class="px-sec"><h2>Quick tools</h2></div>
     <div class="px-tools">

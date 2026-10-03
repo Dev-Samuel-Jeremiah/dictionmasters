@@ -1,0 +1,74 @@
+{% comment %}
+  The Teachers or Students list on the school dashboard, with level tools
+  (static/js/school_levels.js): tick people to promote or move them
+  together, or change one person's level. Needs `people`, `role`
+  ("teacher" or "student") and `level_choices`.
+{% endcomment %}
+<div class="sl" data-sl data-role="{{ role }}">
+  <div class="sl-tools">
+    <label class="sl-search"><span class="sr-only">Search {{ role }}s</span>
+      <input type="search" placeholder="Search by name or login" data-sl-search>
+    </label>
+    <label class="sl-filter"><span class="sr-only">Show a level</span>
+      <select data-sl-filter>
+        <option value="">All levels ({{ people|length }})</option>
+        {% for lvl in level_choices %}<option value="{{ lvl }}">{{ lvl }}</option>{% endfor %}
+        <option value="none">No level yet</option>
+      </select>
+    </label>
+    <label class="sl-all"><input type="checkbox" data-sl-all> Select all shown</label>
+  </div>
+
+  <form method="post" action="{% url 'schools:bulk_levels' %}" data-sl-bulk-form>
+    {% csrf_token %}
+    <input type="hidden" name="role" value="{{ role }}">
+    <input type="hidden" name="action" value="" data-sl-action>
+    <input type="hidden" name="level" value="" data-sl-level>
+    <div class="ui-table-wrap">
+      <table class="ui-table sd-people">
+        <thead><tr>
+          <th class="sl-check"><span class="sr-only">Select</span></th>
+          <th>Name</th><th>Level</th><th>Signs in with</th><th>Joined</th><th class="sd-actions"><span class="sr-only">Remove</span></th>
+        </tr></thead>
+        <tbody>
+          {% for member in people %}
+          <tr data-sl-row data-level="{{ member.level }}" data-levels="{{ member.all_levels|join:',' }}" data-search="{{ member.get_full_name|lower }} {{ member.login_name|lower }}">
+            <td class="sl-check"><input type="checkbox" name="members" value="{{ member.pk }}" aria-label="Select {{ member.get_full_name|default:member.login_name }}" data-sl-pick></td>
+            <td class="sd-name">{{ member.get_full_name }}</td>
+            <td class="sd-meta sl-level">
+              <span class="sl-level__now{% if not member.level %} is-none{% endif %}">{{ member.level_display|default:"No level" }}</span>
+              <button type="button" class="sl-change" data-sl-change data-url="{% url 'schools:member_level' member.pk %}" data-name="{{ member.get_full_name|default:member.login_name }}" aria-label="Change level for {{ member.get_full_name|default:member.login_name }}">Change</button>
+            </td>
+            <td class="sd-meta sd-login">{{ member.login_name }}</td>
+            <td class="sd-meta"><span class="sd-phone-only">Joined </span>{{ member.date_joined|date:"d M Y" }}</td>
+            <td class="sd-actions"><button type="submit" form="sd-remove-{{ member.pk }}" class="sd-btn sd-btn--remove" aria-label="Remove {{ member.get_full_name|default:member.login_name }}">Remove</button></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="sl-none" data-sl-empty hidden>No {{ role }}s match.</p>
+
+    <div class="sl-bar" data-sl-bar hidden role="region" aria-label="Selected {{ role }}s">
+      <span class="sl-bar__count"><strong data-sl-count>0</strong> selected</span>
+      {% if role == "student" %}
+      <button type="button" class="sl-bar__btn sl-bar__btn--gold" data-sl-promote>&#8679; Promote to next level</button>
+      {% endif %}
+      <span class="sl-bar__move">
+        <label class="sr-only" for="sl-move-{{ role }}">Move to level</label>
+        <select id="sl-move-{{ role }}" data-sl-move-to>
+          <option value="">Move to…</option>
+          {% for lvl in level_choices %}<option value="{{ lvl }}">{{ lvl }}</option>{% endfor %}
+        </select>
+        <button type="button" class="sl-bar__btn" data-sl-move>Move</button>
+      </span>
+      <button type="button" class="sl-bar__clear" data-sl-clear>Clear</button>
+    </div>
+  </form>
+
+  {# The Remove forms live outside the bulk form (forms can't nest). #}
+  {% for member in people %}
+  <form method="post" action="{% url 'schools:remove_member' member.pk %}" id="sd-remove-{{ member.pk }}" hidden
+        data-confirm="Remove {{ member.get_full_name|default:member.login_name }}? They'll be signed out and won't be able to sign in. Their work is kept, and you can restore them from the Removed list.">{% csrf_token %}</form>
+  {% endfor %}
+</div>

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Lesson Notes to Audio — Diction Masters{% endblock %}
+{% block meta_description %}Turn your lesson notes into clear, natural audio, and practise the topic's key words before you teach.{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/lesson_audio.css' %}">{% endblock %}
+
+{% block content %}
+<div class="la-page" data-la-hub>
+  <div class="la-wrap">
+    <nav class="la-crumbs" aria-label="Breadcrumb">
+      <a href="{% url 'learning_tools:hub' %}">Learning tools</a><span aria-hidden="true">/</span><span aria-current="page">Lesson Notes to Audio</span>
+    </nav>
+
+    <section class="la-hero" aria-labelledby="la-title">
+      <div class="la-hero__copy">
+        <p class="la-eyebrow"><span class="la-eyebrow__dot"></span>For teachers</p>
+        <h1 id="la-title">Turn your lesson notes<br><span>into audio.</span></h1>
+        <p>Upload your note, paste it, or let AI write one. Listen to it read in a natural British voice with every word highlighted, then practise the topic’s key words before you teach.</p>
+        <ul class="la-hero__points">
+          <li>{% include "includes/icon.html" with name="vol" size=18 %} Natural British voices</li>
+          <li>{% include "includes/icon.html" with name="search" size=18 %} Key words picked out automatically</li>
+          <li>{% include "includes/icon.html" with name="mic" size=18 %} Practise and get instant feedback</li>
+        </ul>
+      </div>
+      <div class="la-hero__art" aria-hidden="true">
+        <div class="la-art-note"><b>Topic: Photosynthesis</b><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="la-art-play"><span>{% include "includes/icon.html" with name="play" size=22 %}</span><em><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></em></div>
+        <div class="la-art-words"><span>chlorophyll</span><span>photosynthesis</span><span>carbon dioxide</span></div>
+      </div>
+    </section>
+
+    <ol class="la-steps" aria-label="How it works">
+      <li><span class="la-steps__n">1</span><span><strong>Add your note</strong><small>Upload, paste or write with AI</small></span></li>
+      <li><span class="la-steps__n">2</span><span><strong>Generate audio</strong><small>Choose a voice and listen along</small></span></li>
+      <li><span class="la-steps__n">3</span><span><strong>Practise key words</strong><small>Hear them, say them, get feedback</small></span></li>
+      <li><span class="la-steps__n">4</span><span><strong>Teach with confidence</strong><small>The right pronunciation, every time</small></span></li>
+    </ol>
+
+    <section class="la-find" aria-labelledby="la-find-title">
+      <div>
+        <h2 id="la-find-title">Is the note already there?</h2>
+        <p>Search {% if library_name %}the {{ library_name }} library{% else %}your notes{% endif %} by topic, subject or class before you write one. Open it to listen, practise the key words, print it or download it.</p>
+      </div>
+      <form method="get" action="#la-results" class="la-find__form" role="search">
+        <span class="la-find__icon" aria-hidden="true">{% include "includes/icon.html" with name="search" size=20 %}</span>
+        <input type="search" name="q" value="{{ query }}" placeholder="e.g. Photosynthesis, Primary 5, Basic Science" aria-label="Search lesson notes">
+        <button type="submit" class="la-btn la-btn--gold">Search</button>
+      </form>
+    </section>
+
+    <section class="la-card la-create" aria-labelledby="la-create-title">
+      <div class="la-card__head">
+        <div><p class="la-card__eyebrow">NEW LESSON NOTE</p><h2 id="la-create-title">How would you like to start?</h2></div>
+      </div>
+
+      <div class="la-tabs" role="tablist" aria-label="Ways to add a lesson note">
+        <button type="button" role="tab" id="la-tab-write" aria-controls="la-panel-write" aria-selected="{% if tab == 'write' or tab == 'typed' %}true{% else %}false{% endif %}" data-la-tab="write">{% include "includes/icon.html" with name="task" size=18 %}<span>Type or paste</span></button>
+        <button type="button" role="tab" id="la-tab-upload" aria-controls="la-panel-upload" aria-selected="{% if tab == 'upload' %}true{% else %}false{% endif %}" data-la-tab="upload">{% include "includes/icon.html" with name="dl" size=18 %}<span>Upload a note</span></button>
+        <button type="button" role="tab" id="la-tab-ai" aria-controls="la-panel-ai" aria-selected="{% if tab == 'ai' %}true{% else %}false{% endif %}" data-la-tab="ai">{% include "includes/icon.html" with name="spark" size=18 %}<span>Generate with AI</span></button>
+      </div>
+
+      <datalist id="la-classes">{% for c in classes %}<option value="{{ c }}">{% endfor %}</datalist>
+      <datalist id="la-subjects">{% for s in subjects %}<option value="{{ s }}">{% endfor %}</datalist>
+
+      {# ---------- Type or paste ---------- #}
+      <form method="post" action="{% url 'lesson_audio:create' %}" class="la-panel" id="la-panel-write" role="tabpanel" aria-labelledby="la-tab-write" data-la-panel="write" data-la-busy="Saving your note…">
+        {% csrf_token %}<input type="hidden" name="mode" value="typed">
+        <div class="la-fields">
+          <label class="la-field la-field--wide"><span>Title</span><input type="text" name="title" maxlength="200" placeholder="e.g. Photosynthesis"></label>
+          <label class="la-field"><span>Subject</span><input type="text" name="subject" maxlength="100" list="la-subjects" placeholder="e.g. Basic Science"></label>
+          <label class="la-field"><span>Class</span><input type="text" name="class_level" maxlength="100" list="la-classes" placeholder="e.g. Primary 5"></label>
+        </div>
+        <label class="la-field la-field--wide"><span>Your lesson note</span>
+          <textarea name="body" rows="10" required maxlength="60000" data-la-count placeholder="Paste or type your lesson note here. Keep a blank line between sections."></textarea>
+        </label>
+        <div class="la-panel__foot"><small data-la-counter>0 words</small><button type="submit" class="la-btn la-btn--gold">Save and continue {% include "includes/icon.html" with name="chev" size=16 %}</button></div>
+      </form>
+
+      {# ---------- Upload ---------- #}
+      <form method="post" action="{% url 'lesson_audio:create' %}" enctype="multipart/form-data" class="la-panel" id="la-panel-upload" role="tabpanel" aria-labelledby="la-tab-upload" data-la-panel="upload" data-la-busy="Reading your note…" hidden>
+        {% csrf_token %}<input type="hidden" name="mode" value="upload">
+        <label class="la-drop" data-la-drop>
+          <input type="file" name="files" multiple accept=".pdf,.docx,.txt,.md,image/jpeg,image/png,image/webp" data-la-files required>
+          <span class="la-drop__icon" aria-hidden="true">{% include "includes/icon.html" with name="dl" size=28 %}</span>
+          <strong>Drop your lesson note here, or <u>choose a file</u></strong>
+          <small>PDF, Word (.docx) or text file — or photos of a handwritten or printed note (up to 8 pages). Max 15 MB each.</small>
+        </label>
+        <ul class="la-filelist" data-la-filelist hidden></ul>
+        <div class="la-fields">
+          <label class="la-field la-field--wide"><span>Title <em>(optional)</em></span><input type="text" name="title" maxlength="200" placeholder="We’ll use the note’s topic"></label>
+          <label class="la-field"><span>Subject</span><input type="text" name="subject" maxlength="100" list="la-subjects"></label>
+          <label class="la-field"><span>Class</span><input type="text" name="class_level" maxlength="100" list="la-classes"></label>
+        </div>
+        <div class="la-panel__foot"><small>Photos are read word for word, then discarded.</small><button type="submit" class="la-btn la-btn--gold">Upload and continue {% include "includes/icon.html" with name="chev" size=16 %}</button></div>
+      </form>
+
+      {# ---------- Generate with AI ---------- #}
+      <form method="post" action="{% url 'lesson_audio:create' %}" class="la-panel" id="la-panel-ai" role="tabpanel" aria-labelledby="la-tab-ai" data-la-panel="ai" data-la-busy="Writing your lesson note… this takes about 20 seconds." hidden>
+        {% csrf_token %}<input type="hidden" name="mode" value="ai">
+        <div class="la-fields">
+          <label class="la-field la-field--wide"><span>Topic</span><input type="text" name="topic" maxlength="200" required placeholder="e.g. Photosynthesis"></label>
+          <label class="la-field"><span>Subject</span><input type="text" name="subject" maxlength="100" list="la-subjects" placeholder="e.g. Basic Science"></label>
+          <label class="la-field"><span>Class</span><input type="text" name="class_level" maxlength="100" list="la-classes" placeholder="e.g. Primary 5"></label>
+          <label class="la-field"><span>Duration</span>
+            <select name="duration"><option>30 minutes</option><option selected>40 minutes</option><option>60 minutes</option><option>80 minutes (double period)</option></select>
+          </label>
+        </div>
+        <label class="la-field la-field--wide"><span>Anything else? <em>(optional)</em></span>
+          <textarea name="details" rows="3" maxlength="800" placeholder="e.g. Include a group activity, use examples from a Nigerian farm, week 3 of second term."></textarea>
+        </label>
+        <div class="la-panel__foot"><small>Written to the Nigerian lesson-note format. Always check it before you teach.</small><button type="submit" class="la-btn la-btn--gold">{% include "includes/icon.html" with name="spark" size=16 %} Generate lesson note</button></div>
+      </form>
+
+      <div class="la-busy" data-la-busy-box hidden role="status" aria-live="polite"><span class="la-spinner" aria-hidden="true"></span><span data-la-busy-text>Working…</span></div>
+    </section>
+
+    <section class="la-mine" id="la-results" aria-labelledby="la-mine-title">
+      {% if query %}
+      <div class="la-mine__head">
+        <h2 id="la-mine-title">Results for “{{ query }}” <span class="la-count">{{ result_count }}</span></h2>
+        <a href="{% url 'lesson_audio:hub' %}" class="la-btn la-btn--ghost la-btn--sm">Clear search</a>
+      </div>
+      {% else %}
+      <div class="la-mine__head"><h2 id="la-mine-title">My lesson notes{% if total %} <span class="la-count">{{ total }}</span>{% endif %}</h2></div>
+      {% endif %}
+
+      {% if notes or not query %}
+      {% if query %}<h3 class="la-mine__sub">My notes</h3>{% endif %}
+      <div class="la-notes">
+        {% for n in notes %}{% include "lesson_audio/_note_card.html" %}
+        {% empty %}<p class="la-empty">Your lesson notes will appear here. Start with one above.</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if school_notes %}
+      <h3 class="la-mine__sub">{% if library_name %}From the {{ library_name }} library{% else %}Other notes{% endif %}</h3>
+      <div class="la-notes">
+        {% for n in school_notes %}{% include "lesson_audio/_note_card.html" with shared=True %}{% endfor %}
+      </div>
+      {% elif query and not notes %}
+      <p class="la-empty">No lesson note matches “{{ query }}” yet. Write one above{% if library_name %} — it will be saved to the {{ library_name }} library for everyone{% endif %}.</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/lesson_audio.js' %}" defer></script>{% endblock %}

@@ -1012,6 +1012,13 @@ a.px-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
 .px-cont__title { margin: 2px 0; font-size: 18px; font-weight: 800; }
 .px-cont__meta { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
 .px-cont .px-meter { max-width: 280px; }
+/* Teachers: Lesson Notes to Audio (templates/accounts/dashboard.html) */
+.px-lesson-audio { display: flex; align-items: center; gap: 16px; margin-top: 16px; padding: 18px; color: #fff; text-decoration: none; background: linear-gradient(120deg, #0B1A4A, #1846E0); }
+.px-lesson-audio__ic { display: grid; place-items: center; flex: 0 0 56px; height: 56px; border-radius: 16px; background: #FFC72C; color: #0B1A4A; }
+.px-lesson-audio__t { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.px-lesson-audio__lab { color: #FFC72C; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.px-lesson-audio__t b { font-size: 17px; }
+.px-lesson-audio__t > span:last-child { color: rgba(255,255,255,.82); font-size: 13px; }
 
 .px-duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 .px-streak { display: flex; flex-direction: column; gap: 6px; }

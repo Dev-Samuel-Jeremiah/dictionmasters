@@ -25,6 +25,7 @@ from .models import BillingSettings, Plan, Subscription
 # billing, the school admin's page — stays open whatever the state.
 GATED_PREFIXES = (
     "/learning-tools/",
+    "/lesson-audio/",
     "/book/",
     "/tricks/",
     "/reference-library/",

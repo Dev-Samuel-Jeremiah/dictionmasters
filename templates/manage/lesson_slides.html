@@ -1,0 +1,86 @@
+{% extends "manage/base.html" %}
+{% load static %}
+
+{% block title %}Photo slides · {{ item.title }} — Control room{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/manage_slides.css' %}">{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#127891; <a href="{{ back }}">{{ item.title }}</a> &middot; {{ item.day }}</p>
+    <h1 class="cr-pagehead__title">Photo slides</h1>
+    <p class="cr-pagehead__note">A picture slideshow children page through on this lesson. Upload many pictures at once, then add captions and drag them into order.</p>
+  </div>
+  <div class="cr-pagehead__actions">
+    {% if slides %}<a href="{{ preview }}" class="cr-btn cr-btn--ghost" target="_blank" rel="noopener">See it as a learner &#8599;</a>{% endif %}
+    <a href="{{ back }}" class="cr-btn cr-btn--ghost">Back to the lesson item</a>
+  </div>
+</header>
+
+<form method="post" enctype="multipart/form-data" class="cr-card ms-upload" data-ms-upload>
+  {% csrf_token %}
+  <input type="hidden" name="do" value="upload">
+  <label class="ms-drop" data-ms-drop>
+    <input type="file" name="images" multiple accept="image/jpeg,image/png,image/webp,image/gif" data-ms-files required>
+    <span class="ms-drop__icon" aria-hidden="true">&#128444;</span>
+    <strong>Drop pictures here, or <u>choose them</u></strong>
+    <small>Choose as many as you like (up to 80 at a time) · JPG, PNG, WebP or GIF · they’re resized for quick loading</small>
+  </label>
+  <ul class="ms-chosen" data-ms-chosen hidden></ul>
+  <div class="ms-upload__options">
+    <label><input type="checkbox" name="captions_from_names" value="1" checked> Use each file’s name as its caption <span class="cr-help">(“red-apple.jpg” → “Red apple”)</span></label>
+    <label><input type="checkbox" name="sort_by_name" value="1" checked> Put them in file-name order <span class="cr-help">(slide1, slide2 … slide10)</span></label>
+  </div>
+  <div class="cr-formactions">
+    <button type="submit" class="cr-btn cr-btn--gold" data-ms-upload-btn>Upload pictures</button>
+    <span class="cr-help" data-ms-upload-note></span>
+  </div>
+</form>
+
+{% if slides %}
+<form method="post" enctype="multipart/form-data" class="cr-card" data-ms-arrange>
+  {% csrf_token %}
+  <input type="hidden" name="do" value="save">
+  <input type="hidden" name="order" value="" data-ms-order>
+  <header class="cr-child__head">
+    <h2 class="cr-card__title">The slideshow <span class="cr-count">{{ slides|length }}</span></h2>
+    <p class="cr-help">Drag a picture (or use its arrows) to change the order. Tick <strong>Remove</strong> to take one out.</p>
+  </header>
+  <ol class="ms-grid" data-ms-grid>
+    {% for slide in slides %}
+    <li class="ms-slide" draggable="true" data-ms-slide data-id="{{ slide.pk }}">
+      <div class="ms-slide__pic">
+        <img src="{{ slide.image.url }}" alt="">
+        <span class="ms-slide__n" data-ms-n>{{ forloop.counter }}</span>
+        <span class="ms-slide__move">
+          <button type="button" data-ms-left aria-label="Move earlier">&#8592;</button>
+          <button type="button" data-ms-right aria-label="Move later">&#8594;</button>
+        </span>
+      </div>
+      <label class="ms-slide__caption"><span class="cr-sr">Caption</span>
+        <input type="text" name="caption_{{ slide.pk }}" value="{{ slide.caption }}" maxlength="200" placeholder="Caption (optional)">
+      </label>
+      <div class="ms-slide__sound">
+        {% if slide.audio_file %}
+        <audio controls preload="none" src="{{ slide.audio_file.url }}"></audio>
+        <label class="ms-check"><input type="checkbox" name="no_audio_{{ slide.pk }}" value="1"> No sound</label>
+        {% endif %}
+        <label class="ms-sound"><span>{% if slide.audio_file %}Replace sound{% else %}&#127908; Add a sound{% endif %}</span>
+          <input type="file" name="audio_{{ slide.pk }}" accept="audio/*">
+        </label>
+      </div>
+      <label class="ms-check ms-check--remove"><input type="checkbox" name="delete" value="{{ slide.pk }}" data-ms-remove> Remove</label>
+    </li>
+    {% endfor %}
+  </ol>
+  <div class="cr-formactions ms-save">
+    <button type="submit" class="cr-btn cr-btn--gold">Save slideshow</button>
+    <span class="cr-help" data-ms-dirty hidden>You have unsaved changes.</span>
+  </div>
+</form>
+{% else %}
+<p class="cr-empty">No pictures yet. Upload some above and they’ll appear here, ready to caption and arrange.</p>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/manage_slides.js' %}" defer></script>{% endblock %}

@@ -26,6 +26,7 @@ urlpatterns = [
     path("results/<str:source>/<int:pk>/", views.result_detail, name="result"),
     path("words/upload-zip/", views.quick_words_audio_upload, name="quick_words_audio_upload"),
     path("words/upload-zip/<uuid:job_id>/", views.quick_words_audio_import, name="quick_words_audio_import"),
+    path("lesson-items/<int:pk>/slides/", views.lesson_slides, name="lesson_slides"),
     path("<slug:key>/", views.record_list, name="list"),
     path("<slug:key>/new/", views.record_form, name="add"),
     path("<slug:key>/bulk/", views.bulk_questions, name="bulk_questions"),

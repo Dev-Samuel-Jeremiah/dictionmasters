@@ -118,6 +118,10 @@ TEXT_FOR = {
     "echospell.cardlessonquick": lambda obj: "\n".join(obj.word_list),
     # A Diction Library book, read aloud a chapter at a time.
     "diction_library.librarychapter": lambda obj: obj.text,
+    # A teacher's lesson note, read aloud (apps/lesson_audio): what the voice read.
+    "lesson_audio.lessonnote": lambda obj: obj.audio_text,
+    # A Scan & Listen reading (apps/learning_tools): what the voice read.
+    "learning_tools.scanreading": lambda obj: obj.audio_text,
 }
 
 
@@ -139,6 +143,8 @@ TEXT_FIELD = {
     "echospell.cardlesson": None,
     "echospell.cardlessonquick": None,
     "diction_library.librarychapter": None,
+    "lesson_audio.lessonnote": None,
+    "learning_tools.scanreading": None,
 }
 
 

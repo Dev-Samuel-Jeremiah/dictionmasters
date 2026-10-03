@@ -7,7 +7,8 @@
 
   // "Are you sure?" on remove buttons, here and on the log-in page.
   document.addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-confirm]");
+    // A form with data-confirm is asked when it's submitted, not here too.
+    var btn = e.target.closest("button[data-confirm], a[data-confirm]");
     if (btn && !window.confirm(btn.getAttribute("data-confirm"))) e.preventDefault();
   });
   // One tap at a time: a switch button waits for the page to change.

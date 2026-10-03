@@ -2,53 +2,39 @@ import csv
 import io
 import json
 import logging
-import re
 import shutil
 import subprocess
-import time
 
 from collections import OrderedDict
 
 from django.contrib.auth.decorators import login_required
-from django.conf import settings
-from django.core.cache import cache
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
-from django.views.decorators.http import require_POST
+from django.db.models import F
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, render
+from django.views.decorators.http import require_GET, require_POST
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from apps.quick_words.speech import SpeechUnavailable, is_configured as speech_is_configured, speak
+from apps.diction_library.narration import voice_configured
 
-from . import page_reader
+from . import page_reader, scan_library
+from .models import ScanReading
 
 logger = logging.getLogger(__name__)
 
-BOOK_SCAN_CHUNK_CHARS = 4000
-BOOK_SCAN_HOURLY_CHARS = 48000
-BOOK_SCAN_AUDIO_MAX_BYTES = 8 * 1024 * 1024
-BOOK_SCAN_AUDIO_TIMEOUT_SECONDS = 60
 BOOK_SCAN_IMAGE_MAX_BYTES = 15 * 1024 * 1024
 BOOK_SCAN_IMAGE_MAX_PIXELS = 50_000_000
 
-
-def _book_scan_audio_quota(user, characters):
-    """Keep generated narration within a per-account hourly character budget."""
-    hour = int(time.time() // 3600)
-    key = f"book-scan-audio:{user.pk}:{hour}"
-    if cache.add(key, characters, timeout=3700):
-        return characters <= BOOK_SCAN_HOURLY_CHARS
-    try:
-        total = cache.incr(key, characters)
-    except ValueError:
-        # The key may expire between add() and incr() at an hour boundary.
-        return cache.add(key, characters, timeout=3700) and characters <= BOOK_SCAN_HOURLY_CHARS
-    return total <= BOOK_SCAN_HOURLY_CHARS
 
 TOOLS = [
     {
         "name": "AI Reading Tutor",
         "blurb": "Read a passage aloud to a live tutor. It stops to help with any word you mispronounce, then gives you your reading level and feedback straight away.",
         "url_name": "tutor:hub", "available": True, "icon": "tutor",
+    },
+    {
+        "name": "Lesson Notes to Audio",
+        "blurb": "For teachers: upload, paste or generate a lesson note, hear it read in a natural British voice, and practise its key words before you teach.",
+        "url_name": "lesson_audio:hub", "available": True, "icon": "note-audio", "teachers": True,
     },
     {
         "name": "Scan & Listen",
@@ -97,14 +83,31 @@ TOOLS = [
 def hub(request):
     """The launcher for every learning tool. New tools join this list
     as they're built, each as its own app."""
-    return render(request, "learning_tools/hub.html", {"tools": TOOLS})
+    tools = TOOLS
+    if request.user.is_student and not request.user.is_staff:
+        tools = [tool for tool in TOOLS if not tool.get("teachers")]
+    return render(request, "learning_tools/hub.html", {"tools": tools})
 
 
 @login_required
 def book_scanner(request):
-    """A private, in-browser book scanner and read-aloud workspace."""
+    """Scan & Listen: snap a page, check the words, listen. ?reading=<id>
+    opens a saved reading — the person's own, or one from their school."""
+    reading = None
+    raw = request.GET.get("reading", "")
+    if raw.isdigit():
+        reading = scan_library.visible(request.user).filter(pk=int(raw)).select_related("owner", "school").first()
+    if reading is not None and reading.has_audio:
+        ScanReading.objects.filter(pk=reading.pk).update(plays=F("plays") + 1)
     return render(request, "learning_tools/book_scanner.html", {
-        "narration_configured": speech_is_configured(),
+        "narration_configured": voice_configured(),
+        "reading": reading,
+        "is_mine": bool(reading and reading.owner_id == request.user.pk),
+        "can_delete": bool(reading and scan_library.may_change(request.user, reading)),
+        "audio_status": scan_library.status_of(reading) if reading else "",
+        "audio_current": bool(reading and scan_library.audio_is_current(reading)),
+        "library_name": request.user.school.name if request.user.school_id else "",
+        "recent": scan_library.search(request.user, limit=6),
     })
 
 
@@ -209,48 +212,90 @@ def book_scanner_recognize(request):
     return JsonResponse({"text": text, "confidence": confidence, "engine": "ocr"})
 
 
+
+
+# ---------------------------------------------------------------------------
+# Saved readings
+# ---------------------------------------------------------------------------
+
+def _json_body(request):
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return {}
+    return body if isinstance(body, dict) else {}
+
+
+def _reading_state(reading, user):
+    return {
+        "id": reading.pk,
+        "url": reading.get_absolute_url(),
+        "title": reading.title,
+        "audio": scan_library.status_of(reading),
+        "audio_error": reading.audio_error,
+        "audio_current": scan_library.audio_is_current(reading),
+        "mine": reading.owner_id == user.pk,
+        "where": f"{reading.school.name} library" if reading.school_id else "My readings",
+    }
+
+
 @login_required
 @require_POST
-def book_scanner_narrate(request):
-    """Turn one short transcript segment into MP3 with the configured
-    ElevenLabs voice. The transcript and audio are never stored here."""
-    if not speech_is_configured():
-        return JsonResponse({"error": "Diction Masters narration is not configured yet."}, status=503)
+def reading_save(request):
+    """Keep the text as it's scanned or typed (called as it changes)."""
+    body = _json_body(request)
+    raw_id = body.get("id")
     try:
-        content_length = int(request.META.get("CONTENT_LENGTH", "0"))
-    except (TypeError, ValueError):
-        content_length = 0
-    if content_length > (BOOK_SCAN_CHUNK_CHARS * 4) + 2000:
-        return JsonResponse({"error": "This text segment is too large."}, status=413)
+        reading = scan_library.save(request.user, str(body.get("text") or ""), str(body.get("title") or ""),
+                                    int(raw_id) if str(raw_id or "").isdigit() else None)
+    except scan_library.ReadingError as error:
+        return JsonResponse({"error": str(error)}, status=400)
+    return JsonResponse(_reading_state(reading, request.user))
+
+
+@login_required
+@require_POST
+def reading_audio(request, pk):
+    """Make (or reuse) the read-aloud of a saved reading."""
+    reading = get_object_or_404(scan_library.visible(request.user), pk=pk)
     try:
-        payload = json.loads(request.body.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return JsonResponse({"error": "The narration request was not valid."}, status=400)
-    if not isinstance(payload, dict) or not isinstance(payload.get("text"), str):
-        return JsonResponse({"error": "Add text before requesting narration."}, status=400)
+        scan_library.start_audio(reading, request.user)
+    except scan_library.ReadingError as error:
+        return JsonResponse({"error": str(error)}, status=400)
+    reading.refresh_from_db()
+    return JsonResponse(_reading_state(reading, request.user))
 
-    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", payload["text"]).strip()
-    if not text:
-        return JsonResponse({"error": "Add text before requesting narration."}, status=400)
-    if len(text) > BOOK_SCAN_CHUNK_CHARS:
-        return JsonResponse({"error": "This text segment is too large. Please try again."}, status=413)
-    if not _book_scan_audio_quota(request.user, len(text)):
-        return JsonResponse({
-            "error": "The Scan & Listen narration allowance for this account has been reached for this hour. Please try again later."
-        }, status=429)
 
-    try:
-        audio = speak(
-            text,
-            model_id=settings.BOOK_SCAN_VOICE_MODEL_ID,
-            max_audio_bytes=BOOK_SCAN_AUDIO_MAX_BYTES,
-            timeout_seconds=BOOK_SCAN_AUDIO_TIMEOUT_SECONDS,
-        )
-    except SpeechUnavailable as exc:
-        logger.warning("Scan & Listen narration failed for user %s: %s", request.user.pk, exc)
-        return JsonResponse({"error": "Narration is temporarily unavailable. Please try again shortly."}, status=503)
-
-    response = HttpResponse(audio, content_type="audio/mpeg")
-    response["Cache-Control"] = "private, no-store, max-age=0"
-    response["X-Content-Type-Options"] = "nosniff"
+@login_required
+@require_GET
+def reading_status(request, pk):
+    reading = get_object_or_404(scan_library.visible(request.user), pk=pk)
+    response = JsonResponse(_reading_state(reading, request.user))
+    response["Cache-Control"] = "no-store"
     return response
+
+
+@login_required
+@require_GET
+def reading_search(request):
+    query = request.GET.get("q", "")
+    results = scan_library.search(request.user, query)
+    return JsonResponse({"results": [{
+        "id": r.pk,
+        "url": r.get_absolute_url(),
+        "title": r.title,
+        "snippet": scan_library.snippet(r, query),
+        "audio": r.has_audio,
+        "by": "You" if r.owner_id == request.user.pk else (r.owner.get_full_name() if r.owner else "Someone at your school"),
+        "when": r.updated_at.strftime("%d %b %Y"),
+    } for r in results]})
+
+
+@login_required
+@require_POST
+def reading_delete(request, pk):
+    reading = get_object_or_404(scan_library.visible(request.user), pk=pk)
+    if not scan_library.may_change(request.user, reading):
+        return JsonResponse({"error": "Only the person who saved it, or your school admin, can delete it."}, status=403)
+    scan_library.delete(reading)
+    return JsonResponse({"ok": True})

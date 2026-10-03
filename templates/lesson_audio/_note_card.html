@@ -1,0 +1,13 @@
+{# One lesson note in a list (lesson_audio/hub.html). Needs `n`; `shared` for someone else's. #}
+<a href="{{ n.get_absolute_url }}" class="la-note">
+  <span class="la-note__top">
+    <span class="la-note__ic{% if n.audio_file %} is-ready{% endif %}" aria-hidden="true">{% if n.audio_file %}{% include "includes/icon.html" with name="vol" size=20 %}{% else %}{% include "includes/icon.html" with name="task" size=20 %}{% endif %}</span>
+    <span class="la-note__title"><strong>{{ n.title }}</strong><small>{% if n.subject %}{{ n.subject }}{% endif %}{% if n.subject and n.class_level %} · {% endif %}{{ n.class_level }}</small></span>
+  </span>
+  <span class="la-note__meta">
+    <span>{{ n.word_count }} words · ~{{ n.minutes }} min</span>
+    {% if n.audio_status == "working" %}<span class="la-pill la-pill--work">Making audio…</span>{% elif n.audio_file %}<span class="la-pill la-pill--ok">Audio ready</span>{% else %}<span class="la-pill">No audio yet</span>{% endif %}
+    {% if n.words_n %}<span class="la-pill la-pill--gold">{% if shared %}{{ n.words_n }} key words{% else %}{{ n.mastered_n }}/{{ n.words_n }} words practised{% endif %}</span>{% endif %}
+  </span>
+  <span class="la-note__foot">{% if shared %}By {{ n.owner.get_full_name|default:"a teacher" }} · {% else %}{{ n.get_source_display }} · {% endif %}updated {{ n.updated_at|timesince }} ago</span>
+</a>

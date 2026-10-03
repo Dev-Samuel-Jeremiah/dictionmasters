@@ -1,0 +1,36 @@
+/* Control room > Photo slides (static/js/manage_slides.js) */
+.ms-drop { position: relative; display: grid; justify-items: center; gap: 6px; padding: 34px 18px; border: 2px dashed #c6d2ee; border-radius: 16px; background: #f7f9ff; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+.ms-drop:hover, .ms-drop.is-over { border-color: #1846E0; background: #eef3ff; }
+.ms-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.ms-drop:focus-within { outline: 3px solid rgba(24,70,224,.35); }
+.ms-drop__icon { font-size: 34px; }
+.ms-drop u { color: #1846E0; }
+.ms-drop small { color: #6b7691; }
+.ms-chosen { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.ms-chosen li { display: grid; gap: 4px; font-size: 11px; color: #55607E; }
+.ms-chosen img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: #eef1f7; }
+.ms-chosen span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-chosen__more { display: grid !important; place-items: center; border-radius: 8px; background: #eef3ff; color: #1846E0 !important; font-weight: 700; }
+.ms-upload__options { display: grid; gap: 6px; margin: 14px 0 4px; font-size: 14px; }
+.ms-upload__options label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.ms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin: 14px 0 0; padding: 0; list-style: none; }
+.ms-slide { display: grid; gap: 8px; padding: 10px; border: 1px solid #e1e7f3; border-radius: 14px; background: #fff; cursor: grab; transition: box-shadow .15s, opacity .15s; }
+.ms-slide:hover { box-shadow: 0 8px 20px rgba(11,26,74,.1); }
+.ms-slide.is-dragging { opacity: .45; }
+.ms-slide.is-removed { opacity: .45; border-color: #f2c4bc; background: #fff6f4; }
+.ms-slide__pic { position: relative; }
+.ms-slide__pic img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; background: #eef1f7; pointer-events: none; }
+.ms-slide__n { position: absolute; left: 8px; top: 8px; display: grid; place-items: center; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 999px; background: #0B1A4A; color: #fff; font-size: 13px; font-weight: 800; }
+.ms-slide__move { position: absolute; right: 8px; top: 8px; display: flex; gap: 4px; }
+.ms-slide__move button { width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(255,255,255,.92); color: #0B1A4A; font-weight: 800; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+.ms-slide__move button:hover, .ms-slide__move button:focus-visible { background: #FFC72C; }
+.ms-slide__caption input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #d6dfef; border-radius: 9px; font: inherit; font-size: 14px; }
+.ms-slide__sound { display: grid; gap: 6px; }
+.ms-slide__sound audio { width: 100%; height: 34px; }
+.ms-sound { position: relative; display: inline-flex; justify-content: center; padding: 6px 10px; border: 1px dashed #c6d2ee; border-radius: 9px; color: #1846E0; font-size: 13px; font-weight: 700; cursor: pointer; overflow: hidden; }
+.ms-sound input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.ms-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #55607E; }
+.ms-check--remove { color: #a33a2e; font-weight: 700; }
+.ms-save { position: sticky; bottom: 0; padding: 12px 0 4px; background: linear-gradient(to top, #fff 75%, rgba(255,255,255,0)); }
+.cr-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

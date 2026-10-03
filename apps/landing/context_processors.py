@@ -19,7 +19,7 @@ NAV_SECTIONS = (
     ("progress", ("/assessments/results/",)),
     ("practice", ("/daily-practice/", "/assessments/", "/clash/", "/tutor/")),
     ("learn", (
-        "/learning-tools/", "/book/", "/tricks/", "/echospell/", "/learning-modules/",
+        "/learning-tools/", "/lesson-audio/", "/book/", "/tricks/", "/echospell/", "/learning-modules/",
         "/reading-club/", "/assembly-recitals/", "/conversational-dialogue/", "/reference-library/", "/library/", "/radio/", "/quick-words/",
     )),
     ("me", ("/billing/", "/videos/offline/")),

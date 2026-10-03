@@ -18,6 +18,8 @@ views._term_status / _week_status.
 
 from django.conf import settings
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.utils.text import slugify
 
 from apps.book.models import AudioContent, VideoContent
@@ -228,7 +230,40 @@ class LessonItem(VideoContent, AudioContent):
             return "video"
         if has_audio:
             return "audio"
+        if self.pk and self.slides.exists():
+            return "slides"
         return "text"
+
+
+class LessonSlide(models.Model):
+    """One picture in a lesson item's photo slideshow, for children to
+    page through: a big picture, an optional caption, and optionally a
+    recording that plays as the slide opens. Added many at a time from
+    the control room (apps/manage/slides.py)."""
+
+    lesson_item = models.ForeignKey(LessonItem, on_delete=models.CASCADE, related_name="slides")
+    image = models.ImageField(upload_to="learning_modules/slides/%Y/%m/")
+    caption = models.CharField(max_length=200, blank=True, help_text='Shown under the picture, e.g. "A big red apple".')
+    audio_file = models.FileField(
+        upload_to="learning_modules/slides/audio/%Y/%m/", blank=True,
+        help_text="Optional: a recording that plays when this slide opens, e.g. the word being said.",
+    )
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.caption or f"Slide {self.order + 1}"
+
+
+@receiver(post_delete, sender=LessonSlide)
+def _slide_files_go_too(sender, instance, **kwargs):
+    """A slide's picture and sound leave storage with it — also when the
+    whole lesson item, day or module it belongs to is deleted."""
+    for field in (instance.image, instance.audio_file):
+        if field:
+            field.storage.delete(field.name)
 
 
 class LessonResource(models.Model):

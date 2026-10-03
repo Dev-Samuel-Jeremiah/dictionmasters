@@ -33,6 +33,7 @@ urlpatterns = [
     path("accounts/", include("apps.accounts.urls")),
     path("school/", include("apps.schools.urls")),
     path("learning-tools/", include("apps.learning_tools.urls")),
+    path("lesson-audio/", include("apps.lesson_audio.urls")),
     path("search/", include("apps.platform_search.urls")),
     path("videos/", include("apps.videos.urls")),
     path("book/", include("apps.book.urls")),

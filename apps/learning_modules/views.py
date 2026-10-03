@@ -261,7 +261,7 @@ def day_detail(request, module_slug, term_slug, week_slug, day_name):
         return redirect("learning_modules:term_detail", module_slug=module_slug, term_slug=term_slug)
 
     day = get_object_or_404(week.days, day_name=day_name, is_published=True)
-    lesson_items = day.lesson_items.filter(is_published=True).order_by("order", "id")
+    lesson_items = day.lesson_items.filter(is_published=True).order_by("order", "id").prefetch_related("slides", "resources")
 
     terms = list(_module_tree(module))
     reachable = _reachable_flat(terms, completed_ids)

@@ -457,8 +457,9 @@ def record_form(request, key, pk=None):
                 "rows": [{"pk": c.pk, "label": str(c)} for c in found[:50]],
                 "count": found.count(),
                 "add_url": f"{reverse('manage:add', args=[child_key])}?in={obj.pk}",
-                "bulk_url": f"{reverse('manage:bulk_questions', args=[child_key])}?in={obj.pk}"
-                if child.get("bulk_add") else "",
+                "bulk_url": reverse(child["bulk_view"], args=[obj.pk]) if child.get("bulk_view") else (
+                    f"{reverse('manage:bulk_questions', args=[child_key])}?in={obj.pk}" if child.get("bulk_add") else ""),
+                "bulk_label": child.get("bulk_label", "+ Add multiple"),
                 "list_url": f"{reverse('manage:list', args=[child_key])}?in={obj.pk}",
             })
 
@@ -674,6 +675,15 @@ def analytics_view(request):
 def bulk_students(request):
     """Register a school's students from an Excel sheet and hand back their logins."""
     return _bulk_people(request, "student")
+
+
+@staff_only
+def lesson_slides(request, pk):
+    """A lesson item's photo slideshow: upload many pictures at once,
+    caption and order them (apps/manage/slides.py)."""
+    from . import slides
+
+    return slides.manage(request, pk)
 
 
 @staff_only

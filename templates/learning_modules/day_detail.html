@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <link rel="stylesheet" href="{% static 'css/book.css' %}">
   <link rel="stylesheet" href="{% static 'css/library.css' %}">
+  <link rel="stylesheet" href="{% static 'css/photo_slides.css' %}">
   <link rel="stylesheet" href="{% static 'css/learning_modules.css' %}">
   <link rel="stylesheet" href="{% static 'css/learning_modules_ui.css' %}">
 {% endblock %}
@@ -58,7 +59,7 @@
     {% if lesson_items %}
     <div class="lm-lessons">
       {% for item in lesson_items %}
-      <article class="content-card lesson-item"{% if item.body and item.audio_source or item.body and item.video_source %} data-read-along{% read_along_sync item %}{% endif %}>
+      <article class="content-card lesson-item" id="item-{{ item.pk }}"{% if item.body and item.audio_source or item.body and item.video_source %} data-read-along{% read_along_sync item %}{% endif %}>
         <div class="lesson-item__head">
           <div>
             <p class="lesson-item__title">{{ item.title }}</p>
@@ -67,6 +68,7 @@
           <div class="lesson-item__badges">
             {% if item.kind == "video" or item.kind == "both" %}<span class="lm-tag lm-tag--video">&#9654; Video</span>{% endif %}
             {% if item.kind == "audio" or item.kind == "both" %}<span class="lm-tag lm-tag--audio">&#127911; Audio</span>{% endif %}
+            {% if item.slides.all %}<span class="lm-tag lm-tag--slides">&#128444; {{ item.slides.all|length }} picture{{ item.slides.all|length|pluralize }}</span>{% endif %}
           </div>
         </div>
 
@@ -89,6 +91,8 @@
           <audio controls src="{{ item.audio_source }}" data-ra-media></audio>
         </div>
         {% endif %}
+
+        {% if item.slides.all %}{% include "learning_modules/_slides.html" with slides=item.slides.all %}{% endif %}
 
         {% if item.body %}
         <div class="lesson-body dm-rich-content" style="margin-top: 16px;" data-ra-text>{{ item.body|rich_text }}</div>
@@ -160,4 +164,5 @@
 
 {% block extra_js %}
   <script src="{% static 'js/read_along.js' %}" defer></script>
+  <script src="{% static 'js/photo_slides.js' %}" defer></script>
 {% endblock %}

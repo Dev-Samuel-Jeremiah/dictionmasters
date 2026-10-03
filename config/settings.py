@@ -135,6 +135,7 @@ LOCAL_APPS = [
     "apps.accounts",
     "apps.schools",
     "apps.learning_tools",
+    "apps.lesson_audio",
     "apps.platform_search",
     "apps.book",
     "apps.videos",
@@ -565,3 +566,17 @@ BOOK_SCAN_VOICE_MODEL_ID = os.environ.get("BOOK_SCAN_VOICE_MODEL_ID", "eleven_fl
 # faithfully than classic OCR. About $0.01 a page. Leave it blank to read
 # pages with the server's Tesseract only.
 BOOK_SCAN_OCR_MODEL = os.environ.get("BOOK_SCAN_OCR_MODEL", "gpt-4o").strip()
+
+# Lesson Notes to Audio (apps/lesson_audio). Writing a note uses OPENAI_MODEL
+# unless LESSON_NOTE_MODEL is set; the key words use the stronger
+# LESSON_KEYWORDS_MODEL, which gets British stress right (about 1 cent a note).
+LESSON_NOTE_MODEL = os.environ.get("LESSON_NOTE_MODEL", "").strip()
+LESSON_KEYWORDS_MODEL = os.environ.get("LESSON_KEYWORDS_MODEL", "gpt-4o").strip()
+# Longest note (characters) read aloud in one go, and each person's daily
+# allowances, so a few heavy users can't run up the voice and AI bills.
+LESSON_AUDIO_MAX_CHARS = int(os.environ.get("LESSON_AUDIO_MAX_CHARS", "20000"))
+LESSON_AUDIO_DAILY = {
+    "audio": int(os.environ.get("LESSON_AUDIO_DAILY_CHARS", "60000")),
+    "write": int(os.environ.get("LESSON_AUDIO_DAILY_NOTES", "15")),
+    "words": 30, "practice": 400, "read": 40,
+}

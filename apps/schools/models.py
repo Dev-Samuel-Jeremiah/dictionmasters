@@ -197,3 +197,30 @@ class AccessCode(models.Model):
         self.used_by = user
         self.used_at = timezone.now()
         self.save(update_fields=["used_by", "used_at"])
+
+
+class LevelChange(models.Model):
+    """One teacher's or student's level changed by their school admin
+    (apps/schools/levels.py): a promotion to the next level, or a move.
+    Changes made together share a `batch`, so a whole promotion can be
+    undone in one go; the levels before and after are kept exactly."""
+
+    KIND_CHOICES = [("promote", "Promoted"), ("move", "Moved")]
+
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="level_changes")
+    member = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="level_changes")
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    batch = models.CharField(max_length=32, db_index=True)
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    old_level = models.CharField(max_length=100, blank=True)
+    old_additional = models.CharField(max_length=255, blank=True)
+    new_level = models.CharField(max_length=100, blank=True)
+    new_additional = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    undone_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.member}: {self.old_level or '—'} → {self.new_level or '—'}"

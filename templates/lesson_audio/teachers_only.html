@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}For teachers — Diction Masters{% endblock %}
+
+{% block content %}
+<div class="ui">
+  <section class="ui-hero">
+    <div class="wrap">
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#128214;</span>
+          <div>
+            <p class="ui-hero__eyebrow">For teachers</p>
+            <h1 class="ui-hero__title">Lesson Notes to Audio is for teachers</h1>
+            <p class="ui-hero__lede">Teachers use it to turn their lesson notes into audio and practise the key words before a lesson. There’s plenty for you to practise in EchoSpell and the 44 Academy.</p>
+            <div class="ui-hero__actions">
+              <a href="{% url 'accounts:dashboard' %}" class="ui-btn ui-btn--gold">Back to my dashboard</a>
+              <a href="{% url 'echospell:hub' %}" class="ui-btn ui-btn--glass">Open EchoSpell</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

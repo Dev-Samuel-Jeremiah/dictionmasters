@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static videos read_along %}
 
 {% block title %}Scan &amp; Listen — Diction Masters{% endblock %}
 {% block meta_description %}Turn a photographed page from a book into editable text and listen to it read aloud.{% endblock %}
@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="bs-page" data-ocr-url="{% url 'learning_tools:book_scanner_recognize' %}" data-audio-url="{% url 'learning_tools:book_scanner_narrate' %}" data-audio-ready="{{ narration_configured|yesno:'true,false' }}">
+<div class="bs-page" data-ocr-url="{% url 'learning_tools:book_scanner_recognize' %}" data-save-url="{% url 'learning_tools:reading_save' %}" data-search-url="{% url 'learning_tools:reading_search' %}" data-audio-ready="{{ narration_configured|yesno:'true,false' }}"{% if reading %} data-reading="{{ reading.pk }}" data-reading-mine="{{ is_mine|yesno:'true,false' }}" data-audio-status="{{ audio_status }}"{% endif %} data-library="{{ library_name|default:'My readings' }}">
   <div class="bs-wrap">
     <nav class="bs-breadcrumbs" aria-label="Breadcrumb">
       <a href="{% url 'learning_tools:hub' %}">Learning tools</a>
@@ -94,16 +94,17 @@
           </div>
           <span class="bs-card__icon bs-card__icon--gold" aria-hidden="true">{% include "includes/icon.html" with name="abc" size=24 %}</span>
         </div>
-        <p class="bs-transcript__hint">Check the words carefully. You can edit this text before listening.</p>
+        <p class="bs-transcript__hint">Check the words carefully. Everything is saved automatically{% if library_name %} to the {{ library_name }} library, so others at your school can listen too{% else %} to My readings{% endif %}.</p>
+        <label class="bs-title-field"><span>Title</span><input type="text" maxlength="200" data-title value="{{ reading.title|default:'' }}" placeholder="We’ll use the first line"></label>
         <label class="bs-visually-hidden" for="bs-transcript-text">Recognized book text</label>
-        <textarea id="bs-transcript-text" class="bs-textarea" data-transcript maxlength="24000" placeholder="Your scanned words will appear here. You can also type or paste text to listen to it."></textarea>
+        <textarea id="bs-transcript-text" class="bs-textarea" data-transcript maxlength="24000" placeholder="Your scanned words will appear here. You can also type or paste text to listen to it.">{{ reading.text|default:'' }}</textarea>
         <div class="bs-transcript__meta"><span data-word-count>0 words</span><span data-char-count>0 / 24,000</span></div>
         <div class="bs-transcript__actions">
           <button type="button" class="bs-text-button" data-copy disabled>Copy text</button>
-          <button type="button" class="bs-text-button" data-download disabled>Download .txt</button>
-          <button type="button" class="bs-text-button bs-text-button--quiet" data-clear disabled>Clear text</button>
+          <button type="button" class="bs-text-button bs-text-button--quiet" data-clear disabled>Start a new reading</button>
         </div>
         <p class="bs-quality" data-quality hidden></p>
+        <p class="bs-saved" data-saved role="status" aria-live="polite">{% if reading %}{% if is_mine %}&#10003; Saved to {% if reading.school %}the {{ reading.school.name }} library{% else %}My readings{% endif %}{% else %}Saved by {{ reading.owner.get_full_name|default:"someone at your school" }}. Your changes will be saved as your own copy.{% endif %}{% endif %}</p>
       </section>
 
       <section class="bs-card bs-listen" aria-labelledby="bs-listen-title">
@@ -114,28 +115,52 @@
           </div>
           <span class="bs-card__icon bs-card__icon--blue" aria-hidden="true">{% include "includes/icon.html" with name="vol" size=24 %}</span>
         </div>
-        <p class="bs-listen__hint">Generate the complete narration first. Once it is ready, you can play it or download the MP3. Your reviewed text is sent securely to ElevenLabs with our configured voice; page photos are never sent.</p>
-        <div class="bs-listen__settings">
-          <div class="bs-narrator"><span class="bs-narrator__label">Reading voice</span><strong>Configured voice</strong><small>ElevenLabs</small></div>
-          <div class="bs-speed"><label for="bs-speed">Reading speed <output data-speed-label for="bs-speed">1×</output></label><input id="bs-speed" type="range" min="0.7" max="1.2" value="1" step="0.1" data-speed></div>
-        </div>
-        <div class="bs-player" data-player>
-          <button class="bs-play" type="button" data-play aria-label="Play complete narration" disabled>{% include "includes/icon.html" with name="play" size=20 %}</button>
-          <div class="bs-player__track"><span class="bs-player__title" data-player-title>Ready when you are</span><span class="bs-player__sub" data-player-sub>Scan a page or add text to get started</span></div>
-          <span class="bs-player__wave" data-wave aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-          <button class="bs-stop" type="button" data-stop aria-label="Stop reading" disabled>&#9632;</button>
-        </div>
+
+        {% if reading and reading.has_audio %}
+          {% if not audio_current %}<p class="bs-audio-note">The text has changed since this audio was made. Generate audio again to include your changes.</p>{% endif %}
+          <div class="bs-heard" data-read-along{% read_along_sync reading %}>
+            {% video_player reading ra=True %}
+            <p class="bs-heard__note">&#128274; Listen here, or choose <strong>Save for offline</strong> to keep it in the app for listening without internet. It can’t be downloaded as a file.</p>
+            <div class="bs-heard__text" data-ra-text>{% for para in reading.audio_blocks %}<p>{{ para }}</p>{% endfor %}</div>
+          </div>
+        {% else %}
+          <p class="bs-listen__hint">Generate the audio once and it’s saved with the text{% if library_name %} for everyone at {{ library_name }}{% endif %}. If these exact words were read before, the saved audio is used straight away.</p>
+        {% endif %}
+
         <div class="bs-player__controls">
-          <button class="bs-button bs-button--primary" type="button" data-generate-audio disabled>Generate audio</button>
-          <button class="bs-button bs-button--secondary" type="button" data-download-audio disabled>Download audio (MP3)</button>
-          <span class="bs-local-audio"><span aria-hidden="true">&#9835;</span><span data-audio-download-status aria-live="polite">Generate the complete audio before playing · Up to 48,000 characters per hour</span></span>
+          <button class="bs-button bs-button--primary" type="button" data-generate-audio{% if not narration_configured %} disabled{% endif %}{% if reading.has_audio and audio_current %} hidden{% endif %}>{% include "includes/icon.html" with name="vol" size=18 %} <span>{% if reading.has_audio %}Generate audio again{% else %}Generate audio{% endif %}</span></button>
+          <span class="bs-local-audio" data-audio-progress{% if audio_status != "working" %} hidden{% endif %}><span class="bs-spinner" aria-hidden="true"></span><span>Making your audio… you can keep working; it appears here when ready.</span></span>
+          {% if can_delete %}<button type="button" class="bs-text-button bs-text-button--quiet" data-delete-reading data-url="{% url 'learning_tools:reading_delete' reading.pk %}">Delete this reading</button>{% endif %}
         </div>
-        <p class="bs-audio-note" data-audio-note{% if narration_configured %} hidden{% endif %}>ElevenLabs narration isn't configured yet. Please contact your Diction Masters administrator.</p>
-        <p class="bs-audio-error" data-audio-error role="alert" hidden></p>
+        <p class="bs-audio-note" data-audio-note{% if narration_configured %} hidden{% endif %}>Audio isn't set up yet. Please contact your Diction Masters administrator.</p>
+        <p class="bs-audio-error" data-audio-error role="alert"{% if audio_status != "failed" %} hidden{% endif %}>{{ reading.audio_error|default:"The audio couldn't be made. Please try again." }}</p>
       </section>
     </div>
 
-    <aside class="bs-footnote"><span class="bs-footnote__lock" aria-hidden="true">&#128274;</span><p><strong>Your privacy matters.</strong> Your compressed page photo is sent to Diction Masters and read by our AI text-recognition service (OpenAI), then discarded without being saved. When you choose Generate audio, the text is sent to ElevenLabs. Diction Masters doesn't save your transcript or generated audio. Generated audio stays in this tab until you leave; close the page to clear your work.</p></aside>
+    <section class="bs-card bs-library" aria-labelledby="bs-library-title">
+      <div class="bs-card__head">
+        <div>
+          <p class="bs-card__eyebrow">{% if library_name %}{{ library_name|upper }} LIBRARY{% else %}MY READINGS{% endif %}</p>
+          <h2 id="bs-library-title">Saved readings</h2>
+        </div>
+        <a href="{% url 'learning_tools:book_scanner' %}" class="bs-button bs-button--secondary bs-library__new">+ New reading</a>
+      </div>
+      <p class="bs-listen__hint">Search before you scan: if someone {% if library_name %}at your school {% endif %}already saved the page, just open it and listen.</p>
+      <label class="bs-visually-hidden" for="bs-library-search">Search saved readings</label>
+      <input id="bs-library-search" type="search" class="bs-library__search" placeholder="Search by title or any words in the text" data-library-search>
+      <ul class="bs-library__list" data-library-list>
+        {% for r in recent %}
+        <li><a href="{{ r.get_absolute_url }}" class="bs-library__item{% if reading and r.pk == reading.pk %} is-open{% endif %}">
+          <span class="bs-library__icon{% if r.has_audio %} has-audio{% endif %}" aria-hidden="true">{% if r.has_audio %}{% include "includes/icon.html" with name="vol" size=18 %}{% else %}{% include "includes/icon.html" with name="abc" size=18 %}{% endif %}</span>
+          <span class="bs-library__text"><strong>{{ r.title }}</strong><small>{% if r.owner_id == user.pk %}You{% else %}{{ r.owner.get_full_name|default:"Someone at your school" }}{% endif %} · {{ r.updated_at|date:"d M Y" }}{% if not r.has_audio %} · no audio yet{% endif %}</small></span>
+        </a></li>
+        {% empty %}
+        <li class="bs-library__empty">Nothing saved yet. Scan a page and it will appear here.</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <aside class="bs-footnote"><span class="bs-footnote__lock" aria-hidden="true">&#128274;</span><p><strong>Your privacy matters.</strong> Your compressed page photo is read by our AI text-recognition service (OpenAI), then discarded — photos are never saved. The text and its audio are saved{% if library_name %} to your school’s library, where others at {{ library_name }} can find and listen to them{% else %} to your own readings{% endif %}. Audio is made with ElevenLabs and plays only inside Diction Masters.</p></aside>
     <form data-speech-token hidden>{% csrf_token %}</form>
   </div>
 </div>
@@ -143,5 +168,6 @@
 
 {% block extra_js %}
 <script src="{% static 'js/book_scanner_capture.js' %}" defer></script>
+<script src="{% static 'js/read_along.js' %}" defer></script>
 <script src="{% static 'js/book_scanner.js' %}" defer></script>
 {% endblock %}

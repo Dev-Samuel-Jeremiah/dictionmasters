@@ -329,10 +329,11 @@ def _pieces(paragraphs):
     return pieces
 
 
-def _speak(text, previous="", following=""):
-    """MP3 bytes and the alignment for `text`."""
-    url = TTS_URL.format(voice=settings.ELEVENLABS_VOICE_ID)
-    payload = {"text": text, "model_id": _model()}
+def _speak(text, previous="", following="", voice=None, model=None):
+    """MP3 bytes and the alignment for `text`, in the site's voice unless
+    another ElevenLabs `voice` is given."""
+    url = TTS_URL.format(voice=voice or settings.ELEVENLABS_VOICE_ID)
+    payload = {"text": text, "model_id": model or _model()}
     if previous:
         payload["previous_text"] = previous[-CONTEXT_CHARS:]
     if following:
@@ -389,8 +390,10 @@ def _duration(path):
         raise NarrationUnavailable("A piece of audio couldn't be read back.")
 
 
-def read_chapter(paragraphs):
-    """(mp3 bytes, words with times, length in seconds) for one chapter."""
+def read_chapter(paragraphs, voice=None, model=None):
+    """(mp3 bytes, words with times, length in seconds) for one chapter.
+    Also used for teachers' lesson notes (apps/lesson_audio), which may
+    choose another voice."""
     pieces = _pieces(paragraphs)
     words, offset = [], 0.0
     with tempfile.TemporaryDirectory(prefix="library-voice-") as folder:
@@ -398,7 +401,7 @@ def read_chapter(paragraphs):
         for n, (text, _glue) in enumerate(pieces):
             previous = pieces[n - 1][0] if n else ""
             following = pieces[n + 1][0] if n + 1 < len(pieces) else ""
-            audio, alignment = _speak(text, previous, following)
+            audio, alignment = _speak(text, previous, following, voice=voice, model=model)
             path = f"{folder}/piece{n:04d}.mp3"
             with open(path, "wb") as out:
                 out.write(audio)

@@ -60,7 +60,7 @@
   <header class="cr-child__head">
     <h2 class="cr-card__title">{{ child.name }} <span class="cr-count">{{ child.count }}</span></h2>
     <div>
-      {% if child.bulk_url %}<a href="{{ child.bulk_url }}" class="cr-btn cr-btn--gold cr-btn--small">+ Add multiple</a>{% endif %}
+      {% if child.bulk_url %}<a href="{{ child.bulk_url }}" class="cr-btn cr-btn--gold cr-btn--small">{{ child.bulk_label }}</a>{% endif %}
       <a href="{{ child.add_url }}" class="cr-btn {% if child.bulk_url %}cr-btn--ghost{% else %}cr-btn--gold{% endif %} cr-btn--small">+ Add {{ child.singular }}</a>
       {% if child.count > 50 %}<a href="{{ child.list_url }}" class="cr-link">See all</a>{% endif %}
     </div>

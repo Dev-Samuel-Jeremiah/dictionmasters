@@ -85,6 +85,9 @@ def keep(request, ticket):
 
 def _type_of(video):
     name = (video.video_file.name or "").lower()
+    # A read-aloud kept the same way (Scan & Listen readings).
+    if name.endswith(".mp3"):
+        return "audio/mpeg"
     if name.endswith(".webm"):
         return "video/webm"
     if name.endswith(".ogg") or name.endswith(".ogv"):
