@@ -20,6 +20,7 @@
 .sl-change:hover, .sl-change:focus-visible { border-color: #1846E0; background: #1846E0; color: #fff; }
 .sl-none { color: #55607E; }
 
+.sl-bar[hidden] { display: none !important; }
 .sl-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 12px;
   padding: 10px 12px; border-radius: 14px; background: #0B1A4A; color: #fff; box-shadow: 0 12px 28px rgba(11,26,74,.28); }
 .sl-bar__count { margin-right: auto; font-size: 14px; }

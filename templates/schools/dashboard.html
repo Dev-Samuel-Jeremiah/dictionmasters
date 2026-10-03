@@ -3,7 +3,7 @@
 
 {% block title %}{{ school.name }} — Diction Masters{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}"><link rel="stylesheet" href="{% static 'css/school_levels.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}"><link rel="stylesheet" href="{% static 'css/school_levels.css' %}"><link rel="stylesheet" href="{% static 'css/school_dashboard.css' %}">{% endblock %}
 {% block extra_js %}
 <script src="{% static 'js/switcher.js' %}" defer></script>
 <script src="{% static 'js/school_levels.js' %}" defer></script>
@@ -13,7 +13,7 @@
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-copy]");
     if (!btn) return;
-    var field = document.querySelector("[data-copy-source]");
+    var field = btn.closest(".sd-link").querySelector("[data-copy-source]");
     var done = function () { btn.textContent = "Copied ✓"; setTimeout(function () { btn.textContent = "Copy link"; }, 1800); };
     if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(field.value).then(done, function () { field.select(); });
     else { field.select(); try { document.execCommand("copy"); done(); } catch (err) { /* selected for them to copy */ } }
@@ -22,42 +22,71 @@
 {% endblock %}
 
 {% block content %}
-<div class="ui">
+<div class="ui sd2">
   <section class="ui-hero ui-hero--blue">
     <div class="wrap">
       <ol class="ui-crumbs">
         <li>School dashboard</li>
+        <li>{{ school.name }}</li>
       </ol>
       <div class="ui-hero__inner">
         <div class="ui-hero__main">
           <span class="ui-hero__icon" aria-hidden="true">&#127979;</span>
-          <div>
+          <div class="sd2-hero__text">
             <p class="ui-hero__eyebrow">School dashboard</p>
             <h1 class="ui-hero__title">{{ school.name }}</h1>
-            <p class="ui-hero__lede">Teachers and students both sign up with your school code, {{ school.code }}. Both choose their level, and your plan covers everyone, so nobody pays separately.</p>
+            <p class="ui-hero__lede">Teachers and students join with your school code and choose their level. Your plan covers everyone, so nobody pays separately.</p>
             <div class="ui-hero__chips">
               <span class="ui-chip ui-chip--gold">School code: {{ school.code }}</span>
-              <span class="ui-chip">{{ teachers|length }}{% if school.teacher_limit is not None %} of {{ school.teacher_limit }}{% endif %} teacher{{ teachers|length|pluralize }}</span>
-              <span class="ui-chip">{{ students|length }}{% if school.max_students is not None %} of {{ school.max_students }}{% endif %} student{{ students|length|pluralize }}</span>
+              <span class="ui-chip">{% if school.teacher_limit is not None %}{{ teachers|length }} of {{ school.teacher_limit }} teacher{{ school.teacher_limit|pluralize }}{% else %}{{ teachers|length }} teacher{{ teachers|length|pluralize }}{% endif %}</span>
+              <span class="ui-chip">{% if school.max_students is not None %}{{ students|length }} of {{ school.max_students }} student{{ school.max_students|pluralize }}{% else %}{{ students|length }} student{{ students|length|pluralize }}{% endif %}</span>
+            </div>
+            <div class="ui-hero__actions">
+              <a href="{% url 'billing:account' %}" class="ui-btn ui-btn--gold">&#128179; {% if billing.state == "active" %}School plan{% else %}Plans &amp; billing{% endif %}</a>
+              <a href="{% url 'learning_tools:hub' %}" class="ui-btn ui-btn--glass">&#129520; Learning tools</a>
+              <a href="{% url 'lesson_audio:hub' %}" class="ui-btn ui-btn--glass">&#127911; Lesson Notes to Audio</a>
+              <a href="{% url 'diction_library:manage' %}" class="ui-btn ui-btn--glass">&#128218; Diction Library</a>
             </div>
             {% include "accounts/_switcher.html" %}
           </div>
         </div>
+        {% if school.teacher_limit %}
         <div class="ui-hero__side">
-          <a href="{% url 'learning_tools:hub' %}" class="ui-btn ui-btn--glass">&#129520; Browse the learning tools</a>
-          <a href="{% url 'lesson_audio:hub' %}" class="ui-btn ui-btn--glass">&#127911; Lesson Notes to Audio</a>
-          <a href="{% url 'diction_library:manage' %}" class="ui-btn ui-btn--glass">&#128218; Manage Diction Library</a>
-          <a href="{% url 'billing:account' %}" class="ui-btn ui-btn--gold">&#128179; {% if billing.state == "active" %}School plan{% else %}Plans &amp; billing{% endif %}</a>
+          <div class="ui-ring" style="--p: {% widthratio teachers|length school.teacher_limit 100 %}">
+            <div><strong>{{ teachers|length }}/{{ school.teacher_limit }}</strong><span>Teacher places</span></div>
+          </div>
         </div>
+        {% endif %}
       </div>
     </div>
   </section>
 
-  <div class="wrap ui-body">
-    <div class="ui-cols">
-      <div>
+  <div class="wrap ui-body sd2-body">
+    <section class="ui-panel sd2-glance" aria-label="Your school at a glance">
+      <dl class="ui-facts">
+        <div><dt>Teachers</dt><dd>{{ teachers|length }}{% if school.teacher_limit is not None %}<small> / {{ school.teacher_limit }}</small>{% endif %}</dd></div>
+        <div><dt>Students</dt><dd>{{ students|length }}{% if school.max_students is not None %}<small> / {{ school.max_students }}</small>{% endif %}</dd></div>
+        <div><dt>Removed</dt><dd>{{ removed|length }}</dd></div>
+        <div><dt>Plan</dt><dd class="sd2-plan">{% if plan %}{{ plan.name }}{% elif billing.state == "trial" %}Free trial{% else %}None yet{% endif %}</dd></div>
+      </dl>
+      <nav class="sd2-jump" aria-label="On this page">
+        <a href="#join">Add people</a>
+        <a href="#teachers">Teachers <b>{{ teachers|length }}</b></a>
+        <a href="#students">Students <b>{{ students|length }}</b></a>
+        <a href="#logins">&#128273; Login details</a>
+        {% if level_history %}<a href="#level-changes">Level changes</a>{% endif %}
+        {% if removed %}<a href="#removed">Removed <b>{{ removed|length }}</b></a>{% endif %}
+      </nav>
+    </section>
+
+    <section class="sd2-section" id="join">
+      <div class="ui-section__head">
+        <h2 class="ui-section__title"><span class="ui-section__num">1</span> Bring people in</h2>
+        <p class="ui-section__aside">Everyone uses your school code, {{ school.code }}</p>
+      </div>
+      <div class="sd2-two">
         <section class="ui-panel sd-teachers">
-          <p class="ui-panel__label">Add teachers</p>
+          <p class="ui-panel__label">Teachers</p>
           <h2 class="ui-panel__title">Teachers join with your school code</h2>
           <p class="ui-panel__lede">Share the code or the link below. Each teacher signs up, chooses the level they teach, and sees only that level's work. There's no code to make for each one.</p>
           <div class="sd-code">
@@ -90,6 +119,25 @@
           {% endwith %}
         </section>
 
+        <section class="ui-panel">
+          <p class="ui-panel__label">Students</p>
+          <h2 class="ui-panel__title">Students join with the same code</h2>
+          <p class="ui-panel__lede">Share this link, or give them the code to type when they sign up. You can also register a whole class from Excel with the control room team.</p>
+          <div class="sd-code">
+            <span class="sd-code__label">School code</span>
+            <strong class="sd-code__value">{{ school.code }}</strong>
+          </div>
+          <div class="sd-link">
+            <input type="text" class="field-input" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'accounts:register_student' %}?school={{ school.code }}" aria-label="Student sign-up link" data-copy-source>
+            <button type="button" class="ui-btn ui-btn--ghost" data-copy>Copy link</button>
+          </div>
+          <dl class="sd2-contact">
+            <div><dt>School email</dt><dd>{{ school.email }}</dd></div>
+            {% if school.phone %}<div><dt>Phone</dt><dd>{{ school.phone }}</dd></div>{% endif %}
+            {% if school.address %}<div><dt>Address</dt><dd>{{ school.address }}</dd></div>{% endif %}
+          </dl>
+        </section>
+      </div>
         {% if pending_codes %}
         <section class="ui-panel">
           <p class="ui-panel__label">Earlier one-time codes</p>
@@ -106,27 +154,41 @@
           </div>
         </section>
         {% endif %}
-      </div>
+    </section>
 
-      <div>
-        <section class="ui-panel">
-          <p class="ui-panel__label">Your school at a glance</p>
-          <dl class="ui-facts">
-            <div><dt>Teachers</dt><dd>{{ teachers|length }}{% if school.teacher_limit is not None %} / {{ school.teacher_limit }}{% endif %}</dd></div>
-            <div><dt>Students</dt><dd>{{ students|length }}{% if school.max_students is not None %} / {{ school.max_students }}{% endif %}</dd></div>
-          </dl>
-          <div class="ui-table-wrap" style="margin-top: 16px;">
-            <table class="ui-table">
-              <tbody>
-                <tr><th scope="row">School email</th><td>{{ school.email }}</td></tr>
-                {% if school.phone %}<tr><th scope="row">Phone</th><td>{{ school.phone }}</td></tr>{% endif %}
-                {% if school.address %}<tr><th scope="row">Address</th><td>{{ school.address }}</td></tr>{% endif %}
-              </tbody>
-            </table>
-          </div>
-          <p class="ui-panel__lede" style="margin: 14px 0 0;">Browse Diction Masters resources and upload books, stories, audio or video for your school in the Diction Library. School uploads are only visible to members of {{ school.name }}.</p>
+    <section class="sd2-section">
+      <div class="ui-section__head">
+        <h2 class="ui-section__title"><span class="ui-section__num">2</span> Your people</h2>
+        <p class="ui-section__aside">Change levels, promote, see logins or remove</p>
+      </div>
+      <div class="sd2-stack">
+        <section class="ui-panel" id="teachers">
+          <p class="ui-panel__label">Teachers</p>
+          {% if teachers %}
+          {% include "schools/_people_table.html" with people=teachers role="teacher" %}
+          {% else %}
+          <div class="ui-empty"><p>No teachers yet. Share your school code, <strong>{{ school.code }}</strong>, or the teacher sign-up link above.</p></div>
+          {% endif %}
         </section>
 
+        <section class="ui-panel" id="students">
+          <p class="ui-panel__label">Students</p>
+          {% if students %}
+          <p class="ui-panel__lede sl-lede">Tick students to <strong>promote them to their next level</strong> (at the end of a session, say) or move them to any level. Filter by level, then use “Select all shown” to tick everyone in it.</p>
+          {% include "schools/_people_table.html" with people=students role="student" %}
+          {% else %}
+          <div class="ui-empty"><p>No students yet. Share your school code, <strong>{{ school.code }}</strong>, and the student sign-up link: {{ request.scheme }}://{{ request.get_host }}{% url 'accounts:register_student' %}?school={{ school.code }}</p></div>
+          {% endif %}
+        </section>
+      </div>
+    </section>
+
+    <section class="sd2-section">
+      <div class="ui-section__head">
+        <h2 class="ui-section__title"><span class="ui-section__num">3</span> Logins and records</h2>
+        <p class="ui-section__aside">Login sheets, level history and removed accounts</p>
+      </div>
+      <div class="sd2-two">
         <section class="ui-panel sl-logins" id="logins">
           <p class="ui-panel__label">Login details</p>
           {% if logins_unlocked %}
@@ -158,75 +220,61 @@
           </form>
           {% endif %}
         </section>
-
-        <section class="ui-panel" id="teachers">
-          <p class="ui-panel__label">Teachers</p>
-          {% if teachers %}
-          {% include "schools/_people_table.html" with people=teachers role="teacher" %}
-          {% else %}
-          <div class="ui-empty"><p>No teachers yet. Share your school code, <strong>{{ school.code }}</strong>, or the teacher sign-up link above.</p></div>
+        <div class="sd2-stack">
+          {% if level_history %}
+          <section class="ui-panel" id="level-changes">
+            <p class="ui-panel__label">Level changes</p>
+            <p class="ui-panel__lede">Recent promotions and moves. Undo puts everyone in a change back where they were, unless they've been moved again since.</p>
+            <ul class="sl-history">
+              {% for change in level_history %}
+              <li class="sl-history__item{% if change.undone %} is-undone{% endif %}">
+                <div class="sl-history__main">
+                  <strong>{{ change.kind }} {{ change.count }} {% if change.count == 1 %}person{% else %}people{% endif %}</strong>
+                  <span class="sl-history__moves">{% for move, n in change.moves|slice:":4" %}<span>{{ move.0 }} &rarr; {{ move.1 }}{% if change.count > 1 %} ({{ n }}){% endif %}</span>{% endfor %}{% if change.moves|length > 4 %}<span>and more</span>{% endif %}</span>
+                  <small>{% if change.count == 1 %}{{ change.rows.0.member.get_full_name }} · {% endif %}{{ change.when|timesince }} ago{% if change.by %} by {{ change.by.get_full_name|default:change.by.email }}{% endif %}{% if change.undone %} · undone{% endif %}</small>
+                </div>
+                {% if change.can_undo %}
+                <form method="post" action="{% url 'schools:undo_levels' change.batch %}" data-confirm="Undo this change and put {% if change.count == 1 %}them{% else %}these {{ change.count }} people{% endif %} back in their earlier level?">
+                  {% csrf_token %}<button type="submit" class="sd-btn sd-btn--remove">&#8630; Undo</button>
+                </form>
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </section>
           {% endif %}
-        </section>
-
-        <section class="ui-panel" id="students">
-          <p class="ui-panel__label">Students</p>
-          {% if students %}
-          <p class="ui-panel__lede sl-lede">Tick students to <strong>promote them to their next level</strong> (at the end of a session, say) or move them to any level. Filter by level, then use “Select all shown” to tick everyone in it.</p>
-          {% include "schools/_people_table.html" with people=students role="student" %}
-          {% else %}
-          <div class="ui-empty"><p>No students yet. Share your school code, <strong>{{ school.code }}</strong>, and the student sign-up link: {{ request.scheme }}://{{ request.get_host }}{% url 'accounts:register_student' %}?school={{ school.code }}</p></div>
+          {% if removed %}
+          <section class="ui-panel" id="removed">
+            <p class="ui-panel__label">Removed</p>
+            <p class="ui-panel__lede">They can't sign in and don't take up a place. Their work is kept, so you can bring anyone back while your plan has room.</p>
+            <div class="ui-table-wrap">
+              <table class="ui-table sd-people">
+                <thead><tr><th>Name</th><th>Role</th><th>Level</th><th>Signs in with</th><th class="sd-actions"><span class="sr-only">Restore</span></th></tr></thead>
+                <tbody>
+                  {% for member in removed %}
+                  <tr class="sd-removed"><td class="sd-name">{{ member.get_full_name }}</td><td class="sd-meta">{{ member.get_role_display }}</td><td class="sd-meta">{{ member.level_display|default:"—" }}</td><td class="sd-meta sd-login">{{ member.login_name }}</td>
+                    <td class="sd-actions">
+                      <form method="post" action="{% url 'schools:restore_member' member.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="sd-btn sd-btn--restore">&#8634; Restore</button>
+                      </form>
+                    </td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </section>
           {% endif %}
-        </section>
-
-        {% if level_history %}
-        <section class="ui-panel" id="level-changes">
-          <p class="ui-panel__label">Level changes</p>
-          <p class="ui-panel__lede">Recent promotions and moves. Undo puts everyone in a change back where they were, unless they've been moved again since.</p>
-          <ul class="sl-history">
-            {% for change in level_history %}
-            <li class="sl-history__item{% if change.undone %} is-undone{% endif %}">
-              <div class="sl-history__main">
-                <strong>{{ change.kind }} {{ change.count }} {% if change.count == 1 %}person{% else %}people{% endif %}</strong>
-                <span class="sl-history__moves">{% for move, n in change.moves|slice:":4" %}<span>{{ move.0 }} &rarr; {{ move.1 }}{% if change.count > 1 %} ({{ n }}){% endif %}</span>{% endfor %}{% if change.moves|length > 4 %}<span>and more</span>{% endif %}</span>
-                <small>{% if change.count == 1 %}{{ change.rows.0.member.get_full_name }} · {% endif %}{{ change.when|timesince }} ago{% if change.by %} by {{ change.by.get_full_name|default:change.by.email }}{% endif %}{% if change.undone %} · undone{% endif %}</small>
-              </div>
-              {% if change.can_undo %}
-              <form method="post" action="{% url 'schools:undo_levels' change.batch %}" data-confirm="Undo this change and put {% if change.count == 1 %}them{% else %}these {{ change.count }} people{% endif %} back in their earlier level?">
-                {% csrf_token %}<button type="submit" class="sd-btn sd-btn--remove">&#8630; Undo</button>
-              </form>
-              {% endif %}
-            </li>
-            {% endfor %}
-          </ul>
-        </section>
-        {% endif %}
-
-        {% if removed %}
-        <section class="ui-panel" id="removed">
-          <p class="ui-panel__label">Removed</p>
-          <p class="ui-panel__lede">They can't sign in and don't take up a place. Their work is kept, so you can bring anyone back while your plan has room.</p>
-          <div class="ui-table-wrap">
-            <table class="ui-table sd-people">
-              <thead><tr><th>Name</th><th>Role</th><th>Level</th><th>Signs in with</th><th class="sd-actions"><span class="sr-only">Restore</span></th></tr></thead>
-              <tbody>
-                {% for member in removed %}
-                <tr class="sd-removed"><td class="sd-name">{{ member.get_full_name }}</td><td class="sd-meta">{{ member.get_role_display }}</td><td class="sd-meta">{{ member.level_display|default:"—" }}</td><td class="sd-meta sd-login">{{ member.login_name }}</td>
-                  <td class="sd-actions">
-                    <form method="post" action="{% url 'schools:restore_member' member.pk %}">
-                      {% csrf_token %}
-                      <button type="submit" class="sd-btn sd-btn--restore">&#8634; Restore</button>
-                    </form>
-                  </td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        {% endif %}
+          <section class="ui-panel">
+            <p class="ui-panel__label">Diction Library</p>
+            <p class="ui-panel__lede" style="margin: 0;">Upload books, stories, audio or video for your school in the <a href="{% url 'diction_library:manage' %}">Diction Library</a>. School uploads are only visible to members of {{ school.name }}.</p>
+          </section>
+        </div>
       </div>
-    </div>
+    </section>
   </div>
 </div>
+
 <dialog class="sl-dialog" data-sl-dialog aria-labelledby="sl-dialog-title">
   <form method="post" data-sl-dialog-form>
     {% csrf_token %}
