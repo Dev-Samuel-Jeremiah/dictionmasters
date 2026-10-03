@@ -41,7 +41,7 @@
             </td>
             <td class="sd-meta sd-login">{{ member.login_name }}</td>
             <td class="sd-meta"><span class="sd-phone-only">Joined </span>{{ member.date_joined|date:"d M Y" }}</td>
-            <td class="sd-actions"><button type="submit" form="sd-remove-{{ member.pk }}" class="sd-btn sd-btn--remove" aria-label="Remove {{ member.get_full_name|default:member.login_name }}">Remove</button></td>
+            <td class="sd-actions"><button type="button" class="sd-btn sd-btn--login" data-sl-login-open data-url="{% url 'schools:member_login' member.pk %}" data-reset-url="{% url 'schools:member_reset' member.pk %}" aria-label="Login details for {{ member.get_full_name|default:member.login_name }}">&#128273; Login</button> <button type="submit" form="sd-remove-{{ member.pk }}" class="sd-btn sd-btn--remove" aria-label="Remove {{ member.get_full_name|default:member.login_name }}">Remove</button></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -62,6 +62,8 @@
         </select>
         <button type="button" class="sl-bar__btn" data-sl-move>Move</button>
       </span>
+      <button type="button" class="sl-bar__btn" data-sl-logins data-url="{% url 'schools:logins_download' %}">&#11015; Logins (Excel)</button>
+      <button type="button" class="sl-bar__btn" data-sl-reset data-url="{% url 'schools:bulk_reset' %}">&#128273; Reset passwords</button>
       <button type="button" class="sl-bar__clear" data-sl-clear>Clear</button>
     </div>
   </form>

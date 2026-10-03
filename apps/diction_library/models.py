@@ -134,3 +134,37 @@ class LibraryChapter(models.Model):
     def read_along_self_timed(self):
         """Timings came with the voice: never measured over."""
         return self.generated
+
+
+class LibraryRecording(models.Model):
+    """One of a book's own narration recordings, e.g. "Chapter five" or
+    "Page 121 to 124". A book can have many (uploaded together in the
+    control room); each becomes a chapter of its read-aloud, put in order
+    by the chapter or page in its name and matched to that part of the
+    book's text (apps/diction_library/narration.py)."""
+
+    item = models.ForeignKey(LibraryItem, on_delete=models.CASCADE, related_name="recordings")
+    name = models.CharField(max_length=200, help_text='What it is, e.g. "Chapter five" or "Page 121 to 124".')
+    audio_file = models.FileField(
+        upload_to="diction_library/narration/%Y/%m/",
+        validators=[FileExtensionValidator(["mp3", "m4a", "wav", "ogg", "aac"])],
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["item", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+def _recording_file_goes_too(sender, instance, **kwargs):
+    """The recording's file leaves storage with it, unless a chapter row
+    still points at it (it's tidied when the chapters are rebuilt)."""
+    name = instance.audio_file.name if instance.audio_file else ""
+    if name and not LibraryRecording.objects.filter(audio_file=name).exists():
+        instance.audio_file.storage.delete(name)
+
+
+models.signals.post_delete.connect(_recording_file_goes_too, sender=LibraryRecording,
+                                   dispatch_uid="dm-library-recording-file")

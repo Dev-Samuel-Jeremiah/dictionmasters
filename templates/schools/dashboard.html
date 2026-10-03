@@ -7,6 +7,7 @@
 {% block extra_js %}
 <script src="{% static 'js/switcher.js' %}" defer></script>
 <script src="{% static 'js/school_levels.js' %}" defer></script>
+<script src="{% static 'js/school_logins.js' %}" defer></script>
 <script>
   // "Copy link" for the teacher sign-up link.
   document.addEventListener("click", function (e) {
@@ -126,6 +127,38 @@
           <p class="ui-panel__lede" style="margin: 14px 0 0;">Browse Diction Masters resources and upload books, stories, audio or video for your school in the Diction Library. School uploads are only visible to members of {{ school.name }}.</p>
         </section>
 
+        <section class="ui-panel sl-logins" id="logins">
+          <p class="ui-panel__label">Login details</p>
+          {% if logins_unlocked %}
+          <div class="sl-logins__head">
+            <h2 class="ui-panel__title">Download, check or reset logins</h2>
+            <form method="post" action="{% url 'schools:logins_unlock' %}">{% csrf_token %}<input type="hidden" name="lock" value="1"><button type="submit" class="sd-btn sd-btn--remove">&#128274; Lock now</button></form>
+          </div>
+          <p class="ui-panel__lede">Unlocked for about {{ logins_minutes }} more minute{{ logins_minutes|pluralize }}. Use <strong>Login</strong> beside anyone below to see or reset theirs, or download a sheet here.</p>
+          <form method="post" action="{% url 'schools:logins_download' %}" class="sl-logins__form">
+            {% csrf_token %}
+            <label><span>Who</span>
+              <select name="role"><option value="">Teachers and students</option><option value="teacher">Teachers only</option><option value="student">Students only</option></select>
+            </label>
+            <label><span>Level</span>
+              <select name="level"><option value="">Every level</option>{% for lvl in level_choices %}<option value="{{ lvl }}">{{ lvl }}</option>{% endfor %}</select>
+            </label>
+            <label class="sl-logins__fill"><input type="checkbox" name="fill_missing" value="1"> Give a new password to anyone whose current one can’t be shown</label>
+            <button type="submit" class="ui-btn ui-btn--gold">&#11015; Download logins (Excel)</button>
+          </form>
+          {% if not logins_recovery %}<p class="sl-logins__warn">Password recovery isn’t switched on for this site, so current passwords can’t be shown — resetting still works. Ask Diction Masters support to switch it on.</p>{% endif %}
+          {% else %}
+          <h2 class="ui-panel__title">Teachers’ and students’ logins</h2>
+          <p class="ui-panel__lede">See anyone’s login, reset a forgotten password, or download everyone’s logins as an Excel sheet. For safety, confirm your own password first; it stays unlocked for 15 minutes.</p>
+          <form method="post" action="{% url 'schools:logins_unlock' %}" class="sl-logins__unlock">
+            {% csrf_token %}
+            <label class="sr-only" for="sl-admin-password">Your password</label>
+            <input id="sl-admin-password" type="password" name="password" class="field-input" placeholder="Your password" autocomplete="current-password" required>
+            <button type="submit" class="ui-btn ui-btn--gold">&#128275; Unlock login details</button>
+          </form>
+          {% endif %}
+        </section>
+
         <section class="ui-panel" id="teachers">
           <p class="ui-panel__label">Teachers</p>
           {% if teachers %}
@@ -207,6 +240,27 @@
       <button type="submit" class="sd-btn sd-btn--restore">Save level</button>
     </div>
   </form>
+</dialog>
+
+<dialog class="sl-dialog" data-sl-login aria-labelledby="sl-login-title">
+  <h2 id="sl-login-title" class="sl-dialog__title" data-sl-login-name>Login</h2>
+  <div data-sl-login-body>
+    <dl class="sl-cred">
+      <div><dt>Signs in with</dt><dd><code data-sl-login-user></code></dd></div>
+      <div><dt>Password</dt><dd><code data-sl-login-pass></code> <button type="button" class="sl-change" data-sl-copy>Copy both</button></dd></div>
+    </dl>
+    <p class="sl-dialog__lede" data-sl-login-note></p>
+    <details class="sl-reset">
+      <summary>Reset password</summary>
+      <p class="sl-dialog__lede">They’ll be signed out everywhere and must use the new password. Leave the box empty to get a simple one, like <em>mango47</em>.</p>
+      <div class="sl-reset__row">
+        <input type="text" class="field-input" data-sl-new-pass placeholder="New password (optional)" autocomplete="off" maxlength="128">
+        <button type="button" class="sd-btn sd-btn--restore" data-sl-reset-go>Reset password</button>
+      </div>
+    </details>
+  </div>
+  <p class="sl-dialog__lede" data-sl-login-locked hidden>Confirm your password in <a href="#logins">Login details</a> first, then try again.</p>
+  <div class="sl-dialog__actions"><button type="button" class="sd-btn sd-btn--remove" data-sl-login-close>Close</button></div>
 </dialog>
 
 <dialog class="sl-dialog" data-sl-confirm aria-labelledby="sl-confirm-title">

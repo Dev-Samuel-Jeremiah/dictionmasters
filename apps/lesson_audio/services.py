@@ -24,6 +24,7 @@ import json
 import logging
 import re
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -376,14 +377,80 @@ def _dictionary_ipa(term, syllables=""):
     return f"/{' '.join(parts)}/" if parts else ""
 
 
-def _word_audio(word):
+# Key words are said with the site's own ElevenLabs voice (always
+# ELEVENLABS_VOICE_ID — never the voice picked for the note's read-aloud),
+# by the model that says single words most accurately: tested on 30 words
+# teachers often get wrong, eleven_turbo_v2_5 said 27 right where
+# eleven_multilingual_v2 managed 19 ("hyperbole", "Leicester", "isosceles",
+# "February" ...). Each recording is then listened back to; one that's
+# heard as a different word is made again by the next model, and the one
+# that's understood is kept.
+WORD_VOICE_SETTINGS = {
+    "stability": 0.5,           # natural, not flat and robotic
+    "similarity_boost": 0.85,   # stays close to the chosen voice
+    "style": 0.0,
+    "use_speaker_boost": True,
+    "speed": 0.92,              # a touch slower: a teacher modelling a word
+}
+
+
+def _word_models():
+    chosen = getattr(settings, "LESSON_WORD_MODELS", "") or "eleven_turbo_v2_5,eleven_v3,eleven_multilingual_v2"
+    return [m.strip() for m in chosen.split(",") if m.strip()]
+
+
+def _say(word, model):
     from apps.quick_words.speech import SpeechUnavailable, speak
 
-    try:
-        return speak(f"{word}.")
-    except SpeechUnavailable as error:
-        logger.warning("Key word audio for %r failed: %s", word, error)
-        return b""
+    settings_for = dict(WORD_VOICE_SETTINGS)
+    if model == "eleven_v3":                  # v3 takes only these
+        settings_for = {"stability": 0.5, "similarity_boost": 0.85}
+    for attempt in range(3):
+        try:
+            return speak(f"{word}.", model_id=model, voice_settings=settings_for)
+        except SpeechUnavailable as error:
+            busy = len(error.args) > 1 and error.args[1] == 429
+            if busy and attempt < 2:
+                time.sleep(2 * (attempt + 1))
+                continue
+            logger.warning("Key word audio for %r with %s failed: %s", word, model, error)
+            return b""
+    return b""
+
+
+def heard_right(word, audio):
+    """Does a listener (the transcriber) hear `word` in this recording?
+    None when there's no way to check."""
+    if not settings.OPENAI_API_KEY:
+        return None
+    from apps.tutor import listen
+
+    with tempfile.NamedTemporaryFile(suffix=".mp3") as clip:
+        clip.write(audio)
+        clip.flush()
+        try:
+            heard = [w.strip(".,!?;:\"'") for w, _s, _e in listen.transcribe_file(clip.name)]
+        except Exception:
+            return None
+    expected = re.findall(r"[A-Za-z’'-]+", word)
+    return bool(heard) and all(any(listen.same_word(token, h, name=True) for h in heard) for token in expected)
+
+
+def _word_audio(word):
+    """The best recording of `word` the voice can give (see above)."""
+    first = b""
+    for model in _word_models():
+        audio = _say(word, model)
+        if not audio:
+            continue
+        first = first or audio
+        verdict = heard_right(word, audio)
+        if verdict is None:
+            return audio                       # nothing to check with: trust the best model
+        if verdict:
+            return audio
+        logger.info("Key word %r was misheard with %s; trying the next model.", word, model)
+    return first
 
 
 def word_details(term):

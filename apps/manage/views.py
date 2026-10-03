@@ -47,6 +47,7 @@ from apps.quick_words.models import QuickWordAudioImportJob
 from .forms import ControlLoginForm, QuickWordAudioZipForm, SchoolTrialForm, LearnerTrialForm, EditTrialForm, build_form
 from . import analytics
 from .level_field import add_levels_field, save_levels
+from .recordings_field import add_recordings_field, save_recordings
 from .plan_field import FIELD as PLAN_FIELD, add_plan_field, check_plan
 from .school_login import add_login_fields, check_login, save_login
 from .bulk_questions import question_formset
@@ -389,6 +390,9 @@ def record_form(request, key, pk=None):
     # say — can be given more than just one.
     if screen.get("levels_field"):
         add_levels_field(form, obj)
+    # A library book's narration: many recordings at once, a chapter each.
+    if screen.get("recordings_field"):
+        add_recordings_field(form, obj)
     # Dropdowns offer only what belongs here, e.g. a trick's group is a trick group.
     for name, condition in screen.get("limit", {}).items():
         if name in form.fields and hasattr(form.fields[name], "queryset"):
@@ -416,11 +420,17 @@ def record_form(request, key, pk=None):
             form.save_m2m()
             if screen.get("levels_field"):
                 save_levels(form, saved)
+            recordings_note = save_recordings(form, saved) if screen.get("recordings_field") else (0, 0)
             login_note = save_login(saved, form) if login_fields else ""
         _record(request, saved, CHANGE if pk else ADDITION, "Changed in the control room" if pk else "Added in the control room")
         messages.success(request, f"{_singular(screen).capitalize()} “{saved}” {'updated' if pk else 'added'}.")
         if login_note:
             messages.success(request, login_note)
+        if any(recordings_note):
+            added, removed = recordings_note
+            parts = ([f"{added} recording{'s' if added != 1 else ''} added"] if added else []) + \
+                    ([f"{removed} removed"] if removed else [])
+            messages.success(request, f"{' and '.join(parts).capitalize()}. The chapters are being put in order and matched to the text.")
         plan = form.cleaned_data.get(PLAN_FIELD) if plan_kind else None
         if plan is not None:
             try:

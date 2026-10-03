@@ -395,6 +395,7 @@ SECTIONS = [
              "search": ["title", "summary", "description"], "order": ["-updated_at"],
              "form": ["title", "kind", "summary", "description", "file", "narration_file", "narration_redo",
                       "external_url", "school", "is_published", "order"],
+             "recordings_field": True,
              "labels": {
                  "school": ("School (optional)", "Leave blank to publish this item to every user. Choose a school to limit it to that school's members."),
                  "file": ("Upload a file", "Books, documents, audio, video or a cover image. You can also add written content or an external link."),

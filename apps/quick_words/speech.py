@@ -47,7 +47,8 @@ def synthesise(word, model_id=None):
     return speak(f"{str(word).strip()}.", model_id=model_id)
 
 
-def speak(text, model_id=None, *, max_audio_bytes=MAX_AUDIO_BYTES, timeout_seconds=TIMEOUT_SECONDS):
+def speak(text, model_id=None, *, max_audio_bytes=MAX_AUDIO_BYTES, timeout_seconds=TIMEOUT_SECONDS,
+          voice_settings=None):
     """MP3 bytes of `text` read aloud, exactly as written. Used directly
     where the wording matters, such as a phonemic chart keyword followed
     by its example words."""
@@ -57,7 +58,7 @@ def speak(text, model_id=None, *, max_audio_bytes=MAX_AUDIO_BYTES, timeout_secon
     body = {
         "text": str(text).strip(),
         "model_id": model_id or settings.ELEVENLABS_MODEL_ID,
-        "voice_settings": VOICE_SETTINGS,
+        "voice_settings": voice_settings or VOICE_SETTINGS,
     }
     request = urllib.request.Request(
         API_URL.format(voice_id=settings.ELEVENLABS_VOICE_ID),
@@ -74,7 +75,7 @@ def speak(text, model_id=None, *, max_audio_bytes=MAX_AUDIO_BYTES, timeout_secon
         with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             audio = response.read(max_audio_bytes + 1)
     except urllib.error.HTTPError as error:
-        raise SpeechUnavailable(f"ElevenLabs answered HTTP {error.code}.") from error
+        raise SpeechUnavailable(f"ElevenLabs answered HTTP {error.code}.", error.code) from error
     except (urllib.error.URLError, TimeoutError, OSError) as error:
         raise SpeechUnavailable("Couldn't reach ElevenLabs.") from error
 

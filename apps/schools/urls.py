@@ -11,4 +11,9 @@ urlpatterns = [
     path("members/<int:pk>/level/", views.member_level, name="member_level"),
     path("members/levels/", views.bulk_levels, name="bulk_levels"),
     path("levels/undo/<str:batch>/", views.undo_levels, name="undo_levels"),
+    path("logins/unlock/", views.logins_unlock, name="logins_unlock"),
+    path("logins/download/", views.logins_download, name="logins_download"),
+    path("logins/reset/", views.bulk_reset, name="bulk_reset"),
+    path("members/<int:pk>/login/", views.member_login, name="member_login"),
+    path("members/<int:pk>/reset-password/", views.member_reset, name="member_reset"),
 ]

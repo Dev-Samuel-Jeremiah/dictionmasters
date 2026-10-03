@@ -402,8 +402,9 @@ def logins_file(school, made, site_url, kind="student"):
     return f"data:{XLSX};base64,{base64.b64encode(out.getvalue()).decode()}", filename
 
 
-def school_logins_file(school, accounts, site_url):
-    """Build a combined, read-only login sheet for active school accounts."""
+def school_logins_file(school, accounts, site_url, note=None, title="Current logins"):
+    """Build a combined login sheet for active school accounts. `note`
+    replaces the line of help under the school's name."""
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font
 
@@ -414,9 +415,9 @@ def school_logins_file(school, accounts, site_url):
     available = sum(1 for account in accounts if account.get("password_available"))
     _banner(
         ws, school,
-        f"School code {school.code} · Current logins · Sign in at {site_url}/accounts/login/ · "
-        "Passwords are not changed by this download. "
-        "Unavailable entries are from before encrypted password recovery, or need the original recovery key.",
+        f"School code {school.code} · {title} · Sign in at {site_url}/accounts/login/ · " + (note or (
+            "Passwords are not changed by this download. "
+            "Unavailable entries are from before encrypted password recovery, or need the original recovery key.")),
         "H",
     )
     stamp = timezone.localtime()

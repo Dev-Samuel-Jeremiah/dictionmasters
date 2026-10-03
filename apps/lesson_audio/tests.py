@@ -1,5 +1,6 @@
 """Lesson Notes to Audio. Nothing here reaches OpenAI or ElevenLabs."""
 
+import json
 from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -216,3 +217,28 @@ class SchoolLibraryTests(TestCase):
         with mock.patch.object(services, "start_keywords"):
             self.client.post("/lesson-audio/new/", {"mode": "typed", "title": "Nouns", "body": "A noun names things."})
         self.assertEqual(LessonNote.objects.get(title="Nouns").school, self.school)
+
+
+@override_settings(OPENAI_API_KEY="test", ELEVENLABS_API_KEY="test", ELEVENLABS_VOICE_ID="site-voice")
+class KeyWordVoiceTests(TestCase):
+    def test_words_use_the_site_voice_and_the_accurate_model_first(self):
+        with mock.patch("apps.quick_words.speech.urllib.request.urlopen") as urlopen, \
+                mock.patch.object(services, "heard_right", return_value=True):
+            urlopen.return_value.__enter__.return_value.read.return_value = b"ID3" + b"x" * 3000
+            services._word_audio("hyperbole")
+        request = urlopen.call_args.args[0]
+        body = json.loads(request.data)
+        self.assertIn("/site-voice", request.full_url)                 # strictly ELEVENLABS_VOICE_ID
+        self.assertEqual((body["model_id"], body["text"]), ("eleven_turbo_v2_5", "hyperbole."))
+        self.assertTrue(body["voice_settings"]["use_speaker_boost"])
+
+    def test_a_misheard_word_is_made_again_with_the_next_model(self):
+        said = {"eleven_turbo_v2_5": b"A", "eleven_v3": b"B", "eleven_multilingual_v2": b"C"}
+        with mock.patch.object(services, "_say", side_effect=lambda w, m: said[m]), \
+                mock.patch.object(services, "heard_right", side_effect=lambda w, a: a == b"B"):
+            self.assertEqual(services._word_audio("quinoa"), b"B")
+
+    def test_when_every_model_is_misheard_the_best_models_recording_is_kept(self):
+        with mock.patch.object(services, "_say", side_effect=lambda w, m: m.encode()), \
+                mock.patch.object(services, "heard_right", return_value=False):
+            self.assertEqual(services._word_audio("quay"), b"eleven_turbo_v2_5")

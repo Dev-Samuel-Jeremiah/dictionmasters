@@ -62,3 +62,34 @@
   .sl-bar__move { flex: 1; }
   .sl-bar__move select { flex: 1; }
 }
+
+/* Login details (static/js/school_logins.js) */
+.sl-logins__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.sl-logins__head form { margin: 0; }
+.sl-logins__form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; align-items: end; margin-top: 12px; }
+.sl-logins__form label { display: grid; gap: 5px; font-size: 13px; font-weight: 700; color: #0B1A4A; }
+.sl-logins__form select { padding: 9px 12px; border: 1.5px solid #D6E3FF; border-radius: 10px; background: #fff; font: inherit; font-size: 14px; }
+.sl-logins__fill { grid-column: 1 / -1; display: flex !important; align-items: center; gap: 8px; font-weight: 600 !important; }
+.sl-logins__fill input { width: 18px; height: 18px; accent-color: #1846E0; }
+.sl-logins__form .ui-btn { grid-column: 1 / -1; justify-self: start; }
+.sl-logins__unlock { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sl-logins__unlock input { flex: 1 1 200px; }
+.sl-logins__warn { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: #FFF5D6; color: #6b4f05; font-size: 13px; }
+.sd-btn--login { border: 1.5px solid #FFC72C; background: #FFF8E1; color: #0B1A4A; }
+.sd-btn--login:hover, .sd-btn--login:focus-visible { background: #FFC72C; }
+.sd-actions { white-space: nowrap; }
+.sl-cred { display: grid; gap: 10px; margin: 6px 0 12px; }
+.sl-cred div { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: #F1F5FF; }
+.sl-cred dt { color: #55607E; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.sl-cred dd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+.sl-cred code { font-family: Consolas, "Courier New", monospace; font-size: 18px; font-weight: 700; color: #0B1A4A; word-break: break-all; }
+.sl-cred code.is-missing { font-family: inherit; font-size: 14px; color: #A0560B; }
+[data-sl-login-note].is-good { color: #23744f; font-weight: 700; }
+.sl-reset { margin: 4px 0 14px; padding: 10px 12px; border: 1px solid #E3E8F4; border-radius: 12px; }
+.sl-reset summary { cursor: pointer; font-weight: 800; color: #1846E0; }
+.sl-reset__row { display: flex; flex-wrap: wrap; gap: 8px; }
+.sl-reset__row input { flex: 1 1 160px; }
+@media (max-width: 640px) {
+  .sl-logins__form { grid-template-columns: 1fr; }
+  [data-sl] .sd-people .sd-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+}
