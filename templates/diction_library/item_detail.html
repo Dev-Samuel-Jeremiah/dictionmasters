@@ -29,6 +29,28 @@
     <p class="ll-cta ll-cta--wait">&#127911; No read-aloud yet{% if item.narration_status == "failed" %}: {{ item.narration_note }}{% endif %}. In the control room, tick <strong>Make the read-aloud again</strong> on this item and save.</p>
     {% endif %}
     {% endwith %}
+    {% if chapters %}
+    <section class="ll ll--top" id="listen" data-listen data-book="{{ item.slug }}">
+      <h2 class="ll__heading">&#127911; Listen and read along</h2>
+      {% if item.narration_status == "working" %}
+      <p class="ll__making">More chapters are still being made ({{ item.narration_note|default:"starting" }}). The chapters below are ready to play now.</p>
+      {% endif %}
+      <div class="ll__nav">
+        <button type="button" class="ll__step" data-ll-prev aria-label="Previous chapter">&lsaquo;</button>
+        <label class="ll__pick"><span class="sr-only">Chapter</span>
+          <select data-ll-pick>{% for chapter in chapters %}<option value="{{ forloop.counter0 }}">{{ chapter.title }}</option>{% endfor %}</select>
+        </label>
+        <button type="button" class="ll__step" data-ll-next aria-label="Next chapter">&rsaquo;</button>
+        <label class="ll__auto"><input type="checkbox" data-ll-auto checked> Play the next chapter automatically</label>
+      </div>
+      {% for chapter in chapters %}
+      <article class="ll__chapter" data-ll-chapter{% read_along_sync chapter %}{% if not forloop.first %} hidden{% endif %}>
+        <audio controls preload="none" src="{{ chapter.audio_source }}" data-ra-media></audio>
+        <div class="ll__text" data-ra-text>{% for para in chapter.paragraphs %}{% if forloop.first and para == chapter.title %}<h3 class="ll__title">{{ para }}</h3>{% else %}<p>{{ para }}</p>{% endif %}{% endfor %}</div>
+      </article>
+      {% endfor %}
+    </section>
+    {% endif %}
     {% if item.file and item.kind != "audio" and item.kind != "video" %}
     {% with kind=item.get_kind_display|lower %}
     <section class="lr" data-lib-reader data-reader="{{ reader }}" data-src="{% url 'diction_library:file' item.slug %}" data-title="{{ item.title }}">
@@ -57,28 +79,6 @@
       </p>
     </section>
     {% endwith %}
-    {% endif %}
-    {% if chapters %}
-    <section class="ll" id="listen" data-listen data-book="{{ item.slug }}">
-      <h2 class="ll__heading">&#127911; Listen and read along</h2>
-      {% if item.narration_status == "working" %}
-      <p class="ll__making">More chapters are still being made ({{ item.narration_note|default:"starting" }}). The chapters below are ready to play now.</p>
-      {% endif %}
-      <div class="ll__nav">
-        <button type="button" class="ll__step" data-ll-prev aria-label="Previous chapter">&lsaquo;</button>
-        <label class="ll__pick"><span class="sr-only">Chapter</span>
-          <select data-ll-pick>{% for chapter in chapters %}<option value="{{ forloop.counter0 }}">{{ chapter.title }}</option>{% endfor %}</select>
-        </label>
-        <button type="button" class="ll__step" data-ll-next aria-label="Next chapter">&rsaquo;</button>
-        <label class="ll__auto"><input type="checkbox" data-ll-auto checked> Play the next chapter automatically</label>
-      </div>
-      {% for chapter in chapters %}
-      <article class="ll__chapter" data-ll-chapter{% read_along_sync chapter %}{% if not forloop.first %} hidden{% endif %}>
-        <audio controls preload="none" src="{{ chapter.audio_source }}" data-ra-media></audio>
-        <div class="ll__text" data-ra-text>{% for para in chapter.paragraphs %}{% if forloop.first and para == chapter.title %}<h3 class="ll__title">{{ para }}</h3>{% else %}<p>{{ para }}</p>{% endif %}{% endfor %}</div>
-      </article>
-      {% endfor %}
-    </section>
     {% endif %}
     {% if item.external_url %}<p><a class="ui-btn ui-btn--glass" href="{{ item.external_url }}" target="_blank" rel="noopener">Open linked resource</a></p>{% endif %}
   </article></div>
