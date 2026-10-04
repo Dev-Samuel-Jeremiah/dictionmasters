@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en-gb">
+<body style="margin:0;padding:0;background:#F1F4FB;font-family:Arial,Helvetica,sans-serif;color:#0B1A4A;">
+  <div style="display:none;max-height:0;overflow:hidden;">{{ intro }}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F4FB;padding:28px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden;">
+        <tr><td style="background:#1846E0;padding:22px 28px;color:#ffffff;font-size:20px;font-weight:bold;">Diction <span style="color:#FFC72C;">Masters</span></td></tr>
+        <tr><td style="background:#0B1A4A;padding:30px 28px;color:#ffffff;">
+          <p style="margin:0 0 8px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#FFC72C;font-weight:bold;">Welcome aboard</p>
+          <p style="margin:0 0 10px;font-size:24px;line-height:1.25;font-weight:bold;">{{ headline }}</p>
+          <p style="margin:0;font-size:15px;line-height:1.6;color:#D6E0FF;">{{ intro }}</p>
+        </td></tr>
+        {% if role == "school_admin" and school %}
+        <tr><td style="padding:22px 28px 0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF6D8;border-radius:14px;">
+            <tr><td style="padding:16px 18px;">
+              <p style="margin:0 0 4px;font-size:12px;font-weight:bold;color:#7A5A06;text-transform:uppercase;letter-spacing:1px;">Your school code</p>
+              <p style="margin:0;font-size:26px;font-weight:bold;letter-spacing:3px;color:#0B1A4A;">{{ school.code }}</p>
+              <p style="margin:6px 0 0;font-size:13px;color:#5B4300;">Teachers and students type this when they sign up.</p>
+            </td></tr>
+          </table>
+        </td></tr>
+        {% endif %}
+        <tr><td style="padding:24px 28px 6px;">
+          <p style="margin:0 0 14px;font-size:16px;font-weight:bold;">{% if role == "school_admin" %}Getting started{% else %}Where to begin{% endif %}</p>
+          {% for title, text in steps %}
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;">
+            <tr>
+              <td width="40" valign="top"><div style="width:30px;height:30px;line-height:30px;border-radius:10px;background:#1846E0;color:#ffffff;font-weight:bold;text-align:center;font-size:14px;">{{ forloop.counter }}</div></td>
+              <td valign="top" style="font-size:14px;line-height:1.55;"><strong style="color:#0B1A4A;">{{ title }}</strong><br><span style="color:#55607E;">{{ text }}</span></td>
+            </tr>
+          </table>
+          {% endfor %}
+        </td></tr>
+        <tr><td style="padding:10px 28px 26px;text-align:center;">
+          <a href="{{ dashboard_url }}" style="display:inline-block;background:#FFC72C;color:#0B1A4A;text-decoration:none;font-weight:bold;font-size:16px;padding:14px 30px;border-radius:12px;">{{ cta }}</a>
+        </td></tr>
+        <tr><td style="padding:0 28px 24px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F5FF;border-radius:12px;">
+            <tr><td style="padding:14px 16px;font-size:13px;line-height:1.6;color:#0B1A4A;">
+              You log in with <strong>{{ login_name }}</strong>{% if school and role != "school_admin" %} at <strong>{{ school.name }}</strong>{% endif %}.<br>
+              Forgot your password? <a href="{{ forgot_url }}" style="color:#1846E0;">Reset it here</a>.
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:16px 28px;background:#F7F9FE;font-size:12px;color:#8792A8;">Happy learning from the Diction Masters team · <a href="{{ site_url }}" style="color:#8792A8;">{{ site_url }}</a></td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{{ headline }}
+
+{{ intro }}
+{% for title, text in steps %}
+{{ forloop.counter }}. {{ title }}
+   {{ text }}
+{% endfor %}
+{{ cta }}: {{ dashboard_url }}
+
+You log in with: {{ login_name }}{% if school %}
+School: {{ school.name }}{% if role == "school_admin" %} (school code {{ school.code }}){% endif %}{% endif %}
+Forgot your password? {{ forgot_url }}
+
+Happy learning,
+The Diction Masters team
+{{ site_url }}

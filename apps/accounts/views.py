@@ -23,6 +23,7 @@ from .forms import (
     StudentRegistrationForm,
 )
 from . import switcher
+from .welcome import send_welcome
 from .models import DashboardCardImage, User
 
 
@@ -89,6 +90,7 @@ def register_school(request):
         if form.is_valid():
             user = form.save()
             auth_login(request, user)
+            send_welcome(request, user)
             plan = _chosen_plan(form, Plan.AUDIENCE_SCHOOL)
             if plan is not None:
                 # Remembered now, trial or not: it sets how many teachers can join.
@@ -202,6 +204,8 @@ def register_school_team(request):
             except SchoolEnrollmentConflict as error:
                 form.add_error(None, str(error))
             else:
+                # The school admin is welcomed; the team gets their logins on the sheet.
+                send_welcome(request, User.objects.filter(email__iexact=admin_data["email"]).first())
                 response = FileResponse(
                     BytesIO(workbook),
                     as_attachment=True,
@@ -229,6 +233,7 @@ def register_individual(request):
         if form.is_valid():
             user = form.save()
             auth_login(request, user)
+            send_welcome(request, user)
             messages.success(request, "Welcome to Diction Masters!")
             return redirect(begin_access(request, user, form.cleaned_data.get("start"), _chosen_plan(form, Plan.AUDIENCE_INDIVIDUAL),
                                           form.cleaned_data.get("promo_code", "")))
@@ -244,6 +249,7 @@ def register_student(request):
         if form.is_valid():
             user = form.save()
             auth_login(request, user)
+            send_welcome(request, user)
             messages.success(request, f"Welcome, {user.first_name}! You're now part of {user.school.name}, and your school's plan covers you.")
             return redirect("accounts:dashboard")
     else:
@@ -258,6 +264,7 @@ def join_with_code(request):
         if form.is_valid():
             user = form.save()
             auth_login(request, user)
+            send_welcome(request, user)
             messages.success(request, f"You're in, {user.first_name}. Welcome to {user.school.name}.")
             return redirect(_post_login_redirect(user))
     else:
