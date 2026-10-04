@@ -26,6 +26,10 @@ class Command(BaseCommand):
             help="Measure nothing: list what would be measured, and roughly what it would cost.",
         )
         parser.add_argument(
+            "--only", action="append", metavar="APP",
+            help='Only this part of the site, e.g. --only diction_library (can be given more than once).',
+        )
+        parser.add_argument(
             "--rescore", action="store_true",
             help="Only work out again how well each recording matches its text, using what was already heard.",
         )
@@ -51,7 +55,12 @@ class Command(BaseCommand):
 
         done = skipped = failed = 0
         planned, minutes, unknown = {}, 0.0, 0
-        for obj in read_along.candidates():
+        if options["only"]:
+            known = {label.split(".")[0] for label in read_along.TEXT_FOR}
+            unknown = set(options["only"]) - known
+            if unknown:
+                raise CommandError(f"Unknown part: {', '.join(sorted(unknown))}. Choose from: {', '.join(sorted(known))}.")
+        for obj in read_along.candidates(only=options["only"]):
             label = f"{obj._meta.verbose_name} {obj.pk} ({str(obj)[:50]})"
             if not options["all"]:
                 status, existing = read_along.timing_for(obj, start=False)
@@ -91,11 +100,16 @@ class Command(BaseCommand):
             for kind, count in sorted(planned.items(), key=lambda row: -row[1]):
                 self.stdout.write(f"  {count:5}  {kind}")
             if total:
-                # OpenAI Whisper: about $0.006 a minute, and each recording is
-                # listened to twice (with and without the text as a hint).
-                cost = minutes * 0.006 * 2
+                from django.conf import settings as dj_settings
+
+                if getattr(dj_settings, "ELEVENLABS_API_KEY", ""):
+                    # ElevenLabs Scribe (speech-to-text), heard once.
+                    where = f"ElevenLabs speech-to-text credit for about {minutes / 60:.1f} hour(s) of audio"
+                else:
+                    # OpenAI Whisper: about $0.006 a minute, listened to twice.
+                    where = f"about ${minutes * 0.006 * 2:.2f} with OpenAI"
                 self.stdout.write(
-                    f"Known length: {minutes:.0f} minutes of audio ≈ ${cost:.2f} with OpenAI"
+                    f"Known length: {minutes:.0f} minutes of audio · {where}"
                     + (f", plus {unknown} recording(s) not measured before (length unknown)." if unknown else ".")
                 )
             self.stdout.write("Nothing was measured. Run without --dry-run to do it.")

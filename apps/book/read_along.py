@@ -1466,12 +1466,15 @@ def _transcribe(audio_path, hint=""):
 # Everything at once
 # ---------------------------------------------------------------------------
 
-def candidates():
-    """Every object that has text and a recording to read along with."""
+def candidates(only=None):
+    """Every object that has text and a recording to read along with —
+    or, with `only` (app labels such as "diction_library"), just those."""
     from django.apps import apps
     from django.db.models import Q
 
     for label in TEXT_FOR:
+        if only and label.split(".")[0] not in only:
+            continue
         model = apps.get_model(label)
         names = {f.name for f in model._meta.fields}
         has_media = Q()
