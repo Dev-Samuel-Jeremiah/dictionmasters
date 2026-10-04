@@ -1446,3 +1446,9 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .px-pwsteps__ic { flex: none; font-size: 22px; line-height: 1; }
 .px-pwnote { margin: 0 0 16px; font-size: 13px; color: var(--muted, #55607E); }
 .px-pwchange .ui-btn { margin-top: 8px; }
+
+/* Signed in with the master password (templates/includes/master_banner.html) */
+.master-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 14px; padding: 8px 16px; background: #B42318; color: #fff; font-size: 14px; text-align: center; }
+.master-banner form { margin: 0; }
+.master-banner button { padding: 5px 12px; border: 1.5px solid rgba(255,255,255,.7); border-radius: 999px; background: transparent; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.master-banner button:hover { background: rgba(255,255,255,.15); }

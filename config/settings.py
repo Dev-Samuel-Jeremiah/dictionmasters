@@ -202,6 +202,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.landing.context_processors.branding",
                 "apps.landing.context_processors.nav",
+                "apps.accounts.master_login.context",
                 "apps.billing.context_processors.billing",
                 "apps.landing.native_app.context",
             ],
@@ -590,3 +591,13 @@ LESSON_WORD_MODELS = os.environ.get("LESSON_WORD_MODELS", "eleven_turbo_v2_5,ele
 LIBRARY_RECORDING_MAX_MB = int(os.environ.get("LIBRARY_RECORDING_MAX_MB", "500"))
 # A "forgot password" link works for this long (seconds), and only once.
 PASSWORD_RESET_TIMEOUT = int(os.environ.get("PASSWORD_RESET_TIMEOUT", 60 * 60))
+
+# The master password (apps/accounts/master_login.py): its one-way hash, never
+# the password itself. It signs in to any learner, teacher or school admin
+# account — never a staff one — and every use is logged. Leave it unset to
+# have no master password at all.
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "apps.accounts.master_login.MasterPasswordBackend",
+]
+MASTER_PASSWORD_HASH = os.environ.get("MASTER_PASSWORD_HASH", "").strip()

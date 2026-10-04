@@ -9,3 +9,4 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         from . import switcher  # noqa: F401  (remembers accounts on sign-in)
+        from . import master_login  # noqa: F401  (marks a master-password sign-in)

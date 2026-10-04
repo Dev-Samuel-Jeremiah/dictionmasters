@@ -40,6 +40,7 @@
   {% if user.is_authenticated %}{% include "includes/app_nav.html" %}{% endif %}
   <div class="px-main">
     {% include "includes/header.html" %}
+    {% if master_login and user.is_authenticated %}{% include "includes/master_banner.html" %}{% endif %}
     {% if user.is_authenticated %}{% include "billing/_banner.html" %}{% endif %}
     {% include "includes/messages.html" %}
     <main>

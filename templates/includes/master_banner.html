@@ -1,0 +1,5 @@
+{# Shown on every page while signed in with the master password (apps/accounts/master_login.py). #}
+<div class="master-banner" role="status">
+  <span>&#128273; You’re in <strong>{{ user.get_full_name|default:user.login_name }}</strong>’s account ({{ user.login_name }}) with the master password.</span>
+  <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit">Log out of this account</button></form>
+</div>
