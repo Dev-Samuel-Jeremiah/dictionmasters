@@ -281,7 +281,7 @@ def read_along_timing(request, token):
         "retry": 4 if status == "pending" else 0,
         # Sent even when the recording turns out to be reading something
         # else: the times still say when and how fast the voice speaks.
-        "words": row.words if row else [],
+        "words": read_along.served_words(obj, row) if row else [],
         "speech": row.speech if row else [],
         "duration": row.duration if row else None,
         "quality": row.quality if row else None,

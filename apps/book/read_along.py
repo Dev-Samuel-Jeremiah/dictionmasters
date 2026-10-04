@@ -33,6 +33,7 @@ the recording skips never throw it off.
 import hashlib
 import json
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -48,6 +49,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.cache import cache
 from django.contrib.contenttypes.models import ContentType
 from django.core import signing
 from django.db import IntegrityError, close_old_connections
@@ -801,9 +803,32 @@ def measure(obj):
             is_list = _label(obj) in TAP_ALONG
             # Forced alignment makes the text fit the recording; a spelling
             # lesson says far more than its list, so lists are transcribed.
-            if getattr(settings, "ELEVENLABS_API_KEY", "") and not (is_list and getattr(settings, "OPENAI_API_KEY", "")):
+            if (getattr(settings, "ELEVENLABS_API_KEY", "") and not (is_list and getattr(settings, "OPENAI_API_KEY", ""))
+                    and not cache.get(NO_FORCED_ALIGNMENT)):
                 try:
                     words, engine = _elevenlabs(audio, text), "elevenlabs"
+                except AlignmentUnavailable as error:
+                    errors.append(str(error))
+                    if "missing the permission" in str(error) or "missing_permissions" in str(error):
+                        # The key can't align: don't upload every recording just to hear that again.
+                        cache.set(NO_FORCED_ALIGNMENT, True, 6 * 60 * 60)
+            if words is None and getattr(settings, "ELEVENLABS_API_KEY", "") and not is_list:
+                # ElevenLabs Scribe: precise word times (a long recording in pieces).
+                try:
+                    if _too_long_for_one_go(audio, length):
+                        words = _transcribe_long(audio, text, runs, length, folder, engine=_scribe)
+                    else:
+                        words = _scribe(audio)
+                    engine = "scribe"
+                except AlignmentUnavailable as error:
+                    errors.append(str(error))
+                    words = None
+            if words is None and getattr(settings, "OPENAI_API_KEY", "") and _too_long_for_one_go(audio, length):
+                # A long recording (a whole book read aloud, say) is heard
+                # in pieces, cut in its pauses, and put back together.
+                try:
+                    words, engine = _transcribe_long(audio, text, runs, length, folder), "openai"
+                    words = even_out(_recover_dropped(audio, words, runs, folder, limit=40))
                 except AlignmentUnavailable as error:
                     errors.append(str(error))
             if words is None and getattr(settings, "OPENAI_API_KEY", ""):
@@ -822,7 +847,7 @@ def measure(obj):
                     words = max(heard, key=lambda attempt: (_spoken_share(text, attempt), len(attempt)))
                     engine = "openai"
                 if words:
-                    words = _recover_dropped(audio, words, runs, folder)
+                    words = even_out(_recover_dropped(audio, words, runs, folder))
                 if words and is_list:
                     # Each item placed on its own, from every transcript heard.
                     items = tap_items(obj)
@@ -855,11 +880,36 @@ def measure(obj):
     return row
 
 
+def _download(source, folder):
+    """A recording in cloud storage, copied here first. Read straight off
+    the network, ffmpeg asks for it a little at a time and a long recording
+    (a whole book read aloud) can take longer than it's allowed; a plain
+    download of the same file takes a minute or two."""
+    import urllib.request
+
+    name = source.split("?", 1)[0].rsplit("/", 1)[-1]
+    path = f"{folder}/source.{name.rsplit('.', 1)[-1][:5] if '.' in name else 'media'}"
+    import http.client
+
+    try:
+        with urllib.request.urlopen(source, timeout=120) as response, open(path, "wb") as out:
+            expected = int(response.headers.get("Content-Length") or 0)
+            shutil.copyfileobj(response, out, 1024 * 1024)
+    except (OSError, ValueError, http.client.HTTPException) as error:
+        raise AlignmentUnavailable(f"Couldn't fetch the recording: {error}") from error
+    # A connection that drops part-way must never pass for the whole recording.
+    if expected and os.path.getsize(path) != expected:
+        raise AlignmentUnavailable("The recording only partly downloaded; it will be tried again.")
+    return path
+
+
 def _extract_audio(source, folder):
     """A small mono MP3 of the soundtrack — quick to upload, and well
     inside every service's size limit even for a long chapter."""
     if not shutil.which("ffmpeg"):
         raise AlignmentUnavailable("ffmpeg isn't installed.")
+    if source.startswith(("http://", "https://")):
+        source = _download(source, folder)
     out = f"{folder}/speech.mp3"
     command = [
         "ffmpeg", "-nostdin", "-loglevel", "error", "-y",
@@ -874,6 +924,15 @@ def _extract_audio(source, folder):
     except (subprocess.CalledProcessError, OSError) as error:
         detail = getattr(error, "stderr", b"") or b""
         raise AlignmentUnavailable(f"Couldn't read the recording: {detail.decode(errors='ignore')[:120]}") from error
+    # The copy must be the whole recording: timings for only its opening
+    # minutes would leave the highlight stuck once those run out.
+    try:
+        whole, copied = _duration(source), _duration(out)
+    except AlignmentUnavailable:
+        whole = copied = None
+    if whole and copied and copied < whole * 0.85:     # (some MP3s only estimate their length)
+        raise AlignmentUnavailable(
+            f"Only {copied / 60:.0f} of the recording's {whole / 60:.0f} minutes could be read; it will be tried again.")
     return out
 
 
@@ -969,6 +1028,73 @@ def _key(word):
     return _as_number(key) or key
 
 
+# ---------------------------------------------------------------------------
+# Timing the page's own words
+# ---------------------------------------------------------------------------
+
+PAGE_TIMED = {"diction_library.librarychapter"}   # long texts read from an uploaded recording
+
+
+def page_timed(text, heard):
+    """[[page word, start, end], …]: the page's own words, in order, each
+    with the time it's said — lined up with what was heard across the
+    whole text at once. On a long book, matching a little at a time in the
+    page can lose its place and leave a stretch unlit; done here, every
+    word the reader says gets its moment. A page word the reader doesn't
+    say (a page header, a stage direction skipped) gets none, so it's
+    passed over rather than lit at the wrong time."""
+    import difflib
+
+    page = text.split()
+    if not page or not heard:
+        return []
+    page_keys = [_key(word) for word in page]
+    heard_keys = [_key(word[0]) for word in heard]
+    out = []
+
+    def spread(words, start, end):
+        if end <= start:
+            end = start + 0.05 * len(words)
+        weights = [_syllables(word) + 0.4 for word in words]
+        total, at = sum(weights), start
+        for word, weight in zip(words, weights):
+            share = (end - start) * weight / total
+            out.append([word, round(at, 3), round(at + share, 3)])
+            at += share
+
+    matcher = difflib.SequenceMatcher(None, page_keys, heard_keys)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            out.extend([page[i], heard[j][1], heard[j][2]] for i, j in zip(range(i1, i2), range(j1, j2)))
+        elif tag == "replace":
+            if i2 - i1 == j2 - j1:                     # said a little differently ("Omego" heard as "Omega")
+                out.extend([page[i], heard[j][1], heard[j][2]] for i, j in zip(range(i1, i2), range(j1, j2)))
+            elif (i2 - i1) <= 3 * (j2 - j1) + 3:
+                spread(page[i1:i2], heard[j1][1], heard[j2 - 1][2])
+            # far more on the page than was said there: not read aloud
+        elif tag == "delete" and i2 - i1 <= 3 and out and j1 < len(heard):
+            # A word or two the transcript dropped, between two that were
+            # heard: said in the gap, if there is one.
+            gap_start, gap_end = out[-1][2], heard[j1][1]
+            if gap_end - gap_start >= 0.12:
+                spread(page[i1:i2], gap_start, gap_end)
+    return _clean(out)
+
+
+def served_words(obj, row):
+    """The word timings the page is sent: for a long text read from an
+    uploaded recording, the page's own words already lined up (page_timed),
+    worked out once per measurement and kept."""
+    if not row or not row.words or _label(obj) not in PAGE_TIMED or row.engine not in ("scribe", "openai"):
+        return row.words if row else []
+    key = f"read-along:page:{row.pk}:{row.updated_at.timestamp() if row.updated_at else 0}"
+    words = cache.get(key)
+    if words is None:
+        words = page_timed(text_for(obj), row.words) or row.words
+        cache.set(key, words, 24 * 60 * 60)
+    return words
+
+
 def _voice_without_words(runs, words):
     """Stretches where the silence map hears a voice but the transcript has
     no words in it. Whisper sometimes drops a whole passage of a longer
@@ -1002,12 +1128,115 @@ def _voice_without_words(runs, words):
     return missing
 
 
-def _recover_dropped(audio, words, runs, folder):
+# ---------------------------------------------------------------------------
+# Long recordings: heard in pieces
+# ---------------------------------------------------------------------------
+
+PIECE_SECONDS = 10 * 60      # each piece about this long: far inside Whisper's 25 MB
+LONG_SECONDS = 20 * 60       # anything longer than this is heard in pieces
+PIECES_AT_ONCE = 4
+
+_COMMON = set("""the a an and but or of to in on at for with from by as is was were be been are am it its this that
+these those he she they we you i me him her them us my your his our their there here what when where who why how
+not no yes so if then than too very all any some one two three said says say will would can could shall should may
+might must do does did done have has had just now up down out over into about after before again also only well oh
+mr mrs miss sir madam enter exit scene act""".split())
+
+
+def _too_long_for_one_go(audio, length):
+    return (length or 0) > LONG_SECONDS or os.path.getsize(audio) > OPENAI_MAX_BYTES * 0.8
+
+
+def _cut_points(runs, length):
+    """Where to cut a long recording: about every PIECE_SECONDS, each time
+    in the middle of the pause nearest that moment, so no word is split."""
+    gaps = [(runs[i][1] + runs[i + 1][0]) / 2 for i in range(len(runs) - 1)
+            if runs[i + 1][0] - runs[i][1] >= 0.3]
+    cuts, target = [0.0], PIECE_SECONDS
+    while target < length - 60:
+        near = [g for g in gaps if abs(g - target) <= 45]
+        cut = min(near, key=lambda g: abs(g - target)) if near else target
+        if cut > cuts[-1] + 60:
+            cuts.append(cut)
+        target = cuts[-1] + PIECE_SECONDS
+    cuts.append(length)
+    return list(zip(cuts, cuts[1:]))
+
+
+def _names_hint(text, share_from, share_to):
+    """Whisper's hint for one piece: the names and unusual words from the
+    part of the text that piece most likely reads (with some to spare),
+    so "Nduka" or "Ibekwe" are written as the book writes them."""
+    words = text.split()
+    if not words:
+        return ""
+    lo = max(0, int(len(words) * share_from) - 400)
+    hi = min(len(words), int(len(words) * share_to) + 400)
+    seen, chosen = set(), []
+    for raw in words[lo:hi]:
+        word = re.sub(r"[^\w'’-]", "", raw)
+        key = word.lower()
+        if len(word) < 3 or key in _COMMON or key in seen:
+            continue
+        if word[0].isupper() or len(word) >= 9:
+            seen.add(key)
+            chosen.append(word)
+    return ", ".join(chosen)
+
+
+def _transcribe_long(audio, text, runs, length, folder, engine=None):
+    """Every word of a long recording, with times in the whole recording."""
+    engine = engine or _transcribe
+    from concurrent.futures import ThreadPoolExecutor
+
+    pieces = _cut_points(runs, length)
+
+    def hear(numbered):
+        n, (start, end) = numbered
+        clip = f"{folder}/piece-{n:03d}.mp3"
+        subprocess.run(
+            ["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-ss", f"{start:.3f}", "-t", f"{end - start:.3f}",
+             "-i", audio, "-ac", "1", "-ar", "16000", "-b:a", "32k", clip],
+            capture_output=True, timeout=EXTRACT_TIMEOUT, check=True,
+        )
+        hint = _names_hint(text, start / length, end / length)
+        try:
+            found = engine(clip, hint=hint)
+        except AlignmentUnavailable:
+            found = engine(clip, hint="")               # once more, on its own
+        return [[word, round(a + start, 3), round(b + start, 3)] for word, a, b in found]
+
+    with ThreadPoolExecutor(max_workers=PIECES_AT_ONCE) as pool:
+        results = list(pool.map(lambda item: _safe(hear, item), enumerate(pieces)))
+    heard = [word for piece in results if piece for word in piece]
+    missing = sum(1 for piece in results if not piece)
+    if not heard:
+        raise AlignmentUnavailable("None of the recording's pieces could be transcribed.")
+    if missing:
+        logger.warning("Read-along: %d of %d pieces of a long recording couldn't be transcribed.", missing, len(pieces))
+    logger.info("Read-along: a %.0f-minute recording was heard in %d pieces, %d words.", length / 60, len(pieces), len(heard))
+    return _clean(heard)
+
+
+def _safe(hear, item):
+    try:
+        return hear(item)
+    except (AlignmentUnavailable, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as error:
+        logger.warning("Read-along: piece %s couldn't be transcribed: %s", item[0], error)
+        return []
+
+
+def _recover_dropped(audio, words, runs, folder, limit=None):
     """Transcribe again, on its own, each stretch of voice the first pass
-    skipped, and let what it hears there replace what the first pass said."""
+    skipped, and let what it hears there replace what the first pass said.
+    With `limit`, only the longest that many stretches (a long book has
+    many short ones, and each is a request of its own)."""
     words = [list(word) for word in words]
     recovered = 0
-    for start, end in _voice_without_words(runs, words):
+    gaps = _voice_without_words(runs, words)
+    if limit is not None and len(gaps) > limit:
+        gaps = sorted(sorted(gaps, key=lambda gap: gap[1] - gap[0], reverse=True)[:limit])
+    for start, end in gaps:
         begin = max(0.0, start - GAP_PAD)
         clip = f"{folder}/gap-{int(begin * 1000)}.mp3"
         try:
@@ -1148,6 +1377,61 @@ def _elevenlabs(audio_path, text):
     words = _clean((w.get("text"), w.get("start"), w.get("end")) for w in data.get("words") or [])
     if not words:
         raise AlignmentUnavailable("ElevenLabs returned no words.")
+    return words
+
+
+SCRIBE_URL = "https://api.elevenlabs.io/v1/speech-to-text"
+NO_FORCED_ALIGNMENT = "read-along:no-forced-alignment"
+
+
+def _scribe(audio_path, hint=""):
+    """ElevenLabs Scribe: every word heard, with a precise start and end.
+    Its word times are far steadier than Whisper's, which often gives a
+    word no length at all and hands its time to the word before; that is
+    what put the highlight a word ahead. (`hint` is accepted for the same
+    shape as _transcribe, but Scribe doesn't need one.)"""
+    fields = [("model_id", getattr(settings, "READ_ALONG_SCRIBE_MODEL", "scribe_v1")),
+              ("timestamps_granularity", "word"), ("language_code", "eng"), ("tag_audio_events", "false")]
+    body, content_type, _size = _multipart(fields, "file", audio_path)
+    data = _post(SCRIBE_URL, {"xi-api-key": settings.ELEVENLABS_API_KEY}, body, content_type, "ElevenLabs Scribe")
+    words = _clean((w.get("text"), w.get("start"), w.get("end"))
+                   for w in data.get("words") or [] if w.get("type", "word") == "word")
+    if not words:
+        raise AlignmentUnavailable("ElevenLabs Scribe returned no words.")
+    return words
+
+
+def _syllables(word):
+    return max(1, len(re.findall(r"[aeiouy]+", word.lower())))
+
+
+def even_out(words):
+    """Repair word times that can't be right: a word with no length, or a
+    one-letter word given far longer than a long word beside it. Each run
+    of words said without a pause shares its time out again by how long
+    each word takes to say, so the highlight lands on the word being said."""
+    words = [list(w) for w in words]
+    i = 0
+    while i < len(words):
+        j = i
+        while j + 1 < len(words) and words[j + 1][1] - words[j][2] < 0.05:
+            j += 1
+        group = words[i:j + 1]
+        span_start, span_end = group[0][1], group[-1][2]
+
+        def odd(word):
+            length = word[2] - word[1]
+            per = length / _syllables(word[0])
+            return length < 0.06 or per > 0.9 or (len(word[0]) <= 2 and length > 0.5)
+
+        if len(group) > 1 and span_end > span_start and any(odd(w) for w in group):
+            weights = [_syllables(w[0]) + 0.4 for w in group]
+            total, at = sum(weights), span_start
+            for word, weight in zip(group, weights):
+                share = (span_end - span_start) * weight / total
+                word[1], word[2] = round(at, 3), round(at + share, 3)
+                at += share
+        i = j + 1
     return words
 
 

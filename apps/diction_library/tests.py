@@ -140,3 +140,82 @@ class ManyRecordingsTests(TestCase):
         first = self.item.recordings.get(name="Chapter 1")
         self.client.post(url, {**{k: v for k, v in data.items() if k != "recordings"}, "remove_recordings": [first.pk]})
         self.assertEqual(list(self.item.recordings.values_list("name", flat=True)), ["chapter five"])
+
+
+class RecordingSizeLimitTests(SimpleTestCase):
+    def test_the_limit_follows_the_setting(self):
+        from django import forms
+
+        from apps.manage.recordings_field import ManyFilesField, max_mb
+
+        self.assertEqual(max_mb(), 500)                                      # the default
+        field = ManyFilesField(required=False)
+        small = SimpleUploadedFile("Chapter 1.mp3", b"x" * (600 * 1024), content_type="audio/mpeg")
+        big = SimpleUploadedFile("Chapter 2.mp3", b"x" * (1200 * 1024), content_type="audio/mpeg")
+        with override_settings(LIBRARY_RECORDING_MAX_MB=1):
+            self.assertEqual(field.clean([small]), [small])
+            with self.assertRaisesMessage(forms.ValidationError, "larger than 1 MB"):
+                field.clean([big])
+
+
+class LongRecordingTests(SimpleTestCase):
+    """A whole book read aloud is heard in pieces (apps/book/read_along.py)."""
+
+    def test_pieces_are_cut_in_pauses_about_every_ten_minutes(self):
+        from apps.book import read_along as ra
+
+        # Speech with a pause every 7 seconds, for 35 minutes.
+        runs = [[t, t + 6.0] for t in range(0, 35 * 60, 7)]
+        pieces = ra._cut_points(runs, 35 * 60)
+        self.assertEqual(len(pieces), 4)
+        self.assertEqual(pieces[0][0], 0.0)
+        self.assertEqual(pieces[-1][1], 35 * 60)
+        for start, _end in pieces[1:]:
+            self.assertTrue(any(a[1] < start < b[0] for a, b in zip(runs, runs[1:])), start)   # in a pause
+            self.assertLess(abs(start % 600 - 0) if start % 600 < 300 else abs(start % 600 - 600), 46)
+
+    def test_each_piece_is_told_the_names_in_its_part_of_the_book(self):
+        from apps.book import read_along as ra
+
+        text = "In ONYEKA's compound. Onyeka and Ibekwe sit under the tree. " * 50 + "Chief Omego arrives at the market. " * 50
+        self.assertIn("Ibekwe", ra._names_hint(text, 0, 0.1))
+        self.assertNotIn("the", ra._names_hint(text, 0, 0.1).split(", "))
+
+    def test_a_recording_in_cloud_storage_is_downloaded_first(self):
+        from apps.book import read_along as ra
+
+        with mock.patch.object(ra, "_download", return_value="/tmp/local.mp3") as download, \
+                mock.patch.object(ra.subprocess, "run") as run, mock.patch.object(ra.shutil, "which", return_value="/usr/bin/ffmpeg"):
+            ra._extract_audio("https://bucket.example/book.mp3?sig=1", "/tmp/x")
+        download.assert_called_once()
+        self.assertIn("/tmp/local.mp3", run.call_args_list[0].args[0])      # ffmpeg reads the local copy
+
+
+class PageTimingTests(SimpleTestCase):
+    """The page's own words lined up with what was heard (apps/book/read_along.py)."""
+
+    def test_every_word_said_gets_its_time_and_unread_headers_none(self):
+        from apps.book import read_along as ra
+
+        text = "NWEKE: This is a spell. Page 122 The Remuneration UDE: Please be peaceful!"
+        heard = [["Nweke", 0.0, 0.4], ["This", 0.5, 0.7], ["is", 0.7, 0.8], ["a", 0.8, 0.85], ["spell.", 0.9, 1.3],
+                 ["Ude", 2.0, 2.3], ["Please", 2.4, 2.7], ["be", 2.7, 2.8], ["peaceful", 2.9, 3.4]]
+        timed = ra.page_timed(text, heard)
+        said = [w[0] for w in timed]
+        self.assertEqual(said[:5], ["NWEKE:", "This", "is", "a", "spell."])
+        self.assertNotIn("122", said)                         # the page header isn't read: no time
+        self.assertEqual([w[1] for w in timed if w[0] == "peaceful!"], [2.9])
+
+    def test_a_word_said_differently_still_gets_its_time(self):
+        from apps.book import read_along as ra
+
+        timed = ra.page_timed("Chief Omego arrives", [["Chief", 1.0, 1.3], ["Omega", 1.4, 1.9], ["arrives", 2.0, 2.5]])
+        self.assertEqual(timed[1], ["Omego", 1.4, 1.9])
+
+    def test_impossible_word_times_are_shared_out_again(self):
+        from apps.book import read_along as ra
+
+        fixed = ra.even_out([["a", 10.0, 10.62], ["journey", 10.62, 10.62], ["is", 10.62, 10.94]])
+        a, journey, is_ = fixed
+        self.assertGreater(journey[2] - journey[1], a[2] - a[1])  # the long word gets the long share
+        self.assertEqual((a[1], is_[2]), (10.0, 10.94))            # within the same stretch

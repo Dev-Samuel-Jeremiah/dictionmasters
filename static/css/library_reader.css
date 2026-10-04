@@ -74,3 +74,4 @@
 /* The read-aloud at the top, above the book itself */
 .ll--top { margin: 4px 0 24px; padding: 0 0 22px; border-top: 0; border-bottom: 1px solid #E3E8F4; }
 .ll--top .ll__chapter .ll__text { max-height: 46vh; overflow-y: auto; }
+.ll--top .ll__chapter .ll__text { position: relative; overflow-x: hidden; overscroll-behavior: contain; scroll-padding: 20% 0; }

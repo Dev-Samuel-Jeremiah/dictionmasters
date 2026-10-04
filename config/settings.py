@@ -584,3 +584,7 @@ LESSON_AUDIO_DAILY = {
 # models whose recording the transcriber hears as the right word
 # (apps/lesson_audio/services.py). Most accurate for single words first.
 LESSON_WORD_MODELS = os.environ.get("LESSON_WORD_MODELS", "eleven_turbo_v2_5,eleven_v3,eleven_multilingual_v2")
+# The largest single narration recording a library book can take (MB). The
+# web server must allow at least this much in one upload too: nginx's
+# client_max_body_size (docs/deploy.md).
+LIBRARY_RECORDING_MAX_MB = int(os.environ.get("LIBRARY_RECORDING_MAX_MB", "500"))

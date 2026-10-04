@@ -714,8 +714,11 @@
       var host = textBox.getBoundingClientRect();
       var rects = node.getClientRects();
       var rect = rects.length ? rects[0] : node.getBoundingClientRect();
-      var x = rect.left - host.left - textBox.clientLeft;
-      var y = rect.top - host.top - textBox.clientTop;
+      // Measured on screen, placed in the text: when the text has its own
+      // scroll bar, how far it's scrolled is added back, or the highlight
+      // would sit that far from the word.
+      var x = rect.left - host.left - textBox.clientLeft + textBox.scrollLeft;
+      var y = rect.top - host.top - textBox.clientTop + textBox.scrollTop;
       // Along a line it glides; onto a new line it steps, rather than
       // sweeping diagonally across the paragraph.
       var sameLine = markerTop !== null && Math.abs(y - markerTop) < rect.height / 2;
@@ -772,19 +775,49 @@
       marker.style.setProperty("--ra-p", progress.toFixed(3));
     }
 
-    function follow(node, newLine) {
-      /* Follow the line, not the word: the page moves once as the reading
+    // The box the words scroll in, when they have their own scroll bar
+    // (a long chapter shown in a fixed-height panel); otherwise the page.
+    function scroller() {
+      for (var n = textBox; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+        var style = window.getComputedStyle(n);
+        if (/(auto|scroll)/.test(style.overflowY) && n.scrollHeight > n.clientHeight + 2) return n;
+      }
+      return null;
+    }
+
+    function follow(node, newLine, force) {
+      /* Follow the line, not the word: the text moves once as the reading
          reaches a new line, and only when that line is drifting out of
-         comfortable view. */
-      if (!on || media.paused || Date.now() - userScrolled < USER_SCROLL_REST) return;
+         comfortable view — inside the text's own scroll box if it has one,
+         and the page brings that box into view too. After the reader
+         scrolls by hand, the text is left alone for a few seconds. */
+      if (!on || (!force && media.paused) || Date.now() - userScrolled < USER_SCROLL_REST) return;
       var now = Date.now();
-      if (now - lastFollow < 400) return;
+      if (!force && now - lastFollow < 400) return;
+      var how = calm.matches ? "auto" : "smooth";
       var rect = node.getBoundingClientRect();
+      var inner = scroller();
       var view = window.innerHeight;
+      if (inner) {
+        var frame = inner.getBoundingClientRect();
+        var height = inner.clientHeight;
+        var top = rect.top - frame.top, bottom = rect.bottom - frame.top;
+        var settledInside = top > height * 0.16 && bottom < height * 0.72;
+        if (force || !(settledInside || (!newLine && top > height * 0.05 && bottom < height * 0.85))) {
+          lastFollow = now;
+          inner.scrollTo({ top: Math.max(0, inner.scrollTop + top - height * 0.38), behavior: how });
+        }
+        // The box itself mostly off the screen: bring it back.
+        var visible = Math.min(frame.bottom, view) - Math.max(frame.top, 0);
+        if (visible < Math.min(height, view) * 0.5) {
+          window.scrollBy({ top: Math.round(frame.top - view * 0.12), behavior: how });
+        }
+        return;
+      }
       var settled = rect.top > view * 0.16 && rect.bottom < view * 0.72;
-      if (settled || (!newLine && rect.top > view * 0.05 && rect.bottom < view * 0.85)) return;
+      if (!force && (settled || (!newLine && rect.top > view * 0.05 && rect.bottom < view * 0.85))) return;
       lastFollow = now;
-      window.scrollBy({ top: Math.round(rect.top - view * 0.38), behavior: calm.matches ? "auto" : "smooth" });
+      window.scrollBy({ top: Math.round(rect.top - view * 0.38), behavior: how });
     }
 
     function litAt(time) {
@@ -981,6 +1014,12 @@
     ["seeking", "seeked"].forEach(function (event) {
       listen(media, event, function () { render(false); });
     });
+    // Jumping in the recording (the progress bar, a tapped word) takes the
+    // text straight to the place, playing or not.
+    listen(media, "seeked", function () {
+      userScrolled = 0;
+      if (track[current]) follow(track[current].node, true, true);
+    });
 
     textBox.addEventListener("click", function (event) {
       var span = event.target.closest(".ra-w");
@@ -1005,6 +1044,10 @@
     ["wheel", "touchmove"].forEach(function (type) {
       listen(window, type, function () { userScrolled = Date.now(); }, { passive: true });
     });
+    // ...including dragging the text's own scroll bar.
+    listen(textBox, "pointerdown", function (event) {
+      if (!event.target.closest(".ra-w")) userScrolled = Date.now();
+    }, { passive: true });
     listen(window, "keydown", function (event) {
       if (/^(ArrowUp|ArrowDown|PageUp|PageDown|Home|End| )$/.test(event.key) && event.target === document.body) {
         userScrolled = Date.now();

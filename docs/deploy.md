@@ -180,8 +180,10 @@ server {
     listen 80;
     server_name dictionmasters.com www.dictionmasters.com;
 
-    # Lesson videos are large; let them through.
-    client_max_body_size 512M;
+    # Lesson videos and book recordings are large (a recording can be up to
+    # LIBRARY_RECORDING_MAX_MB, 500 MB, and several can go in one save).
+    client_max_body_size 1100M;
+    client_body_timeout 900s;
 
     location / {
         proxy_pass http://127.0.0.1:8000;
@@ -189,7 +191,8 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300s;
+        proxy_read_timeout 900s;
+        proxy_send_timeout 900s;
     }
 }
 ```

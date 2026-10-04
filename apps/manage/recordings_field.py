@@ -16,7 +16,13 @@ from apps.diction_library.models import LibraryRecording
 ADD = "recordings"
 REMOVE = "remove_recordings"
 SOUNDS = ["mp3", "m4a", "wav", "ogg", "aac"]
-MAX_BYTES = 200 * 1024 * 1024
+
+
+def max_mb():
+    """The largest recording that can be uploaded, in MB (LIBRARY_RECORDING_MAX_MB)."""
+    from django.conf import settings
+
+    return int(getattr(settings, "LIBRARY_RECORDING_MAX_MB", 500))
 
 
 class ManyFiles(forms.ClearableFileInput):
@@ -34,8 +40,9 @@ class ManyFilesField(forms.FileField):
         cleaned = [single(f, initial) for f in files]
         for f in cleaned:
             FileExtensionValidator(SOUNDS)(f)
-            if f.size > MAX_BYTES:
-                raise forms.ValidationError(f"“{f.name}” is larger than 200 MB.")
+            if f.size > max_mb() * 1024 * 1024:
+                raise forms.ValidationError(f"“{f.name}” is larger than {max_mb()} MB. Upload it in smaller parts "
+                                            "(a chapter or a few pages each), or ask for the limit to be raised.")
         return cleaned
 
 
@@ -46,7 +53,7 @@ def add_recordings_field(form, obj):
         help_text="Choose all of the book’s recordings at once — e.g. “Chapter five”, “Chapter 4”, “Page 121 to 124”. "
                   "Each becomes a chapter, put in order by the chapter or page in its name, with the words of that "
                   "chapter or those pages highlighted as it plays. Leave empty and a read-aloud is made "
-                  "automatically from the book’s text.",
+                  "automatically from the book’s text. Up to " + str(max_mb()) + " MB each; very large files take a few minutes to upload.",
     )
     # Where the old single "Narration" field was: just after the book's file.
     order = [name for name in form.fields if name != ADD]

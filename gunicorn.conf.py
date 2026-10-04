@@ -20,7 +20,8 @@ worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "gthread")
 
 # Long enough for a big video upload to reach R2 before a worker is
 # considered stuck.
-timeout = int(os.environ.get("GUNICORN_TIMEOUT", 180))
+# Long enough for a large upload (a 500 MB book recording) to be saved to storage.
+timeout = int(os.environ.get("GUNICORN_TIMEOUT", 900))
 graceful_timeout = 30
 keepalive = 5
 
