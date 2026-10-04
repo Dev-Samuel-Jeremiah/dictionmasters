@@ -588,3 +588,5 @@ LESSON_WORD_MODELS = os.environ.get("LESSON_WORD_MODELS", "eleven_turbo_v2_5,ele
 # web server must allow at least this much in one upload too: nginx's
 # client_max_body_size (docs/deploy.md).
 LIBRARY_RECORDING_MAX_MB = int(os.environ.get("LIBRARY_RECORDING_MAX_MB", "500"))
+# A "forgot password" link works for this long (seconds), and only once.
+PASSWORD_RESET_TIMEOUT = int(os.environ.get("PASSWORD_RESET_TIMEOUT", 60 * 60))

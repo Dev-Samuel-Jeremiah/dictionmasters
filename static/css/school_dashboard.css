@@ -51,3 +51,5 @@
 @media (prefers-reduced-motion: reduce) {
   .sd2-jump a { transition: none; }
 }
+.sd2-alert { display: block; margin: 14px 0 0; padding: 10px 14px; border-radius: 12px; background: #FFF6D8; border: 1px solid #FFE08A; color: #5B4300; font-weight: 800; text-decoration: none; }
+.sd2-alert:hover { background: #FFEFB8; }

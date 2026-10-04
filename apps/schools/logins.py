@@ -79,6 +79,9 @@ def reset(admin, member, password=""):
     member.set_password(password)
     member.save(update_fields=["password", "encrypted_login_password"])
     member.device_logins.all().delete()
+    from apps.accounts.password_reset import resolve
+
+    resolve(member, by=admin)                     # any "password help" request is answered
     logger.info("School logins: admin %s reset the password of %s", admin.pk, member.pk)
     return password
 

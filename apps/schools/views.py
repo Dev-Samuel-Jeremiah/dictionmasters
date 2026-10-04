@@ -9,6 +9,7 @@ from apps.accounts.models import User
 
 from . import levels as level_moves
 from . import logins
+from apps.accounts import password_reset
 
 
 @role_required(User.Role.SCHOOL_ADMIN)
@@ -30,6 +31,7 @@ def dashboard(request):
         "logins_unlocked": logins.is_unlocked(request),
         "logins_minutes": logins.minutes_left(request),
         "logins_recovery": logins.recovery_ready(),
+        "help_requests": list(password_reset.open_requests(school)),
         "level_history": level_moves.batches(school),
     }
     return render(request, "schools/dashboard.html", context)
@@ -305,3 +307,16 @@ def bulk_reset(request):
         request, logins.accounts(people, new), title="New passwords",
         note="These passwords were just reset: the old ones no longer work. Keep this sheet private.")
     return _xlsx(content, filename.replace("-logins-", "-new-passwords-"))
+
+
+@role_required(User.Role.SCHOOL_ADMIN)
+@require_POST
+def dismiss_help(request, pk):
+    """A password help request that needs nothing (they remembered it)."""
+    from apps.accounts.models import PasswordHelpRequest
+    from django.utils import timezone
+
+    PasswordHelpRequest.objects.filter(pk=pk, school=request.user.school, resolved_at__isnull=True).update(
+        resolved_at=timezone.now(), resolved_by=request.user)
+    messages.success(request, "Request dismissed.")
+    return redirect(f"{reverse('schools:dashboard')}#logins")

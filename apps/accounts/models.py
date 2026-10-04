@@ -296,3 +296,24 @@ class DashboardCardImage(models.Model):
         super().save(*args, **kwargs)
         if previous and previous.image and previous.image.name != (self.image.name if self.image else ""):
             previous.image.storage.delete(previous.image.name)
+
+
+class PasswordHelpRequest(models.Model):
+    """Someone who signs in with a username (a student, usually) and has no
+    email of their own asked for help with a forgotten password. It shows
+    on their school admin's dashboard — or, with no school, in the control
+    room — until a new password is set (apps/accounts/password_reset.py)."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="password_help_requests")
+    school = models.ForeignKey("schools.School", on_delete=models.CASCADE, null=True, blank=True,
+                               related_name="password_help_requests")
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "password help request"
+
+    def __str__(self):
+        return f"{self.user} needs a new password"

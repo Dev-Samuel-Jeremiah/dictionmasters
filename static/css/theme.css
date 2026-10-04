@@ -1435,3 +1435,14 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .es .es-level.has-bg .es-status, .es .es-group.has-bg .es-status { color: #0B1A4A; background: rgba(255, 255, 255, 0.92); box-shadow: 0 4px 12px rgba(11, 26, 74, 0.25); }
 .es .es-level.has-bg .es-status--current, .es .es-group.has-bg .es-status--current { background: #FFC72C; }
 .ui-sound.has-bg .ui-sound__symbol { color: #FFC72C; text-shadow: 0 2px 10px rgba(11, 26, 74, 0.85), 0 0 2px rgba(11, 26, 74, 0.9); }
+
+/* Passwords: forgot, reset, change (apps/accounts/password_views.py) */
+.px-forgot { margin: 14px 0 0; text-align: center; font-size: 14px; font-weight: 700; }
+.px-forgot a { color: var(--blue, #1846E0); }
+.px-pwhelp { margin-top: 18px; padding: 12px 14px; border-radius: 14px; background: #FFF6D8; color: #5B4300; font-size: 13.5px; line-height: 1.5; }
+.px-pwhelp p { margin: 0; }
+.px-pwsteps { display: grid; gap: 12px; margin: 0 0 14px; padding: 0; list-style: none; }
+.px-pwsteps li { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 14px; background: #F1F5FF; font-size: 14.5px; line-height: 1.55; color: #0B1A4A; }
+.px-pwsteps__ic { flex: none; font-size: 22px; line-height: 1; }
+.px-pwnote { margin: 0 0 16px; font-size: 13px; color: var(--muted, #55607E); }
+.px-pwchange .ui-btn { margin-top: 8px; }

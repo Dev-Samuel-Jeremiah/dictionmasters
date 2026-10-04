@@ -30,6 +30,10 @@
       <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="video" size=18 %}</span>
       <span class="account-menu__text"><span>Offline lessons &amp; videos</span><small>Download, and sync your progress</small></span>
     </a>
+    <a href="{% url 'accounts:password_change' %}" class="account-menu__item"{% if request.resolver_match.url_name == 'password_change' %} aria-current="page"{% endif %}>
+      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="lock" size=18 %}</span>
+      <span class="account-menu__text"><span>Change password</span><small>Choose a new one</small></span>
+    </a>
   </nav>
   <form method="post" action="{% url 'accounts:logout' %}" class="account-menu__logout">
     {% csrf_token %}

@@ -94,3 +94,13 @@
   .sl-logins__form { grid-template-columns: 1fr; }
   [data-sl] .sd-people .sd-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 }
+
+/* Password help requests (apps/accounts/password_reset.py) */
+.sl-help { margin: 0 0 16px; padding: 14px; border-radius: 14px; background: #FFF6D8; border: 1px solid #FFE08A; }
+.sl-help__title { margin: 0 0 10px; font-weight: 800; color: #5B4300; }
+.sl-help__list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sl-help__list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 12px; background: #fff; }
+.sl-help__list small { display: block; color: #55607E; font-size: 12.5px; }
+.sl-help__do { display: inline-flex; gap: 6px; }
+.sl-help__do form { margin: 0; }
+.sl-help__note { margin: 10px 0 0; font-size: 13px; color: #5B4300; }

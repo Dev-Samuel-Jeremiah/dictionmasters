@@ -411,7 +411,14 @@ SECTIONS = [
              "columns": ["login_name", "get_full_name", "role", "level_display", "school", "is_active"],
              "search": ["email", "username", "first_name", "last_name"],
              "form": ["first_name", "last_name", "username", "email", "role", "level", "school", "is_active", "is_staff"],
-             "plan_field": "user", "levels_field": True},
+             "plan_field": "user", "levels_field": True, "password_field": True},
+            # Learners without an email who asked for a new password. Their
+            # school admin answers most; ones with no school wait here: open
+            # the user (Users) and set a new password.
+            {"key": "password-help", "model": "accounts.PasswordHelpRequest", "name": "Password help requests",
+             "singular": "password help request",
+             "columns": ["user", "school", "created_at", "resolved_at"], "search": ["user__email", "user__username", "user__first_name"],
+             "order": ["resolved_at", "-created_at"], "readonly": True},
             # The same people, but only what they're called and where they
             # belong: nothing here touches how they sign in (email, username,
             # password), their role or their account.

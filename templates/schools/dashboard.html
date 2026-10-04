@@ -69,6 +69,7 @@
         <div><dt>Removed</dt><dd>{{ removed|length }}</dd></div>
         <div><dt>Plan</dt><dd class="sd2-plan">{% if plan %}{{ plan.name }}{% elif billing.state == "trial" %}Free trial{% else %}None yet{% endif %}</dd></div>
       </dl>
+      {% if help_requests %}<a href="#password-help" class="sd2-alert">&#128587; {{ help_requests|length }} {% if help_requests|length == 1 %}person needs{% else %}people need{% endif %} a new password · Help them</a>{% endif %}
       <nav class="sd2-jump" aria-label="On this page">
         <a href="#join">Add people</a>
         <a href="#teachers">Teachers <b>{{ teachers|length }}</b></a>
@@ -191,6 +192,23 @@
       <div class="sd2-two">
         <section class="ui-panel sl-logins" id="logins">
           <p class="ui-panel__label">Login details</p>
+          {% if help_requests %}
+          <div class="sl-help" id="password-help">
+            <p class="sl-help__title">&#128587; {{ help_requests|length }} {% if help_requests|length == 1 %}person needs{% else %}people need{% endif %} a new password</p>
+            <ul class="sl-help__list">
+              {% for req in help_requests %}
+              <li>
+                <span><strong>{{ req.user.get_full_name|default:req.user.login_name }}</strong><small>{{ req.user.get_role_display }}{% if req.user.level %} · {{ req.user.level }}{% endif %} · {{ req.user.login_name }} · asked {{ req.created_at|timesince }} ago</small></span>
+                <span class="sl-help__do">
+                  <button type="button" class="sd-btn sd-btn--login" data-sl-login-open data-url="{% url 'schools:member_login' req.user.pk %}" data-reset-url="{% url 'schools:member_reset' req.user.pk %}">&#128273; Reset</button>
+                  <form method="post" action="{% url 'schools:dismiss_help' req.pk %}">{% csrf_token %}<button type="submit" class="sd-btn sd-btn--remove">Dismiss</button></form>
+                </span>
+              </li>
+              {% endfor %}
+            </ul>
+            {% if not logins_unlocked %}<p class="sl-help__note">Confirm your password below first, then press Reset.</p>{% endif %}
+          </div>
+          {% endif %}
           {% if logins_unlocked %}
           <div class="sl-logins__head">
             <h2 class="ui-panel__title">Download, check or reset logins</h2>

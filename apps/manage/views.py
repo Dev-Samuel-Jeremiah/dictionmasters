@@ -48,6 +48,7 @@ from .forms import ControlLoginForm, QuickWordAudioZipForm, SchoolTrialForm, Lea
 from . import analytics
 from .level_field import add_levels_field, save_levels
 from .recordings_field import add_recordings_field, save_recordings
+from .password_field import add_password_field, save_password
 from .plan_field import FIELD as PLAN_FIELD, add_plan_field, check_plan
 from .school_login import add_login_fields, check_login, save_login
 from .bulk_questions import question_formset
@@ -393,6 +394,8 @@ def record_form(request, key, pk=None):
     # A library book's narration: many recordings at once, a chapter each.
     if screen.get("recordings_field"):
         add_recordings_field(form, obj)
+    if screen.get("password_field"):
+        add_password_field(form, obj)
     # Dropdowns offer only what belongs here, e.g. a trick's group is a trick group.
     for name, condition in screen.get("limit", {}).items():
         if name in form.fields and hasattr(form.fields[name], "queryset"):
@@ -421,11 +424,14 @@ def record_form(request, key, pk=None):
             if screen.get("levels_field"):
                 save_levels(form, saved)
             recordings_note = save_recordings(form, saved) if screen.get("recordings_field") else (0, 0)
+            password_set = save_password(form, saved, by=request.user) if screen.get("password_field") else False
             login_note = save_login(saved, form) if login_fields else ""
         _record(request, saved, CHANGE if pk else ADDITION, "Changed in the control room" if pk else "Added in the control room")
         messages.success(request, f"{_singular(screen).capitalize()} “{saved}” {'updated' if pk else 'added'}.")
         if login_note:
             messages.success(request, login_note)
+        if password_set:
+            messages.success(request, f"New password set for {saved.get_full_name() or saved.login_name}. Tell them what it is.")
         if any(recordings_note):
             added, removed = recordings_note
             parts = ([f"{added} recording{'s' if added != 1 else ''} added"] if added else []) + \

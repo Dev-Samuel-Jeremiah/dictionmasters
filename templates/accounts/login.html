@@ -51,6 +51,7 @@
             <span>Remember me on this device<small>Family and shared devices: switch between accounts from the dashboard without typing passwords. Untick on a public computer.</small></span>
           </label>
           <button type="submit" class="px-bigbtn">Log in {% include "includes/icon.html" with name="chev" size=22 stroke="2.8" %}</button>
+          <p class="px-forgot"><a href="{% url 'accounts:password_forgot' %}">Forgot your password?</a></p>
         </form>
       </div>
       <p class="px-auth__foot">Don't have an account? <a href="{% url 'accounts:register_choice' %}">Sign up</a></p>
