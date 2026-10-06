@@ -1,0 +1,63 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Upload recital audio ZIP — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow"><a href="{% url 'manage:list' 'recitals' %}">Assembly Recitals</a></p>
+    <h1 class="cr-pagehead__title">Upload recital audio ZIP</h1>
+    <p class="cr-pagehead__note">The folder name selects the section, and each audio filename becomes a recital title.</p>
+  </div>
+  <div class="cr-pagehead__actions">
+    <a href="{% url 'manage:list' 'recitals' %}" class="cr-btn cr-btn--ghost">Back to recitals</a>
+  </div>
+</header>
+
+<section class="cr-card">
+  <h2 class="cr-card__title">Organize the ZIP by section</h2>
+  <p class="cr-help">Put each recording inside a folder whose name matches an Assembly Recitals section. The audio filename becomes the recital title. If that title already exists in the section, its recording is replaced; otherwise a recital is created automatically.</p>
+  <pre class="cr-help">Songs/Members of the family.mp3
+Songs/Letter names.mp3
+Songs/Objects at home.mp3
+Days &amp; Months/Days of the Week.mp3
+Numerals/Numbers 1-20.mp3</pre>
+  <p class="cr-help">You can also upload a flat ZIP if each filename matches an existing recital title. An audio filename that matches a section name creates a recital with that section's name.</p>
+  <p class="cr-help">Upload up to 100 audio files in one ZIP (200 MB maximum; 50 MB per file). Supported formats: MP3, M4A, AAC, WAV, OGG, OPUS, FLAC and WEBM.</p>
+
+  <form method="post" enctype="multipart/form-data" class="cr-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<ul class="cr-errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    <div class="cr-field {% if form.audio_zip.errors %}has-error{% endif %}">
+      <label for="{{ form.audio_zip.id_for_label }}">{{ form.audio_zip.label }} <span class="cr-req">required</span></label>
+      {{ form.audio_zip }}
+      {% if form.audio_zip.errors %}<ul class="cr-errors">{% for error in form.audio_zip.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+    <div class="cr-formactions">
+      <button type="submit" class="cr-btn cr-btn--gold">Upload and attach audio</button>
+      <a href="{% url 'manage:list' 'recitals' %}" class="cr-link">Cancel</a>
+    </div>
+  </form>
+</section>
+
+{% if results_rows %}
+<section class="cr-card cr-card--flush">
+  <div class="cr-tablewrap">
+    <table class="cr-table cr-table--rows">
+      <thead><tr><th>Audio file</th><th>Section</th><th>Recital</th><th>Status</th><th>Details</th></tr></thead>
+      <tbody>
+        {% for row in results_rows %}
+        <tr>
+          <td>{{ row.filename }}</td>
+          <td>{{ row.section }}</td>
+          <td>{% if row.recital_id %}<a href="{% url 'manage:edit' 'recitals' row.recital_id %}">{{ row.recital }}</a>{% else %}{{ row.recital }}{% endif %}</td>
+          <td>{{ row.status|title }}</td>
+          <td>{{ row.message }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

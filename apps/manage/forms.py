@@ -12,6 +12,8 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import models
 
+from apps.assembly_recitals.audio_zip import AudioZipError as RecitalAudioZipError
+from apps.assembly_recitals.audio_zip import inspect_audio_zip as inspect_recital_audio_zip
 from apps.quick_words.audio_zip import AudioZipError, inspect_audio_zip
 from apps.manage.rich_text import RichTextWidget, is_rich_text_field
 
@@ -106,6 +108,27 @@ class QuickWordAudioZipForm(forms.Form):
         try:
             self.audio_count = inspect_audio_zip(upload)
         except AudioZipError as error:
+            raise forms.ValidationError(str(error)) from error
+        return upload
+
+
+class AssemblyRecitalAudioZipForm(forms.Form):
+    audio_zip = forms.FileField(
+        label="ZIP file of recital audio",
+        help_text=(
+            "Put files in folders named after their sections, for example "
+            "Songs/Members of the family.mp3. The filename becomes the recital title. "
+            "An existing recital with that title gets the new audio; otherwise one is created. "
+            "Supported formats: MP3, M4A, AAC, WAV, OGG, OPUS, FLAC and WEBM."
+        ),
+        widget=forms.ClearableFileInput(attrs={"accept": ".zip,application/zip", "class": "cr-file"}),
+    )
+
+    def clean_audio_zip(self):
+        upload = self.cleaned_data["audio_zip"]
+        try:
+            self.audio_count = inspect_recital_audio_zip(upload)
+        except RecitalAudioZipError as error:
             raise forms.ValidationError(str(error)) from error
         return upload
 

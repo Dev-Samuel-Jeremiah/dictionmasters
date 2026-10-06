@@ -23,7 +23,7 @@ from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Max, Q
+from django.db.models import Count, Max, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -38,13 +38,18 @@ from apps.console.dashboard import console_context
 from apps.billing import paystack
 from apps.book import read_along as book_read_along
 from apps.book.models import ReadAlongTiming
+from apps.assembly_recitals.audio_zip import AudioZipError as RecitalAudioZipError, import_audio_zip as import_recital_audio_zip
+from apps.assembly_recitals.models import Recital
 from apps.billing.models import BillingSettings
 from apps.billing.services import CheckoutError, grant_plan, grant_school_plan
 from apps.landing.models import SiteBranding
 from apps.quick_words.audio_zip import start_audio_zip_import
 from apps.quick_words.models import QuickWordAudioImportJob
 
-from .forms import ControlLoginForm, QuickWordAudioZipForm, SchoolTrialForm, LearnerTrialForm, EditTrialForm, build_form
+from .forms import (
+    AssemblyRecitalAudioZipForm, ControlLoginForm, QuickWordAudioZipForm,
+    SchoolTrialForm, LearnerTrialForm, EditTrialForm, build_form,
+)
 from . import analytics
 from .level_field import add_levels_field, save_levels
 from .recordings_field import add_recordings_field, save_recordings
@@ -301,9 +306,93 @@ def quick_words_audio_import(request, job_id):
     ))
 
 
+@staff_only
+def assembly_recital_audio_upload(request):
+    form = AssemblyRecitalAudioZipForm(request.POST or None, request.FILES or None)
+    results_rows = []
+    counts = {"created": 0, "updated": 0, "skipped": 0, "failed": 0}
+
+    if request.method == "POST" and form.is_valid():
+        try:
+            results_rows = import_recital_audio_zip(form.cleaned_data["audio_zip"])
+        except RecitalAudioZipError as error:
+            form.add_error("audio_zip", str(error))
+        else:
+            for row in results_rows:
+                status = row["status"]
+                counts[status] += 1
+                if row.get("recital_id"):
+                    recital = Recital.objects.get(pk=row["recital_id"])
+                    action = ADDITION if status == "created" else CHANGE
+                    _record(request, recital, action, "Audio uploaded from an Assembly Recitals ZIP.")
+            if counts["created"] or counts["updated"]:
+                messages.success(
+                    request,
+                    f"Audio attached to {counts['created'] + counts['updated']} recital"
+                    f"{'s' if counts['created'] + counts['updated'] != 1 else ''}.",
+                )
+            if counts["skipped"] or counts["failed"]:
+                messages.warning(
+                    request,
+                    f"{counts['skipped']} skipped and {counts['failed']} could not be saved. "
+                    "See the file results below.",
+                )
+            form = AssemblyRecitalAudioZipForm()
+
+    return render(request, "manage/recital_audio_upload.html", _base_context(
+        request, "recitals", form=form, results_rows=results_rows, counts=counts,
+    ))
+
+
 # ---------------------------------------------------------------------------
 # One kind of thing: list, add, edit, delete
 # ---------------------------------------------------------------------------
+
+@staff_only
+def groups_overview(request):
+    """Group same-number EchoSpell groups together and list their levels."""
+    levels = list(Level.objects.annotate(group_total=Count("groups")).order_by("order", "name"))
+    level_by_id = {str(level.pk): level for level in levels}
+    selected_level_id = request.GET.get("level", "").strip()
+    parent_id = request.GET.get("in", "").strip()
+    if parent_id in level_by_id:
+        selected_level_id = parent_id
+    selected_level = level_by_id.get(selected_level_id)
+    query = request.GET.get("q", "").strip()
+
+    groups_query = Group.objects.select_related("level").order_by("number", "level__order", "level__name")
+    if selected_level:
+        groups_query = groups_query.filter(level=selected_level)
+    if query:
+        condition = Q(title__icontains=query) | Q(level__name__icontains=query)
+        number_query = query.casefold().removeprefix("group").strip()
+        if number_query.isdigit():
+            condition |= Q(number=int(number_query))
+        groups_query = groups_query.filter(condition)
+
+    groups = list(groups_query)
+    grouped = {}
+    for group in groups:
+        grouped.setdefault(group.number, []).append(group)
+
+    visible_numbers = sorted(grouped)
+
+    number_groups = [{"number": number, "groups": grouped[number], "count": len(grouped[number])}
+                     for number in visible_numbers]
+    all_group_numbers = Group.objects.order_by().values_list("number", flat=True).distinct()
+    return render(request, "manage/groups_overview.html", _base_context(
+        request, "groups",
+        levels=levels,
+        number_groups=number_groups,
+        selected_level=selected_level,
+        query=query,
+        result_count=len(groups),
+        result_number_count=len(grouped),
+        total_groups=Group.objects.count(),
+        total_group_numbers=all_group_numbers.count(),
+        total_levels=len(levels),
+        parent_level=selected_level if parent_id and selected_level else None,
+    ))
 
 @staff_only
 def record_list(request, key):

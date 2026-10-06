@@ -331,6 +331,18 @@ select[multiple].cr-input { background-image: none; padding-right: 14px; min-hei
 .cr-childlist li { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 10px; }
 .cr-childlist li:hover { background: rgba(20, 33, 61, .04); }
 .cr-childlist li a:first-child { flex: 1; font-weight: 600; text-decoration: none; color: var(--ink); }
+.cr-groups-number-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.cr-groups-number-nav a { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border: 1px solid var(--cr-line); border-radius: 999px; color: var(--ink); background: #fff; font-size: .82rem; font-weight: 600; text-decoration: none; }
+.cr-groups-number-nav a:hover { border-color: var(--cr-gold); background: rgba(255, 199, 44, .1); }
+.cr-groups-number-nav span { min-width: 21px; padding: 1px 6px; border-radius: 999px; color: var(--ink); background: rgba(20, 33, 61, .07); text-align: center; font-size: .72rem; }
+.cr-groups-number { scroll-margin-top: 18px; }
+.cr-groups-number__head { align-items: flex-start; margin-bottom: 14px; }
+.cr-groups-number__head .cr-card__title { margin: 0; }
+.cr-groups-number__head > div { display: block; }
+.cr-groups-number__head .cr-help { margin-top: 5px; }
+.cr-groups-number__table { border: 1px solid var(--cr-line); border-radius: 12px; }
+.cr-group-level-link { font-weight: 700; color: var(--ink); text-decoration: none; }
+.cr-group-level-link:hover { color: var(--maroon); text-decoration: underline; }
 
 .cr-danger { border-color: rgba(24, 70, 224, .4); }
 .cr-danger__what { margin: 0 0 10px; font-family: var(--font-serif); font-size: 1.3rem; }

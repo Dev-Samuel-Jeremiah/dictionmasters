@@ -1,0 +1,80 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Groups across levels — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">🔊 EchoSpell{% if parent_level %} &middot; <a href="{% url 'manage:edit' 'levels' parent_level.pk %}">{{ parent_level.name }}</a>{% else %} &middot; Groups{% endif %}</p>
+    <h1 class="cr-pagehead__title">Groups across levels</h1>
+    <p class="cr-pagehead__note">
+      {% if query or selected_level %}Showing {{ result_count }} of {{ total_groups }} group entries across {{ result_number_count }} group numbers{% else %}{{ total_groups }} group entries across {{ total_group_numbers }} group numbers and {{ total_levels }} levels{% endif %}. Edit each level's group from its row.
+    </p>
+  </div>
+  <div class="cr-pagehead__actions">
+    {% if selected_level %}<a href="{% url 'manage:add' 'groups' %}?in={{ selected_level.pk }}" class="cr-btn cr-btn--gold">+ Add group to {{ selected_level.name }}</a>
+    {% else %}<a href="{% url 'manage:add' 'groups' %}" class="cr-btn cr-btn--gold">+ Add group</a>{% endif %}
+  </div>
+</header>
+
+<section class="cr-stats" aria-label="Group totals">
+  <article class="cr-stat"><span class="cr-stat__label">Group entries</span><strong class="cr-stat__value">{{ result_count }}</strong><span class="cr-stat__note">{% if query or selected_level %}matching your filters{% else %}in EchoSpell{% endif %}</span></article>
+  <article class="cr-stat"><span class="cr-stat__label">Group numbers</span><strong class="cr-stat__value">{{ result_number_count }}</strong><span class="cr-stat__note">shown across their levels</span></article>
+  <article class="cr-stat"><span class="cr-stat__label">Levels</span><strong class="cr-stat__value">{{ total_levels }}</strong><span class="cr-stat__note">available in EchoSpell</span></article>
+</section>
+
+<form method="get" class="cr-filter">
+  {% if parent_level %}<input type="hidden" name="in" value="{{ parent_level.pk }}">{% endif %}
+  <input type="search" name="q" value="{{ query }}" placeholder="Search group number, title or level…" class="cr-input" aria-label="Search groups">
+  {% if not parent_level %}
+  <select name="level" class="cr-input cr-select" aria-label="Filter by level">
+    <option value="">All levels</option>
+    {% for level in levels %}<option value="{{ level.pk }}"{% if selected_level.pk == level.pk %} selected{% endif %}>{{ level.name }} ({{ level.group_total }} groups)</option>{% endfor %}
+  </select>
+  {% endif %}
+  <button type="submit" class="cr-btn cr-btn--ghost">Search</button>
+  {% if query or selected_level and not parent_level %}<a href="{% if parent_level %}{% url 'manage:groups_overview' %}?in={{ parent_level.pk }}{% else %}{% url 'manage:groups_overview' %}{% endif %}" class="cr-link">Clear</a>{% endif %}
+</form>
+
+{% if not selected_level and not parent_level and not query %}
+<nav class="cr-groups-number-nav" aria-label="Jump to a group number">
+  {% for item in number_groups %}<a href="#group-{{ item.number }}">Group {{ item.number }} <span>{{ item.count }} level{{ item.count|pluralize }}</span></a>{% endfor %}
+</nav>
+{% endif %}
+
+{% if number_groups %}
+  {% for item in number_groups %}
+  <section class="cr-card cr-groups-number" id="group-{{ item.number }}">
+    <header class="cr-child__head cr-groups-number__head">
+      <div>
+        <h2 class="cr-card__title">Group {{ item.number }} <span class="cr-count">{{ item.count }} level{{ item.count|pluralize }}</span></h2>
+        <p class="cr-help">This group number appears in the following levels.</p>
+      </div>
+    </header>
+    <div class="cr-tablewrap cr-groups-number__table">
+      <table class="cr-table cr-table--rows">
+        <thead><tr><th>Level</th><th>Title</th><th class="cr-table__end">Actions</th></tr></thead>
+        <tbody>
+          {% for group in item.groups %}
+          <tr>
+            <td><a href="{% url 'manage:edit' 'levels' group.level_id %}" class="cr-group-level-link">{{ group.level.name }}</a></td>
+            <td>{% if group.title %}{{ group.title }}{% else %}<span class="cr-blank">—</span>{% endif %}</td>
+            <td class="cr-table__end">
+              <a href="{% url 'manage:edit' 'groups' group.pk %}" class="cr-btn cr-btn--ghost cr-btn--small">Edit group</a>
+              <a href="{% url 'manage:delete' 'groups' group.pk %}" class="cr-btn cr-btn--danger cr-btn--small">Delete</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endfor %}
+{% elif query %}
+<div class="cr-empty cr-empty--big"><p>No groups match “{{ query }}”.</p><a href="{% url 'manage:groups_overview' %}" class="cr-btn cr-btn--ghost">Clear search</a></div>
+{% elif not total_levels %}
+<div class="cr-empty cr-empty--big"><p>No EchoSpell levels have been added yet.</p><a href="{% url 'manage:add' 'levels' %}" class="cr-btn cr-btn--gold">+ Add a level</a></div>
+{% else %}
+<div class="cr-empty cr-empty--big"><p>No groups have been added yet.</p><a href="{% url 'manage:add' 'groups' %}" class="cr-btn cr-btn--gold">+ Add the first group</a></div>
+{% endif %}
+{% endblock %}
