@@ -25,7 +25,7 @@
         <h2 class="ui-auth__heading">Your school and your details</h2>
         <p class="ui-auth__note">Your school admin can give you the school code — it starts with DM-.</p>
         <div class="form-card">
-          <form method="post" novalidate>
+          <form method="post" novalidate data-submit-once>
             {% csrf_token %}
             {% if form.non_field_errors %}
             <ul class="non-field-errors">

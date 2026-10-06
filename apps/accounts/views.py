@@ -1,3 +1,6 @@
+import logging
+from urllib.parse import quote
+
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
@@ -6,7 +9,6 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
-from urllib.parse import quote
 
 from apps.billing.access import subscription_for
 from apps.billing.models import Plan
@@ -25,6 +27,29 @@ from .forms import (
 from . import switcher
 from .welcome import send_welcome
 from .models import DashboardCardImage, User
+
+
+logger = logging.getLogger(__name__)
+
+ACCOUNT_EXISTS = ("An account already exists with this email. Log in instead, or use "
+                  "“Forgot your password?” on the log-in page to reset it.")
+
+
+def _create_account(form):
+    """Save a sign-up form's new account, or None with a friendly error on
+    the form. The form already checks the email is free, but a sign-up
+    sent twice (a double tap on a slow phone) can pass that check in both
+    requests before either is saved: the second must say so, not crash."""
+    from django.core.exceptions import ValidationError
+    from django.db import IntegrityError, transaction
+
+    try:
+        with transaction.atomic():
+            return form.save()
+    except (ValidationError, IntegrityError) as error:
+        logger.info("Sign-up refused at save: %s", error)
+        form.add_error("email" if "email" in form.fields else None, ACCOUNT_EXISTS)
+        return None
 
 
 def _post_login_redirect(user):
@@ -87,8 +112,8 @@ def _chosen_plan(form, audience):
 def register_school(request):
     if request.method == "POST":
         form = SchoolRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
+        user = _create_account(form) if form.is_valid() else None
+        if user is not None:
             auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             send_welcome(request, user)
             plan = _chosen_plan(form, Plan.AUDIENCE_SCHOOL)
@@ -230,8 +255,8 @@ def register_school_team(request):
 def register_individual(request):
     if request.method == "POST":
         form = IndividualRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
+        user = _create_account(form) if form.is_valid() else None
+        if user is not None:
             auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             send_welcome(request, user)
             messages.success(request, "Welcome to Diction Masters!")
@@ -246,8 +271,8 @@ def register_individual(request):
 def register_student(request):
     if request.method == "POST":
         form = StudentRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
+        user = _create_account(form) if form.is_valid() else None
+        if user is not None:
             auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             send_welcome(request, user)
             messages.success(request, f"Welcome, {user.first_name}! You're now part of {user.school.name}, and your school's plan covers you.")
@@ -261,8 +286,8 @@ def register_student(request):
 def join_with_code(request):
     if request.method == "POST":
         form = TeacherRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
+        user = _create_account(form) if form.is_valid() else None
+        if user is not None:
             auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             send_welcome(request, user)
             messages.success(request, f"You're in, {user.first_name}. Welcome to {user.school.name}.")

@@ -60,24 +60,28 @@
     </div>
     {% endif %}
 
-    {% if verses %}
-    <section class="ui-panel rc-words"{% if recital.audio_source %} data-read-along{% read_along_sync recital %}{% endif %}>
+    {% if verses or recital.audio_source %}
+    <section class="ui-panel rc-words"{% if verses and recital.audio_source %} data-read-along{% read_along_sync recital %}{% endif %}>
       <div class="rc-words__head">
-        <p class="ui-panel__label">{% if recital.audio_source %}Listen, then say it together{% else %}Say it together{% endif %}</p>
+        <p class="ui-panel__label">{% if recital.audio_source and verses %}Listen, then say it together{% elif recital.audio_source %}Model recording{% else %}Say it together{% endif %}</p>
+        {% if verses %}
         <div class="rc-size" role="group" aria-label="Text size">
           <button type="button" class="rc-size__btn" data-size="-1" aria-label="Smaller words">A&minus;</button>
           <button type="button" class="rc-size__btn" data-size="1" aria-label="Bigger words">A+</button>
         </div>
+        {% endif %}
       </div>
       {% if recital.audio_source %}
-      <p class="ui-panel__lede">Press play and each word lights up as it is said.</p>
+      {% if verses %}<p class="ui-panel__lede">Press play and each word lights up as it is said.</p>{% endif %}
       <audio controls src="{{ recital.audio_source }}" data-ra-media data-recital-audio class="rc-audio"></audio>
       {% endif %}
+      {% if verses %}
       <div class="rc-verses" data-ra-text data-verses>
         {% for verse in verses %}
         <p class="rc-verse">{% for line in verse %}<span class="rc-line">{{ line }}</span>{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
         {% endfor %}
       </div>
+      {% endif %}
     </section>
     {% elif not recital.video_source and not recital.audio_source %}
     <div class="ui-empty"><p>This recital is being put together. Check back soon.</p></div>

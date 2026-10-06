@@ -166,7 +166,7 @@ class SchoolRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
 
     def clean_email(self):
         email = self.cleaned_data["email"].lower().strip()
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("An account already exists with this email.")
         return email
 
@@ -309,7 +309,7 @@ class IndividualRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
 
     def clean_email(self):
         email = self.cleaned_data["email"].lower().strip()
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("An account already exists with this email.")
         return email
 
@@ -390,7 +390,7 @@ class StudentRegistrationForm(StyledFormMixin, forms.Form):
 
     def clean_email(self):
         email = (self.cleaned_data.get("email") or "").lower().strip()
-        if email and User.objects.filter(email=email).exists():
+        if email and User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("An account already exists with this email.")
         return email
 
@@ -474,7 +474,7 @@ class TeacherRegistrationForm(StyledFormMixin, forms.Form):
 
     def clean_email(self):
         email = self.cleaned_data["email"].lower().strip()
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("An account already exists with this email.")
         return email
 
