@@ -459,6 +459,11 @@ def dashboard(request):
         home = learner_home(request.user)
         home["switcher"] = switcher.context(request)
         return render(request, "accounts/learner_home.html", home)
+    # An individual learner follows a scheme they choose, at their own pace.
+    from apps.scheme import path as own_scheme
+
+    if own_scheme.follows_path(request.user):
+        return scheme_views.path_home(request)
     dashboard = learner_dashboard(request.user)
     if request.user.is_individual:
         # Adults keep every tool, but still get a clear place to start.

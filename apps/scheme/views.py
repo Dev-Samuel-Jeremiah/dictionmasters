@@ -38,6 +38,7 @@ from apps.schools import levels as level_moves
 
 from .calendar import break_after_week, dates_from_weeks, last_term, terms_for, week_starts, weeks_in
 from .models import TERM_CHOICES as TERM_LABELS
+from . import path as own
 from . import timetable as tt
 from .models import Grading, ReportCard, SchemeEntry, SchemeOpened, SchoolTermDates
 from .results import publish, save_comments, term_results
@@ -281,10 +282,12 @@ def home(request):
 
 
 def _scheme_student(view):
-    """Only a student following the scheme; anyone else goes home."""
+    """Only a student following the scheme, or an individual learner who
+    has chosen one (path.py); anyone else goes home."""
     @login_required(login_url="accounts:login")
     def guard(request, *args, **kwargs):
-        if not tt.on_scheme(request.user):
+        user = request.user
+        if not (tt.on_scheme(user) or (own.follows_path(user) and own.choice_for(user))):
             return redirect("accounts:dashboard")
         return view(request, *args, **kwargs)
 
@@ -302,12 +305,26 @@ def practise(request):
 @_scheme_student
 def weeks(request):
     """My weeks: the weeks they've reached, newest first."""
-    return render(request, "scheme/weeks.html", {"weeks": tt.past_weeks(request.user)})
+    if tt.on_scheme(request.user):
+        weeks = tt.past_weeks(request.user)
+    else:
+        weeks = [{**w, "is_current": w["state"] == "current"}
+                 for w in reversed(own.path(request.user, own.choice_for(request.user).level)["weeks"])
+                 if w["state"] != "locked"]
+    return render(request, "scheme/weeks.html", {"weeks": weeks})
 
 
 @_scheme_student
 def week(request, term, number):
-    rows = tt.week_rows(request.user, term, number)
+    if tt.on_scheme(request.user):
+        rows = tt.week_rows(request.user, term, number)
+    else:
+        level = own.choice_for(request.user).level
+        rows = None
+        if (term, number) in own.open_weeks(request.user, level):
+            entries = tt._sorted(tt._entries(level=level, term=term, week=number))
+            done = tt.done_for([request.user], entries)[request.user.pk]
+            rows = [tt._row(e, done) for e in entries]
     if rows is None:
         raise Http404
     return render(request, "scheme/week.html", {
@@ -320,11 +337,58 @@ def week(request, term, number):
 def go(request, pk):
     """Open an entry from the scheme: noted, then on to its content. Only
     entries for their level in a week they've reached."""
-    entry = get_object_or_404(SchemeEntry, pk=pk, level=request.user.level)
-    if tt.content_key(entry) not in tt.open_keys(request.user):
-        raise Http404
-    SchemeOpened.objects.get_or_create(user=request.user, entry=entry)
+    user = request.user
+    if tt.on_scheme(user):
+        entry = get_object_or_404(SchemeEntry, pk=pk, level=user.level, is_draft=False)
+        if tt.content_key(entry) not in tt.open_keys(user):
+            raise Http404
+    else:
+        level = own.choice_for(user).level
+        entry = get_object_or_404(SchemeEntry, pk=pk, level=level, is_draft=False)
+        if (entry.term, entry.week) not in own.open_weeks(user, level):
+            raise Http404
+    SchemeOpened.objects.get_or_create(user=user, entry=entry)
     return redirect(tt.content_url(entry))
+
+
+def path_home(request):
+    """An individual learner's dashboard: their chosen scheme, the next
+    lesson and My weeks — or, with none chosen yet, the choice. Called from
+    accounts.views.dashboard."""
+    from apps.accounts import switcher
+    from apps.accounts.dashboard_data import _greeting
+
+    choice = own.choice_for(request.user)
+    if choice is None:
+        return choose(request)
+    return render(request, "scheme/path_home.html", {
+        **own.path(request.user, choice.level),
+        "choice": choice,
+        "greeting": _greeting(timezone.now()),
+        "today": _today(),
+        "switcher": switcher.context(request),
+    })
+
+
+@login_required(login_url="accounts:login")
+def choose(request):
+    """Choose (or change) the scheme to follow. Individual learners only."""
+    from .models import SchemeChoice
+
+    if not own.follows_path(request.user):
+        return redirect("accounts:dashboard")
+    offer = own.schemes_on_offer()
+    if request.method == "POST":
+        level = request.POST.get("level", "")
+        if level in {o["level"] for o in offer}:
+            SchemeChoice.objects.update_or_create(user=request.user, defaults={"level": level})
+            messages.success(request, f"You're following the {level} scheme. Your first lesson is ready.")
+            return redirect("accounts:dashboard")
+        messages.error(request, "Choose one of the schemes below.")
+    choice = own.choice_for(request.user)
+    return render(request, "scheme/choose.html", {
+        "offer": offer, "choice": choice, "suggested": own.suggested_level(request.user),
+    })
 
 
 @role_required(User.Role.TEACHER)

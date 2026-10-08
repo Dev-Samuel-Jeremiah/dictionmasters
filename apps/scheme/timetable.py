@@ -222,7 +222,8 @@ def timetable(user, today=None):
 
 def past_weeks(user, today=None):
     """The weeks a student can go back to, newest first, with how much of
-    each is done: [{"term", "number", "week", "done", "total", "is_current"}]."""
+    each is done: [{"term", "week", "label", "done", "total", "is_current"}]
+    — the same shape as path.path()'s weeks, so one page shows either."""
     condition, found = _reached_filter(user, today)
     entries = list(_entries().filter(condition))
     done_ids = done_for([user], entries)[user.pk]
@@ -235,7 +236,8 @@ def past_weeks(user, today=None):
     current = {(t["number"], t["upto"]) for t in found if t["current"]}
     names = {t["number"]: t["dated"] for t in found}
     return [
-        {"term": names[term], "number": term, "week": week, "is_current": (term, week) in current, **counts}
+        {"term": term, "week": week, "label": f"{names[term].term.get_number_display()}, Week {week}",
+         "is_current": (term, week) in current, **counts}
         for (term, week), counts in sorted(weeks.items(), reverse=True)
     ]
 

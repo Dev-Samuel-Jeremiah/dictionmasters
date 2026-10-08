@@ -15,4 +15,5 @@ urlpatterns = [
     path("practise/", views.practise, name="practise"),
     path("weeks/<int:term>/<int:number>/", views.week, name="week"),
     path("go/<int:pk>/", views.go, name="go"),
+    path("choose/", views.choose, name="choose"),
 ]

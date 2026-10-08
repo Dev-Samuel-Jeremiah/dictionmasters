@@ -11,6 +11,8 @@ report cards that come out of them.
     SchemeEntry         the scheme of work: a piece of content a level does
                         in one week of a term, on one day; staff only
     SchemeOpened        a student opened an entry from their scheme
+    SchemeChoice        the level's scheme an individual learner follows,
+                        at their own pace
     Grading             the CA / exam weights and grade boundaries (one row)
     ReportCard          a student's term: scores, grade, days practised and
                         the teacher's comment, frozen when the school
@@ -269,3 +271,16 @@ class ReportCard(models.Model):
 
     def __str__(self):
         return f"{self.student} — {self.term}"
+
+
+class SchemeChoice(models.Model):
+    """The scheme an individual learner chose to follow, at their own pace
+    (apps/scheme/path.py). Changing it keeps everything they've done."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="scheme_choice")
+    level = models.CharField(max_length=100, choices=LEVEL_NAME_CHOICES)
+    started_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user} follows the {self.level} scheme"

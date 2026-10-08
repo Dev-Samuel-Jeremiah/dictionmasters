@@ -97,8 +97,10 @@ class HomeTests(TestCase):
         self.assertNotContains(page, "Quick tools")
         self.assertNotContains(page, "Your courses")
 
-    def test_an_individual_keeps_the_full_dashboard_with_the_card_on_top(self):
-        page = self.home(make("adult@example.com"))
+    def test_staff_keep_the_full_dashboard_with_the_card_on_top(self):
+        # An individual learner now follows a scheme they choose
+        # (apps/scheme/test_path.py); the full dashboard is staff's.
+        page = self.home(make("adult@example.com", is_staff=True))
         self.assertTemplateUsed(page, "accounts/dashboard.html")
         self.assertContains(page, "data-todays-lesson", count=1)
         self.assertContains(page, "Quick tools")
@@ -158,7 +160,8 @@ class GrownUpsTests(TestCase):
         self.client.post(self.url, {})
         adult.refresh_from_db()
         self.assertFalse(adult.simple_home)
-        self.assertTemplateUsed(self.client.get("/accounts/dashboard/"), "accounts/dashboard.html")
+        # Off again: their own scheme (to choose, the first time).
+        self.assertTemplateUsed(self.client.get("/accounts/dashboard/"), "scheme/choose.html")
 
     def test_students_and_teachers_have_no_switch(self):
         for user in (make("pupil@example.com", role="student", level="Level 1"),

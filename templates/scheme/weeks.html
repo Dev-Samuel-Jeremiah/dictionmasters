@@ -17,9 +17,9 @@
     <ol class="sh-list" style="margin-top: 18px">
       {% for w in weeks %}
       <li>
-        <a href="{% url 'scheme:week' w.number w.week %}" class="sh-item{% if w.done == w.total %} is-done{% endif %}">
+        <a href="{% url 'scheme:week' w.term w.week %}" class="sh-item{% if w.done == w.total %} is-done{% endif %}">
           <span class="sh-item__tick" aria-hidden="true">{% if w.done == w.total %}&#10003;{% else %}{{ w.week }}{% endif %}</span>
-          <span class="sh-item__text"><b>{{ w.term.term.get_number_display }}, Week {{ w.week }}{% if w.is_current %} · This week{% endif %}</b><small>{{ w.done }} of {{ w.total }} done</small></span>
+          <span class="sh-item__text"><b>{{ w.label }}{% if w.is_current %} · This week{% endif %}</b><small>{{ w.done }} of {{ w.total }} done</small></span>
           <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=20 %}</span>
         </a>
       </li>

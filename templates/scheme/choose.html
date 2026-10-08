@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Choose your scheme — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  An individual learner chooses the scheme to follow (apps/scheme/views.choose):
+  each level's scheme, the one a placement test suggested marked. Changing
+  later keeps everything already done.
+{% endcomment %}
+<div class="px-page sh">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/heroGirl.jpg' %}" alt="">
+    <h1>{% if choice %}Change your scheme{% else %}Choose your scheme{% endif %}</h1>
+    <p>A clear path, week by week, at your own pace</p>
+  </section>
+  <div class="px-wrap">
+    {% if not suggested %}
+    <a href="{% url 'assessments:kind_list' 'placement' %}" class="px-card sh-weeks-card sh-placement">
+      <span class="px-item__ii t-mint" aria-hidden="true">{% include "includes/icon.html" with name="compass" size=24 %}</span>
+      <span class="sh-weeks-card__text"><b>Not sure where to start?</b><small>Take the placement test and we'll suggest a level</small></span>
+      <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
+    </a>
+    {% endif %}
+
+    {% if offer %}
+    <form method="post" class="sh-offer" data-scheme-offer>
+      {% csrf_token %}
+      {% for one in offer %}
+      <article class="px-card sh-scheme{% if one.level == suggested %} is-suggested{% endif %}{% if choice and one.level == choice.level %} is-chosen{% endif %}">
+        <span class="sh-scheme__text">
+          <b>{{ one.level }}</b>
+          <small>{{ one.weeks }} week{{ one.weeks|pluralize }} · {{ one.lessons }} lesson{{ one.lessons|pluralize }}</small>
+          {% if one.level == suggested %}<span class="px-pill">Suggested for you</span>{% endif %}
+          {% if choice and one.level == choice.level %}<span class="px-pill">Your scheme now</span>{% endif %}
+        </span>
+        <button type="submit" name="level" value="{{ one.level }}" class="sh-scheme__go">{% if choice and one.level == choice.level %}Keep going{% else %}Start{% endif %}</button>
+      </article>
+      {% endfor %}
+    </form>
+    {% else %}
+    <div class="px-card px-empty" style="margin-top: 18px">The schemes of work are being prepared. Please check back soon.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

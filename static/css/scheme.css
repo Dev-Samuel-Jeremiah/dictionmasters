@@ -198,3 +198,16 @@
 .tp-week.is-taught summary::-webkit-details-marker { display: none; }
 .tp-week.is-taught[open] summary { margin-bottom: 10px; }
 @media print { .tp-week.is-taught { display: none !important; } }
+
+/* An individual learner's scheme (path_home.html, choose.html) */
+.sh-change { margin: 20px 4px 0; font-size: 14px; color: var(--muted); }
+.sh-change a { display: inline-flex; align-items: center; min-height: 44px; color: var(--blue); font-weight: 700; text-decoration: none; }
+.sh-offer { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; margin-top: 16px; }
+.sh-offer .sh-scheme { display: flex; align-items: center; gap: 12px; min-height: 84px; }
+.sh-scheme.is-suggested { border: 3px solid var(--yellow); }
+.sh-scheme.is-chosen { border: 3px solid var(--blue); }
+.sh-scheme__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.sh-scheme__text b { font-size: 19px; }
+.sh-scheme__text small { color: var(--muted); font-size: 14px; }
+.sh-scheme__go { flex: none; min-height: 56px; padding: 0 22px; border: 0; border-radius: 16px; background: var(--yellow); color: var(--navy); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
+.px-wrap .sh-placement { margin-top: 16px; }

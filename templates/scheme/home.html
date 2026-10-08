@@ -68,6 +68,8 @@
       <small>Your school's scheme of work will appear here.</small>
     </div>
     {% endif %}
+    {# Progress, report cards and the PIN live here (accounts/grown_ups.html). #}
+    <p class="sh-change"><a href="{% url 'accounts:grown_ups' %}">For grown-ups</a></p>
   </div>
 </div>
 {% endblock %}

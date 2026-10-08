@@ -61,6 +61,7 @@ class StudentViewTests(TimetableCase):
         self.assertNotContains(page, "<h2>Today</h2>", html=False)
         self.assertNotContains(page, "<h2>This week</h2>", html=False)
         self.assertContains(page, 'href="/scheme/weeks/" class="px-card sh-weeks-card"')
+        self.assertContains(page, 'href="/accounts/grown-ups/"')
         self.assertContains(page, "This week: 0 of 2 done")
         self.assertNotContains(page, "EchoSpell Group 2")
 
@@ -80,7 +81,7 @@ class StudentViewTests(TimetableCase):
 
     def test_past_weeks_never_show_what_is_to_come(self):
         weeks = past_weeks(self.ada, TUESDAY_WEEK_2)
-        self.assertEqual([(w["number"], w["week"], w["is_current"]) for w in weeks], [(1, 2, True), (1, 1, False)])
+        self.assertEqual([(w["term"], w["week"], w["is_current"]) for w in weeks], [(1, 2, True), (1, 1, False)])
         self.client.force_login(self.ada)
         with self.on(TUESDAY_WEEK_2):
             self.assertContains(self.client.get("/scheme/weeks/1/1/"), "The Fox")

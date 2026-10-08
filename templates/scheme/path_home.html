@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Home — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}"><link rel="stylesheet" href="{% static 'css/learner_home.css' %}"><link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/switcher.js' %}" defer></script>{% endblock %}
+
+{% block content %}
+{% comment %}
+  An individual learner's dashboard (apps/scheme/views.path_home): the scheme
+  they chose, at their own pace (apps/scheme/path.py) — the next lesson, a My
+  weeks card, practice. The same shape as a school student's (home.html).
+{% endcomment %}
+<div class="px-page px-home lh sh">
+  <section class="px-hero lh-hero">
+    <img class="px-hero__img" src="{% static 'img/app/heroBoy.jpg' %}" alt="">
+    <div class="px-hero__text">
+      <p class="px-hero__date">{{ today|date:"l j F" }}<br><span class="sh-place" data-path-place>{{ choice.level }} scheme{% if current %} · Week {{ current.number }} of {{ weeks|length }}{% endif %}</span></p>
+      <h1 class="lh-hero__title">{{ greeting }},<br>{{ user.first_name|default:"there" }}</h1>
+      {% include "accounts/_switcher.html" %}
+    </div>
+  </section>
+
+  <div class="px-wrap px-lift lh-body">
+    {% if next %}
+    <a href="{{ next.url }}" class="px-card px-cont lh-lesson" data-scheme-next>
+      <span class="px-cont__t">
+        <span class="lh-lesson__lab">Your next lesson</span>
+        <span class="px-cont__title">{{ next.title }}</span>
+        <span class="px-cont__meta">{{ current.label }} · {{ next.kind }} · {{ done }} of {{ total }} done this week</span>
+        <span class="px-meter" aria-hidden="true"><i style="width: {% widthratio done total 100 %}%"></i></span>
+      </span>
+      <span class="px-playbig lh-lesson__go" aria-hidden="true">{% include "includes/icon.html" with name="play" size=28 %}</span>
+    </a>
+    {% elif complete %}
+    <div class="px-card sh-alldone"><span aria-hidden="true">&#127942;</span><b>You've finished the {{ choice.level }} scheme!</b><small>Brilliant work. Choose the next level's scheme when you're ready.</small></div>
+    {% else %}
+    <div class="px-card sh-empty"><b>The {{ choice.level }} scheme isn't ready yet.</b><small>Choose another scheme below.</small></div>
+    {% endif %}
+
+    <a href="{% url 'scheme:weeks' %}" class="px-card sh-weeks-card" data-my-weeks>
+      <span class="px-item__ii t-sky" aria-hidden="true">{% include "includes/icon.html" with name="book" size=26 %}</span>
+      <span class="sh-weeks-card__text">
+        <b>My weeks</b>
+        <small>{% if current %}{{ current.label }}: {{ done }} of {{ total }} done · {% endif %}The next week opens when this one is done</small>
+      </span>
+      <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
+    </a>
+
+    <div class="px-sec"><h2>Practise</h2></div>
+    {% include "scheme/_practise.html" %}
+
+    <p class="sh-change"><a href="{% url 'scheme:choose' %}">Change scheme</a> · <a href="{% url 'learning_tools:hub' %}">All courses and tools</a> · <a href="{% url 'accounts:grown_ups' %}">For grown-ups</a></p>
+  </div>
+</div>
+{% endblock %}
