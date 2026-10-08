@@ -53,7 +53,6 @@
       </script>
       <p class="px-hero__sub">{% if user.school %}{{ user.get_role_display }} at {{ user.school.name }}{% if level %}, {{ level }}{% endif %}{% else %}Individual learner{% endif %}</p>
       {% include "accounts/_switcher.html" %}
-      {% if user.is_teacher %}<p class="px-hero__note">Your class dashboard is on its way. Until then, every learning tool is open to you.</p>{% endif %}
       <div class="px-hero__actions">
         <a href="{% url 'clash:hub' %}" class="px-chipbtn">{% include "includes/icon.html" with name="swords" size=18 %} Play Diction Clash</a>
         {% if billing.can_pay %}<a href="{% url 'billing:account' %}" class="px-chipbtn">{% include "includes/icon.html" with name="card" size=18 %} {% if billing.state == "active" %}My plan{% else %}Plans and billing{% endif %}</a>{% endif %}
@@ -63,6 +62,18 @@
   </section>
 
   <div class="px-wrap px-lift">
+
+    {% if my_class %}
+    {# Teachers: their class at a glance (apps/schools/class_progress.py), above their own progress. #}
+    <a href="{% url 'schools:class_dashboard' %}" class="px-card px-cont px-myclass" style="margin-bottom: 14px" data-my-class>
+      <span class="px-cont__t">
+        <span class="px-cont__lab">My class</span>
+        <span class="px-cont__title">{{ my_class.pupils }} pupil{{ my_class.pupils|pluralize }}{% if level %}, {{ level }}{% endif %}</span>
+        <span class="px-cont__meta">{{ my_class.active }} active this week{% if my_class.quiet %} · {{ my_class.quiet }} quiet{% endif %}{% if my_class.new %} · {{ my_class.new }} not started{% endif %}{% if my_class.to_mark %} · {{ my_class.to_mark }} to mark{% endif %}</span>
+      </span>
+      <span class="px-playbig" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
+    </a>
+    {% endif %}
 
     {# ================= Continue, streak, this week ================= #}
     <div class="px-top">

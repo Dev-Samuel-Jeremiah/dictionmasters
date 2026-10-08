@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My class — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/class_dashboard.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  My class (apps/schools/views.class_dashboard): every pupil in the
+  teacher's levels and what they've done lately. The numbers come from
+  apps/schools/class_progress.py, gathered for the whole class at once.
+{% endcomment %}
+<div class="px-page cd">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/teacher.jpg' %}" alt="">
+    <h1>My class</h1>
+    <p>{% if level %}{{ level }}{% elif user.level_display %}{{ user.level_display }}{% else %}Every student at {{ user.school.name }}{% endif %}</p>
+  </section>
+
+  <div class="px-wrap">
+    {% if levels %}
+    <nav class="px-chips cd-levels" aria-label="Level">
+      <a href="{% url 'schools:class_dashboard' %}" class="px-chip{% if not level %} is-on{% endif %}"{% if not level %} aria-current="page"{% endif %}>All my levels</a>
+      {% for one in levels %}
+      <a href="?level={{ one|urlencode }}" class="px-chip{% if one == level %} is-on{% endif %}"{% if one == level %} aria-current="page"{% endif %}>{{ one }}</a>
+      {% endfor %}
+    </nav>
+    {% endif %}
+
+    <div class="cd-stats" role="list">
+      <div class="px-card cd-stat" role="listitem"><b>{{ summary.pupils }}</b><span>pupil{{ summary.pupils|pluralize }}</span></div>
+      <div class="px-card cd-stat" role="listitem"><b>{{ summary.active }}</b><span>active this week</span></div>
+      <div class="px-card cd-stat{% if summary.quiet %} is-quiet{% endif %}" role="listitem"><b>{{ summary.quiet }}</b><span>quiet for {{ quiet_days }} days</span></div>
+      <div class="px-card cd-stat" role="listitem"><b>{{ summary.new }}</b><span>not started</span></div>
+    </div>
+    {% if summary.to_mark %}
+    <a href="{% url 'assessments:marking_queue' %}" class="px-item cd-mark">
+      <span class="px-item__ii t-lilac">{% include "includes/icon.html" with name="task" size=22 %}</span>
+      <span class="px-item__it"><b>{{ summary.to_mark }} assessment{{ summary.to_mark|pluralize }} to mark</b><span>Spoken and written answers waiting for you</span></span>
+      <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+    </a>
+    {% endif %}
+
+    <div class="px-sec"><h2>Pupils</h2></div>
+    {% if rows %}
+    <ol class="px-grid-list cd-pupils" style="margin-top: 0">
+      {% for row in rows %}
+      <li>
+        <a href="{% url 'schools:pupil_detail' row.pupil.pk %}" class="px-item cd-pupil is-{{ row.state }}">
+          <span class="px-item__ii t-sky" aria-hidden="true">{{ row.pupil.first_name|first|upper }}{{ row.pupil.last_name|first|upper }}</span>
+          <span class="px-item__it">
+            <b>{{ row.pupil.get_full_name|default:row.pupil.login_name }}{% if levels and not level %} <small>{{ row.pupil.level }}</small>{% endif %}</b>
+            <span>
+              {% if row.state == "new" %}Not started yet{% else %}Last active {% if row.just_now %}just now{% else %}{{ row.last_active|timesince }} ago{% endif %}{% if row.sessions_week %} · {{ row.sessions_week }} this week{% endif %}{% endif %}
+            </span>
+            {% if row.echospell_total %}
+            <span class="cd-pupil__echo">EchoSpell {{ row.echospell_done }} of {{ row.echospell_total }} groups</span>
+            <span class="px-meter" aria-hidden="true"><i style="width: {{ row.echospell_percent }}%"></i></span>
+            {% endif %}
+            <span class="cd-pupil__nums">
+              {% if row.activity_avg is not None %}<span>Activities {{ row.activity_avg }}%</span>{% endif %}
+              {% if row.assessment_avg is not None %}<span>Assessments {{ row.assessment_avg }}%</span>{% endif %}
+              {% if row.module_days %}<span>{{ row.module_days }} module day{{ row.module_days|pluralize }}</span>{% endif %}
+              {% if row.readings %}<span>{{ row.readings }} Yela reading{{ row.readings|pluralize }}</span>{% endif %}
+            </span>
+            {% if row.state == "quiet" or row.to_mark %}
+            <span class="cd-pupil__flags">
+              {% if row.state == "quiet" %}<span class="px-pill cd-flag--quiet">Quiet</span>{% endif %}
+              {% if row.to_mark %}<span class="px-pill">{{ row.to_mark }} to mark</span>{% endif %}
+            </span>
+            {% endif %}
+          </span>
+          <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <div class="px-card px-empty">No pupils here yet. Students appear once they join {{ user.school.name }} in {% if level %}{{ level }}{% else %}your level{% endif %}. Your school admin can check levels on the school dashboard.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

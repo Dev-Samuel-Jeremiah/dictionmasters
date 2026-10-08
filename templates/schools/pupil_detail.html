@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ pupil.get_full_name|default:pupil.login_name }} — My class — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/class_dashboard.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  One pupil's progress for their teacher (apps/schools/views.pupil_detail),
+  read-only. The numbers are the pupil's own dashboard's
+  (apps/accounts/dashboard_data.learner_dashboard). Recent work is listed
+  without links: those pages open the signed-in person's own work.
+{% endcomment %}
+<div class="px-page cd">
+  <section class="px-phead">
+    <h1>{{ pupil.get_full_name|default:pupil.login_name }}</h1>
+    <p>{{ pupil.level|default:"No level yet" }}</p>
+  </section>
+
+  <div class="px-wrap">
+    <p class="cd-back"><a href="{% url 'schools:class_dashboard' %}">&larr; My class</a></p>
+
+    <div class="px-duo">
+      <div class="px-card px-streak" aria-label="Study streak: {{ streak }} day{{ streak|pluralize }}. Best: {{ best_streak }}.">
+        <b><span class="px-streak__flame">{% include "includes/icon.html" with name="flame" size=24 %}</span>{{ streak }}</b>
+        <span class="px-small px-muted">day streak.{% if practised_today %} Practised today.{% endif %}</span>
+        {% if best_streak %}<span class="px-pill">Best: {{ best_streak }}</span>{% endif %}
+      </div>
+      <div class="px-card px-weekcard">
+        <span class="px-weekcard__head"><b>This week</b><span class="px-small px-muted">{{ week_total }} session{{ week_total|pluralize }}</span></span>
+        <span class="px-week" role="img" aria-label="Practice sessions over the last seven days">
+          {% for day in week %}
+          <span class="px-week__col"><span class="px-week__slot"><span class="px-week__bar{% if day.count %} is-on{% endif %}{% if day.is_today %} is-today{% endif %}" style="height: {{ day.height }}%"></span></span>{{ day.label|slice:":1" }}</span>
+          {% endfor %}
+        </span>
+      </div>
+    </div>
+
+    <div class="px-sec"><h2>Progress</h2></div>
+    <ul class="px-list">
+      <li class="px-item"><span class="px-item__it"><b>EchoSpell</b><span>{{ echospell.completed }} of {{ echospell.total }} groups{% if activity_average is not None %}, {{ activity_average }}% average over {{ activities_done }} activit{{ activities_done|pluralize:"y,ies" }}{% endif %}</span><span class="px-meter"><i style="width: {{ echospell.percent }}%"></i></span></span></li>
+      <li class="px-item"><span class="px-item__it"><b>Assessments</b><span>{% if assessment_average is not None %}{{ assessments_taken }} taken, {{ assessment_average }}% average{% else %}None taken yet{% endif %}</span></span></li>
+      <li class="px-item"><span class="px-item__it"><b>Learning Modules</b><span>{{ modules.completed }} of {{ modules.total }} days complete</span><span class="px-meter"><i style="width: {{ modules.percent }}%"></i></span></span></li>
+      <li class="px-item"><span class="px-item__it"><b>The 44 Academy</b><span>{{ academy_done }} of {{ academy_sounds }} sounds complete</span></span></li>
+      <li class="px-item"><span class="px-item__it"><b>Tricks to Sound Fluent</b><span>{{ tricks_done }} of {{ tricks_count }} tricks complete</span></span></li>
+      <li class="px-item"><span class="px-item__it"><b>Reading with Yela</b><span>{% if tutor.readings %}{{ tutor.readings }} reading{{ tutor.readings|pluralize }}{% if tutor.level %}, last one {{ tutor.level }}{% if tutor.accuracy %} at {{ tutor.accuracy }}% accurate{% endif %}{% endif %}{% else %}No readings yet{% endif %}</span></span></li>
+      <li class="px-item"><span class="px-item__it"><b>Diction Clash</b><span>{% if clash_games %}{{ clash_games }} game{{ clash_games|pluralize }}, best {{ clash_best }}{% else %}No games yet{% endif %}</span></span></li>
+    </ul>
+
+    <div class="px-sec"><h2>Recent work</h2></div>
+    {% if feed %}
+    <ol class="px-list">
+      {% for item in feed %}
+      <li class="px-item">
+        <span class="px-item__ii t-sky">{% include "includes/icon.html" with name="check" size=22 stroke="2.6" %}</span>
+        <span class="px-item__it"><b>{{ item.title }}</b><span>{{ item.detail }}</span></span>
+        <time class="px-item__when" datetime="{{ item.when|date:'c' }}">{% if item.recent %}Just now{% else %}{{ item.when|timesince }} ago{% endif %}</time>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <div class="px-card px-empty">Nothing yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

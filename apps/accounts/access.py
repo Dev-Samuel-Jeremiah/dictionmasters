@@ -18,6 +18,10 @@ and see everything.
 Content with no level of its own — a placement test, a word that hasn't
 been graded — belongs to everybody, so it is always shown.
 
+A teacher's class is the same rule turned round: the active students at
+their school in a level they teach (pupils_of, teaches). A teacher with
+no level yet teaches the whole school's students.
+
 Everything routes through here, so the rule is written once and the same
 answer is given on every page.
 """
@@ -96,3 +100,20 @@ def in_level(queryset, level_name):
     from the control room shows up under each of them, not just their
     main one. For the control room's Schools & people page."""
     return queryset.filter(Q(level=level_name) | Q(additional_levels__contains=f",{level_name},"))
+
+
+def pupils_of(teacher):
+    """The students a teacher teaches: active students at their school in
+    one of their levels. Nobody, for anyone who isn't a school teacher."""
+    from apps.accounts.models import User
+
+    if not (getattr(teacher, "is_authenticated", False) and teacher.is_teacher and teacher.school_id):
+        return User.objects.none()
+    pupils = User.objects.filter(school_id=teacher.school_id, role=User.Role.STUDENT, is_active=True)
+    levels = accessible_levels(teacher)
+    return pupils if levels is None else pupils.filter(level__in=levels)
+
+
+def teaches(teacher, pupil):
+    """Is this student one of the teacher's pupils?"""
+    return pupils_of(teacher).filter(pk=pupil.pk).exists()

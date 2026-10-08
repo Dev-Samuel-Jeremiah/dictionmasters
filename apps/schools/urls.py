@@ -6,6 +6,8 @@ app_name = "schools"
 
 urlpatterns = [
     path("dashboard/", views.dashboard, name="dashboard"),
+    path("class/", views.class_dashboard, name="class_dashboard"),
+    path("class/<int:pk>/", views.pupil_detail, name="pupil_detail"),
     path("members/<int:pk>/remove/", views.remove_member, name="remove_member"),
     path("members/<int:pk>/restore/", views.restore_member, name="restore_member"),
     path("members/<int:pk>/level/", views.member_level, name="member_level"),

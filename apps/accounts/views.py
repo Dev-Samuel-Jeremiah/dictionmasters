@@ -14,6 +14,7 @@ from apps.billing.access import subscription_for
 from apps.billing.models import Plan
 from apps.billing.services import begin_access
 
+from .access import pupils_of
 from .dashboard_data import learner_dashboard, learner_home, todays_lesson
 from .forms import (
     EmailAuthenticationForm,
@@ -454,6 +455,10 @@ def dashboard(request):
     if request.user.is_individual:
         # Adults keep every tool, but still get a clear place to start.
         dashboard["lesson"] = todays_lesson(request.user, dashboard["echospell"], dashboard["modules"])
+    elif request.user.is_teacher:
+        from apps.schools.class_progress import class_progress
+
+        dashboard["my_class"] = class_progress(pupils_of(request.user))["summary"]
     dashboard["dashboard_card_images"] = {
         card.key.replace("-", "_"): card.image.url
         for card in DashboardCardImage.objects.exclude(image="")

@@ -4,10 +4,13 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.accounts import switcher
+from apps.accounts.access import pupils_of
+from apps.accounts.dashboard_data import learner_dashboard
 from apps.accounts.decorators import role_required
 from apps.accounts.models import User
 
 from . import levels as level_moves
+from .class_progress import class_progress
 from . import logins
 from apps.accounts import password_reset
 
@@ -320,3 +323,32 @@ def dismiss_help(request, pk):
         resolved_at=timezone.now(), resolved_by=request.user)
     messages.success(request, "Request dismissed.")
     return redirect(f"{reverse('schools:dashboard')}#logins")
+
+
+# ---------------------------------------------------------------------------
+# A teacher's class: how each pupil is getting on
+# ---------------------------------------------------------------------------
+
+@role_required(User.Role.TEACHER)
+def class_dashboard(request):
+    """My class: every pupil in the teacher's levels, with what they've done
+    lately. A teacher of several levels can look at one at a time."""
+    pupils = pupils_of(request.user)
+    levels = request.user.all_levels
+    level = request.GET.get("level", "")
+    if level and level in levels:
+        pupils = pupils.filter(level=level)
+    else:
+        level = ""
+    return render(request, "schools/class_dashboard.html", {
+        **class_progress(pupils),
+        "levels": levels if len(levels) > 1 else [],
+        "level": level,
+    })
+
+
+@role_required(User.Role.TEACHER)
+def pupil_detail(request, pk):
+    """One pupil's progress, read-only. Only the teacher's own pupils."""
+    pupil = get_object_or_404(pupils_of(request.user), pk=pk)
+    return render(request, "schools/pupil_detail.html", {**learner_dashboard(pupil), "pupil": pupil})
