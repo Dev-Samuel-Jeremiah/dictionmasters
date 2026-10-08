@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Term dates — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+
+{% block content %}
+{# A school's own term dates (apps/scheme/views.term_dates), for a school that resumes on other days. #}
+<div class="px-page">
+  <section class="px-phead">
+    <h1>Term dates</h1>
+    <p>Your school's terms. Change a date if you resume or break on a different day.</p>
+  </section>
+  <div class="px-wrap">
+    {% if terms %}
+    <form method="post" class="sw-dates">
+      {% csrf_token %}
+      {% for row in terms %}
+      {% with t=row.dated key=row.dated.term.pk %}
+      <fieldset class="px-card sw-dates__term">
+        <legend>{{ t }}{% if row.own %} <small>Your own dates</small>{% endif %}</legend>
+        {% if row.error %}<p class="sw-dates__error" role="alert">{{ row.error }}</p>{% endif %}
+        <div class="sw-dates__grid">
+          <label>Starts<input type="date" name="starts-{{ key }}" value="{{ t.starts|date:'Y-m-d' }}" required></label>
+          <label>Ends<input type="date" name="ends-{{ key }}" value="{{ t.ends|date:'Y-m-d' }}" required></label>
+          <label>Mid-term break starts<input type="date" name="break_starts-{{ key }}" value="{{ t.break_starts|date:'Y-m-d' }}"></label>
+          <label>Mid-term break ends<input type="date" name="break_ends-{{ key }}" value="{{ t.break_ends|date:'Y-m-d' }}"></label>
+        </div>
+        {% if row.own %}<label class="sw-dates__reset"><input type="checkbox" name="platform-{{ key }}"> Go back to the usual dates</label>{% endif %}
+      </fieldset>
+      {% endwith %}
+      {% endfor %}
+      <div class="sw-save"><button type="submit">Save term dates</button></div>
+    </form>
+    {% else %}
+    <div class="px-card px-empty">No terms are set for this school year yet. They are added in the control room.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

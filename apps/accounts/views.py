@@ -514,6 +514,9 @@ def grown_ups(request):
         summary=learner_summary(user),
         weekly_email=found.weekly_email,
         has_pin=grown_up_pin.needs_pin(user),
+        # A school pupil's published report cards (apps/scheme).
+        report_cards=(user.report_cards.exclude(published_at=None).select_related("term__session")
+                      if user.is_student else []),
     )
     return render(request, "accounts/grown_ups.html", context)
 

@@ -152,6 +152,7 @@ LOCAL_APPS = [
     "apps.quick_words",
     "apps.tutor",
     "apps.assessments",
+    "apps.scheme",
     "apps.clash",
     "apps.console",
     "apps.manage",

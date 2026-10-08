@@ -60,6 +60,12 @@ def start_or_resume(user, assessment):
         else:
             return current
 
+    window = assessment.window(timezone.now())
+    if window == "not_yet":
+        opens = timezone.localtime(assessment.opens_at)
+        raise AttemptNotAllowed(f"This test opens on {opens:%A %d %B at %H:%M}.")
+    if window == "closed":
+        raise AttemptNotAllowed("This test has closed.")
     if attempts_left(user, assessment) == 0:
         raise AttemptNotAllowed("You've used all your attempts at this assessment.")
 

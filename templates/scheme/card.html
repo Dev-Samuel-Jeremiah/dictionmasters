@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Report card — {{ student.get_full_name|default:student.login_name }} — {{ dated }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+
+{% block content %}
+{# One student's term (apps/scheme/views.card), laid out to print on one A4 page. #}
+<div class="px-page sw-print-page">
+  <div class="px-wrap">
+    <div class="sw-print-bar">
+      <a href="{% if staff_side %}{% url 'scheme:reports' %}?term={{ dated.term.pk }}{% else %}{% url 'accounts:grown_ups' %}{% endif %}">&larr; Back</a>
+      <button type="button" onclick="window.print()">Print</button>
+    </div>
+    <article class="sw-report">
+      <header class="sw-report__head">
+        <p class="sw-report__school">{{ student.school.name|default:"Diction Masters" }}</p>
+        <h1>Report card</h1>
+        <p>{{ dated }}{% if not row.published %} · <b>Draft, not published yet</b>{% endif %}</p>
+      </header>
+      <dl class="sw-report__who">
+        <div><dt>Name</dt><dd>{{ student.get_full_name|default:student.login_name }}</dd></div>
+        <div><dt>Level</dt><dd>{{ row.card.level|default:student.level|default:"—" }}</dd></div>
+        <div><dt>Days practised</dt><dd>{{ row.days }}</dd></div>
+      </dl>
+      <table class="sw-report__table">
+        <thead><tr><th scope="col">Assessment</th><th scope="col">Counts for</th><th scope="col">Score</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">CA 1</th><td>{{ grading.ca1_weight }}%</td><td>{% if row.ca1 is not None %}{{ row.ca1 }}%{% elif "ca1" in row.pending %}Being marked{% else %}Not sat{% endif %}</td></tr>
+          <tr><th scope="row">CA 2</th><td>{{ grading.ca2_weight }}%</td><td>{% if row.ca2 is not None %}{{ row.ca2 }}%{% elif "ca2" in row.pending %}Being marked{% else %}Not sat{% endif %}</td></tr>
+          <tr><th scope="row">Exam</th><td>{{ grading.exam_weight }}%</td><td>{% if row.exam is not None %}{{ row.exam }}%{% elif "exam" in row.pending %}Being marked{% else %}Not sat{% endif %}</td></tr>
+        </tbody>
+        <tfoot><tr><th scope="row">Total</th><td></td><td><b>{{ row.total|default_if_none:"—" }}</b>{% if row.grade %} · Grade <b>{{ row.grade }}</b>{% endif %}</td></tr></tfoot>
+      </table>
+      <section class="sw-report__comment">
+        <h2>Teacher's comment</h2>
+        <p>{{ row.card.teacher_comment|default:"—"|linebreaksbr }}</p>
+      </section>
+      <p class="sw-report__key">Grades: A {{ grading.a_from }}–100 · B {{ grading.b_from }}–{{ grading.a_from|add:"-1" }} · C {{ grading.c_from }}–{{ grading.b_from|add:"-1" }} · D {{ grading.d_from }}–{{ grading.c_from|add:"-1" }} · E {{ grading.e_from }}–{{ grading.d_from|add:"-1" }} · F below {{ grading.e_from }}</p>
+    </article>
+  </div>
+</div>
+{% endblock %}

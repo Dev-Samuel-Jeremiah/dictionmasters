@@ -193,11 +193,20 @@ def todays_lesson(user, echospell=None, modules=None):
     home. Pass in what learner_dashboard already worked out to save
     looking it up twice.
 
+    A pupil at a school does this week's scheme of work first, when there
+    is one and something in it is left to do.
+
     EchoSpell comes first: every group belongs to one level, while a
     module with no levels ticked is open to every level, so putting
     modules first could still send a Level 9 pupil to a nursery day. The 44 Academy keeps no per-learner "next sound",
     so the last resort is Daily Practice, which always has a ready set.
     """
+    # A pupil at a school follows the scheme of work first (apps/scheme).
+    from apps.scheme.weeks import scheme_lesson
+
+    scheme = scheme_lesson(user)
+    if scheme:
+        return scheme
     echospell = echospell or _next_echospell(user)
     resume = echospell["resume"]
     if resume:

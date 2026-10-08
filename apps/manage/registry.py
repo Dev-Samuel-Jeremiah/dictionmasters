@@ -28,6 +28,9 @@ delete and uploads all follow from it.
                      row opens that attempt in Results & marking
     kind_fields      "activity" or "item": show only the fields the activity type
                      needs (apps/manage/kind_fields.py)
+    singleton        a settings record there is only one of: made by its model's
+                     load() when the screen opens
+    content_levels   show a `levels` field as a tick-list of levels
 """
 
 
@@ -284,11 +287,30 @@ SECTIONS = [
         ],
     },
     {
+        "slug": "scheme", "name": "Scheme of work", "icon": "🗓️", "tone": "#1846E0",
+        "blurb": "The school year: term dates, what each level does each week, and how report cards are graded.",
+        "screens": [
+            {"key": "school-years", "model": "scheme.Session", "name": "School years", "singular": "school year",
+             "columns": ["name"], "search": ["name"], "children": ["terms"]},
+            {"key": "terms", "model": "scheme.Term", "columns": ["__str__", "starts", "ends", "break_starts", "break_ends"],
+             "search": ["session__name"], "order": ["starts"], "parent": ("session", "school-years")},
+            {"key": "scheme-weeks", "model": "scheme.SchemeWeek", "name": "Scheme of work weeks", "singular": "week",
+             "columns": ["level", "term", "week", "title"], "search": ["title", "notes", "level"],
+             "order": ["level", "term", "week"]},
+            {"key": "grading", "model": "scheme.Grading", "name": "Grading", "singular": "grading",
+             "columns": ["__str__", "ca1_weight", "ca2_weight", "exam_weight", "pass_mark"], "search": [],
+             "no_add": True, "no_delete": True, "singleton": True},
+            {"key": "report-cards", "model": "scheme.ReportCard", "name": "Report cards", "singular": "report card",
+             "columns": ["student", "term", "total", "grade", "published_at"],
+             "search": ["student__email", "student__first_name", "student__last_name"], "readonly": True},
+        ],
+    },
+    {
         "slug": "assessments", "name": "Assessments", "icon": "📋", "tone": "#1846E0",
         "blurb": "Quizzes, timed tests, speaking assessments and results.",
         "screens": [
             {"key": "assessments", "model": "assessments.Assessment",
-             "columns": ["title", "kind", "level", "pass_mark", "is_published"],
+             "columns": ["title", "kind", "level", "term", "pass_mark", "is_published"],
              "search": ["title", "summary"], "children": ["questions"]},
             {"key": "questions", "model": "assessments.Question",
              "columns": ["__str__", "assessment", "type", "points", "order"],

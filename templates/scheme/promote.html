@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Promote from results — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  End of the year (apps/scheme/views.promote): students whose session
+  average reaches the promotion mark are ticked; the admin can change any
+  tick. Promoting uses the school's usual level tools, so it can be undone
+  under Level changes on the school dashboard.
+{% endcomment %}
+<div class="px-page">
+  <section class="px-phead">
+    <h1>Promote from results</h1>
+    <p>{% if session %}{{ session }}: the average of each student's published report cards.{% else %}No school year has started yet.{% endif %}</p>
+  </section>
+  <div class="px-wrap">
+    <p class="sw-key">Ticked: an average of {{ grading.pass_mark }}% or more ({{ suggested }} student{{ suggested|pluralize }}). Change any tick before you promote.</p>
+    {% if rows %}
+    <form method="post" class="sw-promote">
+      {% csrf_token %}
+      <ul class="sw-promote__list">
+        {% for row in rows %}
+        <li>
+          <label class="px-card sw-promote__row">
+            <input type="checkbox" name="students" value="{{ row.student.pk }}"{% if row.suggested %} checked{% endif %}{% if not row.next_level %} disabled{% endif %}>
+            <span class="sw-promote__who"><b>{{ row.student.get_full_name|default:row.student.login_name }}</b>
+              <small>{{ row.student.level|default:"No level" }}{% if row.next_level %} → {{ row.next_level }}{% else %} · stays{% endif %}</small></span>
+            <span class="sw-promote__avg">{% if row.average is not None %}{{ row.average }}%<small>{{ row.terms }} term{{ row.terms|pluralize }}</small>{% else %}—<small>No cards</small>{% endif %}</span>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="sw-save"><button type="submit">Promote the ticked students</button></div>
+    </form>
+    {% else %}
+    <div class="px-card px-empty">No students yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

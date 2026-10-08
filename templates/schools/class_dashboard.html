@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}My class — Diction Masters{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/class_dashboard.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/class_dashboard.css' %}"><link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
 
 {% block content %}
 {% comment %}
@@ -26,6 +26,36 @@
       {% endfor %}
     </nav>
     {% endif %}
+
+    {# This week in the scheme of work (apps/scheme/weeks.py). #}
+    {% if scheme.place.label %}
+    <section class="px-card sw-week" data-scheme-week>
+      <p class="sw-week__label">{{ scheme.place.label }}</p>
+      {% if scheme.week %}
+      <h2>{{ scheme.week.title }}</h2>
+      {% if scheme.week.notes %}<p class="sw-week__notes">{{ scheme.week.notes|linebreaksbr }}</p>{% endif %}
+      <ul class="sw-week__links">
+        {% for group in scheme.week.groups.all %}<li><a href="{% url 'echospell:group_detail' group.level.slug group.slug %}">EchoSpell Group {{ group.number }}</a></li>{% endfor %}
+        {% if scheme.week.module_week %}<li><a href="{% url 'learning_modules:week_detail' scheme.week.module_week.term.module.slug scheme.week.module_week.term.slug scheme.week.module_week.slug %}">{{ scheme.week.module_week.term.module.name }}, {{ scheme.week.module_week.display_name }}</a></li>{% endif %}
+        {% if scheme.week.dialogue_week %}<li><a href="{% url 'conversational_dialogue:hub' %}">Conversational Dialogue, Week {{ scheme.week.dialogue_week }}</a></li>{% endif %}
+        {% if scheme.week.assessment %}<li><a href="{% url 'assessments:detail' scheme.week.assessment.slug %}">{{ scheme.week.assessment.title }}</a></li>{% endif %}
+      </ul>
+      {% elif scheme.place.state == "term" %}
+      <p class="sw-week__notes">Nothing in the scheme of work for this week yet.</p>
+      {% endif %}
+      {% if scheme.strip %}
+      <ol class="sw-strip" aria-label="Weeks this term">
+        {% for w in scheme.strip %}<li class="{% if w.scheme %}has-scheme{% endif %}{% if w.is_now %} is-now{% endif %}"{% if w.scheme %} title="{{ w.scheme.title }}"{% endif %}>{{ w.number }}</li>{% endfor %}
+      </ol>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <a href="{% url 'scheme:reports' %}" class="px-item cd-mark">
+      <span class="px-item__ii t-butter">{% include "includes/icon.html" with name="cert" size=22 %}</span>
+      <span class="px-item__it"><b>Report cards</b><span>This term's scores, and your comment for each pupil</span></span>
+      <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+    </a>
 
     <div class="cd-stats" role="list">
       <div class="px-card cd-stat" role="listitem"><b>{{ summary.pupils }}</b><span>pupil{{ summary.pupils|pluralize }}</span></div>

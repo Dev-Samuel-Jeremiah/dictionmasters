@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Report cards — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/class_dashboard.css' %}"><link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  A term's report cards (apps/scheme/views.reports): the teacher writes a
+  comment for each pupil; the school admin publishes them all, which freezes
+  the scores (apps/scheme/results.py).
+{% endcomment %}
+<div class="px-page cd">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/teacher.jpg' %}" alt="">
+    <h1>Report cards</h1>
+    <p>{% if dated %}{{ dated }}{% else %}No term has started yet{% endif %}</p>
+  </section>
+
+  <div class="px-wrap">
+    {% if not dated %}
+    <div class="px-card px-empty" style="margin-top: 18px">Report cards appear once a term has started. Term dates are set in the control room{% if is_admin %}, and you can shift them for your school under <a href="{% url 'scheme:term_dates' %}">Term dates</a>{% endif %}.</div>
+    {% else %}
+    {% if terms|length > 1 %}
+    <nav class="px-chips cd-levels" aria-label="Term">
+      {% for one in terms %}<a href="?term={{ one.term.pk }}&level={{ level }}" class="px-chip{% if one.term.pk == dated.term.pk %} is-on{% endif %}">{{ one }}</a>{% endfor %}
+    </nav>
+    {% endif %}
+    {% if levels|length > 1 %}
+    <nav class="px-chips cd-levels" aria-label="Level">
+      <a href="?term={{ dated.term.pk }}" class="px-chip{% if not level %} is-on{% endif %}">All levels</a>
+      {% for one in levels %}<a href="?term={{ dated.term.pk }}&level={{ one|urlencode }}" class="px-chip{% if one == level %} is-on{% endif %}">{{ one }}</a>{% endfor %}
+    </nav>
+    {% endif %}
+
+    <p class="sw-key">CA 1 {{ grading.ca1_weight }}% · CA 2 {{ grading.ca2_weight }}% · Exam {{ grading.exam_weight }}% · A {{ grading.a_from }}+ · B {{ grading.b_from }}+ · C {{ grading.c_from }}+ · D {{ grading.d_from }}+ · E {{ grading.e_from }}+</p>
+
+    {% if is_admin and unpublished %}
+    <form method="post" class="px-card sw-publish">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="publish"><input type="hidden" name="term" value="{{ dated.term.pk }}"><input type="hidden" name="level" value="{{ level }}">
+      <span><b>Publish {{ unpublished }} report card{{ unpublished|pluralize }}</b><small>Families see them on For grown-ups. Publishing freezes the scores as they are now.</small></span>
+      <button type="submit">Publish</button>
+    </form>
+    {% endif %}
+
+    {% if rows %}
+    <form method="post" class="sw-cards">
+      {% csrf_token %}
+      <input type="hidden" name="term" value="{{ dated.term.pk }}"><input type="hidden" name="level" value="{{ level }}">
+      {% for row in rows %}
+      <article class="px-card sw-card{% if row.published %} is-published{% endif %}">
+        <header class="sw-card__head">
+          <b>{{ row.pupil.get_full_name|default:row.pupil.login_name }}</b>
+          <span>{{ row.pupil.level }}{% if row.published %} · Published{% endif %}</span>
+        </header>
+        <dl class="sw-scores">
+          <div><dt>CA 1</dt><dd>{% if row.ca1 is not None %}{{ row.ca1 }}%{% elif "ca1" in row.pending %}Marking{% else %}—{% endif %}</dd></div>
+          <div><dt>CA 2</dt><dd>{% if row.ca2 is not None %}{{ row.ca2 }}%{% elif "ca2" in row.pending %}Marking{% else %}—{% endif %}</dd></div>
+          <div><dt>Exam</dt><dd>{% if row.exam is not None %}{{ row.exam }}%{% elif "exam" in row.pending %}Marking{% else %}—{% endif %}</dd></div>
+          <div class="sw-scores__total"><dt>Total</dt><dd>{{ row.total|default_if_none:"—" }}{% if row.grade %} <span class="sw-grade">{{ row.grade }}</span>{% endif %}</dd></div>
+        </dl>
+        <p class="sw-card__days">{{ row.days }} day{{ row.days|pluralize }} practised this term{% if row.missing and not row.published %} · not sat yet: {{ row.missing|join:", "|upper }}{% endif %}</p>
+        {% if row.published %}
+        {% if row.card.teacher_comment %}<p class="sw-card__comment">{{ row.card.teacher_comment }}</p>{% endif %}
+        {% else %}
+        <label class="sw-card__label" for="comment-{{ row.pupil.pk }}">Teacher's comment</label>
+        <textarea id="comment-{{ row.pupil.pk }}" name="comment-{{ row.pupil.pk }}" rows="3" maxlength="2000">{{ row.card.teacher_comment }}</textarea>
+        {% endif %}
+        <a href="{% url 'scheme:card' dated.term.pk row.pupil.pk %}" class="sw-card__view">View and print the card</a>
+      </article>
+      {% endfor %}
+      {% if unpublished %}<div class="sw-save"><button type="submit">Save comments</button></div>{% endif %}
+    </form>
+    {% else %}
+    <div class="px-card px-empty" style="margin-top: 18px">No pupils here yet.</div>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

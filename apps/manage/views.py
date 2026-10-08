@@ -398,6 +398,10 @@ def groups_overview(request):
 def record_list(request, key):
     screen = _screen_or_404(key)
     model = _model_for(screen)
+    # A settings record there is only ever one of (scheme.Grading): make
+    # it, with its defaults, so there is always something to edit.
+    if screen.get("singleton"):
+        model.load()
     rows = _rows_for(screen)
 
     # Opened from inside its parent, e.g. the groups of one level.

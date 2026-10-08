@@ -12,6 +12,8 @@ from apps.accounts.decorators import role_required
 from apps.accounts.models import User
 
 from . import levels as level_moves
+from apps.scheme.weeks import this_week
+
 from .class_progress import class_progress
 from . import logins
 from apps.accounts import password_reset
@@ -356,6 +358,8 @@ def class_dashboard(request):
         "levels": levels if len(levels) > 1 else [],
         "level": level,
         "weekly_email": found.weekly_email,
+        # This week in the scheme of work, for the level being looked at.
+        "scheme": this_week(request.user, level or request.user.level),
     })
 
 

@@ -239,6 +239,16 @@
           {% endif %}
         </section>
         <div class="sd2-stack">
+          {# The school year (apps/scheme): term dates, report cards, promotion from results. #}
+          <section class="ui-panel" id="school-year">
+            <p class="ui-panel__label">The school year</p>
+            <p class="ui-panel__lede">Your term dates, this term's report cards, and promoting students from their results at the end of the year.</p>
+            <p class="sd2-year-links">
+              <a href="{% url 'scheme:term_dates' %}" class="sd-btn sd-btn--login">Term dates</a>
+              <a href="{% url 'scheme:reports' %}" class="sd-btn sd-btn--login">Report cards</a>
+              <a href="{% url 'scheme:promote' %}" class="sd-btn sd-btn--login">Promote from results</a>
+            </p>
+          </section>
           {% if level_history %}
           <section class="ui-panel" id="level-changes">
             <p class="ui-panel__label">Level changes</p>

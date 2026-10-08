@@ -1,7 +1,7 @@
 """
 Assessments — the tests learners take to show what they can do.
 
-Four kinds, each a different experience rather than a different model:
+Six kinds, each a different experience rather than a different model:
 
   Practice quiz        untimed, try as often as you like, each answer
                        marked the moment you check it
@@ -11,6 +11,9 @@ Four kinds, each a different experience rather than a different model:
                        a pronunciation rubric
   Placement test       questions tagged by level; the result recommends
                        the EchoSpell level to start at
+  CA test, Exam        a school term's tests (apps/scheme): for one level
+                       and term, open between two dates, one attempt each;
+                       their scores make the term's report card
 
 An Assessment holds Questions. Each time someone sits it, an Attempt
 records their Answers. Objective answers are marked by the same rules
@@ -53,6 +56,8 @@ class Assessment(models.Model):
         TIMED = "timed", "Timed test"
         SPEAKING = "speaking", "Speaking assessment"
         PLACEMENT = "placement", "Placement test"
+        CA = "ca", "CA test"
+        EXAM = "exam", "Exam"
 
     title = models.CharField(max_length=150)
     slug = models.SlugField(max_length=170, unique=True, blank=True)
@@ -74,6 +79,18 @@ class Assessment(models.Model):
     shuffle_questions = models.BooleanField(
         default=True, help_text="Give each attempt its own question order.",
     )
+    # A CA test or exam belongs to a term (First, Second, Third) and opens
+    # and closes on set dates; see apps/scheme.
+    term = models.PositiveSmallIntegerField(
+        null=True, blank=True, choices=[(1, "First Term"), (2, "Second Term"), (3, "Third Term")],
+        help_text="CA tests and exams: the term it counts towards.",
+    )
+    ca_number = models.PositiveSmallIntegerField(
+        "CA number", null=True, blank=True, choices=[(1, "CA 1"), (2, "CA 2")],
+        help_text="CA tests: the first or the second of the term.",
+    )
+    opens_at = models.DateTimeField(null=True, blank=True, help_text="CA tests and exams: when it can be started.")
+    closes_at = models.DateTimeField(null=True, blank=True, help_text="CA tests and exams: when it shuts.")
     order = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -91,15 +108,52 @@ class Assessment(models.Model):
                 i += 1
                 slug = f"{base}-{i}"
             self.slug = slug
+        if self.is_school_test:
+            self.max_attempts = 1          # a term's test is sat once
         super().save(*args, **kwargs)
 
     def clean(self):
         if self.kind == self.Kind.TIMED and not self.time_limit_minutes:
             raise ValidationError({"time_limit_minutes": "A timed test needs a time limit."})
+        if self.is_school_test:
+            errors = {}
+            if not self.level:
+                errors["level"] = "A CA test or exam is for one level."
+            if not self.term:
+                errors["term"] = "Choose the term it counts towards."
+            if self.kind == self.Kind.CA and not self.ca_number:
+                errors["ca_number"] = "Is it CA 1 or CA 2?"
+            if self.opens_at and self.closes_at and self.closes_at <= self.opens_at:
+                errors["closes_at"] = "It must close after it opens."
+            if errors:
+                raise ValidationError(errors)
+
+    @property
+    def is_school_test(self):
+        return self.kind in (self.Kind.CA, self.Kind.EXAM)
+
+    def window(self, now):
+        """"open", "not_yet" or "closed" — always "open" for other kinds."""
+        if self.is_school_test:
+            if self.opens_at and now < self.opens_at:
+                return "not_yet"
+            if self.closes_at and now >= self.closes_at:
+                return "closed"
+        return "open"
+
+    @property
+    def slot(self):
+        """Where a school test sits on the report card: "ca1", "ca2" or "exam"."""
+        if self.kind == self.Kind.EXAM:
+            return "exam"
+        if self.kind == self.Kind.CA and self.ca_number:
+            return f"ca{self.ca_number}"
+        return ""
 
     @property
     def is_timed(self):
-        return bool(self.time_limit_minutes) and self.kind in (self.Kind.TIMED, self.Kind.PLACEMENT)
+        return bool(self.time_limit_minutes) and self.kind in (
+            self.Kind.TIMED, self.Kind.PLACEMENT, self.Kind.CA, self.Kind.EXAM)
 
     @property
     def is_practice(self):

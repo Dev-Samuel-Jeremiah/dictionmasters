@@ -1,0 +1,100 @@
+/* =========================================================
+   The school year (apps/scheme): report cards, the printable card,
+   promotion from results and a school's term dates.
+   Cards at every width, for a 360px phone. Colours from theme.css,
+   which loads after this file: overrides of its px- classes carry an
+   extra parent class.
+   ========================================================= */
+
+.sw-key { margin: 16px 0 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+.sw-save { position: sticky; bottom: calc(var(--tab-h) + 8px); display: flex; justify-content: flex-end; margin-top: 16px; }
+.sw-save button, .sw-publish button {
+  min-height: 56px; padding: 0 24px; border: 0; border-radius: 16px;
+  background: var(--yellow); color: var(--navy); font: inherit; font-size: 17px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 6px 14px rgba(233, 174, 0, 0.35);
+}
+@media (min-width: 1100px) { .sw-save { bottom: 16px; } }
+
+/* ---------- a term's cards ---------- */
+.px-wrap .sw-publish { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 16px; border: 3px solid var(--yellow); }
+.sw-publish > span { flex: 1 1 240px; display: flex; flex-direction: column; gap: 4px; }
+.sw-publish small { color: var(--muted); font-size: 13px; }
+.sw-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 12px; margin-top: 16px; }
+.sw-cards .sw-card { display: flex; flex-direction: column; gap: 10px; }
+.sw-card.is-published { background: var(--bg); box-shadow: none; border: 1px solid var(--line); }
+.sw-card__head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.sw-card__head span { font-size: 13px; color: var(--muted); font-weight: 700; }
+.sw-scores { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.sw-scores div { padding: 8px; border-radius: 12px; background: var(--sky); text-align: center; }
+.sw-scores dt { font-size: 12px; font-weight: 700; color: var(--muted); }
+.sw-scores dd { margin: 2px 0 0; font-size: 16px; font-weight: 800; }
+.sw-scores__total { background: var(--butter) !important; }
+.sw-grade { display: inline-block; min-width: 24px; padding: 0 6px; border-radius: 8px; background: var(--blue); color: #fff; }
+.sw-card__days { margin: 0; font-size: 13px; color: var(--muted); }
+.sw-card__label { font-weight: 700; font-size: 14px; }
+.sw-card textarea { width: 100%; min-height: 84px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; font: inherit; font-size: 15px; resize: vertical; }
+.sw-card textarea:focus { border-color: var(--blue); outline: none; }
+.sw-card__comment { margin: 0; line-height: 1.5; }
+.sw-card__view { display: inline-flex; align-items: center; min-height: 44px; color: var(--blue); font-weight: 700; text-decoration: none; }
+
+/* ---------- the printable card ---------- */
+.sw-print-bar { display: flex; justify-content: space-between; align-items: center; margin: 16px 0; }
+.sw-print-bar a { display: inline-flex; align-items: center; min-height: 44px; color: var(--blue); font-weight: 700; text-decoration: none; }
+.sw-print-bar button { min-height: 48px; padding: 0 22px; border: 0; border-radius: 99px; background: var(--blue); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.sw-report { max-width: 760px; margin: 0 auto 32px; padding: 28px; background: #fff; border-radius: 20px; box-shadow: var(--shadow); }
+.sw-report__head { text-align: center; border-bottom: 2px solid var(--line); padding-bottom: 14px; }
+.sw-report__school { margin: 0; font-weight: 800; color: var(--blue); text-transform: uppercase; letter-spacing: 0.08em; font-size: 13px; }
+.sw-report__head h1 { margin: 4px 0; font-size: 28px; }
+.sw-report__head p { margin: 0; }
+.sw-report__who { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 18px 0; }
+.sw-report__who dt { font-size: 12px; font-weight: 700; color: var(--muted); }
+.sw-report__who dd { margin: 2px 0 0; font-weight: 800; }
+.sw-report__table { width: 100%; border-collapse: collapse; }
+.sw-report__table th, .sw-report__table td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+.sw-report__table tfoot th, .sw-report__table tfoot td { border-bottom: 0; font-size: 17px; }
+.sw-report__comment h2 { margin: 20px 0 6px; font-size: 16px; }
+.sw-report__comment p { margin: 0; line-height: 1.6; }
+.sw-report__key { margin: 20px 0 0; font-size: 12px; color: var(--muted); }
+@media print {
+  @page { size: A4; margin: 16mm; }
+  /* Only the card: not the site's bars, banners or install button. */
+  .sw-print-bar, .site-header, .px-bar, .bl-banner, .install-fab, .site-footer { display: none !important; }
+  .sw-report { box-shadow: none; padding: 0; max-width: none; }
+  body, .px-page { background: #fff !important; }
+}
+
+/* ---------- promotion ---------- */
+.sw-promote__list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }
+.sw-promote .sw-promote__row { display: flex; align-items: center; gap: 14px; min-height: 64px; cursor: pointer; }
+.sw-promote__row input { width: 26px; height: 26px; accent-color: var(--blue); flex: none; }
+.sw-promote__who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sw-promote__who small, .sw-promote__avg small { color: var(--muted); font-size: 12px; font-weight: 600; }
+.sw-promote__avg { display: flex; flex-direction: column; align-items: flex-end; font-size: 18px; font-weight: 800; }
+
+/* ---------- term dates ---------- */
+.sw-dates { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.sw-dates .sw-dates__term { border: 0; margin: 0; }
+.sw-dates__term legend { font-weight: 800; font-size: 17px; padding: 0; }
+.sw-dates__term legend small { margin-left: 6px; font-size: 12px; color: var(--blue); }
+.sw-dates__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+.sw-dates__grid label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.sw-dates__grid input { min-height: 48px; padding: 0 10px; border: 2px solid var(--line); border-radius: 12px; font: inherit; color: var(--text); }
+.sw-dates__reset { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 8px; font-weight: 700; }
+.sw-dates__error { margin: 8px 0 0; color: var(--blue); font-weight: 700; }
+
+/* ---------- this week in the scheme (My class) ---------- */
+.px-wrap .sw-week { margin-top: 18px; }
+.sw-week__label { margin: 0; font-size: 13px; font-weight: 800; color: var(--blue); }
+.sw-week h2 { margin: 4px 0 6px; font-size: 20px; }
+.sw-week__notes { margin: 0; color: var(--muted); line-height: 1.5; }
+.sw-week__links { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.sw-week__links a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 99px; background: var(--sky); color: var(--blue); font-weight: 700; text-decoration: none; }
+.sw-strip { display: flex; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; overflow-x: auto; }
+.sw-strip li { flex: none; min-width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: var(--bg); font-size: 13px; font-weight: 800; color: var(--muted); }
+.sw-strip li.has-scheme { background: var(--sky); color: var(--blue); }
+.sw-strip li.is-now { background: var(--yellow); color: var(--navy); }
+
+@media (max-width: 420px) {
+  .sw-scores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sw-report { padding: 18px; }
+}

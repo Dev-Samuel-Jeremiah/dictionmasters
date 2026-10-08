@@ -46,7 +46,17 @@ KIND_INFO = {
         "blurb": "Read and speak aloud. Your teacher listens and marks your pronunciation.",
         "points": ["Record your voice", "Marked by your teacher", "Scored on sounds, stress, pace and more"],
     },
-    Assessment.Kind.PLACEMENT: {
+    Assessment.Kind.CA: {
+        "icon": "📝",
+        "blurb": "Your school's continuous assessment for this term. It counts towards your report card.",
+        "points": ["Opens and closes on set days", "One go only", "Counts towards your report card"],
+    },
+    Assessment.Kind.EXAM: {
+        "icon": "🎓",
+        "blurb": "The end-of-term exam. It counts for most of your report card.",
+        "points": ["Opens and closes on set days", "One go only", "Counts towards your report card"],
+    },
+        Assessment.Kind.PLACEMENT: {
         "icon": "🧭",
         "blurb": "Questions from easy to hard that find the right EchoSpell level for you.",
         "points": ["Questions across the levels", "Recommends where to start", "Takes about ten minutes"],
@@ -100,6 +110,14 @@ def markable(user):
     return waiting.none()
 
 
+# CA tests and exams are a school's; individual learners don't see them.
+SCHOOL_KINDS = {Assessment.Kind.CA, Assessment.Kind.EXAM}
+
+
+def _sits_school_tests(user):
+    return user.is_staff or user.is_student or user.is_teacher
+
+
 def _can_use_marking(user):
     return user.is_staff or (user.is_teacher and user.school_id)
 
@@ -117,6 +135,7 @@ def hub(request):
     kinds = [
         {"value": value, "label": label, "count": counts.get(value, 0), **KIND_INFO[value]}
         for value, label in Assessment.Kind.choices
+        if value not in SCHOOL_KINDS or _sits_school_tests(request.user)
     ]
     return render(request, "assessments/hub.html", {
         "kinds": kinds,
@@ -134,6 +153,8 @@ def hub(request):
 @login_required
 def kind_list(request, kind):
     if kind not in Assessment.Kind.values:
+        raise Http404
+    if kind in SCHOOL_KINDS and not _sits_school_tests(request.user):
         raise Http404
     assessments = limit_to_levels(
         Assessment.objects.filter(is_published=True, kind=kind), request.user
@@ -171,6 +192,8 @@ def kind_list(request, kind):
 def detail(request, slug):
     assessment = get_object_or_404(Assessment, slug=slug, is_published=True)
     require_level(request.user, assessment.level)
+    if assessment.kind in SCHOOL_KINDS and not _sits_school_tests(request.user):
+        raise Http404
     return render(request, "assessments/detail.html", {
         "assessment": assessment,
         "info": KIND_INFO[assessment.kind],
@@ -186,6 +209,8 @@ def detail(request, slug):
 def start(request, slug):
     assessment = get_object_or_404(Assessment, slug=slug, is_published=True)
     require_level(request.user, assessment.level)
+    if assessment.kind in SCHOOL_KINDS and not _sits_school_tests(request.user):
+        raise Http404
     if not assessment.questions.exists():
         messages.error(request, "This assessment has no questions yet.")
         return redirect("assessments:detail", slug=slug)

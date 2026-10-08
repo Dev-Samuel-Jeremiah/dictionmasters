@@ -30,6 +30,20 @@
       </ul>
     </section>
 
+    {% if report_cards %}
+    {# Published report cards (apps/scheme), newest first. #}
+    <div class="px-sec"><h2>Report cards</h2></div>
+    <div class="px-list" data-report-cards>
+      {% for card in report_cards %}
+      <a href="{% url 'scheme:card' card.term_id user.pk %}" class="px-item">
+        <span class="px-item__ii t-butter">{% include "includes/icon.html" with name="cert" size=22 %}</span>
+        <span class="px-item__it"><b>{{ card.term }}</b><span>{% if card.total is not None %}{{ card.total }}%{% if card.grade %}, grade {{ card.grade }}{% endif %}{% endif %}{% if card.level %} · {{ card.level }}{% endif %}</span></span>
+        <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     {% if user.has_real_email %}
     <form method="post" class="px-card gu-switch">
       {% csrf_token %}
