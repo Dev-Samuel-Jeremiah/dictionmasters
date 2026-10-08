@@ -11,7 +11,8 @@ from django.test.utils import CaptureQueriesContext
 from apps.diction_library.models import LibraryItem
 from apps.echospell.models import Group, GroupProgress, Level
 
-from .models import SchemeEntry, SchemeOpened
+from .calendar import weeks_in
+from .models import SchemeEntry, SchemeOpened, Term
 from .tests import YearTestCase, make
 from .timetable import class_week, past_weeks, timetable
 
@@ -179,3 +180,34 @@ class EditorTests(TimetableCase):
     def test_only_staff(self):
         self.client.force_login(self.teacher)
         self.assertEqual(self.client.get(self.url).status_code, 302)
+
+
+class SeedDemoTests(TimetableCase):
+    def test_every_school_day_of_the_year_is_filled_and_it_can_be_removed(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        from apps.assessments.models import Assessment
+        from apps.schools.models import School
+
+        Term.objects.all().delete()
+        out = StringIO()
+        call_command("seed_scheme_demo", "--level", "Level 2", stdout=out)
+        terms = list(Term.objects.order_by("starts"))
+        self.assertEqual([t.number for t in terms], [1, 2, 3])
+        for term in terms:
+            for week in range(1, weeks_in(term) + 1):
+                days = set(SchemeEntry.objects.filter(level="Level 2", term=term.number, week=week)
+                           .values_list("day", flat=True))
+                self.assertTrue({"monday", "tuesday", "wednesday", "thursday", "friday"} <= days, (term, week))
+        self.assertEqual(Assessment.objects.filter(slug__startswith="demo-scheme-level-2-").count(), 9)
+        self.assertEqual(User.objects.filter(school__name="Demo Scheme School", level="Level 2").count(), 3)
+        self.assertIn("DemoScheme-2026", out.getvalue())
+        # Again: rebuilt, not doubled.
+        first = SchemeEntry.objects.count()
+        call_command("seed_scheme_demo", "--level", "Level 2", stdout=StringIO())
+        self.assertEqual(SchemeEntry.objects.count(), first)
+        call_command("seed_scheme_demo", "--level", "Level 2", "--remove", stdout=StringIO())
+        self.assertFalse(SchemeEntry.objects.filter(level="Level 2").exists())
+        self.assertFalse(School.objects.filter(name="Demo Scheme School").exists())
