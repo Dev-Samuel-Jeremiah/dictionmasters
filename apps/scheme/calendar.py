@@ -94,3 +94,36 @@ def term_window(dated, grace_days=21):
     start = timezone.make_aware(datetime.combine(dated.starts, time.min), tz)
     end = timezone.make_aware(datetime.combine(dated.ends + timedelta(days=grace_days), time.max), tz)
     return start, end
+
+
+def dates_from_weeks(starts, weeks, break_after=0, break_weeks=1):
+    """A term's other dates from its first day, how many teaching weeks it
+    has, and the week its mid-term break follows (0 for none): (ends,
+    break_starts, break_ends). Starting on a Monday, the term ends on a
+    Friday and the break runs Monday to Friday."""
+    has_break = 0 < break_after < weeks and break_weeks > 0
+    gap = timedelta(weeks=break_weeks) if has_break else timedelta(0)
+    ends = starts + timedelta(weeks=weeks) + gap - timedelta(days=3)
+    if not has_break:
+        return ends, None, None
+    break_starts = starts + timedelta(weeks=break_after)
+    return ends, break_starts, break_starts + gap - timedelta(days=3)
+
+
+def week_starts(dated):
+    """[(week number, its first day)] for every teaching week of a term,
+    for showing the term as a strip of weeks."""
+    found, day = [], dated.starts
+    for number in range(1, weeks_in(dated) + 1):
+        if dated.break_starts and dated.break_starts <= day <= dated.break_ends:
+            day = dated.break_ends + timedelta(days=3)
+        found.append((number, day))
+        day += timedelta(weeks=1)
+    return found
+
+
+def break_after_week(dated):
+    """The teaching week the mid-term break follows, or 0."""
+    if not dated.break_starts:
+        return 0
+    return week_of(dated, dated.break_starts - timedelta(days=1))

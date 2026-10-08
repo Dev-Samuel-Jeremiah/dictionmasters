@@ -36,7 +36,7 @@ from apps.accounts.decorators import role_required
 from apps.accounts.models import User
 from apps.schools import levels as level_moves
 
-from .calendar import last_term, terms_for
+from .calendar import break_after_week, dates_from_weeks, last_term, terms_for, week_starts, weeks_in
 from .models import TERM_CHOICES as TERM_LABELS
 from . import timetable as tt
 from .models import Grading, ReportCard, SchemeEntry, SchemeOpened, SchoolTermDates
@@ -189,9 +189,15 @@ def term_dates(request):
                 values = {name: (date.fromisoformat(request.POST[f"{name}-{key}"])
                                  if request.POST.get(f"{name}-{key}") else None)
                           for name in ("starts", "ends", "break_starts", "break_ends")}
+                weeks = int(request.POST.get(f"weeks-{key}") or 0)
+                after = int(request.POST.get(f"break_after-{key}") or 0)
             except ValueError:
                 errors[key] = "One of the dates isn't a date."
                 continue
+            # Teaching weeks given: the end and break follow from the first day.
+            if weeks and values["starts"] and request.POST.get(f"by_weeks-{key}"):
+                values["ends"], values["break_starts"], values["break_ends"] = dates_from_weeks(
+                    values["starts"], weeks, after)
             if not values["starts"] or not values["ends"]:
                 continue
             same = all(values[n] == getattr(dated.term, n) for n in values)
@@ -212,7 +218,48 @@ def term_dates(request):
             return redirect("scheme:term_dates")
         terms = [t for t in terms_for(school) if t.ends >= _today()]
     return render(request, "scheme/term_dates.html", {
-        "terms": [{"dated": t, "own": t.term.pk in own, "error": errors.get(t.term.pk, "")} for t in terms],
+        "terms": [{"dated": t, "own": t.term.pk in own, "error": errors.get(t.term.pk, ""),
+                   "weeks": weeks_in(t), "break_after": break_after_week(t)} for t in terms],
+    })
+
+
+@role_required(User.Role.SCHOOL_ADMIN)
+def school_scheme(request):
+    """The scheme of work for the school's levels, read-only, with the
+    school's own week dates. The scheme itself is set by Diction Masters
+    (control room); a school sets its term dates."""
+    from .models import DAY_CHOICES, DAY_ORDER, SchemeEntry
+    from .timetable import content_url
+
+    school = request.user.school
+    levels = sorted(set(_school_students(school).exclude(level="").values_list("level", flat=True)),
+                    key=lambda v: level_moves.LEVELS.index(v) if v in level_moves.LEVELS else 99) or level_moves.LEVELS[1:2]
+    level = request.GET.get("level") if request.GET.get("level") in level_moves.LEVELS else levels[0]
+    raw = request.GET.get("term", "")
+    number = int(raw) if raw in {"1", "2", "3"} else (last_term(request.user).number if last_term(request.user) else 1)
+    terms = terms_for(school)
+    newest = terms[-1].term.session_id if terms else None
+    dated = next((t for t in terms if t.term.session_id == newest and t.number == number), None)
+    firsts = dict(week_starts(dated)) if dated else {}
+    labels = dict(DAY_CHOICES)
+    by_week = {}
+    for entry in (SchemeEntry.objects.filter(level=level, term=number, is_draft=False)
+                  .select_related("group__level", "module_day__week__term__module", "dialogue__level", "sound",
+                                  "chapter__term__book", "recital__section", "library_item", "assessment")
+                  .order_by("week", "order")):
+        by_week.setdefault(entry.week, []).append(
+            {"day": labels.get(entry.day) or "Any day", "title": entry.title, "kind": entry.get_kind_display(),
+             "url": content_url(entry)})
+    # Monday to Friday, "any day" first — not the days' names in A–Z order.
+    rank = {label: DAY_ORDER.index(key) for key, label in DAY_CHOICES}
+    rank["Any day"] = 0
+    for rows in by_week.values():
+        rows.sort(key=lambda row: rank.get(row["day"], 0))
+    weeks = [{"number": n, "first": firsts.get(n), "rows": by_week.get(n, [])}
+             for n in range(1, (weeks_in(dated) if dated else max(by_week or [12])) + 1)]
+    return render(request, "scheme/school_scheme.html", {
+        "levels": levels, "level": level, "terms": TERM_LABELS, "number": number, "dated": dated,
+        "weeks": weeks, "total": sum(len(w["rows"]) for w in weeks),
     })
 
 

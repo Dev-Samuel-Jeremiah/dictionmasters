@@ -133,6 +133,9 @@ class SchemeEntry(models.Model):
     day = models.CharField(max_length=10, choices=DAY_CHOICES, blank=True)
     order = models.PositiveSmallIntegerField(default=0)
     kind = models.CharField(max_length=20, choices=Kind.choices)
+    # A draft (from the scheme builder, apps/scheme/builder.py) is seen and
+    # edited in the control room only; publishing makes it the live scheme.
+    is_draft = models.BooleanField(default=False)
 
     group = models.ForeignKey("echospell.Group", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
     module_day = models.ForeignKey("learning_modules.Day", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
@@ -145,7 +148,7 @@ class SchemeEntry(models.Model):
 
     class Meta:
         ordering = ["level", "term", "week", "day", "order", "pk"]
-        indexes = [models.Index(fields=["level", "term", "week"])]
+        indexes = [models.Index(fields=["level", "term", "week"]), models.Index(fields=["level", "term", "is_draft"])]
         verbose_name = "scheme of work entry"
         verbose_name_plural = "scheme of work entries"
 

@@ -20,6 +20,11 @@
       <fieldset class="px-card sw-dates__term">
         <legend>{{ t }}{% if row.own %} <small>Your own dates</small>{% endif %}</legend>
         {% if row.error %}<p class="sw-dates__error" role="alert">{{ row.error }}</p>{% endif %}
+        <div class="sw-dates__grid sw-dates__weeks">
+          <label class="sw-dates__by"><input type="checkbox" name="by_weeks-{{ key }}"> Work out the end and break from the weeks</label>
+          <label>Teaching weeks<input type="number" name="weeks-{{ key }}" min="1" max="14" value="{{ row.weeks }}"></label>
+          <label>Break after week (0 = none)<input type="number" name="break_after-{{ key }}" min="0" max="14" value="{{ row.break_after }}"></label>
+        </div>
         <div class="sw-dates__grid">
           <label>Starts<input type="date" name="starts-{{ key }}" value="{{ t.starts|date:'Y-m-d' }}" required></label>
           <label>Ends<input type="date" name="ends-{{ key }}" value="{{ t.ends|date:'Y-m-d' }}" required></label>

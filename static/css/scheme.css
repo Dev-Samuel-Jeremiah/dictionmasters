@@ -137,3 +137,13 @@
 .sw-tt__day { flex: none; width: 82px; font-size: 13px; font-weight: 800; color: var(--muted); }
 .sw-tt a { color: var(--text); font-weight: 700; text-decoration: none; }
 @media (max-width: 380px) { .sh-practise { grid-template-columns: minmax(0, 1fr); } }
+
+/* Term dates: setting a term by its weeks */
+.sw-dates__weeks { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.sw-dates__by { grid-column: 1 / -1; flex-direction: row !important; align-items: center; gap: 8px !important; min-height: 44px; color: var(--text) !important; }
+.sw-dates__by input { width: 22px; height: 22px; min-height: 0 !important; }
+
+/* The school's view of the scheme (school_scheme.html) */
+.ss-weeks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; margin-top: 16px; }
+.ss-week h2 { margin: 0 0 8px; font-size: 17px; }
+.ss-week h2 small { margin-left: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }

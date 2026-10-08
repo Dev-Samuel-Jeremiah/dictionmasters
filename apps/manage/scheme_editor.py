@@ -8,8 +8,14 @@ whole set — a level's EchoSpell groups one a week, a module's days one a
 school day, the level's dialogues on the weeks they were written for. What
 is on it is exactly what the level's students see and may open
 (apps/scheme/timetable.py).
+
+The scheme builder (apps/scheme/builder.py) plans a term or a whole year
+from the content on the site and saves it as a draft. The editor then
+shows the draft, every tool above works on it, and Publish makes it the
+live scheme (Discard throws it away). Students never see a draft.
 """
 
+from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Max
@@ -24,6 +30,8 @@ from apps.diction_library.models import LibraryItem
 from apps.echospell.models import LEVEL_NAME_CHOICES, Group
 from apps.learning_modules.models import Day, LearningModule
 from apps.reading_club.models import Book, Chapter
+from apps.scheme import builder
+from apps.scheme.calendar import break_after_week, terms_for, weeks_in
 from apps.scheme.models import DAY_CHOICES, TERM_CHOICES, WEEK_CHOICES, SchemeEntry
 from apps.tricks.progress import lessons_in_order
 
@@ -93,13 +101,28 @@ def _set_items(name, level, term):
     return None, None, []
 
 
-def _next_order(level, term, week, day):
-    found = SchemeEntry.objects.filter(level=level, term=term, week=week, day=day).aggregate(n=Max("order"))["n"]
+def _next_order(level, term, week, day, is_draft=False):
+    found = (SchemeEntry.objects.filter(level=level, term=term, week=week, day=day, is_draft=is_draft)
+             .aggregate(n=Max("order"))["n"])
     return (found or 0) + 1
 
 
-def _back(level, term):
-    return redirect(f"{reverse('manage:scheme_editor')}?level={level}&term={term}")
+def _back(level, term, view=""):
+    return redirect(f"{reverse('manage:scheme_editor')}?level={level}&term={term}" + (f"&view={view}" if view else ""))
+
+
+def _term_specs(numbers):
+    """[{"number", "weeks", "break_after"}] for these term numbers, from the
+    newest school year in the calendar (12 weeks, a break after week 6,
+    when there's no calendar yet)."""
+    terms = terms_for(None)
+    newest = terms[-1].term.session_id if terms else None
+    dated = {t.number: t for t in terms if t.term.session_id == newest}
+    return [
+        {"number": n, "weeks": min(weeks_in(dated[n]), LAST_WEEK), "break_after": break_after_week(dated[n])}
+        if n in dated else {"number": n, "weeks": 12, "break_after": 6}
+        for n in numbers
+    ]
 
 
 @staff_only
@@ -109,11 +132,26 @@ def scheme_editor(request):
     raw_term = request.GET.get("term") or request.POST.get("term") or "1"
     term = int(raw_term) if raw_term in {"1", "2", "3"} else 1
 
+    drafts = SchemeEntry.objects.filter(level=level, term=term, is_draft=True)
+    view = request.GET.get("view") or request.POST.get("view") or ("draft" if drafts.exists() else "live")
+    view = view if view in ("draft", "live") else "live"
+    is_draft = view == "draft"
+
     if request.method == "POST":
         action = request.POST.get("action")
-        entries = SchemeEntry.objects.filter(level=level, term=term)
+        entries = SchemeEntry.objects.filter(level=level, term=term, is_draft=is_draft)
+        if action == "build":
+            return _build(request, level, term)
+        if action == "publish":
+            _publish(request, level, term)
+            return _back(level, term, "live")
+        if action == "discard":
+            count = drafts.count()
+            drafts.delete()
+            messages.success(request, f"Draft thrown away ({count} entries). The live scheme is unchanged.")
+            return _back(level, term, "live")
         if action == "add":
-            _add(request, level, term)
+            _add(request, level, term, is_draft)
         elif action in ("up", "down", "remove"):
             entry = entries.filter(pk=request.POST.get("entry")).first()
             if entry and action == "remove":
@@ -122,15 +160,15 @@ def scheme_editor(request):
             elif entry:
                 _move(entry, -1 if action == "up" else 1)
         elif action == "fill":
-            _fill(request, level, term)
+            _fill(request, level, term, is_draft)
         elif action == "clear":
             count = entries.count()
             entries.delete()
             messages.success(request, f"{level}, {dict(TERM_CHOICES)[term]}: {count} entries taken off.")
-        return _back(level, term)
+        return _back(level, term, view)
 
     rows = {}
-    for entry in (SchemeEntry.objects.filter(level=level, term=term)
+    for entry in (SchemeEntry.objects.filter(level=level, term=term, is_draft=is_draft)
                   .select_related("group", "module_day__week__term__module", "dialogue", "sound", "chapter",
                                   "recital", "library_item", "assessment")):
         rows.setdefault(entry.week, []).append(entry)
@@ -142,10 +180,41 @@ def scheme_editor(request):
         weeks=weeks, days=DAY_CHOICES, week_choices=WEEK_CHOICES,
         content_choices=_content_choices(level), fill_sets=_fill_sets(level, term),
         total=sum(len(w["entries"]) for w in weeks),
+        view=view, draft_count=drafts.count(),
+        live_count=SchemeEntry.objects.filter(level=level, term=term, is_draft=False).count(),
+        ai_ready=bool(getattr(settings, "OPENAI_API_KEY", "")),
     ))
 
 
-def _add(request, level, term):
+def _build(request, level, term):
+    """Plan this term, or the whole year, as a draft."""
+    numbers = [1, 2, 3] if request.POST.get("scope") == "year" else [term]
+    note = request.POST.get("note", "")
+    result = builder.build(level, _term_specs(numbers), note=note, use_ai=request.POST.get("use_ai") != "no")
+    if not result["count"]:
+        messages.error(request, result["message"] or "Nothing could be planned.")
+        return _back(level, term)
+    how = "planned by AI" if result["source"] == "ai" else "planned by rule"
+    where = "the whole year" if len(numbers) > 1 else dict(TERM_CHOICES)[term]
+    messages.success(request, f"Draft ready for {level}, {where}: {result['count']} entries, {how}. "
+                              "Check and edit it, then Publish to make it live.")
+    if result["message"]:
+        messages.info(request, result["message"])
+    return _back(level, term, "draft")
+
+
+def _publish(request, level, term):
+    drafts = SchemeEntry.objects.filter(level=level, term=term, is_draft=True)
+    if not drafts.exists():
+        messages.info(request, "There's no draft to publish.")
+        return
+    with transaction.atomic():
+        SchemeEntry.objects.filter(level=level, term=term, is_draft=False).delete()
+        count = drafts.update(is_draft=False)
+    messages.success(request, f"Published: {count} entries are now {level}'s live scheme for {dict(TERM_CHOICES)[term]}.")
+
+
+def _add(request, level, term, is_draft=False):
     try:
         week = int(request.POST.get("week", ""))
         kind, _sep, pk = request.POST.get("content", "").partition(":")
@@ -157,8 +226,8 @@ def _add(request, level, term):
     if field == "missing" or day not in dict(DAY_CHOICES) or not 1 <= week <= LAST_WEEK:
         messages.error(request, "Choose a week, a day and something to add.")
         return
-    entry = SchemeEntry(level=level, term=term, week=week, day=day, kind=kind,
-                        order=_next_order(level, term, week, day))
+    entry = SchemeEntry(level=level, term=term, week=week, day=day, kind=kind, is_draft=is_draft,
+                        order=_next_order(level, term, week, day, is_draft))
     if field:
         if not pk.isdigit():
             messages.error(request, "Choose something to add.")
@@ -171,7 +240,8 @@ def _add(request, level, term):
 
 def _move(entry, step):
     """Swap with its neighbour on the same day."""
-    same_day = list(SchemeEntry.objects.filter(level=entry.level, term=entry.term, week=entry.week, day=entry.day)
+    same_day = list(SchemeEntry.objects.filter(level=entry.level, term=entry.term, week=entry.week, day=entry.day,
+                                               is_draft=entry.is_draft)
                     .order_by("order", "pk"))
     at = same_day.index(entry)
     other = at + step
@@ -183,7 +253,7 @@ def _move(entry, step):
                     SchemeEntry.objects.filter(pk=item.pk).update(order=order)
 
 
-def _fill(request, level, term):
+def _fill(request, level, term, is_draft=False):
     """Put a whole set on the timetable, in order, from a starting week."""
     name = request.POST.get("set", "")
     try:
@@ -201,7 +271,7 @@ def _fill(request, level, term):
         for dialogue in Dialogue.objects.filter(level__name=level, term=term):
             if dialogue.week <= LAST_WEEK:
                 new.append(SchemeEntry(level=level, term=term, week=dialogue.week, day=dialogue.day,
-                                       kind=K.DIALOGUE, dialogue=dialogue))
+                                       kind=K.DIALOGUE, dialogue=dialogue, is_draft=is_draft))
     else:
         kind, field, items = _set_items(name, level, term)
         if kind is None:
@@ -217,10 +287,11 @@ def _fill(request, level, term):
                 week, on = start + i, day
             if week > LAST_WEEK:
                 break
-            new.append(SchemeEntry(level=level, term=term, week=week, day=on, kind=kind, **{field: item}))
+            new.append(SchemeEntry(level=level, term=term, week=week, day=on, kind=kind, is_draft=is_draft,
+                                   **{field: item}))
     # Each goes after anything already on its day.
     tops = {}
-    for row in (SchemeEntry.objects.filter(level=level, term=term).values("week", "day")
+    for row in (SchemeEntry.objects.filter(level=level, term=term, is_draft=is_draft).values("week", "day")
                 .annotate(top=Max("order"))):
         tops[(row["week"], row["day"])] = row["top"] or 0
     for entry in new:

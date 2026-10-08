@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Scheme of work — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/class_dashboard.css' %}"><link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  The scheme of work for a school admin (apps/scheme/views.school_scheme):
+  what each level does, week by week, on the school's own dates. Read-only:
+  Diction Masters sets the scheme; the school sets its term dates.
+{% endcomment %}
+<div class="px-page cd">
+  <section class="px-phead">
+    <h1>Scheme of work</h1>
+    <p>{{ level }}{% for value, label in terms %}{% if value == number %}, {{ label }}{% endif %}{% endfor %}{% if dated %}: {{ dated.starts|date:"j M" }} – {{ dated.ends|date:"j M Y" }}{% endif %}</p>
+  </section>
+  <div class="px-wrap">
+    <nav class="px-chips cd-levels" aria-label="Level">
+      {% for one in levels %}<a href="?level={{ one|urlencode }}&term={{ number }}" class="px-chip{% if one == level %} is-on{% endif %}">{{ one }}</a>{% endfor %}
+    </nav>
+    <nav class="px-chips cd-levels" aria-label="Term">
+      {% for value, label in terms %}<a href="?level={{ level|urlencode }}&term={{ value }}" class="px-chip{% if value == number %} is-on{% endif %}">{{ label }}</a>{% endfor %}
+    </nav>
+    <p class="sw-key">Your students see each week as it comes. Set your own term dates and weeks under <a href="{% url 'scheme:term_dates' %}">Term dates</a>.</p>
+    {% if total %}
+    <div class="ss-weeks">
+      {% for week in weeks %}
+      <section class="px-card ss-week">
+        <h2>Week {{ week.number }}{% if week.first %} <small>from {{ week.first|date:"D j M" }}</small>{% endif %}</h2>
+        {% if week.rows %}
+        <ul class="sw-tt">{% for row in week.rows %}<li><span class="sw-tt__day">{{ row.day }}</span><a href="{{ row.url }}">{{ row.title }}</a></li>{% endfor %}</ul>
+        {% else %}<p class="sw-week__notes">Nothing this week.</p>{% endif %}
+      </section>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-card px-empty" style="margin-top: 16px">The scheme of work for {{ level }} this term isn't ready yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

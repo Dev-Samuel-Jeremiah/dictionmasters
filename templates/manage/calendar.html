@@ -1,0 +1,66 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Calendar — Control room{% endblock %}
+
+{% block content %}
+{# The school calendar (apps/manage/calendar_editor.py): terms by first day, teaching weeks and break week. #}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#128197; Calendar</p>
+    <h1 class="cr-pagehead__title">{% if session %}School year {{ session }}{% else %}School calendar{% endif %}</h1>
+    <p class="cr-pagehead__note">Set each term by its first day, how many teaching weeks it has, and the week the mid-term break comes after. The end and break dates are worked out for you. Schools can shift their own dates from their dashboard.</p>
+  </div>
+</header>
+
+<div class="cal-top">
+  {% if sessions %}
+  <form method="get" class="cr-filter">
+    <select name="year" class="cr-input cr-select" aria-label="School year">{% for one in sessions %}<option value="{{ one.pk }}"{% if one == session %} selected{% endif %}>{{ one }}</option>{% endfor %}</select>
+    <button type="submit" class="cr-btn cr-btn--ghost">Open</button>
+  </form>
+  {% endif %}
+  <form method="post" class="cr-filter">
+    {% csrf_token %}<input type="hidden" name="action" value="add_year">
+    <input type="text" name="name" class="cr-input" placeholder="New school year, e.g. 2027/2028" maxlength="20" aria-label="New school year">
+    <button type="submit" class="cr-btn cr-btn--gold">Add school year</button>
+  </form>
+</div>
+
+{% if session %}
+{% for row in rows %}
+<section class="cr-card cal-term">
+  <form method="post" class="cal-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_term"><input type="hidden" name="year" value="{{ session.pk }}"><input type="hidden" name="number" value="{{ row.number }}">
+    <h2 class="cr-card__title">{{ row.label }}{% if row.term %} <small>{{ row.term.starts|date:"j M" }} – {{ row.term.ends|date:"j M Y" }}{% if row.term.break_starts %} · break {{ row.term.break_starts|date:"j M" }}–{{ row.term.break_ends|date:"j M" }}{% endif %}</small>{% else %} <small>Not set yet</small>{% endif %}</h2>
+    <label>First day<input type="date" name="starts" class="cr-input" value="{{ row.term.starts|date:'Y-m-d' }}" required></label>
+    <label>Teaching weeks<input type="number" name="weeks" class="cr-input" min="1" max="{{ max_weeks }}" value="{{ row.weeks }}" required></label>
+    <label>Break after week (0 = none)<input type="number" name="break_after" class="cr-input" min="0" max="{{ max_weeks }}" value="{{ row.break_after }}"></label>
+    <button type="submit" class="cr-btn cr-btn--gold">Save</button>
+  </form>
+  {% if row.strip %}
+  <ol class="cal-strip" aria-label="{{ row.label }} weeks">
+    {% for number, first in row.strip %}
+    <li{% if row.break_after and number == row.break_after %} class="before-break"{% endif %}><b>Week {{ number }}</b><span>{{ first|date:"j M" }}</span></li>
+    {% if row.break_after and number == row.break_after %}<li class="is-break"><b>Break</b><span>{{ row.term.break_starts|date:"j M" }}</span></li>{% endif %}
+    {% endfor %}
+  </ol>
+  {% endif %}
+</section>
+{% endfor %}
+{% else %}
+<div class="cr-card"><p class="cr-help">No school year yet. Add one above, for example 2026/2027.</p></div>
+{% endif %}
+
+<style>
+  .cal-top { display: flex; flex-wrap: wrap; gap: 0 24px; }
+  .cal-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px 12px; align-items: end; }
+  .cal-form h2 { grid-column: 1 / -1; }
+  .cal-form h2 small { font-size: 0.8rem; font-weight: 600; color: var(--cr-muted, #667); margin-left: 8px; }
+  .cal-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; }
+  .cal-strip { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+  .cal-strip li { display: flex; flex-direction: column; min-width: 70px; padding: 6px 8px; border-radius: 10px; background: #EEF3FF; font-size: 12px; }
+  .cal-strip li.is-break { background: #FFF3CC; }
+  @media (max-width: 760px) { .cal-form { grid-template-columns: minmax(0, 1fr); } }
+</style>
+{% endblock %}

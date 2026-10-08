@@ -12,20 +12,53 @@
   <div>
     <p class="cr-pagehead__eyebrow">&#128467;&#65039; Scheme of work</p>
     <h1 class="cr-pagehead__title">{{ level }} · {% for value, label in terms %}{% if value == term %}{{ label }}{% endif %}{% endfor %}</h1>
-    <p class="cr-pagehead__note">{{ total }} entr{{ total|pluralize:"y,ies" }} this term. Students in {{ level }} see only the current week, and can go back to earlier weeks.</p>
+    <p class="cr-pagehead__note">{% if view == "draft" %}Draft: {% endif %}{{ total }} entr{{ total|pluralize:"y,ies" }} this term. Students in {{ level }} see only the current week, and can go back to earlier weeks.</p>
   </div>
 </header>
 
 <form method="get" class="cr-filter">
+  <input type="hidden" name="view" value="">
   <select name="level" class="cr-input cr-select" aria-label="Level">{% for one in levels %}<option value="{{ one }}"{% if one == level %} selected{% endif %}>{{ one }}</option>{% endfor %}</select>
   <select name="term" class="cr-input cr-select" aria-label="Term">{% for value, label in terms %}<option value="{{ value }}"{% if value == term %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
   <button type="submit" class="cr-btn cr-btn--ghost">Open</button>
 </form>
 
+<nav class="se-views" aria-label="Live or draft">
+  <a href="?level={{ level|urlencode }}&term={{ term }}&view=live" class="cr-btn {% if view == 'live' %}cr-btn--gold{% else %}cr-btn--ghost{% endif %}">Live scheme ({{ live_count }})</a>
+  <a href="?level={{ level|urlencode }}&term={{ term }}&view=draft" class="cr-btn {% if view == 'draft' %}cr-btn--gold{% else %}cr-btn--ghost{% endif %}">Draft ({{ draft_count }})</a>
+</nav>
+
+{% if view == "draft" %}
+<section class="cr-card se-draft" data-scheme-draft>
+  <div>
+    <h2 class="cr-card__title">Draft, not live yet</h2>
+    <p class="cr-help">Students still see the live scheme. Check this draft, change anything with the tools below, then publish it. Publishing replaces {{ level }}'s live scheme for this term.</p>
+  </div>
+  {% if draft_count %}
+  <div class="se-draft__actions">
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="publish"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}"><button type="submit" class="cr-btn cr-btn--gold">Publish</button></form>
+    <form method="post" onsubmit="return confirm('Throw this draft away?');">{% csrf_token %}<input type="hidden" name="action" value="discard"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}"><button type="submit" class="cr-btn cr-btn--ghost">Discard draft</button></form>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<form method="post" class="cr-card se-build" data-scheme-build onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Building… this can take a minute';">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="build"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}">
+  <div class="se-build__head">
+    <h2 class="cr-card__title">&#10024; Build with AI</h2>
+    <p class="cr-help">Plans {{ level }}'s scheme from the content on the site: courses in order, variety through the week, Daily Practice on Fridays, CA tests and a revision week before the exam. It's saved as a draft to check and edit before you publish.{% if not ai_ready %} <b>No OpenAI key is set, so the plan is made by rule.</b>{% endif %}</p>
+  </div>
+  <label>Plan<select name="scope" class="cr-input cr-select"><option value="term">This term only</option><option value="year">The whole year (all three terms)</option></select></label>
+  <label class="se-wide">A note for the planner (optional)<textarea name="note" rows="2" maxlength="1000" class="cr-input" placeholder="e.g. Start with the short vowels; keep Fridays light."></textarea></label>
+  <button type="submit" class="cr-btn cr-btn--gold">Build a draft</button>
+</form>
+
 <div class="se-tools">
   <form method="post" class="cr-card se-form">
     {% csrf_token %}
-    <input type="hidden" name="action" value="add"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}">
+    <input type="hidden" name="action" value="add"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="view" value="{{ view }}">
     <h2 class="cr-card__title">Add to the timetable</h2>
     <label>Week<select name="week" class="cr-input cr-select">{% for value, label in week_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
     <label>Day<select name="day" class="cr-input cr-select">{% for value, label in days %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
@@ -38,7 +71,7 @@
 
   <form method="post" class="cr-card se-form">
     {% csrf_token %}
-    <input type="hidden" name="action" value="fill"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}">
+    <input type="hidden" name="action" value="fill"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="view" value="{{ view }}">
     <h2 class="cr-card__title">Fill the weeks</h2>
     <label class="se-wide">With<select name="set" class="cr-input cr-select" required>{% for value, label in fill_sets %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
     <label>From week<select name="start_week" class="cr-input cr-select">{% for value, label in week_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
@@ -63,7 +96,7 @@
         <span class="se-title"><b>{{ entry.title }}</b><small>{{ entry.get_kind_display }}</small></span>
         <form method="post" class="se-actions">
           {% csrf_token %}
-          <input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="entry" value="{{ entry.pk }}">
+          <input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="view" value="{{ view }}"><input type="hidden" name="entry" value="{{ entry.pk }}">
           <button type="submit" name="action" value="up" class="cr-btn cr-btn--ghost" aria-label="Move up">&uarr;</button>
           <button type="submit" name="action" value="down" class="cr-btn cr-btn--ghost" aria-label="Move down">&darr;</button>
           <button type="submit" name="action" value="remove" class="cr-btn cr-btn--ghost" aria-label="Take off">&times;</button>
@@ -81,7 +114,7 @@
 {% if total %}
 <form method="post" class="se-clear" onsubmit="return confirm('Take everything off {{ level }} for this term?');">
   {% csrf_token %}
-  <input type="hidden" name="action" value="clear"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}">
+  <input type="hidden" name="action" value="clear"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="view" value="{{ view }}">
   <button type="submit" class="cr-btn cr-btn--ghost">Clear this term for {{ level }}</button>
 </form>
 {% endif %}
@@ -101,5 +134,12 @@
   .se-actions { display: flex; gap: 4px; }
   .se-actions .cr-btn { min-width: 36px; padding: 0 8px; }
   .se-clear { margin-top: 20px; }
+  .se-views { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .se-draft { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; border: 2px solid #FFC72C; }
+  .se-draft__actions { display: flex; gap: 8px; }
+  .se-build { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 10px 14px; align-items: end; }
+  .se-build__head { grid-column: 1 / -1; }
+  .se-build label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; }
+  @media (max-width: 760px) { .se-build { grid-template-columns: minmax(0, 1fr); } }
 </style>
 {% endblock %}

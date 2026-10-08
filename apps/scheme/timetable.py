@@ -43,8 +43,10 @@ def on_scheme(user):
 
 
 def _entries(**filters):
+    """Live entries only: a draft from the scheme builder is never seen by
+    students or teachers until it's published."""
     return (
-        SchemeEntry.objects.filter(**filters)
+        SchemeEntry.objects.filter(is_draft=False, **filters)
         .select_related(
             "group__level", "module_day__week__term__module", "dialogue__level", "sound",
             "chapter__term__book", "recital__section", "library_item", "assessment",
