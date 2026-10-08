@@ -41,6 +41,22 @@
     </a>
     {% endif %}
 
+    {% if needs_help %}
+    {# Stuck on an activity, or quiet for a week (class_progress.py): who to help first. #}
+    <div class="px-sec"><h2>Needs help</h2></div>
+    <ul class="px-list cd-help" data-needs-help>
+      {% for row in needs_help %}
+      <li>
+        <a href="{% url 'schools:pupil_detail' row.pupil.pk %}" class="px-item cd-help__item">
+          <span class="px-item__ii t-blush" aria-hidden="true">{{ row.pupil.first_name|first|upper }}{{ row.pupil.last_name|first|upper }}</span>
+          <span class="px-item__it"><b>{{ row.pupil.get_full_name|default:row.pupil.login_name }}</b><span>{{ row.reason }}</span></span>
+          <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
     <div class="px-sec"><h2>Pupils</h2></div>
     {% if rows %}
     <ol class="px-grid-list cd-pupils" style="margin-top: 0">
@@ -77,6 +93,15 @@
     </ol>
     {% else %}
     <div class="px-card px-empty">No pupils here yet. Students appear once they join {{ user.school.name }} in {% if level %}{{ level }}{% else %}your level{% endif %}. Your school admin can check levels on the school dashboard.</div>
+    {% endif %}
+
+    {% if user.has_real_email %}
+    <form method="post" class="px-card cd-weekly">
+      {% csrf_token %}
+      <span><b>Weekly "Needs help" email</b><small>Every Monday, to {{ user.email }}, when a pupil is stuck or quiet.</small></span>
+      <label><input type="checkbox" name="weekly_email"{% if weekly_email %} checked{% endif %}> Send it</label>
+      <button type="submit">Save</button>
+    </form>
     {% endif %}
   </div>
 </div>

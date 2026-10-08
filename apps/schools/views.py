@@ -6,6 +6,8 @@ from django.views.decorators.http import require_POST
 from apps.accounts import switcher
 from apps.accounts.access import pupils_of
 from apps.accounts.dashboard_data import learner_dashboard
+from apps.accounts.grown_ups import settings_for as grown_up_settings
+from apps.accounts.weekly import help_reason
 from apps.accounts.decorators import role_required
 from apps.accounts.models import User
 
@@ -333,6 +335,13 @@ def dismiss_help(request, pk):
 def class_dashboard(request):
     """My class: every pupil in the teacher's levels, with what they've done
     lately. A teacher of several levels can look at one at a time."""
+    found = grown_up_settings(request.user)
+    if request.method == "POST":
+        # The one setting here: the weekly "Needs help" email.
+        found.weekly_email = bool(request.POST.get("weekly_email"))
+        found.save(update_fields=["weekly_email"])
+        messages.success(request, "The weekly email is on." if found.weekly_email else "The weekly email is off.")
+        return redirect("schools:class_dashboard")
     pupils = pupils_of(request.user)
     levels = request.user.all_levels
     level = request.GET.get("level", "")
@@ -340,10 +349,13 @@ def class_dashboard(request):
         pupils = pupils.filter(level=level)
     else:
         level = ""
+    progress = class_progress(pupils)
     return render(request, "schools/class_dashboard.html", {
-        **class_progress(pupils),
+        **progress,
+        "needs_help": [{**row, "reason": help_reason(row)} for row in progress["rows"] if row["needs_help"]],
         "levels": levels if len(levels) > 1 else [],
         "level": level,
+        "weekly_email": found.weekly_email,
     })
 
 

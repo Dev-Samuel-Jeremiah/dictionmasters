@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}For grown-ups — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/learner_home.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  The PIN in front of For grown-ups (apps/accounts/grown_ups.py): set one,
+  enter it, or replace a forgotten one with the account's password. The
+  number pad fills the PIN box; without JavaScript the box still works.
+{% endcomment %}
+<div class="px-page">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/rParent.jpg' %}" alt="">
+    <h1>For grown-ups</h1>
+    <p>{% if mode == "set" %}Set a PIN to keep this page for grown-ups.{% elif mode == "reset" %}Forgot the PIN? Use the account's password.{% else %}Enter the grown-ups' PIN.{% endif %}</p>
+  </section>
+
+  <div class="px-wrap gu-pin-wrap">
+    <form method="post" class="px-card gu-pin" data-pin-form autocomplete="off">
+      {% csrf_token %}
+      {% if locked %}
+      <p class="gu-pin__note">Too many wrong PINs. Try again in {{ lock_minutes }} minutes, or <a href="?forgot=1">use the account's password</a>.</p>
+      {% else %}
+      {% if mode == "set" %}
+      <input type="hidden" name="action" value="set">
+      <label class="gu-pin__label" for="pin">Choose a 4-number PIN</label>
+      <input class="gu-pin__box" id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required data-pin-box>
+      <label class="gu-pin__label" for="pin2">Type it again</label>
+      <input class="gu-pin__box" id="pin2" name="pin2" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required data-pin-box>
+      {% elif mode == "reset" %}
+      <input type="hidden" name="action" value="reset">
+      <label class="gu-pin__label" for="password">The account's password</label>
+      <input class="gu-pin__box gu-pin__box--text" id="password" name="password" type="password" autocomplete="current-password" required>
+      <label class="gu-pin__label" for="pin">New 4-number PIN</label>
+      <input class="gu-pin__box" id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required data-pin-box>
+      {% else %}
+      <input type="hidden" name="action" value="unlock">
+      <label class="gu-pin__label" for="pin">PIN</label>
+      <input class="gu-pin__box" id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required autofocus data-pin-box>
+      {% endif %}
+
+      {% if error %}<p class="gu-pin__error" role="alert">{{ error }}</p>{% endif %}
+
+      {% if mode != "reset" %}
+      <div class="gu-pad" data-pin-pad hidden>
+        {% for key in "123456789" %}<button type="button" data-key="{{ key }}">{{ key }}</button>{% endfor %}
+        <button type="button" data-key="del" aria-label="Delete">&larr;</button>
+        <button type="button" data-key="0">0</button>
+        <span></span>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="gu-pin__go">{% if mode == "set" %}Set PIN{% elif mode == "reset" %}Set new PIN{% else %}Open{% endif %}</button>
+      {% endif %}
+
+      <p class="gu-pin__links">
+        {% if mode == "enter" and not locked %}<a href="?forgot=1">Forgot the PIN?</a>{% endif %}
+        {% if mode == "reset" %}<a href="{% url 'accounts:grown_ups' %}">Back to the PIN</a>{% endif %}
+        <a href="{% url 'accounts:dashboard' %}">Back home</a>
+      </p>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* The number pad types into the first PIN box with room, then the next. */
+(function () {
+  var pad = document.querySelector("[data-pin-pad]");
+  if (!pad) return;
+  pad.hidden = false;
+  var boxes = [].slice.call(document.querySelectorAll("[data-pin-box]"));
+  pad.addEventListener("click", function (event) {
+    var key = event.target.closest("[data-key]");
+    if (!key) return;
+    var k = key.dataset.key;
+    if (k === "del") {
+      var last = boxes.slice().reverse().find(function (b) { return b.value.length; });
+      if (last) last.value = last.value.slice(0, -1);
+      return;
+    }
+    var box = boxes.find(function (b) { return b.value.length < 4; });
+    if (box) box.value += k;
+  });
+})();
+</script>
+{% endblock %}

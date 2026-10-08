@@ -143,6 +143,8 @@ class GrownUpsTests(TestCase):
     def test_an_individual_can_switch_the_simple_home_on_and_off(self):
         adult = make("parent@example.com")
         self.client.force_login(adult)
+        # Behind the grown-ups' PIN since Phase 4: set one first.
+        self.client.post(self.url, {"action": "set", "pin": "2468", "pin2": "2468"})
         page = self.client.get(self.url)
         self.assertContains(page, "Use the simple home")
         self.assertContains(page, "This week")

@@ -18,9 +18,35 @@
   </section>
 
   <div class="px-wrap">
+    {% if has_pin %}
+    <form method="post" class="gu-lock">{% csrf_token %}<input type="hidden" name="action" value="lock"><button type="submit">Lock and go home</button></form>
+    {% endif %}
+
+    {# ================= This week, in words (apps/accounts/weekly.py) ================= #}
+    <section class="px-card gu-week" data-week-summary>
+      <h2>This week</h2>
+      <ul class="gu-week__lines">
+        {% for title, text in summary.lines %}<li><b>{{ title }}</b><span>{{ text }}</span></li>{% endfor %}
+      </ul>
+    </section>
+
+    {% if user.has_real_email %}
+    <form method="post" class="px-card gu-switch">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="weekly">
+      <span class="gu-switch__text">
+        <b>Weekly email</b>
+        <span>This summary, sent to {{ user.email }} every Monday morning.</span>
+      </span>
+      <label><input type="checkbox" name="weekly_email"{% if weekly_email %} checked{% endif %}> Send it</label>
+      <button type="submit">Save</button>
+    </form>
+    {% endif %}
+
     {% if home_form %}
     <form method="post" class="px-card gu-switch">
       {% csrf_token %}
+      <input type="hidden" name="action" value="home">
       <span class="gu-switch__text">
         <b>Use the simple home</b>
         <span>For a child using this account: the home shows one big "Today's lesson" button instead of the full dashboard. Everything else stays under Learn.</span>
@@ -30,8 +56,8 @@
     </form>
     {% endif %}
 
-    {# ================= Streak and this week ================= #}
-    <div class="px-sec"><h2>This week</h2></div>
+    {# ================= Streak and the last seven days ================= #}
+    <div class="px-sec"><h2>Streak</h2></div>
     <div class="px-duo">
       <div class="px-card px-streak" aria-label="Study streak: {{ streak }} day{{ streak|pluralize }}. Best: {{ best_streak }}.">
         <b><span class="px-streak__flame">{% include "includes/icon.html" with name="flame" size=24 %}</span>{{ streak }}</b>

@@ -129,6 +129,18 @@ def teaches(teacher, pupil):
     return pupils_of(teacher).filter(pk=pupil.pk).exists()
 
 
+def is_pupil_of(teacher, pupil):
+    """pupils_of's rule for two accounts already in hand, with no query —
+    for matching many teachers to many pupils at once (the weekly
+    "Needs help" email). Keep the two in step."""
+    if not (teacher.is_teacher and teacher.school_id and pupil.is_student and pupil.is_active):
+        return False
+    if pupil.school_id != teacher.school_id:
+        return False
+    levels = accessible_levels(teacher)
+    return levels is None or pupil.level in levels
+
+
 # ---------------------------------------------------------------------------
 # Content for several levels, whole tools, and age bands
 # ---------------------------------------------------------------------------

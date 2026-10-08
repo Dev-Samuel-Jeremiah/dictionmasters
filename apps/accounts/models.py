@@ -326,3 +326,28 @@ class PasswordHelpRequest(models.Model):
 
     def __str__(self):
         return f"{self.user} needs a new password"
+
+
+class GrownUpSettings(models.Model):
+    """The grown-up side of one account (apps/accounts/grown_ups.py): the
+    PIN that keeps the For grown-ups page from a child, and the weekly
+    email. Made the first time it's needed."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="grown_up")
+    # Hashed like a password; blank until a grown-up sets one.
+    pin_hash = models.CharField(max_length=128, blank=True, editable=False)
+    # Wrong PINs in a row, and when entering one is allowed again.
+    failed_tries = models.PositiveSmallIntegerField(default=0, editable=False)
+    locked_until = models.DateTimeField(null=True, blank=True, editable=False)
+    weekly_email = models.BooleanField(
+        default=True, help_text="Send the weekly summary (or, for a teacher, the weekly 'Needs help' email).",
+    )
+    # When the last weekly email went, so a week is never sent twice.
+    last_summary_at = models.DateTimeField(null=True, blank=True, editable=False)
+
+    class Meta:
+        verbose_name = "grown-up settings"
+        verbose_name_plural = "grown-up settings"
+
+    def __str__(self):
+        return f"Grown-up settings for {self.user}"

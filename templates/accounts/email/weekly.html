@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en-gb">
+{% comment %}
+  The weekly emails (apps/accounts/weekly.py): a learner's week for their
+  grown-ups, and a teacher's "Needs help" list. Same look as welcome.html.
+{% endcomment %}
+<body style="margin:0;padding:0;background:#F1F4FB;font-family:Arial,Helvetica,sans-serif;color:#0B1A4A;">
+  <div style="display:none;max-height:0;overflow:hidden;">{{ intro }}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F4FB;padding:28px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden;">
+        <tr><td style="background:#1846E0;padding:22px 28px;color:#ffffff;font-size:20px;font-weight:bold;">Diction <span style="color:#FFC72C;">Masters</span></td></tr>
+        <tr><td style="background:#0B1A4A;padding:30px 28px;color:#ffffff;">
+          <p style="margin:0 0 8px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#FFC72C;font-weight:bold;">{{ eyebrow }}</p>
+          <p style="margin:0 0 10px;font-size:24px;line-height:1.25;font-weight:bold;">{{ headline }}</p>
+          <p style="margin:0;font-size:15px;line-height:1.6;color:#D6E0FF;">{{ intro }}</p>
+        </td></tr>
+        <tr><td style="padding:24px 28px 6px;">
+          {% for title, text in lines %}
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;background:#F7F9FE;border-radius:12px;">
+            <tr><td style="padding:12px 16px;font-size:14px;line-height:1.55;"><strong style="color:#0B1A4A;">{{ title }}</strong><br><span style="color:#55607E;">{{ text }}</span></td></tr>
+          </table>
+          {% endfor %}
+        </td></tr>
+        <tr><td style="padding:10px 28px 26px;text-align:center;">
+          <a href="{{ cta_url }}" style="display:inline-block;background:#FFC72C;color:#0B1A4A;text-decoration:none;font-weight:bold;font-size:16px;padding:14px 30px;border-radius:12px;">{{ cta }}</a>
+        </td></tr>
+        <tr><td style="padding:16px 28px;background:#F7F9FE;font-size:12px;line-height:1.6;color:#8792A8;">{{ footer }}<br>The Diction Masters team · <a href="{{ site_url }}" style="color:#8792A8;">{{ site_url }}</a></td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

@@ -69,7 +69,7 @@
       <span class="px-cont__t">
         <span class="px-cont__lab">My class</span>
         <span class="px-cont__title">{{ my_class.pupils }} pupil{{ my_class.pupils|pluralize }}{% if level %}, {{ level }}{% endif %}</span>
-        <span class="px-cont__meta">{{ my_class.active }} active this week{% if my_class.quiet %} · {{ my_class.quiet }} quiet{% endif %}{% if my_class.new %} · {{ my_class.new }} not started{% endif %}{% if my_class.to_mark %} · {{ my_class.to_mark }} to mark{% endif %}</span>
+        <span class="px-cont__meta">{{ my_class.active }} active this week{% if my_class.quiet %} · {{ my_class.quiet }} quiet{% endif %}{% if my_class.new %} · {{ my_class.new }} not started{% endif %}{% if my_class.needs_help %} · <b>{{ my_class.needs_help }} need{{ my_class.needs_help|pluralize:"s," }} help</b>{% endif %}{% if my_class.to_mark %} · {{ my_class.to_mark }} to mark{% endif %}</span>
       </span>
       <span class="px-playbig" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
     </a>

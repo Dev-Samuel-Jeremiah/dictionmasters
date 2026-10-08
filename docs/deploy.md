@@ -211,6 +211,54 @@ Static files are served by the application through WhiteNoise, so nginx
 needs no `location /static/` block. Uploads are served from R2 through
 signed links that expire after six hours.
 
+## 7b. The Monday emails
+
+Every Monday morning the site emails each learner's grown-ups a summary
+of their week, and each teacher the pupils who need help
+(`apps/accounts/weekly.py`). Nothing inside Django runs on a clock, so a
+systemd timer starts it. It needs the email settings from step 3; without
+them the emails are only printed to the log.
+
+`/etc/systemd/system/dictionmasters-weekly.service`:
+
+```ini
+[Unit]
+Description=Diction Masters weekly emails
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/dictionmasters
+EnvironmentFile=/srv/dictionmasters/.env
+ExecStart=/srv/dictionmasters/venv/bin/python manage.py send_weekly_summaries
+```
+
+`/etc/systemd/system/dictionmasters-weekly.timer` (07:00 in Lagos):
+
+```ini
+[Unit]
+Description=Diction Masters weekly emails, Monday mornings
+
+[Timer]
+OnCalendar=Mon *-*-* 07:00:00 Africa/Lagos
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now dictionmasters-weekly.timer
+systemctl list-timers dictionmasters-weekly.timer       # shows the next run
+sudo -u www-data /srv/dictionmasters/venv/bin/python manage.py send_weekly_summaries --dry-run   # who would get one
+```
+
+Running it twice in a week is safe: anyone already sent this week's email
+is skipped.
+
 ## 8. Every release after that
 
 ```bash

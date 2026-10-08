@@ -14,6 +14,7 @@ from apps.billing.access import subscription_for
 from apps.billing.models import Plan
 from apps.billing.services import begin_access
 
+from . import grown_ups as grown_up_pin
 from .access import pupils_of
 from .dashboard_data import learner_dashboard, learner_home, todays_lesson
 from .forms import (
@@ -27,6 +28,7 @@ from .forms import (
     StudentRegistrationForm,
 )
 from . import switcher
+from .weekly import learner_summary
 from .welcome import send_welcome
 from .models import DashboardCardImage, User
 
@@ -471,23 +473,84 @@ def dashboard(request):
 @login_required(login_url="accounts:login")
 def grown_ups(request):
     """For grown-ups: the progress, results, plan and app links that were
-    taken off the child's home so the home has one clear button. An
-    individual account can switch the simple home on or off here."""
-    if request.user.role == User.Role.SCHOOL_ADMIN:
+    taken off the child's home so the home has one clear button, with this
+    week's summary on top. A child's account keeps it behind a PIN
+    (grown_ups.py). An individual account can switch the simple home on
+    or off here; anyone with an email can switch the weekly email."""
+    user = request.user
+    if user.role == User.Role.SCHOOL_ADMIN:
         return redirect("schools:dashboard")
+    action = request.POST.get("action", "home") if request.method == "POST" else ""
+
+    found = grown_up_pin.settings_for(user)
+    if grown_up_pin.needs_pin(user) and not grown_up_pin.is_unlocked(request):
+        return _grown_ups_pin(request, found, action)
+
+    if action == "lock":
+        grown_up_pin.lock(request)
+        return redirect("accounts:dashboard")
+    if action == "weekly" and user.has_real_email:
+        found.weekly_email = bool(request.POST.get("weekly_email"))
+        found.save(update_fields=["weekly_email"])
+        messages.success(request, "Weekly emails are on." if found.weekly_email else "Weekly emails are off.")
+        return redirect("accounts:grown_ups")
+
     form = None
-    if request.user.is_individual:
+    if user.is_individual:
         # Bound on any POST: an unticked box sends nothing, and that
         # still means "switch it off".
-        form = SimpleHomeForm(request.POST if request.method == "POST" else None, instance=request.user)
-        if request.method == "POST" and form.is_valid():
+        form = SimpleHomeForm(request.POST if action == "home" else None, instance=user)
+        if action == "home" and form.is_valid():
             form.save()
-            messages.success(request, "The simple home is on." if request.user.simple_home else "The full dashboard is back.")
+            messages.success(request, "The simple home is on." if user.simple_home else "The full dashboard is back.")
             return redirect("accounts:grown_ups")
     elif request.method == "POST":
         # Only an individual account has the switch; students always
         # get the simple home and teachers never do.
         return redirect("accounts:grown_ups")
-    context = learner_dashboard(request.user)
-    context["home_form"] = form
+    context = learner_dashboard(user)
+    context.update(
+        home_form=form,
+        summary=learner_summary(user),
+        weekly_email=found.weekly_email,
+        has_pin=grown_up_pin.needs_pin(user),
+    )
     return render(request, "accounts/grown_ups.html", context)
+
+
+def _grown_ups_pin(request, found, action):
+    """The PIN screens: set one, enter it, or replace a forgotten one."""
+    pin = request.POST.get("pin", "").strip()
+    error = ""
+    mode = "enter" if grown_up_pin.has_pin(found) else "set"
+    if request.GET.get("forgot") or action == "reset":
+        mode = "reset"
+
+    if action == "set" and mode == "set":
+        if not grown_up_pin.valid_pin(pin):
+            error = "Choose 4 numbers."
+        elif pin != request.POST.get("pin2", "").strip():
+            error = "The two PINs don't match. Try again."
+        else:
+            grown_up_pin.set_pin(request, found, pin)
+            messages.success(request, "PIN set. Keep it to yourself, so this page stays for grown-ups.")
+            return redirect("accounts:grown_ups")
+    elif action == "unlock" and mode == "enter":
+        if grown_up_pin.try_pin(request, found, pin):
+            return redirect("accounts:grown_ups")
+        error = "" if grown_up_pin.is_locked_out(found) else "That's not the PIN. Try again."
+    elif action == "reset":
+        if not grown_up_pin.valid_pin(pin):
+            error = "Choose 4 numbers for the new PIN."
+        elif grown_up_pin.reset_with_password(request, found, request.POST.get("password", ""), pin):
+            messages.success(request, "New PIN set.")
+            return redirect("accounts:grown_ups")
+        else:
+            error = "That password isn't right."
+
+    return render(request, "accounts/grown_ups_pin.html", {
+        "mode": mode,
+        "error": error,
+        "locked": mode == "enter" and grown_up_pin.is_locked_out(found),
+        "lock_minutes": grown_up_pin.LOCK_MINUTES,
+    }, status=200)

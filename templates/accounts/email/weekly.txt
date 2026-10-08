@@ -1,0 +1,13 @@
+{{ headline }}
+
+{{ intro }}
+{% for title, text in lines %}
+{{ title }}
+   {{ text }}
+{% endfor %}
+{{ cta }}: {{ cta_url }}
+
+{{ footer }}
+
+The Diction Masters team
+{{ site_url }}

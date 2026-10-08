@@ -83,7 +83,7 @@ class ClassTests(TestCase):
         self.assertEqual(ada["state"], "active")
         self.assertEqual(ada["sessions_week"], 5)
         self.assertEqual(self.row(self.ben, data)["state"], "new")
-        self.assertEqual(data["summary"], {"pupils": 2, "active": 1, "quiet": 0, "new": 1, "to_mark": 1})
+        self.assertEqual(data["summary"], {"pupils": 2, "active": 1, "quiet": 0, "new": 1, "to_mark": 1, "needs_help": 0})
 
     def test_a_pupil_with_nothing_lately_is_quiet(self):
         module = LearningModule.objects.create(name="Sound Discovery")

@@ -56,6 +56,39 @@
 .gu-switch input[type="checkbox"] { width: 26px; height: 26px; accent-color: var(--blue); }
 .gu-switch button { min-height: 56px; padding: 0 22px; border: 0; border-radius: 99px; background: var(--blue); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
 
+/* ---------- the PIN (grown_ups_pin.html) ---------- */
+.gu-pin-wrap { max-width: 420px; }
+/* .gu-pin-wrap: theme.css loads after this file and sets .px-card to block. */
+.gu-pin-wrap .gu-pin { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.gu-pin__label { font-weight: 700; font-size: 15px; }
+.gu-pin__box {
+  min-height: 56px; padding: 0 16px; border: 2px solid var(--line); border-radius: 14px;
+  font: inherit; font-size: 28px; letter-spacing: 0.5em; text-align: center; background: var(--bg); color: var(--text);
+}
+.gu-pin__box--text { font-size: 17px; letter-spacing: normal; text-align: left; }
+.gu-pin__box:focus { border-color: var(--blue); outline: none; }
+.gu-pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 6px; }
+.gu-pad button {
+  min-height: 60px; border: 0; border-radius: 16px; background: var(--sky); color: var(--navy);
+  font: inherit; font-size: 24px; font-weight: 800; cursor: pointer;
+}
+.gu-pad button:active { background: var(--yellow); }
+.gu-pin__go { min-height: 56px; margin-top: 6px; border: 0; border-radius: 16px; background: var(--yellow); color: var(--navy); font: inherit; font-size: 18px; font-weight: 800; cursor: pointer; }
+.gu-pin__error { margin: 0; color: var(--blue); font-weight: 700; }
+.gu-pin__note { margin: 0; line-height: 1.5; }
+.gu-pin__links { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin: 6px 0 0; }
+.gu-pin__links a { display: inline-flex; align-items: center; min-height: 44px; color: var(--blue); font-weight: 700; text-decoration: none; }
+
+/* ---------- the week (grown_ups.html) ---------- */
+.gu-week { margin-top: 18px; }
+.gu-week h2 { margin: 0 0 10px; font-size: 20px; }
+.gu-week__lines { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.gu-week__lines li { padding: 10px 14px; border-radius: 14px; background: var(--bg); line-height: 1.45; }
+.gu-week__lines b { display: block; }
+.gu-week__lines span { color: var(--muted); font-size: 14px; }
+.gu-lock { display: flex; justify-content: flex-end; margin-top: 12px; }
+.gu-lock button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 99px; background: var(--sky); color: var(--blue); font: inherit; font-weight: 800; cursor: pointer; }
+
 @media (max-width: 700px) {
   .lh-hero { min-height: 230px; }
   .lh .lh-lesson { padding: 18px; }
