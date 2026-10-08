@@ -305,13 +305,29 @@ def practise(request):
 @_scheme_student
 def weeks(request):
     """My weeks: the weeks they've reached, newest first."""
+    if not tt.on_scheme(request.user):
+        return redirect("scheme:lessons")          # individuals: the whole scheme, term by term
+    return render(request, "scheme/weeks.html", {"weeks": tt.past_weeks(request.user)})
+
+
+@_scheme_student
+def lessons(request):
+    """An individual learner's Lessons: their scheme term by term, week by
+    week, day by day — all open, to move around until it's all done."""
     if tt.on_scheme(request.user):
-        weeks = tt.past_weeks(request.user)
+        return redirect("scheme:weeks")
+    choice = own.choice_for(request.user)
+    found = own.lessons(request.user, choice.level)
+    raw = request.GET.get("term", "")
+    numbers = [t["number"] for t in found["terms"]]
+    if raw.isdigit() and int(raw) in numbers:
+        shown = int(raw)
     else:
-        weeks = [{**w, "is_current": w["state"] == "current"}
-                 for w in reversed(own.path(request.user, own.choice_for(request.user).level)["weeks"])
-                 if w["state"] != "locked"]
-    return render(request, "scheme/weeks.html", {"weeks": weeks})
+        shown = found["current"]["term"] if found["current"] else (numbers[0] if numbers else None)
+    return render(request, "scheme/lessons.html", {
+        **found, "choice": choice, "shown": shown,
+        "term": next((t for t in found["terms"] if t["number"] == shown), None),
+    })
 
 
 @_scheme_student

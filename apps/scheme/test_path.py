@@ -1,6 +1,6 @@
 """An individual learner's scheme, at their own pace (apps/scheme/path.py):
-they choose a level's scheme, see the next lesson and My weeks, and a week
-opens when the one before it is done. Learn stays open to them."""
+they choose a level's scheme, see the next lesson and a Lessons card, and
+move around its terms, weeks and days freely. Learn stays open to them."""
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -54,27 +54,40 @@ class PathTests(TestCase):
         self.assertRedirects(self.choose(), "/accounts/dashboard/", fetch_redirect_response=False)
         page = self.client.get("/accounts/dashboard/")
         self.assertTemplateUsed(page, "scheme/path_home.html")
-        self.assertContains(page, "Level 2 scheme · Week 1 of 3")
+        self.assertContains(page, "Level 2 scheme · First Term, Week 1")
         self.assertContains(page, "EchoSpell Group 1")
-        self.assertContains(page, 'href="/scheme/weeks/" class="px-card sh-weeks-card"')
+        self.assertContains(page, 'href="/scheme/lessons/" class="px-card sh-weeks-card"')
+        self.assertNotContains(page, "My weeks")
         self.assertContains(page, 'href="/accounts/grown-ups/"')
 
-    def test_the_next_week_opens_when_this_one_is_done(self):
+    def test_everything_is_open_and_the_next_lesson_follows_the_order(self):
         self.choose()
-        self.assertEqual(path(self.solo, "Level 2")["current"]["week"], 1)
-        self.assertEqual(self.client.get(f"/scheme/go/{self.e_g2.pk}/").status_code, 404)       # not open yet
-        GroupProgress.objects.create(user=self.solo, group=self.g1)
-        self.assertEqual(path(self.solo, "Level 2")["current"]["week"], 1)                    # The Fox still to do
-        self.assertRedirects(self.client.get(f"/scheme/go/{self.e_story.pk}/"), "/library/the-fox/",
+        # Any lesson, any week, any term opens.
+        self.assertRedirects(self.client.get(f"/scheme/go/{self.e_g3.pk}/"), "/echospell/level-2/p3/",
                              fetch_redirect_response=False)
+        self.assertEqual(path(self.solo, "Level 2")["next"]["title"], "EchoSpell Group 1")
+        GroupProgress.objects.create(user=self.solo, group=self.g1)
+        SchemeOpened.objects.create(user=self.solo, entry=self.e_story)
         state = path(self.solo, "Level 2")
         self.assertEqual((state["current"]["term"], state["current"]["week"]), (1, 2))
         self.assertEqual(state["next"]["title"], "EchoSpell Group 2")
-        weeks = self.client.get("/scheme/weeks/")
-        self.assertContains(weeks, "First Term, Week 2 · This week")
-        self.assertContains(weeks, "First Term, Week 1")
-        self.assertNotContains(weeks, "Second Term")
-        self.assertEqual(self.client.get("/scheme/weeks/2/1/").status_code, 404)
+
+    def test_lessons_lay_out_term_week_and_day(self):
+        self.choose()
+        GroupProgress.objects.create(user=self.solo, group=self.g1)
+        page = self.client.get("/scheme/lessons/")
+        self.assertContains(page, "Level 2 scheme · 1 of 4 done")
+        self.assertContains(page, "First Term <small>1/3</small>", html=False)
+        self.assertContains(page, "Second Term <small>0/1</small>", html=False)
+        self.assertContains(page, "Week 1 · You're here")
+        self.assertContains(page, "Monday")
+        self.assertContains(page, "Tuesday")
+        self.assertContains(page, "The Fox")
+        second = self.client.get("/scheme/lessons/?term=2")
+        self.assertContains(second, "EchoSpell Group 3")
+        self.assertNotContains(second, "The Fox")
+        # The old My weeks address now leads here.
+        self.assertRedirects(self.client.get("/scheme/weeks/"), "/scheme/lessons/", fetch_redirect_response=False)
 
     def test_all_done(self):
         self.choose()

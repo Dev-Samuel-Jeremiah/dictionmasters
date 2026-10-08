@@ -2,9 +2,9 @@
 
    Under the password box on every page where one is set, this shows:
 
-     * the four things the site actually checks, ticking off as they are
-       met — the same four Django checks the form will apply when it is
-       sent, so nothing is accepted here and refused there;
+     * the one thing the site checks — 6 characters or more — ticking off
+       when it's met, so nothing is accepted here and refused there
+       (simple passwords are fine: apps/accounts/password_rules.py);
      * how strong the password is, as a bar and a word;
      * an example, and a button that makes a good one and fills both
        boxes, for anyone who would rather not think of one.
@@ -79,31 +79,28 @@
   }
 
   function judge(password, personal) {
+    // The one thing the site checks: 6 characters or more. Simple passwords
+    // are fine (apps/accounts/password_rules.py); the bar only says how
+    // strong it is, and a common one or one like their name is gently
+    // marked weak, never refused.
     var lower = password.toLowerCase();
     var checks = [
-      { key: "length", label: "8 characters or more", ok: password.length >= 8 },
-      { key: "numbers", label: "Not only numbers", ok: !/^\d+$/.test(password) && password.length > 0 },
-      { key: "common", label: "Not a common password", ok: password.length > 0 && COMMON.indexOf(lower) < 0 },
-      {
-        key: "personal", label: "Not your name or email", ok: password.length > 0 && !personal.some(function (bit) {
-          return lower === bit || sameness(lower, bit) > 0.7;
-        }),
-      },
+      { key: "length", label: "6 characters or more", ok: password.length >= 6 },
     ];
+    var weak = COMMON.indexOf(lower) >= 0 || /^\d+$/.test(password) || personal.some(function (bit) {
+      return lower === bit || sameness(lower, bit) > 0.7;
+    });
 
     var kinds = 0;
     [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].forEach(function (pattern) { if (pattern.test(password)) kinds += 1; });
     var score = 0;
-    if (password.length >= 8) {
+    if (password.length >= 6) {
       score = 1;
-      if (password.length >= 10 && kinds >= 2) score = 2;
-      if (password.length >= 12 && kinds >= 2) score = 3;
-      if (password.length >= 14 && kinds >= 3) score = 4;
-      if (/^(.)\1+$/.test(password) || /^(?:012|123|234|345|456|567|678|789|890|abc|qwe)/.test(password.toLowerCase())) {
-        score = 1;
-      }
+      if (password.length >= 8 && kinds >= 2) score = 2;
+      if (password.length >= 10 && kinds >= 2) score = 3;
+      if (password.length >= 12 && kinds >= 3) score = 4;
+      if (weak || /^(.)\1+$/.test(password)) score = 1;
     }
-    if (checks.some(function (check) { return !check.ok; })) score = Math.min(score, 1);
     return { checks: checks, score: score, accepted: checks.every(function (check) { return check.ok; }) };
   }
 
@@ -146,7 +143,7 @@
     panel.appendChild(list);
 
     panel.appendChild(el("p", "pw-example",
-      'For example: <strong>mango river 47</strong> or <strong>Blue-Gate-8</strong> — easy for you, hard for anyone else.'));
+      'Simple is fine, for example <strong>mango7</strong>. Longer is safer, like <strong>blue gate 47</strong>.'));
 
     var make = el("button", "pw-make", "Suggest a strong password");
     make.type = "button";

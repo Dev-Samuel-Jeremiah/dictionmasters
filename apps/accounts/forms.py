@@ -33,14 +33,13 @@ from apps.schools.models import AccessCode, School
 from .models import User
 
 # Said the same way on every form that sets a password, and matching what
-# the site actually checks (see AUTH_PASSWORD_VALIDATORS): eight characters
-# or more, not all numbers, not one of the common ones, and not made from
-# the name or email already on the form. The registration pages turn this
-# into a live check as the person types (static/js/password_strength.js);
-# without JavaScript it is still shown here.
+# the site actually checks (see AUTH_PASSWORD_VALIDATORS and
+# apps/accounts/password_rules.py): six characters or more — simple ones are
+# fine. The registration pages turn this into a live check as the person
+# types (static/js/password_strength.js); without JavaScript it is still
+# shown here.
 PASSWORD_HELP = (
-    "8 characters or more, not all numbers, and not an easy one to guess. "
-    "Three small words and a number work well — like “mango river 47” or “Blue-Gate-8”."
+    "6 characters or more. Something easy to remember is fine — like “mango7” or “blue gate”."
 )
 
 

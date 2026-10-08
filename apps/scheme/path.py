@@ -2,18 +2,21 @@
 An individual learner's scheme of work, at their own pace.
 
 An individual has no school and no term dates, so they choose a level's
-scheme (SchemeChoice) and work through it as one path: First Term's weeks,
-then Second, then Third. A week opens once every lesson of the week
-before it is done, so they go as fast or as slow as they like. Their
-dashboard shows the next lesson and a My weeks card, the same shape as a
-school student's (timetable.py); "done" means the same as it does there.
-Unlike school students, nothing else is closed to them: Learn stays open.
+scheme (SchemeChoice) and work through it at their own pace: First Term,
+then Second, then Third. Everything is open — they can move around the
+terms, weeks and days as they like until the whole scheme is done. Their
+dashboard shows the next lesson (the first not done, in order) and a
+Lessons card; the Lessons page lays the scheme out term, week and day.
+"Done" means the same as it does for school students (timetable.py), and
+nothing else is closed to them: Learn stays open.
 
     follows_path(user)      an individual learner (not staff, not a child on
                             the simple home)
     choice_for(user)        their SchemeChoice, or None
     path(user, level)       every week with ticks, the current one, the next
                             lesson, and whether it's all done
+    lessons(user, level)    the whole scheme as terms, weeks and days, for
+                            the Lessons page
     schemes_on_offer()      each level with a live scheme, for choosing
 """
 
@@ -44,8 +47,8 @@ def path(user, level):
     """{"weeks", "current", "rows", "next", "complete", "done", "total"}.
 
     weeks: [{"term", "week", "label", "number", "done", "total", "state"}]
-    in path order, state "done", "current" or "locked". rows: the current
-    week's lessons with ticks."""
+    in path order, state "done", "current" (the first not finished) or
+    "todo". rows: the current week's lessons with ticks."""
     entries = list(_entries(level=level))
     done_ids = done_for([user], entries)[user.pk]
     by_week = {}
@@ -59,7 +62,7 @@ def path(user, level):
             state = "current"
             current = key
         else:
-            state = "done" if current is None else "locked"
+            state = "done" if done == len(found) else "todo"
         weeks.append({"term": key[0], "week": key[1], "label": _label(*key), "number": number,
                       "done": done, "total": len(found), "state": state})
     rows = [_row(e, done_ids) for e in _sorted(by_week.get(current, []))]
@@ -75,8 +78,49 @@ def path(user, level):
 
 
 def open_weeks(user, level):
-    """{(term, week)} the learner may open: every week up to the current one."""
-    return {(w["term"], w["week"]) for w in path(user, level)["weeks"] if w["state"] != "locked"}
+    """{(term, week)} the learner may open: all of them."""
+    return {(w["term"], w["week"]) for w in path(user, level)["weeks"]}
+
+
+def lessons(user, level):
+    """The whole scheme for the Lessons page: {"terms", "done", "total",
+    "current"}. terms: [{"number", "label", "done", "total", "weeks"}], each
+    week {"week", "label", "done", "total", "is_current", "days"}, each day
+    {"label", "rows"} Monday to Friday with "any day" first."""
+    from .models import DAY_CHOICES, DAY_ORDER
+
+    entries = list(_entries(level=level))
+    done_ids = done_for([user], entries)[user.pk]
+    state = path(user, level)
+    current = state["current"]
+    labels = dict(DAY_CHOICES)
+    terms = {}
+    for entry in _sorted(entries):
+        term = terms.setdefault(entry.term, {"number": entry.term, "label": TERM_LABELS.get(entry.term, ""),
+                                             "done": 0, "total": 0, "weeks": {}})
+        week = term["weeks"].setdefault(entry.week, {
+            "week": entry.week, "label": f"Week {entry.week}", "done": 0, "total": 0, "days": {},
+            "is_current": bool(current) and (current["term"], current["week"]) == (entry.term, entry.week),
+        })
+        row = _row(entry, done_ids)
+        day = week["days"].setdefault(entry.day, {"key": entry.day, "label": labels.get(entry.day) or "Any day this week",
+                                                  "rows": []})
+        day["rows"].append(row)
+        for bucket in (term, week):
+            bucket["total"] += 1
+            bucket["done"] += row["done"]
+    ordered = []
+    for number in sorted(terms):
+        term = terms[number]
+        weeks = []
+        for key in sorted(term["weeks"]):
+            week = term["weeks"][key]
+            week["days"] = sorted(week["days"].values(),
+                                  key=lambda d: DAY_ORDER.index(d["key"]) if d["key"] in DAY_ORDER else 0)
+            weeks.append(week)
+        ordered.append({**term, "weeks": weeks})
+    return {"terms": ordered, "current": current,
+            "done": sum(t["done"] for t in ordered), "total": sum(t["total"] for t in ordered)}
 
 
 def schemes_on_offer():

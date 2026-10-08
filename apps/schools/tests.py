@@ -151,8 +151,9 @@ class LoginToolsTests(TestCase):
         self.client.post(f"/school/members/{self.student.pk}/reset-password/", {"password": "banana22"})
         self.student.refresh_from_db()
         self.assertTrue(self.student.check_password("banana22"))
-        weak = self.client.post(f"/school/members/{self.teacher.pk}/reset-password/", {"password": "123456"})
-        self.assertEqual(weak.status_code, 400)
+        # Simple passwords are fine now (apps/accounts/password_rules.py); too short isn't.
+        short = self.client.post(f"/school/members/{self.teacher.pk}/reset-password/", {"password": "12345"})
+        self.assertEqual(short.status_code, 400)
 
     def test_download_everyone_or_just_students_as_excel(self):
         self.unlock()

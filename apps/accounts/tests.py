@@ -42,22 +42,34 @@ class PasswordGuidanceTests(TestCase):
                     "/accounts/register/student/", "/accounts/join/"]:
             page = self.client.get(url)
             self.assertEqual(page.status_code, 200, url)
-            self.assertContains(page, "8 characters or more", msg_prefix=url)
-            self.assertContains(page, "mango river 47", msg_prefix=url)
-        self.assertIn("8 characters or more", PASSWORD_HELP)
+            self.assertContains(page, "6 characters or more", msg_prefix=url)
+        self.assertIn("6 characters or more", PASSWORD_HELP)
 
     def test_the_guidance_matches_what_is_actually_checked(self):
-        """The four things the page ticks off are the four the site
-        enforces, so nothing is promised here and refused on sending."""
+        """What the page ticks off is what the site enforces, so nothing is
+        promised here and refused on sending."""
         from django.conf import settings
 
         enforced = {rule["NAME"].rsplit(".", 1)[-1] for rule in settings.AUTH_PASSWORD_VALIDATORS}
         self.assertEqual(enforced, {
-            "UserAttributeSimilarityValidator",    # "Not your name or email"
-            "MinimumLengthValidator",              # "8 characters or more"
-            "CommonPasswordValidator",             # "Not a common password"
-            "NumericPasswordValidator",            # "Not only numbers"
+            "MinimumLengthValidator",              # "6 characters or more"
+            "StaffPasswordValidator",              # staff only: the full checks
         })
+
+    def test_simple_passwords_are_fine_but_staff_need_strong_ones(self):
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
+
+        learner = get_user_model()(email="kid@example.com", first_name="Kid")
+        validate_password("123456", learner)               # simple: fine
+        validate_password("mango7", learner)
+        with self.assertRaises(ValidationError):
+            validate_password("12345", learner)            # under 6 characters
+        staff = get_user_model()(email="boss@example.com", first_name="Boss", is_staff=True)
+        for weak in ("123456", "mango7", "password1"):
+            with self.assertRaises(ValidationError):
+                validate_password(weak, staff)
+        validate_password("River-gate-77", staff)
 
 
 class NamingTests(TestCase):

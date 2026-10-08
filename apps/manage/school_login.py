@@ -37,7 +37,7 @@ def add_login_fields(form, school):
     form.fields[PASSWORD] = forms.CharField(
         label="School login: password", required=False, strip=False,
         widget=forms.PasswordInput(attrs={"autocomplete": "new-password", **saved}, render_value=True),
-        help_text="At least 8 characters, not just numbers." + keep,
+        help_text="At least 6 characters." + keep,
     )
     form.fields[CONFIRM] = forms.CharField(
         label="School login: confirm password", required=False, strip=False,

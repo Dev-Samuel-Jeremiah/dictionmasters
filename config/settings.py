@@ -293,11 +293,11 @@ DATABASES = {"default": POSTGRES if USE_POSTGRES else SQLITE}
 # Password validation
 # ---------------------------------------------------------------------------
 
+# Simple passwords are fine for everyone: just 6 characters or more. Staff
+# accounts (the control room) keep the full checks (apps/accounts/password_rules.py).
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 6}},
+    {"NAME": "apps.accounts.password_rules.StaffPasswordValidator"},
 ]
 
 

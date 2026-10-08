@@ -75,7 +75,7 @@ class PasswordTests(TestCase):
         self.forgot("teacher@example.com")
         link = self.link_in(mail.outbox[0]).split("://", 1)[1].split("/", 1)[1]
         page = self.client.get("/" + link, follow=True)
-        response = self.client.post(page.redirect_chain[-1][0], {"new_password1": "12345678", "new_password2": "12345678"})
+        response = self.client.post(page.redirect_chain[-1][0], {"new_password1": "12345", "new_password2": "12345"})
         self.assertEqual(response.status_code, 200)
         self.teacher.refresh_from_db()
         self.assertTrue(self.teacher.check_password("Old-pass-word-1"))

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Lessons — {{ choice.level }} — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/class_dashboard.css' %}"><link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  An individual learner's Lessons (apps/scheme/views.lessons, path.lessons):
+  their scheme term by term, week by week, day by day. Everything is open;
+  the current week (the first not finished) opens by itself.
+{% endcomment %}
+<div class="px-page cd sh">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/heroGirl.jpg' %}" alt="">
+    <h1>Lessons</h1>
+    <p>{{ choice.level }} scheme · {{ done }} of {{ total }} done</p>
+  </section>
+  <div class="px-wrap">
+    <span class="px-meter ls-meter" aria-hidden="true"><i style="width: {% widthratio done total 100 %}%"></i></span>
+
+    {% if terms %}
+    <nav class="px-chips cd-levels" aria-label="Term">
+      {% for t in terms %}<a href="?term={{ t.number }}" class="px-chip{% if t.number == shown %} is-on{% endif %}">{{ t.label }} <small>{{ t.done }}/{{ t.total }}</small></a>{% endfor %}
+    </nav>
+
+    {% if term %}
+    <div class="ls-weeks">
+      {% for week in term.weeks %}
+      <details class="px-card ls-week{% if week.done == week.total %} is-done{% endif %}"{% if week.is_current %} open{% endif %}>
+        <summary>
+          <span class="sh-item__tick" aria-hidden="true">{% if week.done == week.total %}&#10003;{% else %}{{ week.week }}{% endif %}</span>
+          <span class="ls-week__text"><b>{{ week.label }}{% if week.is_current %} · You're here{% endif %}</b><small>{{ week.done }} of {{ week.total }} done</small></span>
+        </summary>
+        {% for day in week.days %}
+        <div class="ls-day">
+          <p class="ls-day__label">{{ day.label }}</p>
+          {% include "scheme/_entry_list.html" with rows=day.rows %}
+        </div>
+        {% endfor %}
+      </details>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="px-card px-empty" style="margin-top: 16px">The {{ choice.level }} scheme isn't ready yet.</div>
+    {% endif %}
+    <p class="sh-change"><a href="{% url 'accounts:dashboard' %}">&larr; Home</a> · <a href="{% url 'scheme:choose' %}">Change scheme</a></p>
+  </div>
+</div>
+{% endblock %}
