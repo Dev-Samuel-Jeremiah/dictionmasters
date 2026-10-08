@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}My dashboard — Diction Masters{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}">{% if lesson %}<link rel="stylesheet" href="{% static 'css/learner_home.css' %}">{% endif %}{% endblock %}
 {% block extra_js %}<script src="{% static 'js/switcher.js' %}" defer></script>{% endblock %}
 
 {% block content %}
@@ -66,6 +66,8 @@
 
     {# ================= Continue, streak, this week ================= #}
     <div class="px-top">
+      {# Individuals get Today's lesson here instead (views.dashboard); it already covers carrying on in EchoSpell. #}
+      {% if lesson %}{% include "accounts/_todays_lesson.html" %}{% else %}
       <a href="{% if echospell.resume %}{{ echospell.resume.url }}{% else %}{{ echospell.url }}{% endif %}" class="px-card px-cont">
         <span class="px-cont__ic"><img src="{% if dashboard_card_images.progress_echospell %}{{ dashboard_card_images.progress_echospell }}{% else %}{% static 'img/app/kidThumb.jpg' %}{% endif %}" alt=""></span>
         <span class="px-cont__t">
@@ -76,6 +78,7 @@
         </span>
         <span class="px-playbig" aria-hidden="true">{% include "includes/icon.html" with name="play" size=22 %}</span>
       </a>
+      {% endif %}
 
       <div class="px-duo">
         <div class="px-card px-streak" aria-label="Study streak: {{ streak }} day{{ streak|pluralize }}. Best: {{ best_streak }}.">
@@ -214,6 +217,13 @@
             <span class="px-item__it"><b>My results</b><span>{% if assessment_average is not None %}{{ assessments_taken }} assessment{{ assessments_taken|pluralize }}, {{ assessment_average }}% average{% else %}Scores across all programmes{% endif %}</span></span>
             <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
           </a>
+          {% if user.is_individual %}
+          <a href="{% url 'accounts:grown_ups' %}" class="px-item">
+            <span class="px-item__ii t-butter">{% include "includes/icon.html" with name="user" size=22 %}</span>
+            <span class="px-item__it"><b>For grown-ups</b><span>Progress for parents, and the simple home for a child</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+          </a>
+          {% endif %}
           <a href="{% url 'reference_library:home' %}" class="px-item">
             <span class="px-item__ii t-stone">{% include "includes/icon.html" with name="search" size=22 %}</span>
             <span class="px-item__it"><b>Reference Library</b><span>Grammar, spelling rules, word origins and more</span></span>

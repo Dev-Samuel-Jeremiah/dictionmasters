@@ -1,0 +1,10 @@
+{# The "Today's lesson" button (dashboard_data.todays_lesson): the whole simple home, and the first card on an individual's dashboard. Needs `lesson`. #}
+<a href="{{ lesson.url }}" class="px-card px-cont lh-lesson" data-todays-lesson>
+  <span class="px-cont__t">
+    <span class="lh-lesson__lab">Today's lesson</span>
+    <span class="px-cont__title">{{ lesson.title }}</span>
+    <span class="px-cont__meta">{{ lesson.label }} · {{ lesson.detail }}</span>
+    {% if lesson.percent is not None %}<span class="px-meter" aria-hidden="true"><i style="width: {{ lesson.percent }}%"></i></span>{% endif %}
+  </span>
+  <span class="px-playbig lh-lesson__go" aria-hidden="true">{% include "includes/icon.html" with name="play" size=28 %}</span>
+</a>

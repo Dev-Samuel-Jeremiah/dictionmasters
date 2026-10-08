@@ -14,9 +14,10 @@ from apps.billing.access import subscription_for
 from apps.billing.models import Plan
 from apps.billing.services import begin_access
 
-from .dashboard_data import learner_dashboard
+from .dashboard_data import learner_dashboard, learner_home, todays_lesson
 from .forms import (
     EmailAuthenticationForm,
+    SimpleHomeForm,
     IndividualRegistrationForm,
     SchoolTeamMemberForm,
     SchoolTeamRegistrationForm,
@@ -431,13 +432,28 @@ def delete_account(request):
     return render(request, "accounts/delete_account.html", {"error": error})
 
 
+def _uses_simple_home(user):
+    """Students always get the one-button home; an individual learner
+    gets it when a grown-up has switched it on for them."""
+    return user.is_student or (user.is_individual and user.simple_home)
+
+
 @login_required(login_url="accounts:login")
 def dashboard(request):
-    """The learner's home: streak, progress across every tool, where to
-    carry on, and the tools themselves."""
+    """The learner's home. Students (and children on an individual
+    account) get one big "Today's lesson" button; everyone else gets the
+    full dashboard: streak, progress across every tool, where to carry
+    on, and the tools themselves."""
     if request.user.role == User.Role.SCHOOL_ADMIN:
         return redirect("schools:dashboard")
+    if _uses_simple_home(request.user):
+        home = learner_home(request.user)
+        home["switcher"] = switcher.context(request)
+        return render(request, "accounts/learner_home.html", home)
     dashboard = learner_dashboard(request.user)
+    if request.user.is_individual:
+        # Adults keep every tool, but still get a clear place to start.
+        dashboard["lesson"] = todays_lesson(request.user, dashboard["echospell"], dashboard["modules"])
     dashboard["dashboard_card_images"] = {
         card.key.replace("-", "_"): card.image.url
         for card in DashboardCardImage.objects.exclude(image="")
@@ -445,3 +461,28 @@ def dashboard(request):
     }
     dashboard["switcher"] = switcher.context(request)
     return render(request, "accounts/dashboard.html", dashboard)
+
+
+@login_required(login_url="accounts:login")
+def grown_ups(request):
+    """For grown-ups: the progress, results, plan and app links that were
+    taken off the child's home so the home has one clear button. An
+    individual account can switch the simple home on or off here."""
+    if request.user.role == User.Role.SCHOOL_ADMIN:
+        return redirect("schools:dashboard")
+    form = None
+    if request.user.is_individual:
+        # Bound on any POST: an unticked box sends nothing, and that
+        # still means "switch it off".
+        form = SimpleHomeForm(request.POST if request.method == "POST" else None, instance=request.user)
+        if request.method == "POST" and form.is_valid():
+            form.save()
+            messages.success(request, "The simple home is on." if request.user.simple_home else "The full dashboard is back.")
+            return redirect("accounts:grown_ups")
+    elif request.method == "POST":
+        # Only an individual account has the switch; students always
+        # get the simple home and teachers never do.
+        return redirect("accounts:grown_ups")
+    context = learner_dashboard(request.user)
+    context["home_form"] = form
+    return render(request, "accounts/grown_ups.html", context)

@@ -22,7 +22,7 @@ NAV_SECTIONS = (
         "/learning-tools/", "/lesson-audio/", "/book/", "/tricks/", "/echospell/", "/learning-modules/",
         "/reading-club/", "/assembly-recitals/", "/conversational-dialogue/", "/reference-library/", "/library/", "/radio/", "/quick-words/",
     )),
-    ("me", ("/billing/", "/videos/offline/")),
+    ("me", ("/billing/", "/videos/offline/", "/accounts/grown-ups/")),
     ("home", ("/accounts/dashboard/", "/school/dashboard/")),
 )
 

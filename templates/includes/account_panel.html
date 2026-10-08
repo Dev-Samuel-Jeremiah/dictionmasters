@@ -18,7 +18,7 @@
     </a>
     <a href="{% url 'learning_tools:hub' %}" class="account-menu__item"{% if '/learning-tools/' in request.path %} aria-current="page"{% endif %}>
       <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="grid" size=18 %}</span>
-      <span class="account-menu__text"><span>Learning tools</span><small>Every tool in one place</small></span>
+      <span class="account-menu__text"><span>Learn</span><small>All courses and tools</small></span>
     </a>
     {% if billing.can_pay %}
     <a href="{% url 'billing:account' %}" class="account-menu__item"{% if request.path == '/billing/' %} aria-current="page"{% endif %}>

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Home — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}"><link rel="stylesheet" href="{% static 'css/learner_home.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/switcher.js' %}" defer></script>{% endblock %}
+
+{% block content %}
+{% comment %}
+  The simple home (apps/accounts/views.dashboard): one big button, so a
+  child always knows where to start. Everything else is one tap away under
+  Learn; progress, results and the plan are on the For grown-ups page.
+{% endcomment %}
+<div class="px-page px-home lh">
+
+  <section class="px-hero lh-hero">
+    <img class="px-hero__img" src="{% static 'img/app/heroBoy.jpg' %}" alt="">
+    <div class="px-hero__text">
+      <p class="px-hero__date">{{ today|date:"l j F" }}</p>
+      <h1 class="lh-hero__title">{{ greeting }},<br>{{ user.first_name|default:"there" }}</h1>
+      {% include "accounts/_switcher.html" %}
+    </div>
+  </section>
+
+  <div class="px-wrap px-lift lh-body">
+    {% include "accounts/_todays_lesson.html" %}
+
+    <p class="lh-streak">
+      <span class="px-streak__flame" aria-hidden="true">{% include "includes/icon.html" with name="flame" size=22 %}</span>
+      {% if streak %}<b>{{ streak }} day{{ streak|pluralize }} in a row.</b> {% if practised_today %}Well done today!{% else %}Practise today to keep it going.{% endif %}{% else %}Start a streak today.{% endif %}
+    </p>
+
+    <nav class="lh-more" aria-label="More">
+      <a href="{% url 'learning_tools:hub' %}" class="lh-more__link">
+        <span class="px-item__ii t-sky" aria-hidden="true">{% include "includes/icon.html" with name="book" size=24 %}</span>
+        <b>Learn</b>
+      </a>
+      <a href="{% url 'accounts:grown_ups' %}" class="lh-more__link">
+        <span class="px-item__ii t-butter" aria-hidden="true">{% include "includes/icon.html" with name="user" size=24 %}</span>
+        <b>For grown-ups</b>
+      </a>
+    </nav>
+  </div>
+</div>
+{% endblock %}

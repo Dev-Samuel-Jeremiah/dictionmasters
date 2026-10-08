@@ -185,6 +185,67 @@ def _next_module_day(user):
     return result
 
 
+def todays_lesson(user, echospell=None, modules=None):
+    """The one thing a learner should do next — the big button on their
+    home. Pass in what learner_dashboard already worked out to save
+    looking it up twice.
+
+    EchoSpell comes first because it is filtered by level; Learning
+    Modules aren't yet, so putting them first could send a Level 9 pupil
+    to a nursery day. The 44 Academy keeps no per-learner "next sound",
+    so the last resort is Daily Practice, which always has a ready set.
+    """
+    echospell = echospell or _next_echospell(user)
+    resume = echospell["resume"]
+    if resume:
+        group = resume["group"]
+        return {
+            "kind": "echospell", "label": "Carry on where you stopped", "url": resume["url"],
+            "title": f"EchoSpell: {group.level.name}, Group {group.number}",
+            "detail": resume["category"].name, "percent": echospell["percent"],
+        }
+    if echospell["group"]:
+        group = echospell["group"]
+        return {
+            "kind": "echospell", "label": "Your next lesson", "url": echospell["url"],
+            "title": f"EchoSpell: {group.level.name}, Group {group.number}",
+            "detail": f"{echospell['completed']} of {echospell['total']} groups done", "percent": echospell["percent"],
+        }
+    modules = modules or _next_module_day(user)
+    if modules["day"]:
+        day = modules["day"]
+        return {
+            "kind": "modules", "label": "Your next lesson", "url": modules["url"],
+            "title": f"{day.week.term.module.name}: {day.get_day_name_display()}",
+            "detail": f"{day.week.term.name} · {day.week.display_name}", "percent": modules["percent"],
+        }
+    return {
+        "kind": "daily_practice", "label": "Today's practice", "url": reverse("daily_practice:home"),
+        "title": "Daily Practice", "detail": "A word, a sentence and a tongue twister", "percent": None,
+    }
+
+
+def _greeting(now):
+    hour = timezone.localtime(now).hour
+    return "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
+
+
+def learner_home(user):
+    """Just what the one-button home shows: a greeting, the streak and
+    today's lesson. Lighter than learner_dashboard, which also counts
+    every tool's results for the grown-ups."""
+    now = timezone.now()
+    today = _local_date(now)
+    active_days = {_local_date(e[0]) for e in _events(user)}
+    return {
+        "greeting": _greeting(now),
+        "today": today,
+        "streak": _streak(active_days, today),
+        "practised_today": today in active_days,
+        "lesson": todays_lesson(user),
+    }
+
+
 def learner_dashboard(user):
     now = timezone.now()
     today = _local_date(now)
@@ -196,13 +257,10 @@ def learner_dashboard(user):
     marked = AssessmentAttempt.objects.filter(user=user, status__in=["submitted", "marked"])
     echospell_attempts = ActivityAttempt.objects.filter(user=user, status__in=["marked", "reviewed"])
 
-    hour = timezone.localtime(now).hour
-    greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
-
     week = _week(events, today)
     return {
         "orbit_symbols": ORBIT_SYMBOLS,
-        "greeting": greeting,
+        "greeting": _greeting(now),
         "today": today,
         "streak": _streak(active_days, today),
         "best_streak": _best_streak(active_days),

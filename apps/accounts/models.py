@@ -106,6 +106,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     # enabled. It is never exposed in a form or admin fieldset.
     encrypted_login_password = models.TextField(blank=True, default="", editable=False)
 
+    # An individual account is sometimes a parent signing up a child. This
+    # gives them the student's one-button home instead of the full
+    # dashboard; set from the For grown-ups page. Students always get the
+    # simple home, so it only matters for individual learners.
+    simple_home = models.BooleanField(
+        default=False,
+        help_text="Individual learners only: show the simple one-button home instead of the full dashboard.",
+    )
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(
         default=False,

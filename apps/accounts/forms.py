@@ -10,6 +10,9 @@ Four ways to get an account:
   paying for their own access.
 - TeacherRegistrationForm: a teacher joining with their school's code.
 
+SimpleHomeForm is not a sign-up: it is the For grown-ups page's switch
+for the simple one-button home.
+
 Every registration also asks how to begin: the free trial, or paying for
 a plan now (see StartChoiceMixin). Plans and prices come from billing.
 
@@ -536,3 +539,13 @@ class EmailAuthenticationForm(StyledFormMixin, AuthenticationForm):
                 return by_name
         stored_email = User.objects.filter(email__iexact=typed).values_list("email", flat=True).first()
         return stored_email or typed.lower()
+
+
+class SimpleHomeForm(forms.ModelForm):
+    """The one switch on the For grown-ups page: a parent who signed up a
+    child as an individual learner can give them the simple home."""
+
+    class Meta:
+        model = User
+        fields = ["simple_home"]
+        labels = {"simple_home": "Use the simple home"}

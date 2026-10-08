@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}For grown-ups — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/learner_home.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  For grown-ups (apps/accounts/views.grown_ups): progress, results, the
+  plan and the app, taken off the child's home so the home keeps one
+  clear button. An individual account can switch the simple home here.
+{% endcomment %}
+<div class="px-page">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/rParent.jpg' %}" alt="">
+    <h1>For grown-ups</h1>
+    <p>How {{ user.first_name|default:"this learner" }} is getting on{% if level %}, {{ level }}{% endif %}.</p>
+  </section>
+
+  <div class="px-wrap">
+    {% if home_form %}
+    <form method="post" class="px-card gu-switch">
+      {% csrf_token %}
+      <span class="gu-switch__text">
+        <b>Use the simple home</b>
+        <span>For a child using this account: the home shows one big "Today's lesson" button instead of the full dashboard. Everything else stays under Learn.</span>
+      </span>
+      <label>{{ home_form.simple_home }} Simple home on</label>
+      <button type="submit">Save</button>
+    </form>
+    {% endif %}
+
+    {# ================= Streak and this week ================= #}
+    <div class="px-sec"><h2>This week</h2></div>
+    <div class="px-duo">
+      <div class="px-card px-streak" aria-label="Study streak: {{ streak }} day{{ streak|pluralize }}. Best: {{ best_streak }}.">
+        <b><span class="px-streak__flame">{% include "includes/icon.html" with name="flame" size=24 %}</span>{{ streak }}</b>
+        <span class="px-small px-muted">day streak.{% if practised_today %} Practised today.{% endif %}</span>
+        {% if best_streak %}<span class="px-pill">Best: {{ best_streak }}</span>{% endif %}
+      </div>
+      <div class="px-card px-weekcard">
+        <span class="px-weekcard__head"><b>Sessions</b><span class="px-small px-muted">{{ week_total }} this week</span></span>
+        <span class="px-week" role="img" aria-label="Practice sessions over the last seven days">
+          {% for day in week %}
+          <span class="px-week__col"><span class="px-week__slot"><span class="px-week__bar{% if day.count %} is-on{% endif %}{% if day.is_today %} is-today{% endif %}" style="height: {{ day.height }}%"></span></span>{{ day.label|slice:":1" }}</span>
+          {% endfor %}
+        </span>
+      </div>
+    </div>
+
+    {# ================= Progress in each course ================= #}
+    <div class="px-sec"><h2>Progress</h2></div>
+    <div class="px-grid-list" style="margin-top: 0">
+      <a href="{% url 'echospell:hub' %}" class="px-item">
+        <img class="px-thumb" src="{% static 'img/app/cEcho.jpg' %}" alt="">
+        <span class="px-item__it"><b>EchoSpell</b><span>{{ echospell.completed }} of {{ echospell.total }} groups{% if activity_average is not None %}, {{ activity_average }}% average over {{ activities_done }} activit{{ activities_done|pluralize:"y,ies" }}{% endif %}</span><span class="px-meter"><i style="width: {{ echospell.percent }}%"></i></span></span>
+      </a>
+      <a href="{% url 'book:home' %}" class="px-item">
+        <img class="px-thumb" src="{% static 'img/app/c44.jpg' %}" alt="">
+        <span class="px-item__it"><b>The 44 Academy</b><span>{{ academy_done }} of {{ academy_sounds }} sounds complete</span><span class="px-meter"><i style="width: {% widthratio academy_done academy_sounds 100 %}%"></i></span></span>
+      </a>
+      <a href="{% url 'tricks:home' %}" class="px-item">
+        <img class="px-thumb" src="{% static 'img/app/cSB.jpg' %}" alt="">
+        <span class="px-item__it"><b>Tricks to Sound Fluent</b><span>{{ tricks_done }} of {{ tricks_count }} tricks complete</span><span class="px-meter"><i style="width: {% widthratio tricks_done tricks_count 100 %}%"></i></span></span>
+      </a>
+      <a href="{% url 'learning_modules:hub' %}" class="px-item">
+        <img class="px-thumb" src="{% static 'img/app/cSchool.jpg' %}" alt="">
+        <span class="px-item__it"><b>Learning Modules</b><span>{{ modules.completed }} of {{ modules.total }} days complete</span><span class="px-meter"><i style="width: {{ modules.percent }}%"></i></span></span>
+      </a>
+      <a href="{% url 'tutor:hub' %}" class="px-item">
+        <img class="px-thumb" src="{% static 'img/app/cYala.jpg' %}" alt="">
+        <span class="px-item__it"><b>Reading with Yela</b><span>{% if tutor.readings %}{{ tutor.readings }} reading{{ tutor.readings|pluralize }}{% if tutor.level %}, last one {{ tutor.level }}{% if tutor.accuracy %} at {{ tutor.accuracy }}% accurate{% endif %}{% endif %}{% else %}No readings yet{% endif %}</span></span>
+      </a>
+    </div>
+
+    <div class="px-cols">
+      {# ================= Recent activity ================= #}
+      <section>
+        <div class="px-sec"><h2>Recent activity</h2></div>
+        {% if feed %}
+        <ol class="px-list">
+          {% for item in feed %}
+          <li>
+            <a href="{{ item.url }}" class="px-item">
+              <span class="px-item__ii {% if item.kind == 'echospell' %}t-sky{% elif item.kind == 'clash' %}t-blush{% elif item.kind == 'modules' %}t-mint{% else %}t-butter{% endif %}">{% include "includes/icon.html" with name="check" size=22 stroke="2.6" %}</span>
+              <span class="px-item__it"><b>{{ item.title }}</b><span>{{ item.detail }}</span></span>
+              <time class="px-item__when" datetime="{{ item.when|date:'c' }}">{% if item.recent %}Just now{% else %}{{ item.when|timesince }} ago{% endif %}</time>
+            </a>
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}
+        <div class="px-card px-empty">Nothing yet. Finished lessons, activities and games show up here.</div>
+        {% endif %}
+      </section>
+
+      {# ================= Results and account ================= #}
+      <section>
+        <div class="px-sec"><h2>Results and account</h2></div>
+        <div class="px-list">
+          <a href="{% url 'assessments:my_results' %}" class="px-item">
+            <span class="px-item__ii t-lilac">{% include "includes/icon.html" with name="chart" size=22 %}</span>
+            <span class="px-item__it"><b>All results</b><span>{% if assessment_average is not None %}{{ assessments_taken }} assessment{{ assessments_taken|pluralize }}, {{ assessment_average }}% average{% else %}No assessments yet{% endif %}{% if clash_games %} · Diction Clash best {{ clash_best }} in {{ clash_games }} game{{ clash_games|pluralize }}{% endif %}</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+          </a>
+          <a href="{% url 'assessments:hub' %}" class="px-item">
+            <span class="px-item__ii t-mint">{% include "includes/icon.html" with name="compass" size=22 %}</span>
+            <span class="px-item__it"><b>Find the right level</b><span>Take a placement test</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+          </a>
+          <a href="{% url 'quick_words:hub' %}" class="px-item">
+            <span class="px-item__ii t-butter">{% include "includes/icon.html" with name="bookmark" size=22 %}</span>
+            <span class="px-item__it"><b>Saved words</b><span>{{ saved_words }} word{{ saved_words|pluralize }} in their lists</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+          </a>
+          {% if billing.can_pay %}
+          <a href="{% url 'billing:account' %}" class="px-item">
+            <span class="px-item__ii t-sky">{% include "includes/icon.html" with name="card" size=22 %}</span>
+            <span class="px-item__it"><b>{% if billing.state == "active" %}My plan{% else %}Plans and billing{% endif %}</b><span>Plans, payments and receipts</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+          </a>
+          {% endif %}
+          {% if not native_app %}
+          <a href="{% url 'native_app_get' %}" class="px-item">
+            <span class="px-item__ii t-stone">{% include "includes/icon.html" with name="dl" size=22 %}</span>
+            <span class="px-item__it"><b>Get the app</b><span>Diction Masters on a phone or tablet</span></span>
+            <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+          </a>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

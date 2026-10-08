@@ -25,68 +25,120 @@ BOOK_SCAN_IMAGE_MAX_BYTES = 15 * 1024 * 1024
 BOOK_SCAN_IMAGE_MAX_PIXELS = 50_000_000
 
 
+# Every course and tool on the Learn page, once each, in the order shown.
+# Site search (apps/platform_search) looks through this list too, so every
+# entry must have a working url_name. `section` picks the Learn page's
+# heading; `icon` and `tone` are the icon include's name and a theme.css
+# tint, and `image` a picture used instead of the icon. `teachers` hides
+# a tool from students.
+SECTIONS = [
+    ("courses", "Courses"),
+    ("practise", "Practise and play"),
+    ("read", "Read, listen and look up"),
+    ("teachers", "For teachers"),
+]
+
 TOOLS = [
-    {
-        "name": "AI Reading Tutor",
-        "blurb": "Read a passage aloud to a live tutor. It stops to help with any word you mispronounce, then gives you your reading level and feedback straight away.",
-        "url_name": "tutor:hub", "available": True, "icon": "tutor",
-    },
-    {
-        "name": "Lesson Notes to Audio",
-        "blurb": "For teachers: upload, paste or generate a lesson note, hear it read in a natural British voice, and practise its key words before you teach.",
-        "url_name": "lesson_audio:hub", "available": True, "icon": "note-audio", "teachers": True,
-    },
-    {
-        "name": "Scan & Listen",
-        "blurb": "Photograph a page from any book, turn it into editable text, and listen as it is read aloud.",
-        "url_name": "learning_tools:book_scanner", "available": True, "icon": "scan",
-    },
-    {
-        "name": "Daily Practice",
-        "blurb": "A fresh set of pronunciation drills — a word, a sentence and a tongue twister — pulled at random from the 44 Academy each day.",
-        "url_name": "daily_practice:home", "available": True, "icon": "daily-practice",
-    },
     {
         "name": "44 Academy",
         "blurb": "A full lesson for every sound of English: articulation, word bank, sentence practice, passages, conversations, twisters and minimal pairs.",
-        "url_name": "book:home", "available": True, "icon": "book",
+        "url_name": "book:home", "available": True, "section": "courses", "icon": "cap", "tone": "t-butter", "image": "img/app/c44.jpg",
+    },
+    {
+        "name": "EchoSpell",
+        "blurb": "Spelling and phonics by level, with scored activities.",
+        "url_name": "echospell:hub", "available": True, "section": "courses", "icon": "abc", "tone": "t-sky", "image": "img/app/cEcho.jpg",
     },
     {
         "name": "Tricks to Sound Fluent",
         "blurb": "The tricks that make English flow, each a full lesson: the trick, a word list, sentence practice, passages, conversations, twisters and minimal pairs.",
-        "url_name": "tricks:home", "available": True, "icon": "tricks",
+        "url_name": "tricks:home", "available": True, "section": "courses", "icon": "spark", "tone": "t-blush", "image": "img/app/cSB.jpg",
+    },
+    {
+        "name": "Learning Modules",
+        "blurb": "Term by term, week by week, Monday to Friday.",
+        "url_name": "learning_modules:hub", "available": True, "section": "courses", "icon": "book", "tone": "t-mint", "image": "img/app/cSchool.jpg",
     },
     {
         "name": "Reading Club",
         "blurb": "This term's reading book, chapter by chapter — listen to the model reading, follow the text, and work through First, Second and Third term in order.",
-        "url_name": "reading_club:hub", "available": True, "icon": "reading-club",
+        "url_name": "reading_club:hub", "available": True, "section": "courses", "icon": "shelf", "tone": "t-lilac",
     },
     {
-        "name": "Reference Library",
-        "blurb": "Look things up — grammar points, spelling rules, word origins and anything else worth researching, browsable by topic or searchable by keyword.",
-        "url_name": "reference_library:home", "available": True,
+        "name": "Conversational Dialogue",
+        "blurb": "A short conversation for every school day, by level.",
+        "url_name": "conversational_dialogue:hub", "available": True, "section": "courses", "icon": "mic", "tone": "t-butter", "image": "img/app/practiceGirl.jpg",
+    },
+    {
+        "name": "Assembly Recitals",
+        "blurb": "Days, months, numbers and diction songs to say together.",
+        "url_name": "assembly_recitals:hub", "available": True, "section": "courses", "icon": "mic", "tone": "t-sky", "image": "img/app/teacher.jpg",
+    },
+    {
+        "name": "Daily Practice",
+        "blurb": "A fresh set of pronunciation drills — a word, a sentence and a tongue twister — pulled at random from the 44 Academy each day.",
+        "url_name": "daily_practice:home", "available": True, "section": "practise", "icon": "calendar", "tone": "t-mint",
+    },
+    {
+        "name": "Read with Yela",
+        "blurb": "Your AI reading tutor: read a passage aloud and it stops to help with any word you mispronounce, then gives you your reading level and feedback straight away.",
+        "url_name": "tutor:hub", "available": True, "section": "practise", "icon": "robot", "tone": "t-sky", "image": "img/app/cYala.jpg",
+    },
+    {
+        "name": "Diction Clash",
+        "blurb": "Timed games built from your lessons. Fastest correct answers win.",
+        "url_name": "clash:hub", "available": True, "section": "practise", "icon": "swords", "tone": "t-blush",
+    },
+    {
+        "name": "Quick Words",
+        "blurb": "Hear any word, see its meaning and save it to your lists.",
+        "url_name": "quick_words:hub", "available": True, "section": "practise", "icon": "words", "tone": "t-butter",
+    },
+    {
+        "name": "Phonemic chart",
+        "blurb": "Every sound of English, with audio.",
+        "url_name": "book:phonemic_chart", "available": True, "section": "practise", "icon": "ipa", "tone": "t-sky",
+    },
+    {
+        "name": "Scan & Listen",
+        "blurb": "Photograph a page from any book, turn it into editable text, and listen as it is read aloud.",
+        "url_name": "learning_tools:book_scanner", "available": True, "section": "read", "icon": "scan", "tone": "t-sky",
     },
     {
         "name": "Diction Library",
         "blurb": "Books, stories, audio and video shared by Diction Masters and your school.",
-        "url_name": "diction_library:hub", "available": True, "icon": "diction-library",
+        "url_name": "diction_library:hub", "available": True, "section": "read", "icon": "shelf", "tone": "t-mint",
     },
     {
         "name": "Diction Radio",
         "blurb": "Tune in to pronunciation, storytelling and language programmes, played one after another.",
-        "url_name": "diction_radio:home", "available": True, "icon": "diction-radio",
+        "url_name": "diction_radio:home", "available": True, "section": "read", "icon": "radio", "tone": "t-butter",
+    },
+    {
+        "name": "Reference Library",
+        "blurb": "Look things up — grammar points, spelling rules, word origins and anything else worth researching, browsable by topic or searchable by keyword.",
+        "url_name": "reference_library:home", "available": True, "section": "read", "icon": "search", "tone": "t-stone",
+    },
+    {
+        "name": "Lesson Notes to Audio",
+        "blurb": "For teachers: upload, paste or generate a lesson note, hear it read in a natural British voice, and practise its key words before you teach.",
+        "url_name": "lesson_audio:hub", "available": True, "section": "teachers", "icon": "note-audio", "tone": "t-butter", "teachers": True,
     },
 ]
 
 
 @login_required
 def hub(request):
-    """The launcher for every learning tool. New tools join this list
-    as they're built, each as its own app."""
+    """Learn: every course and tool, once each, under a few plain
+    headings. New tools join TOOLS as they're built, each as its own app."""
     tools = TOOLS
     if request.user.is_student and not request.user.is_staff:
         tools = [tool for tool in TOOLS if not tool.get("teachers")]
-    return render(request, "learning_tools/hub.html", {"tools": tools})
+    sections = [
+        {"key": key, "title": title, "tools": [tool for tool in tools if tool["section"] == key]}
+        for key, title in SECTIONS
+    ]
+    return render(request, "learning_tools/hub.html", {"sections": [s for s in sections if s["tools"]]})
 
 
 @login_required

@@ -1,0 +1,55 @@
+/* =========================================================
+   The simple home and the For grown-ups page
+   (templates/accounts/learner_home.html, grown_ups.html, and the
+   "Today's lesson" card in _todays_lesson.html).
+
+   Built for a child on a 360px phone: one big button, and every
+   tap target at least 56px tall. Colours come from theme.css.
+   ========================================================= */
+
+/* ---------- Today's lesson ---------- */
+.lh-lesson { min-height: 104px; border: 3px solid var(--yellow); }
+.lh-lesson__lab {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--blue);
+}
+.lh-lesson .px-cont__title { font-size: 20px; line-height: 1.25; }
+.lh-lesson__go { width: 64px; height: 64px; }
+
+/* ---------- the simple home ---------- */
+.lh-hero { min-height: 260px; }
+.lh-hero__title { margin: 6px 0 14px; color: #fff; font-size: clamp(28px, 5vw, 44px); line-height: 1.1; overflow-wrap: anywhere; }
+.lh-body { max-width: 720px; }
+.lh .lh-lesson { min-height: 128px; padding: 22px; }
+.lh .lh-lesson .px-cont__title { font-size: 22px; }
+
+.lh-streak { display: flex; align-items: center; gap: 8px; margin: 18px 4px 0; font-size: 15px; line-height: 1.4; color: var(--muted); }
+.lh-streak b { color: var(--text); }
+
+.lh-more { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.lh-more__link {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 72px; padding: 12px 14px;
+  background: var(--card); border-radius: 18px; box-shadow: var(--shadow);
+  color: var(--text); text-decoration: none; font-size: 16px;
+}
+.lh-more__link:hover { box-shadow: var(--shadow-lift); }
+
+/* ---------- For grown-ups ---------- */
+.gu-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 18px; }
+.gu-switch__text { flex: 1 1 260px; min-width: 0; }
+.gu-switch__text b { display: block; font-size: 16px; }
+.gu-switch__text span { display: block; margin-top: 4px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.gu-switch label { display: inline-flex; align-items: center; gap: 10px; min-height: 56px; font-weight: 700; cursor: pointer; }
+.gu-switch input[type="checkbox"] { width: 26px; height: 26px; accent-color: var(--blue); }
+.gu-switch button { min-height: 56px; padding: 0 22px; border: 0; border-radius: 99px; background: var(--blue); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+
+@media (max-width: 700px) {
+  .lh-hero { min-height: 230px; }
+  .lh .lh-lesson { padding: 18px; }
+}
+@media (max-width: 380px) {
+  .lh-more { grid-template-columns: minmax(0, 1fr); }
+  .lh .lh-lesson .px-cont__title { font-size: 19px; }
+  .lh-lesson__go { width: 56px; height: 56px; }
+}
