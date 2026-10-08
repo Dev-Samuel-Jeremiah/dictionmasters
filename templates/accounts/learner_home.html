@@ -11,7 +11,7 @@
   child always knows where to start. Everything else is one tap away under
   Learn; progress, results and the plan are on the For grown-ups page.
 {% endcomment %}
-<div class="px-page px-home lh">
+<div class="px-page px-home lh{% if band %} lh--{{ band.key }}{% endif %}">
 
   <section class="px-hero lh-hero">
     <img class="px-hero__img" src="{% static 'img/app/heroBoy.jpg' %}" alt="">
@@ -27,18 +27,18 @@
 
     <p class="lh-streak">
       <span class="px-streak__flame" aria-hidden="true">{% include "includes/icon.html" with name="flame" size=22 %}</span>
-      {% if streak %}<b>{{ streak }} day{{ streak|pluralize }} in a row.</b> {% if practised_today %}Well done today!{% else %}Practise today to keep it going.{% endif %}{% else %}Start a streak today.{% endif %}
+      {% if band.key == "little" %}{% if streak %}<b>{{ streak }} day{{ streak|pluralize }}!</b>{% else %}Let's play!{% endif %}
+      {% elif streak %}<b>{{ streak }} day{{ streak|pluralize }} in a row.</b> {% if practised_today %}Well done today!{% else %}Practise today to keep it going.{% endif %}{% else %}Start a streak today.{% endif %}
     </p>
 
-    <nav class="lh-more" aria-label="More">
-      <a href="{% url 'learning_tools:hub' %}" class="lh-more__link">
-        <span class="px-item__ii t-sky" aria-hidden="true">{% include "includes/icon.html" with name="book" size=24 %}</span>
-        <b>Learn</b>
+    {# The tiles depend on the age band (dashboard_data._home_tiles): little ones get big pictures with one word. #}
+    <nav class="lh-more{% if band.key == 'little' %} lh-more--pictures{% endif %}{% if tiles|length > 2 %} lh-more--four{% endif %}" aria-label="More">
+      {% for tile in tiles %}
+      <a href="{{ tile.url }}" class="lh-more__link">
+        {% if band.key == "little" %}<img class="lh-more__pic" src="{% static tile.image %}" alt="">{% else %}<span class="px-item__ii {{ tile.tone }}" aria-hidden="true">{% include "includes/icon.html" with name=tile.icon size=24 %}</span>{% endif %}
+        <b>{{ tile.label }}</b>
       </a>
-      <a href="{% url 'accounts:grown_ups' %}" class="lh-more__link">
-        <span class="px-item__ii t-butter" aria-hidden="true">{% include "includes/icon.html" with name="user" size=24 %}</span>
-        <b>For grown-ups</b>
-      </a>
+      {% endfor %}
     </nav>
   </div>
 </div>

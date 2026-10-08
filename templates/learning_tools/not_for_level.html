@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Not for your level yet — Diction Masters{% endblock %}
+
+{% block content %}
+{# A tool kept for other levels (apps/learning_tools/middleware.py). Friendly, with one way back. #}
+<div class="px-page">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/heroGirl.jpg' %}" alt="">
+    <h1>Not for your level yet</h1>
+    <p>This one is for other levels. There's plenty more for you under Learn.</p>
+  </section>
+  <div class="px-wrap" style="margin-top: 18px">
+    <a href="{% url 'learning_tools:hub' %}" class="px-item" style="min-height: 64px">
+      <span class="px-item__ii t-sky" aria-hidden="true">{% include "includes/icon.html" with name="book" size=24 %}</span>
+      <span class="px-item__it"><b>Back to Learn</b><span>All your courses and tools</span></span>
+      <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+    </a>
+  </div>
+</div>
+{% endblock %}

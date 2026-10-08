@@ -176,6 +176,8 @@ MIDDLEWARE = [
     "apps.landing.native_app.NativeAppMiddleware",
     # Learning tools need a running free trial or a paid plan (apps/billing).
     "apps.billing.middleware.SubscriptionRequiredMiddleware",
+    # After billing: a tool kept for other levels (learning_tools.ToolLevels).
+    "apps.learning_tools.middleware.ToolLevelsMiddleware",
 ]
 
 # Serves the site's own CSS, JS and images in production, so no separate

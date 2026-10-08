@@ -51,7 +51,7 @@ from .forms import (
     SchoolTrialForm, LearnerTrialForm, EditTrialForm, build_form,
 )
 from . import analytics
-from .level_field import add_levels_field, save_levels
+from .level_field import add_content_levels_field, add_levels_field, save_content_levels, save_levels
 from .recordings_field import add_recordings_field, save_recordings
 from .password_field import add_password_field, save_password
 from .plan_field import FIELD as PLAN_FIELD, add_plan_field, check_plan
@@ -480,6 +480,9 @@ def record_form(request, key, pk=None):
     # say — can be given more than just one.
     if screen.get("levels_field"):
         add_levels_field(form, obj)
+    # Content made for some levels only: the same tick-list, on `levels`.
+    if screen.get("content_levels"):
+        add_content_levels_field(form, obj)
     # A library book's narration: many recordings at once, a chapter each.
     if screen.get("recordings_field"):
         add_recordings_field(form, obj)
@@ -512,6 +515,8 @@ def record_form(request, key, pk=None):
             form.save_m2m()
             if screen.get("levels_field"):
                 save_levels(form, saved)
+            if screen.get("content_levels"):
+                save_content_levels(form, saved)
             recordings_note = save_recordings(form, saved) if screen.get("recordings_field") else (0, 0)
             password_set = save_password(form, saved, by=request.user) if screen.get("password_field") else False
             login_note = save_login(saved, form) if login_fields else ""

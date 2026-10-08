@@ -7,6 +7,11 @@ The real fields are User.level (their main one — used wherever the site
 shows a single level: the dashboard, a joining code's starting level) and
 User.additional_levels (the rest); this field edits both together as one
 tick-list and splits it back apart on save.
+
+The same tick-list edits a `levels` field on content made for several
+levels, or a tool kept for some (screens with "content_levels"):
+add_content_levels_field / save_content_levels, stored as
+",Level 1,Level 2," by apps.accounts.access.pack_levels.
 """
 
 from django import forms
@@ -43,3 +48,31 @@ def save_levels(form, saved):
     saved.level = chosen[0] if chosen else ""
     saved.additional_levels = ("," + ",".join(chosen[1:]) + ",") if len(chosen) > 1 else ""
     saved.save(update_fields=["level", "additional_levels"])
+
+
+CONTENT_FIELD = "levels"
+
+
+def add_content_levels_field(form, obj):
+    """Show a content record's `levels` as a tick-list of every level."""
+    from apps.accounts.access import unpack_levels
+
+    if CONTENT_FIELD not in form.fields:
+        return
+    help_text = form.fields[CONTENT_FIELD].help_text
+    form.fields[CONTENT_FIELD] = forms.MultipleChoiceField(
+        choices=LEVEL_NAME_CHOICES, required=False,
+        initial=unpack_levels(obj.levels) if obj is not None and obj.pk else [],
+        label="Levels", help_text=help_text,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "cr-levels"}),
+    )
+
+
+def save_content_levels(form, saved):
+    """After saved.save(): store the ticked levels as ",Level 1,Level 2,"."""
+    from apps.accounts.access import pack_levels
+
+    if CONTENT_FIELD not in form.cleaned_data:
+        return
+    saved.levels = pack_levels(form.cleaned_data[CONTENT_FIELD])
+    saved.save(update_fields=["levels"])

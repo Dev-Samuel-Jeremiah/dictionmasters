@@ -21,7 +21,7 @@ from apps.echospell.models import ActivityAttempt, CardPosition, Group, GroupPro
 from apps.learning_modules.models import Day, DayProgress
 from apps.quick_words.models import QuickWord
 
-from .access import limit_to_levels
+from .access import age_band, can_use_tool, limit_to_level_list, limit_to_levels, tool_levels
 
 FEED_SIZE = 6
 WEEK = 7
@@ -166,7 +166,10 @@ def _next_echospell(user):
 def _next_module_day(user):
     done = set(DayProgress.objects.filter(user=user).values_list("day_id", flat=True))
     days = list(
-        Day.objects.filter(is_published=True, week__term__module__is_published=True)
+        limit_to_level_list(
+            Day.objects.filter(is_published=True, week__term__module__is_published=True),
+            user, field="week__term__module__levels",
+        )
         .select_related("week__term__module")
         .order_by("week__term__module__order", "week__term__module__name", "week__term__order", "week__term__id", "week__number", "order", "id")
     )
@@ -190,9 +193,9 @@ def todays_lesson(user, echospell=None, modules=None):
     home. Pass in what learner_dashboard already worked out to save
     looking it up twice.
 
-    EchoSpell comes first because it is filtered by level; Learning
-    Modules aren't yet, so putting them first could send a Level 9 pupil
-    to a nursery day. The 44 Academy keeps no per-learner "next sound",
+    EchoSpell comes first: every group belongs to one level, while a
+    module with no levels ticked is open to every level, so putting
+    modules first could still send a Level 9 pupil to a nursery day. The 44 Academy keeps no per-learner "next sound",
     so the last resort is Daily Practice, which always has a ready set.
     """
     echospell = echospell or _next_echospell(user)
@@ -230,19 +233,44 @@ def _greeting(now):
     return "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
 
 
+def _home_tiles(user, band):
+    """The tiles under Today's lesson, by age band: little ones get two big
+    pictures with a word each, older pupils two more of their own tools
+    (if open to their level), everyone else Learn and For grown-ups."""
+    learn = {"url": reverse("learning_tools:hub"), "label": "Learn", "icon": "book", "tone": "t-sky",
+             "image": "img/app/heroGirl.jpg"}
+    grown_ups = {"url": reverse("accounts:grown_ups"), "label": "For grown-ups", "icon": "user", "tone": "t-butter",
+                 "image": "img/app/rParent.jpg"}
+    key = band["key"] if band else ""
+    if key == "little":
+        return [learn, {**grown_ups, "label": "Grown-ups"}]
+    if key == "older":
+        kept = tool_levels()
+        extra = [
+            {"url": reverse("daily_practice:home"), "label": "Practice", "icon": "mic", "tone": "t-mint", "tool": "daily_practice:home"},
+            {"url": reverse("clash:hub"), "label": "Diction Clash", "icon": "swords", "tone": "t-blush", "tool": "clash:hub"},
+        ]
+        return [learn, *[t for t in extra if can_use_tool(user, t["tool"], kept)], grown_ups]
+    return [learn, grown_ups]
+
+
 def learner_home(user):
-    """Just what the one-button home shows: a greeting, the streak and
-    today's lesson. Lighter than learner_dashboard, which also counts
-    every tool's results for the grown-ups."""
+    """Just what the one-button home shows: a greeting, the streak, today's
+    lesson and a few tiles, laid out for the learner's age band. Lighter
+    than learner_dashboard, which also counts every tool's results for
+    the grown-ups."""
     now = timezone.now()
     today = _local_date(now)
     active_days = {_local_date(e[0]) for e in _events(user)}
+    band = age_band(user)
     return {
         "greeting": _greeting(now),
         "today": today,
         "streak": _streak(active_days, today),
         "practised_today": today in active_days,
         "lesson": todays_lesson(user),
+        "band": band,
+        "tiles": _home_tiles(user, band),
     }
 
 

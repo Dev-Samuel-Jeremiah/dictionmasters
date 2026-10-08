@@ -31,6 +31,13 @@ class LibraryItem(models.Model):
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="library_items"
     )
+    # Which levels this is for, as ",Level 1,Level 2," — blank for every
+    # level. Ticked in the control room; read by apps/accounts/access.py
+    # (limit_to_level_list).
+    levels = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="The levels this is for. Leave every box empty for every level.",
+    )
     is_published = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0)
 

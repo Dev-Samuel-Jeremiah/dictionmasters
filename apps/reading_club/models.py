@@ -38,6 +38,13 @@ class Book(models.Model):
         max_length=7, choices=COLOR_CHOICES, default="#B8863B", help_text="Badge colour."
     )
     order = models.PositiveIntegerField(default=0)
+    # Which levels this is for, as ",Level 1,Level 2," — blank for every
+    # level. Ticked in the control room; read by apps/accounts/access.py
+    # (limit_to_level_list).
+    levels = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="The levels this is for. Leave every box empty for every level.",
+    )
     is_published = models.BooleanField(
         default=True, help_text="Unpublished books are hidden from the hub."
     )

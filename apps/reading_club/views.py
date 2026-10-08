@@ -13,7 +13,15 @@ from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.accounts.access import limit_to_level_list
+
 from .models import Book, Chapter, ChapterProgress, Term
+
+
+def _books(user):
+    """The published books this person may open: those for their level,
+    and those for every level."""
+    return limit_to_level_list(Book.objects.filter(is_published=True), user)
 
 
 def _completed_chapter_ids(user, book):
@@ -84,7 +92,7 @@ def _term_status(book, term, completed_ids):
 
 @login_required
 def hub(request):
-    books = Book.objects.filter(is_published=True).order_by("order", "title")
+    books = _books(request.user).order_by("order", "title")
     book_cards = []
     for book in books:
         terms = list(_book_tree(book))
@@ -100,7 +108,7 @@ def hub(request):
 
 @login_required
 def book_detail(request, book_slug):
-    book = get_object_or_404(Book, slug=book_slug, is_published=True)
+    book = get_object_or_404(_books(request.user), slug=book_slug)
     terms = list(_book_tree(book))
     completed_ids = _completed_chapter_ids(request.user, book)
     flat = _flatten(terms)
@@ -124,7 +132,7 @@ def book_detail(request, book_slug):
 
 @login_required
 def term_detail(request, book_slug, term_slug):
-    book = get_object_or_404(Book, slug=book_slug, is_published=True)
+    book = get_object_or_404(_books(request.user), slug=book_slug)
     term = get_object_or_404(book.terms, slug=term_slug)
     completed_ids = _completed_chapter_ids(request.user, book)
 
@@ -152,7 +160,7 @@ def term_detail(request, book_slug, term_slug):
 
 @login_required
 def chapter_detail(request, book_slug, term_slug, chapter_slug):
-    book = get_object_or_404(Book, slug=book_slug, is_published=True)
+    book = get_object_or_404(_books(request.user), slug=book_slug)
     term = get_object_or_404(book.terms, slug=term_slug)
     completed_ids = _completed_chapter_ids(request.user, book)
 
@@ -183,7 +191,7 @@ def chapter_detail(request, book_slug, term_slug, chapter_slug):
 @login_required
 @require_POST
 def toggle_complete(request, book_slug, term_slug, chapter_slug):
-    book = get_object_or_404(Book, slug=book_slug, is_published=True)
+    book = get_object_or_404(_books(request.user), slug=book_slug)
     term = get_object_or_404(book.terms, slug=term_slug)
     chapter = get_object_or_404(term.chapters, slug=chapter_slug)
 

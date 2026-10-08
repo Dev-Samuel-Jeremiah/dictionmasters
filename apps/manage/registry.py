@@ -143,6 +143,15 @@ def assessment_screens(programme, lessons_key, key_prefix, lesson_word):
 
 SECTIONS = [
     {
+        "slug": "tool-levels", "name": "Tools by level", "icon": "🎚️", "tone": "#1846E0",
+        "blurb": "Keep a whole tool for some levels only. Students outside them can't open it; teachers always can.",
+        "screens": [
+            {"key": "tool-levels", "model": "learning_tools.ToolLevels", "name": "Tools by level", "singular": "tool",
+             "columns": ["tool", "levels_label"], "search": ["tool"], "form": ["tool", "levels"],
+             "content_levels": True},
+        ],
+    },
+    {
         "slug": "dashboard", "name": "Dashboard appearance", "icon": "🖼️", "tone": "#1846E0",
         "blurb": "Upload a separate background image for every learner dashboard card.",
         "screens": [
@@ -200,7 +209,7 @@ SECTIONS = [
         "screens": [
             {"key": "modules", "model": "learning_modules.LearningModule",
              "columns": ["name", "icon", "order", "is_published"],
-             "search": ["name", "description"], "children": ["module-terms"]},
+             "search": ["name", "description"], "children": ["module-terms"], "content_levels": True},
             {"key": "module-terms", "model": "learning_modules.Term",
              "columns": ["name", "module", "order"], "search": ["name"],
              "parent": ("module", "modules"), "children": ["weeks"]},
@@ -296,7 +305,7 @@ SECTIONS = [
         "screens": [
             {"key": "books", "model": "reading_club.Book",
              "columns": ["title", "author", "order", "is_published"],
-             "search": ["title", "author"], "children": ["book-terms"]},
+             "search": ["title", "author"], "children": ["book-terms"], "content_levels": True},
             {"key": "book-terms", "model": "reading_club.Term",
              "columns": ["name", "book", "order"], "search": ["name"],
              "parent": ("book", "books"), "children": ["chapters"]},
@@ -394,8 +403,8 @@ SECTIONS = [
              "columns": ["title", "kind", "school", "narration_label", "is_published", "updated_at"],
              "search": ["title", "summary", "description"], "order": ["-updated_at"],
              "form": ["title", "kind", "summary", "description", "file", "narration_file", "narration_redo",
-                      "external_url", "school", "is_published", "order"],
-             "recordings_field": True,
+                      "external_url", "school", "levels", "is_published", "order"],
+             "recordings_field": True, "content_levels": True,
              "labels": {
                  "school": ("School (optional)", "Leave blank to publish this item to every user. Choose a school to limit it to that school's members."),
                  "file": ("Upload a file", "Books, documents, audio, video or a cover image. You can also add written content or an external link."),

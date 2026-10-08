@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 
-from apps.accounts.access import limit_to_levels
+from apps.accounts.access import can_use_tool, limit_to_level_list, limit_to_levels, tool_levels
 from apps.learning_tools.views import TOOLS
 from apps.manage.rich_text import plain_text
 
@@ -25,7 +25,12 @@ def _search_items(request, query, per_type=MAX_RESULTS_PER_TYPE):
 
     if len(query) >= 2:
         needle = query
+        kept = tool_levels()
         for tool in TOOLS:
+            if tool.get("teachers") and request.user.is_authenticated and request.user.is_student:
+                continue
+            if not can_use_tool(request.user, tool["url_name"], kept):
+                continue
             if needle.casefold() in f"{tool['name']} {tool['blurb']}".casefold():
                 items.append({"title": tool["name"], "section": "Platform feature", "summary": tool["blurb"], "url": reverse(tool["url_name"])})
 
@@ -36,7 +41,7 @@ def _search_items(request, query, per_type=MAX_RESULTS_PER_TYPE):
         add(articles, lambda x: x.title, "Reference Library", lambda x: x.summary or x.category.name, lambda x: reverse("reference_library:article", args=[x.slug]))
 
         from apps.diction_library.models import LibraryItem
-        library = LibraryItem.objects.filter(is_published=True).filter(
+        library = limit_to_level_list(LibraryItem.objects.filter(is_published=True), request.user).filter(
             Q(title__icontains=needle) | Q(summary__icontains=needle) | Q(description__icontains=needle)
         )
         if request.user.is_authenticated and request.user.school_id:
@@ -56,7 +61,7 @@ def _search_items(request, query, per_type=MAX_RESULTS_PER_TYPE):
         add(episodes, lambda x: x.title, "Diction Radio episode", lambda x: x.description or x.program.title, lambda x: reverse("diction_radio:home") + f"#program-{x.program_id}")
 
         from apps.reading_club.models import Book, Chapter
-        books = Book.objects.filter(is_published=True).filter(Q(title__icontains=needle) | Q(author__icontains=needle) | Q(description__icontains=needle) | Q(overview__icontains=needle))
+        books = limit_to_level_list(Book.objects.filter(is_published=True), request.user).filter(Q(title__icontains=needle) | Q(author__icontains=needle) | Q(description__icontains=needle) | Q(overview__icontains=needle))
         add(books, lambda x: x.title, "Reading Club book", lambda x: x.description or x.author, lambda x: reverse("reading_club:book_detail", args=[x.slug]))
         chapters = Chapter.objects.filter(is_published=True, term__book__is_published=True).filter(Q(title__icontains=needle) | Q(summary__icontains=needle) | Q(body__icontains=needle)).select_related("term__book")
         add(chapters, lambda x: x.title, "Reading Club lesson", lambda x: x.summary or x.term.book.title, lambda x: reverse("reading_club:chapter_detail", args=[x.term.book.slug, x.term.slug, x.slug]))
@@ -75,9 +80,12 @@ def _search_items(request, query, per_type=MAX_RESULTS_PER_TYPE):
         add(conversations, lambda x: x.title, "Conversational dialogue", lambda x: f"{x.level.name} · {x.place}", lambda x: reverse("conversational_dialogue:dialogue", args=[x.level.slug, x.slug]))
 
         from apps.learning_modules.models import LearningModule, LessonItem
-        modules = LearningModule.objects.filter(is_published=True).filter(Q(name__icontains=needle) | Q(description__icontains=needle) | Q(overview__icontains=needle))
+        modules = limit_to_level_list(LearningModule.objects.filter(is_published=True), request.user).filter(Q(name__icontains=needle) | Q(description__icontains=needle) | Q(overview__icontains=needle))
         add(modules, lambda x: x.name, "Learning Module", lambda x: x.description or x.overview, lambda x: reverse("learning_modules:module_detail", args=[x.slug]))
-        lessons = LessonItem.objects.filter(is_published=True, day__is_published=True, day__week__term__module__is_published=True).filter(Q(title__icontains=needle) | Q(description__icontains=needle) | Q(body__icontains=needle)).select_related("day__week__term__module")
+        lessons = limit_to_level_list(
+            LessonItem.objects.filter(is_published=True, day__is_published=True, day__week__term__module__is_published=True),
+            request.user, field="day__week__term__module__levels",
+        ).filter(Q(title__icontains=needle) | Q(description__icontains=needle) | Q(body__icontains=needle)).select_related("day__week__term__module")
         add(lessons, lambda x: x.title, "Learning Module lesson", lambda x: x.description or x.day.week.term.module.name, lambda x: reverse("learning_modules:module_detail", args=[x.day.week.term.module.slug]))
 
         from apps.book.models import Sound

@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.accounts.access import limit_to_level_list
 from apps.accounts.decorators import role_required
 from apps.accounts.models import User
 
@@ -12,7 +13,9 @@ from .models import LibraryItem
 
 
 def visible_items(user):
-    items = LibraryItem.objects.filter(is_published=True)
+    """Published items for everyone or this person's school, and for
+    their level (or every level)."""
+    items = limit_to_level_list(LibraryItem.objects.filter(is_published=True), user)
     if user.school_id:
         return items.filter(Q(school__isnull=True) | Q(school_id=user.school_id))
     return items.filter(school__isnull=True)

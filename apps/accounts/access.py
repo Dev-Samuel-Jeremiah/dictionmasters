@@ -18,6 +18,16 @@ and see everything.
 Content with no level of its own — a placement test, a word that hasn't
 been graded — belongs to everybody, so it is always shown.
 
+Content made for several levels — a learning module, a reading book, a
+library item — keeps them as ",Level 1,Level 2," (blank for everyone),
+narrowed by limit_to_level_list. A whole tool can be kept for some
+levels too (learning_tools.ToolLevels, set in the control room):
+can_use_tool. That one applies to students only; a teacher must be able
+to open any tool to teach it.
+
+Students also fall into an age band (age_band) — Little ones, Middle,
+Older — which decides how much their home and Learn page show.
+
 A teacher's class is the same rule turned round: the active students at
 their school in a level they teach (pupils_of, teaches). A teacher with
 no level yet teaches the whole school's students.
@@ -117,3 +127,67 @@ def pupils_of(teacher):
 def teaches(teacher, pupil):
     """Is this student one of the teacher's pupils?"""
     return pupils_of(teacher).filter(pk=pupil.pk).exists()
+
+
+# ---------------------------------------------------------------------------
+# Content for several levels, whole tools, and age bands
+# ---------------------------------------------------------------------------
+
+def pack_levels(levels):
+    """Levels as stored on content: ",Level 1,Level 3," in the site's own
+    order, or "" for everyone."""
+    chosen = sorted(set(levels), key=lambda v: LEVEL_ORDER.index(v) if v in LEVEL_ORDER else len(LEVEL_ORDER))
+    return ("," + ",".join(chosen) + ",") if chosen else ""
+
+
+def unpack_levels(stored):
+    return [lvl for lvl in (stored or "").split(",") if lvl]
+
+
+def limit_to_level_list(queryset, user, field="levels"):
+    """Narrow content made for several levels to the ones this person may
+    see. Content with no levels ticked belongs to everyone."""
+    levels = accessible_levels(user)
+    if levels is None:
+        return queryset
+    condition = Q(**{field: ""})
+    for level in levels:
+        # The commas either side stop "Level 1" matching inside "Level 12".
+        condition |= Q(**{f"{field}__contains": f",{level},"})
+    return queryset.filter(condition)
+
+
+def tool_levels():
+    """{tool url name: [levels]} for every tool kept for some levels only.
+    One small query; a tool not listed is open to everyone."""
+    from apps.learning_tools.models import ToolLevels
+
+    return {row.tool: unpack_levels(row.levels) for row in ToolLevels.objects.exclude(levels="")}
+
+
+def can_use_tool(user, tool, kept=None):
+    """May this person open the tool (its url name, e.g. "clash:hub")?
+    Only students are held back, and only by a tool that staff have kept
+    for some levels. Pass `kept` (tool_levels()) when asking about many."""
+    if not getattr(user, "is_authenticated", False) or user.is_staff or user.role != "student":
+        return True
+    kept = tool_levels() if kept is None else kept
+    levels = kept.get(tool)
+    if not levels or not user.level:
+        return True
+    return user.level in levels
+
+
+BANDS = [
+    {"key": "little", "label": "Little ones", "levels": LEVEL_ORDER[0:3]},   # Pre-Level – Level 2
+    {"key": "middle", "label": "Middle", "levels": LEVEL_ORDER[3:7]},        # Level 3 – Level 6
+    {"key": "older", "label": "Older", "levels": LEVEL_ORDER[7:]},           # Level 7 – Level 12
+]
+
+
+def age_band(user):
+    """A student's age band, from their level, or None — for everyone
+    else, and a student with no level yet, the pages stay as they are."""
+    if not getattr(user, "is_authenticated", False) or user.role != "student" or not user.level:
+        return None
+    return next((band for band in BANDS if user.level in band["levels"]), None)

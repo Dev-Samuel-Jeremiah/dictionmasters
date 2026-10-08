@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET, require_POST
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from apps.accounts.access import age_band, can_use_tool, tool_levels
 from apps.diction_library.narration import voice_configured
 
 from . import page_reader, scan_library
@@ -127,18 +128,38 @@ TOOLS = [
 ]
 
 
+# The Learn page by age band (apps.accounts.access.age_band): little ones
+# get only these sections, with pictures and names; everyone else gets
+# them all. A band's "blurbs" is how much of each description shows.
+BAND_SECTIONS = {"little": ("courses", "practise")}
+BAND_BLURBS = {"little": "none", "middle": "short"}
+
+
 @login_required
 def hub(request):
     """Learn: every course and tool, once each, under a few plain
-    headings. New tools join TOOLS as they're built, each as its own app."""
-    tools = TOOLS
-    if request.user.is_student and not request.user.is_staff:
-        tools = [tool for tool in TOOLS if not tool.get("teachers")]
+    headings. New tools join TOOLS as they're built, each as its own app.
+    A student sees only the tools open to their level, laid out for their
+    age band."""
+    user = request.user
+    kept = tool_levels()
+    tools = [
+        tool for tool in TOOLS
+        if can_use_tool(user, tool["url_name"], kept)
+        and not (tool.get("teachers") and user.is_student and not user.is_staff)
+    ]
+    band = age_band(user)
+    wanted = BAND_SECTIONS.get(band["key"]) if band else None
     sections = [
         {"key": key, "title": title, "tools": [tool for tool in tools if tool["section"] == key]}
         for key, title in SECTIONS
+        if wanted is None or key in wanted
     ]
-    return render(request, "learning_tools/hub.html", {"sections": [s for s in sections if s["tools"]]})
+    return render(request, "learning_tools/hub.html", {
+        "sections": [s for s in sections if s["tools"]],
+        "band": band,
+        "blurbs": BAND_BLURBS.get(band["key"], "full") if band else "full",
+    })
 
 
 @login_required

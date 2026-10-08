@@ -8,6 +8,9 @@ there can search for it and listen. An individual learner's readings are
 their own. The audio is played through the protected player and can only
 be kept for offline listening inside the app (apps/videos) — never handed
 over as a file.
+
+ToolLevels keeps a whole tool for some levels only (apps/accounts/access.py,
+can_use_tool), set in the control room.
 """
 
 from django.conf import settings
@@ -82,3 +85,36 @@ class ScanReading(models.Model):
     @property
     def video_caption(self):
         return f"Scan & Listen: {self.title}"
+
+
+def _tool_choices():
+    # Every tool on the Learn page (apps/learning_tools/views.TOOLS), by
+    # the url name it's reached at.
+    from .views import TOOLS
+
+    return [(tool["url_name"], tool["name"]) for tool in TOOLS]
+
+
+class ToolLevels(models.Model):
+    """A tool kept for some levels only — Reference Library from Level 7,
+    say. Students outside them can't open it and don't see it. No row,
+    or no levels ticked, means every level; teachers and everyone else
+    are never held back."""
+
+    tool = models.CharField(max_length=60, unique=True, choices=_tool_choices)
+    levels = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="The levels whose students may open this tool. Leave every box empty for every level.",
+    )
+
+    class Meta:
+        ordering = ["tool"]
+        verbose_name = "tool levels"
+        verbose_name_plural = "tool levels"
+
+    def __str__(self):
+        return self.get_tool_display()
+
+    @property
+    def levels_label(self):
+        return ", ".join(lvl for lvl in self.levels.split(",") if lvl) or "Every level"

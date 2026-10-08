@@ -16,10 +16,18 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.accounts.access import limit_to_level_list
+
 from . import lesson_path as path_of
 from .models import DAY_CHOICES, Day, DayProgress, LearningModule, LessonItem, Week
 
 DAY_SLUGS = {slug for slug, _label in DAY_CHOICES}
+
+
+def _modules(user):
+    """The published modules this person may open: those for their level,
+    and those for every level."""
+    return limit_to_level_list(LearningModule.objects.filter(is_published=True), user)
 
 
 def _completed_day_ids(user, module):
@@ -113,7 +121,7 @@ def _week_status(term, week, completed_ids):
 
 @login_required
 def hub(request):
-    modules = LearningModule.objects.filter(is_published=True).order_by("order", "name")
+    modules = _modules(request.user).order_by("order", "name")
     module_cards = []
     for module in modules:
         terms = list(_module_tree(module))
@@ -146,7 +154,7 @@ def hub(request):
 
 @login_required
 def module_detail(request, module_slug):
-    module = get_object_or_404(LearningModule, slug=module_slug, is_published=True)
+    module = get_object_or_404(_modules(request.user), slug=module_slug)
     terms = list(_module_tree(module))
     completed_ids = _completed_day_ids(request.user, module)
     flat = _flatten(terms)
@@ -172,7 +180,7 @@ def module_detail(request, module_slug):
 
 @login_required
 def term_detail(request, module_slug, term_slug):
-    module = get_object_or_404(LearningModule, slug=module_slug, is_published=True)
+    module = get_object_or_404(_modules(request.user), slug=module_slug)
     term = get_object_or_404(module.terms, slug=term_slug)
     completed_ids = _completed_day_ids(request.user, module)
 
@@ -202,7 +210,7 @@ def term_detail(request, module_slug, term_slug):
 
 @login_required
 def week_detail(request, module_slug, term_slug, week_slug):
-    module = get_object_or_404(LearningModule, slug=module_slug, is_published=True)
+    module = get_object_or_404(_modules(request.user), slug=module_slug)
     term = get_object_or_404(module.terms, slug=term_slug)
     completed_ids = _completed_day_ids(request.user, module)
 
@@ -248,7 +256,7 @@ def day_detail(request, module_slug, term_slug, week_slug, day_name):
     if day_name not in DAY_SLUGS:
         raise Http404("That day doesn't exist.")
 
-    module = get_object_or_404(LearningModule, slug=module_slug, is_published=True)
+    module = get_object_or_404(_modules(request.user), slug=module_slug)
     term = get_object_or_404(module.terms, slug=term_slug)
     completed_ids = _completed_day_ids(request.user, module)
 
@@ -318,7 +326,7 @@ def toggle_complete(request, module_slug, term_slug, week_slug, day_name):
     """Kept so old pages and bookmarks don't break, but a day can no
     longer be ticked off by hand: it is earned by opening every lesson
     item (lesson_path.py)."""
-    module = get_object_or_404(LearningModule, slug=module_slug, is_published=True)
+    module = get_object_or_404(_modules(request.user), slug=module_slug)
     term = get_object_or_404(module.terms, slug=term_slug)
     week = get_object_or_404(term.weeks, slug=week_slug)
     get_object_or_404(week.days, day_name=day_name)

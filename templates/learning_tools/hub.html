@@ -2,10 +2,11 @@
 {% load static %}
 
 {% block title %}Learn — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/learner_home.css' %}">{% endblock %}
 
 {% block content %}
 {# Learn: every course and tool once, under a few headings. The list and its order live in apps/learning_tools/views.TOOLS. #}
-<div class="px-page px-learn">
+<div class="px-page px-learn{% if band %} lt-band--{{ band.key }}{% endif %}">
   <section class="px-phead">
     <img class="px-phead__img" src="{% static 'img/app/heroGirl.jpg' %}" alt="">
     <h1>Learn</h1>
@@ -19,11 +20,11 @@
       {% for tool in section.tools %}
       <a href="{% url tool.url_name %}" class="px-item">
         {% if tool.image %}<img class="px-thumb" src="{% static tool.image %}" alt="">{% else %}<span class="px-item__ii {{ tool.tone }}">{% include "includes/icon.html" with name=tool.icon size=24 %}</span>{% endif %}
-        <span class="px-item__it"><b>{{ tool.name }}</b><span>{{ tool.blurb }}</span></span>
+        <span class="px-item__it"><b>{{ tool.name }}</b>{% if blurbs != "none" %}<span{% if blurbs == "short" %} class="lt-short"{% endif %}>{{ tool.blurb }}</span>{% endif %}</span>
         <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
       </a>
       {% endfor %}
-      {% if section.key == "courses" %}
+      {% if section.key == "courses" and blurbs != "none" %}
       {# The Etiquette Advantage: shown, but locked until its lessons are ready. Not in TOOLS, which site search reads. #}
       <div class="px-item is-locked" aria-disabled="true">
         <img class="px-thumb" src="{% static 'img/app/cEtiq.jpg' %}" alt="">
