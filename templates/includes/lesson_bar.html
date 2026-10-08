@@ -1,0 +1,22 @@
+{% comment %}
+  The guided lesson's step bar, shared by EchoSpell groups and Learning
+  Modules days (each app's lesson_path.at_step builds `lesson`). Back goes
+  to the step before, Next to the next unfinished step, or the finish
+  screen. Pass hide_next=True on a step whose own button moves on (an
+  activity's Submit).
+{% endcomment %}
+<nav class="lp-bar" aria-label="Lesson steps" data-lesson-bar>
+  <div class="lp-bar__head">
+    <p class="lp-bar__count">Step {{ lesson.current.number }} of {{ lesson.total }}</p>
+    <ol class="lp-bar__track" aria-hidden="true">{% for step in lesson.steps %}<li class="{% if step.done %}is-done{% endif %}{% if step.key == lesson.current.key %} is-here{% endif %}"></li>{% endfor %}</ol>
+  </div>
+  <div class="lp-bar__btns">
+    <a href="{% if lesson.back %}{{ lesson.back.url }}{% else %}{{ lesson.start_url }}{% endif %}" class="lp-bar__back">&larr; Back</a>
+    {% if not hide_next %}
+    <a href="{% if lesson.following %}{{ lesson.following.url }}{% else %}{{ lesson.finish_url }}{% endif %}" class="lp-bar__next" rel="next">
+      <span><small>{% if lesson.following %}Next{% else %}All done?{% endif %}</small>{% if lesson.following %}{{ lesson.following.title }}{% else %}Finish{% endif %}</span>
+      <span aria-hidden="true">&rarr;</span>
+    </a>
+    {% endif %}
+  </div>
+</nav>

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="{% static 'css/book.css' %}">
   <link rel="stylesheet" href="{% static 'css/activity.css' %}">
   <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+{% if lesson %}<link rel="stylesheet" href="{% static 'css/lesson_path.css' %}">{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -101,6 +102,7 @@
       </ol>
     </section>
 
+    {% if lesson %}{% include "includes/lesson_bar.html" %}{% endif %}
     <div class="es-submitbar es-submitbar--static">
       {% if back_url %}
       <a href="{{ back_url }}" class="es-link">&larr; {{ back_label }}</a>

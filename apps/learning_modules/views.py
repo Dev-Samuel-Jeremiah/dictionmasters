@@ -16,6 +16,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from . import lesson_path as path_of
 from .models import DAY_CHOICES, Day, DayProgress, LearningModule, LessonItem, Week
 
 DAY_SLUGS = {slug for slug, _label in DAY_CHOICES}
@@ -261,7 +262,29 @@ def day_detail(request, module_slug, term_slug, week_slug, day_name):
         return redirect("learning_modules:term_detail", module_slug=module_slug, term_slug=term_slug)
 
     day = get_object_or_404(week.days, day_name=day_name, is_published=True)
-    lesson_items = day.lesson_items.filter(is_published=True).order_by("order", "id").prefetch_related("slides", "resources")
+    items = list(day.lesson_items.filter(is_published=True).order_by("order", "id"))
+
+    # One lesson item per screen (lesson_path.py): ?step=N shows item N and
+    # counts it as done; ?step=finish, or a day with every item done, shows
+    # the start / finish screen. With no step, the first item not yet done.
+    raw = request.GET.get("step", "")
+    lesson = path_of.lesson_path(request.user, day, items)
+    if raw.isdigit() and 1 <= int(raw) <= len(items):
+        number = int(raw)
+    elif raw != "finish" and lesson["next"]:
+        number = lesson["next"]["number"]
+    else:
+        number = None
+    lesson_items = []
+    if number:
+        current = items[number - 1]
+        path_of.record_item(request.user, day, current)
+        lesson = path_of.lesson_path(request.user, day, items)
+        lesson_items = list(
+            day.lesson_items.filter(pk=current.pk).prefetch_related("slides", "resources")
+        )
+    if path_of.award(request.user, lesson, day):
+        completed_ids.add(day.id)
 
     terms = list(_module_tree(module))
     reachable = _reachable_flat(terms, completed_ids)
@@ -277,6 +300,8 @@ def day_detail(request, module_slug, term_slug, week_slug, day_name):
         "week": week,
         "day": day,
         "lesson_items": lesson_items,
+        "lesson": lesson,
+        "step": path_of.at_step(lesson, number) if number else None,
         "is_complete": day.id in completed_ids,
         "prev_entry": prev_entry,
         "next_entry": next_entry,
@@ -290,12 +315,14 @@ def day_detail(request, module_slug, term_slug, week_slug, day_name):
 @login_required
 @require_POST
 def toggle_complete(request, module_slug, term_slug, week_slug, day_name):
+    """Kept so old pages and bookmarks don't break, but a day can no
+    longer be ticked off by hand: it is earned by opening every lesson
+    item (lesson_path.py)."""
     module = get_object_or_404(LearningModule, slug=module_slug, is_published=True)
     term = get_object_or_404(module.terms, slug=term_slug)
     week = get_object_or_404(term.weeks, slug=week_slug)
-    day = get_object_or_404(week.days, day_name=day_name)
-
-    DayProgress.objects.get_or_create(user=request.user, day=day)
+    get_object_or_404(week.days, day_name=day_name)
+    messages.info(request, "A day is completed by going through every one of its lessons.")
 
     return redirect(
         "learning_modules:day_detail",

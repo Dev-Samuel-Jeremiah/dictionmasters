@@ -15,6 +15,7 @@ import re
 
 from apps.accounts.access import limit_to_levels, require_level
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404, HttpResponse, JsonResponse
@@ -23,6 +24,7 @@ from django.urls import reverse
 from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_POST
 
+from . import lesson_path as path_of
 from . import qr
 from .activity_kinds import MODE_CHOICE, MODE_ORDER, MODE_RECORD
 from .marking import feedback_for, grade_sentence_use, mark_response
@@ -161,6 +163,11 @@ def group_detail(request, level_slug, group_slug):
     group = get_object_or_404(level.groups, slug=group_slug)
     completed_ids = _completed_group_ids(request.user, level)
 
+    # The group page is the guided lesson's start and finish screen.
+    lesson = path_of.lesson_path(request.user, level, group)
+    if path_of.award(request.user, lesson, group):
+        completed_ids.add(group.id)
+
     groups = list(level.groups.all())
     index = next((i for i, g in enumerate(groups) if g.id == group.id), None)
     prev_group = groups[index - 1] if index else None
@@ -177,6 +184,7 @@ def group_detail(request, level_slug, group_slug):
         "activity_rows": activity_rows(request.user, activities_for(group)),
         "group_position": (index or 0) + 1,
         "group_total": len(groups),
+        "lesson": lesson,
     }
     return render(request, "echospell/group_detail.html", context)
 
@@ -236,6 +244,11 @@ def card_detail(request, level_slug, group_slug, category_slug):
     # Its own QR code, for printing beside this card in the book. Shown to
     # the people who make the books, not to every learner.
     context.update(_card_steps(level, group, category))
+    # The guided lesson: opening a card type is what counts as doing it.
+    path_of.record_card(request.user, group, category)
+    lesson = path_of.lesson_path(request.user, level, group)
+    path_of.award(request.user, lesson, group)
+    context["lesson"] = path_of.at_step(lesson, f"card-{category.pk}")
     context["card_url"] = _card_link(level, group, category)
     context["qr_filename"] = _qr_filename(level, group, category)
     context["show_qr"] = _makes_materials(request.user)
@@ -346,12 +359,13 @@ def save_card_position(request):
 @login_required
 @require_POST
 def toggle_complete(request, level_slug, group_slug):
+    """Kept so old pages and bookmarks don't break, but a group can no
+    longer be ticked off by hand: it is earned by doing every step
+    (lesson_path.py)."""
     level = get_object_or_404(Level, slug=level_slug, is_published=True)
     require_level(request.user, level.name)
-    group = get_object_or_404(level.groups, slug=group_slug)
-
-    GroupProgress.objects.get_or_create(user=request.user, group=group)
-
+    get_object_or_404(level.groups, slug=group_slug)
+    messages.info(request, "A group is completed by doing every step of its lesson.")
     return redirect("echospell:group_detail", level_slug=level_slug, group_slug=group_slug)
 
 
@@ -442,6 +456,7 @@ def activity_detail(request, level_slug, group_slug, activity_slug):
             )
         attempt.recalculate()
         attempt.save()
+        path_of.award(request.user, path_of.lesson_path(request.user, level, group), group)
         return redirect(
             "echospell:activity_result",
             level_slug=level.slug, group_slug=group.slug,
@@ -455,6 +470,7 @@ def activity_detail(request, level_slug, group_slug, activity_slug):
         "item_rows": _item_rows(activity, items),
         "buckets": activity.bucket_list,
         "previous": _best_attempts(request.user, [activity]).get(activity.id),
+        "lesson": path_of.at_step(path_of.lesson_path(request.user, level, group), f"activity-{activity.pk}"),
     })
 
 
@@ -488,4 +504,5 @@ def activity_result(request, level_slug, group_slug, activity_slug, attempt_id):
         "attempt": attempt,
         "rows": rows,
         "uses_numeric_marks": any(row["teacher_mark"] is not None for row in rows),
+        "lesson": path_of.at_step(path_of.lesson_path(request.user, level, group), f"activity-{activity.pk}"),
     })

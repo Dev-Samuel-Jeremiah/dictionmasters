@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{% static 'css/book.css' %}">
   <link rel="stylesheet" href="{% static 'css/activity.css' %}">
   <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+  <link rel="stylesheet" href="{% static 'css/lesson_path.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -38,6 +39,43 @@
   </section>
 
   <div class="wrap es-body">
+    {% comment %}
+      The guided lesson's start and finish screen (apps/echospell/lesson_path.py):
+      one big button to the next unfinished step, the steps with ticks, and
+      the group completes itself once every step is done.
+    {% endcomment %}
+    <section class="lp-start{% if is_complete %} lp-done{% endif %}" id="finish" data-lesson-start>
+      {% if is_complete %}
+      <div class="lp-done__star" aria-hidden="true">&#11088;</div>
+      <h2>Group {{ group.number }} complete!</h2>
+      <p class="lp-start__note">You did every step. Well done!</p>
+      {% if next_group %}
+      <a href="{% url 'echospell:group_detail' level.slug next_group.slug %}" class="lp-go"><span><small>Next lesson</small>Group {{ next_group.number }}</span><span aria-hidden="true">&rarr;</span></a>
+      {% else %}
+      <a href="{% url 'accounts:dashboard' %}" class="lp-go"><span><small>All done here</small>Back home</span><span aria-hidden="true">&rarr;</span></a>
+      {% endif %}
+      {% elif lesson.total %}
+      <h2>{% if lesson.done %}Keep going{% else %}Ready to start?{% endif %}</h2>
+      <p class="lp-start__note">{{ lesson.done }} of {{ lesson.total }} step{{ lesson.total|pluralize }} done. Do every step to complete Group {{ group.number }}.</p>
+      <span class="px-meter" aria-hidden="true"><i style="width: {{ lesson.percent }}%"></i></span>
+      <a href="{{ lesson.next.url }}" class="lp-go" data-lesson-go><span><small>{% if lesson.done %}Continue{% else %}Start{% endif %} &middot; step {{ lesson.next.number }}</small>{{ lesson.next.title }}</span><span aria-hidden="true">&rarr;</span></a>
+      {% endif %}
+      {% if lesson.total %}
+      <ol class="lp-steps">
+        {% for step in lesson.steps %}
+        <li class="{% if step.done %}is-done{% endif %}">
+          <a href="{{ step.url }}">
+            <span class="lp-steps__tick" aria-hidden="true">{% if step.done %}&#10003;{% else %}{{ step.number }}{% endif %}</span>
+            <span class="lp-steps__title">{{ step.title }}</span>
+            <span class="lp-steps__state">{% if step.done %}Done{% elif step.kind == "activity" %}Pass it{% else %}Open it{% endif %}</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ol>
+      {% endif %}
+    </section>
+
+    {% if not lesson.total %}
     <section class="es-panel">
       <header class="es-section__head">
         <h2 class="es-section__title"><span class="es-section__num">1</span> Learn</h2>
@@ -85,28 +123,7 @@
     </section>
     {% endif %}
 
-    <section class="es-section">
-      <div class="es-complete{% if is_complete %} es-complete--done{% endif %}">
-        <span class="es-complete__mark" aria-hidden="true">{% if is_complete %}&#10003;{% else %}&#9733;{% endif %}</span>
-        <div class="es-complete__text">
-          {% if is_complete %}
-          <strong>Group {{ group.number }} is complete</strong>
-          <span>Nicely done. Move on to the next group, or mark it as not done to come back to it.</span>
-          {% else %}
-          <strong>Finished this group?</strong>
-          <span>Mark it complete to track your progress through {{ level.name }}.</span>
-          {% endif %}
-        </div>
-        <form method="post" action="{% url 'echospell:toggle_complete' level.slug group.slug %}">
-          {% csrf_token %}
-          {% if is_complete %}
-          <button type="submit" class="es-btn es-btn--ghost">Mark as not done</button>
-          {% else %}
-          <button type="submit" class="es-btn es-btn--green">&#10003; Mark group complete</button>
-          {% endif %}
-        </form>
-      </div>
-    </section>
+    {% endif %}
 
     {% if prev_group or next_group %}
     <nav class="es-pager" aria-label="Other groups">

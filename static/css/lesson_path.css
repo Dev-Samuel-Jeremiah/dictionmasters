@@ -1,0 +1,70 @@
+/* =========================================================
+   The guided lesson: the step bar on every step
+   (templates/includes/lesson_bar.html) and the start / finish screen
+   on an EchoSpell group or a Learning Modules day.
+   Built for a child on a 360px phone: big buttons, at least 56px.
+   Colours come from theme.css.
+   ========================================================= */
+
+/* ---------- step bar ---------- */
+.lp-bar {
+  margin: 28px 0 8px; padding: 16px;
+  background: var(--card); border-radius: 20px; box-shadow: var(--shadow);
+}
+.lp-bar__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lp-bar__count { margin: 0; font-size: 14px; font-weight: 800; color: var(--blue); }
+.lp-bar__track { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; flex: 1 1 140px; justify-content: flex-end; }
+.lp-bar__track li { flex: 0 1 28px; height: 8px; border-radius: 99px; background: var(--line); }
+.lp-bar__track li.is-done { background: var(--blue); }
+.lp-bar__track li.is-here { box-shadow: 0 0 0 2px var(--yellow); }
+.lp-bar__btns { display: flex; align-items: stretch; gap: 10px; margin-top: 14px; }
+.lp-bar__back {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 56px; padding: 0 16px; border-radius: 16px;
+  background: var(--sky); color: var(--blue); font-weight: 800; text-decoration: none; flex: none;
+}
+.lp-bar__next {
+  flex: 1; min-width: 0; min-height: 56px; padding: 8px 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border-radius: 16px; background: var(--yellow); color: var(--navy);
+  font-size: 17px; font-weight: 800; text-decoration: none;
+  box-shadow: 0 6px 14px rgba(233, 174, 0, 0.35);
+}
+.lp-bar__next span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-bar__next small { display: block; font-size: 12px; font-weight: 700; opacity: 0.75; }
+
+/* ---------- start / finish screen ---------- */
+.lp-start { margin-bottom: 8px; padding: 20px; background: var(--card); border-radius: 20px; box-shadow: var(--shadow); }
+.lp-start h2 { margin: 0 0 4px; font-size: 22px; }
+.lp-start__note { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+.lp-start .px-meter { margin-top: 12px; }
+.lp-go {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 64px; margin-top: 16px; padding: 10px 20px;
+  border-radius: 18px; background: var(--yellow); color: var(--navy);
+  font-size: 19px; font-weight: 800; text-decoration: none;
+  box-shadow: 0 6px 14px rgba(233, 174, 0, 0.35);
+}
+.lp-go small { display: block; font-size: 13px; font-weight: 700; opacity: 0.75; }
+.lp-steps { display: flex; flex-direction: column; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.lp-steps a, .lp-steps span.lp-steps__row {
+  display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px;
+  border-radius: 14px; background: var(--bg); color: var(--text); text-decoration: none; font-weight: 700;
+}
+.lp-steps__tick {
+  width: 32px; height: 32px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: var(--card); color: var(--muted); font-size: 14px; font-weight: 800; border: 2px solid var(--line);
+}
+.lp-steps .is-done .lp-steps__tick { background: var(--blue); border-color: var(--blue); color: #fff; }
+.lp-steps__title { flex: 1; min-width: 0; }
+.lp-steps__state { font-size: 13px; color: var(--muted); font-weight: 600; }
+
+.lp-done { text-align: center; border: 3px solid var(--yellow); }
+.lp-done__star { font-size: 44px; line-height: 1; }
+.lp-done .lp-steps { text-align: left; }
+
+@media (max-width: 380px) {
+  .lp-bar { padding: 12px; }
+  .lp-bar__back { padding: 0 12px; }
+  .lp-bar__next { font-size: 16px; padding: 8px 14px; }
+}

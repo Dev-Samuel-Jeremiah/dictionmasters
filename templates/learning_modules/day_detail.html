@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="{% static 'css/photo_slides.css' %}">
   <link rel="stylesheet" href="{% static 'css/learning_modules.css' %}">
   <link rel="stylesheet" href="{% static 'css/learning_modules_ui.css' %}">
+  <link rel="stylesheet" href="{% static 'css/lesson_path.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -32,7 +33,7 @@
             <p class="lm-hero__eyebrow">{{ term.name }} &middot; {{ week.display_name }}</p>
             <h1 class="lm-hero__title">{{ day.get_day_name_display }}</h1>
             <div class="lm-hero__chips">
-              <span class="lm-chip">{{ lesson_items|length }} lesson item{{ lesson_items|length|pluralize }}</span>
+              <span class="lm-chip">{{ lesson.total }} lesson item{{ lesson.total|pluralize }}</span>
               {% if is_complete %}<span class="lm-chip lm-chip--done">&#10003; Completed</span>{% endif %}
             </div>
           </div>
@@ -115,32 +116,46 @@
       </article>
       {% endfor %}
     </div>
+    {% include "includes/lesson_bar.html" with lesson=step %}
     {% else %}
-    <div class="lm-empty"><p>This day's lessons are being put together. Check back soon.</p></div>
+    {% comment %}
+      The day's start / finish screen (apps/learning_modules/lesson_path.py):
+      one big button to the next item not yet done, the items with ticks,
+      and the day completes itself once every item has been opened.
+    {% endcomment %}
+    <section class="lp-start{% if is_complete %} lp-done{% endif %}" id="finish" data-lesson-start>
+      {% if is_complete %}
+      <div class="lp-done__star" aria-hidden="true">&#11088;</div>
+      <h2>{{ day.get_day_name_display }} complete!</h2>
+      <p class="lp-start__note">{% if lesson.total %}You went through every lesson. Well done!{% else %}This day's lessons are being put together, so you can go straight on.{% endif %}</p>
+      {% if next_entry %}
+      <a href="{% url 'learning_modules:day_detail' module.slug next_entry.term.slug next_entry.week.slug next_entry.day.day_name %}" class="lp-go"><span><small>Next lesson</small>{{ next_entry.day.get_day_name_display }}, {{ next_entry.week.display_name }}</span><span aria-hidden="true">&rarr;</span></a>
+      {% else %}
+      <a href="{% url 'accounts:dashboard' %}" class="lp-go"><span><small>All done here</small>Back home</span><span aria-hidden="true">&rarr;</span></a>
+      {% endif %}
+      {% else %}
+      <h2>{% if lesson.done %}Keep going{% else %}Ready to start?{% endif %}</h2>
+      <p class="lp-start__note">{{ lesson.done }} of {{ lesson.total }} lesson{{ lesson.total|pluralize }} done. Go through every one to complete {{ day.get_day_name_display }}.</p>
+      <span class="px-meter" aria-hidden="true"><i style="width: {{ lesson.percent }}%"></i></span>
+      <a href="{{ lesson.next.url }}" class="lp-go" data-lesson-go><span><small>{% if lesson.done %}Continue{% else %}Start{% endif %} &middot; step {{ lesson.next.number }}</small>{{ lesson.next.title }}</span><span aria-hidden="true">&rarr;</span></a>
+      {% endif %}
+      {% if lesson.total %}
+      <ol class="lp-steps">
+        {% for one in lesson.steps %}
+        <li class="{% if one.done %}is-done{% endif %}">
+          <a href="{{ one.url }}">
+            <span class="lp-steps__tick" aria-hidden="true">{% if one.done %}&#10003;{% else %}{{ one.number }}{% endif %}</span>
+            <span class="lp-steps__title">{{ one.title }}</span>
+            <span class="lp-steps__state">{% if one.done %}Done{% else %}Open it{% endif %}</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ol>
+      {% endif %}
+    </section>
     {% endif %}
 
-    <section class="lm-section">
-      <form method="post" action="{% url 'learning_modules:toggle_complete' module.slug term.slug week.slug day.day_name %}" class="lm-complete{% if is_complete %} lm-complete--done{% endif %}">
-        {% csrf_token %}
-        <span class="lm-complete__mark" aria-hidden="true">{% if is_complete %}&#10003;{% else %}&#9733;{% endif %}</span>
-        <div class="lm-complete__text">
-          {% if is_complete %}
-          <strong>{{ day.get_day_name_display }} is complete</strong>
-          <span>Well done. Go on to the next day, or mark this one as not done to come back to it.</span>
-          {% else %}
-          <strong>Finished today's lessons?</strong>
-          <span>Mark the day complete to unlock what comes next.</span>
-          {% endif %}
-        </div>
-        {% if is_complete %}
-        <button type="submit" class="lm-btn lm-btn--ghost">Mark as not done</button>
-        {% else %}
-        <button type="submit" class="lm-btn lm-btn--green">&#10003; Mark day complete</button>
-        {% endif %}
-      </form>
-    </section>
-
-    {% if prev_entry or next_entry %}
+    {% if not step and prev_entry or not step and next_entry %}
     <nav class="lm-pager" aria-label="Other days">
       {% if prev_entry %}
       <a href="{% url 'learning_modules:day_detail' module.slug prev_entry.term.slug prev_entry.week.slug prev_entry.day.day_name %}" class="lm-lift">

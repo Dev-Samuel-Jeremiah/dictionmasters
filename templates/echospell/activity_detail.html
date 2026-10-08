@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="{% static 'css/book.css' %}">
   <link rel="stylesheet" href="{% static 'css/activity.css' %}">
   <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+{% if lesson %}<link rel="stylesheet" href="{% static 'css/lesson_path.css' %}">{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -50,6 +51,7 @@
 
 <section>
   <div class="wrap es-body es-body--narrow">
+    {% if lesson %}{% include "includes/lesson_bar.html" with hide_next=True %}{% endif %}
     {% if item_rows %}
     <form method="post" enctype="multipart/form-data" class="activity-form" data-mode="{{ activity.mode }}">
       {% csrf_token %}

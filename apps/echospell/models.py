@@ -572,6 +572,26 @@ class CardPosition(models.Model):
         return f"{self.user} — {self.group} · {self.category}"
 
 
+class GroupStepsSeen(models.Model):
+    """Which card types of a group a learner has opened, for the guided
+    lesson (apps/echospell/lesson_path.py). A group is earned once every
+    card type with something in it has been opened and every activity is
+    done — the same rule as the 44 Academy's tabs."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="echospell_steps_seen")
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="+")
+    cards_seen = models.JSONField(default=list, blank=True, help_text="Category ids opened, in the order first opened.")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "group"], name="one_steps_seen_per_group")]
+        verbose_name = "group steps seen"
+        verbose_name_plural = "group steps seen"
+
+    def __str__(self):
+        return f"{self.user} — {self.group}"
+
+
 class CardLessonQuick(CardLesson):
     """A card's "Quick" recording, for the read-along highlight.
 

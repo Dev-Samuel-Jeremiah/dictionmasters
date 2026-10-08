@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="{% static 'css/library.css' %}">
   <link rel="stylesheet" href="{% static 'css/echospell.css' %}">
   <link rel="stylesheet" href="{% static 'css/echospell_ui.css' %}">
+{% if lesson %}<link rel="stylesheet" href="{% static 'css/lesson_path.css' %}">{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -297,7 +298,7 @@
       {% endif %}
     {% endif %}
 
-    {% include "echospell/_card_steps.html" %}
+    {% if lesson %}{% include "includes/lesson_bar.html" %}{% else %}{% include "echospell/_card_steps.html" %}{% endif %}
   </div>
 </section>
 </div>

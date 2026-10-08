@@ -10,8 +10,9 @@ it holds an ordered list of LessonItems (a short video, an audio
 track, or both, each with its own title), the same way a school day
 covers a few short activities rather than one long one.
 
-Progress is tracked per Day (DayProgress). Terms and Weeks unlock in
-order: a Term/Week stays locked until the one before it is complete,
+Progress is tracked per Day (DayProgress), earned by opening every one
+of the day's lesson items (DayItemsSeen; see lesson_path.py). Terms and
+Weeks unlock in order: a Term/Week stays locked until the one before it is complete,
 computed live from DayProgress rather than stored — see
 views._term_status / _week_status.
 """
@@ -298,6 +299,25 @@ class DayProgress(models.Model):
     class Meta:
         unique_together = ("user", "day")
         verbose_name_plural = "Day progress"
+
+    def __str__(self):
+        return f"{self.user} — {self.day}"
+
+
+class DayItemsSeen(models.Model):
+    """Which lesson items of a day a learner has opened, one screen at a
+    time (apps/learning_modules/lesson_path.py). The day is earned —
+    DayProgress written — once every published item has been opened."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="day_items_seen")
+    day = models.ForeignKey(Day, on_delete=models.CASCADE, related_name="+")
+    items_seen = models.JSONField(default=list, blank=True, help_text="LessonItem ids opened, in the order first opened.")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "day"], name="one_items_seen_per_day")]
+        verbose_name = "day items seen"
+        verbose_name_plural = "day items seen"
 
     def __str__(self):
         return f"{self.user} — {self.day}"
