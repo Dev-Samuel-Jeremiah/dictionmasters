@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Not on your scheme yet — Diction Masters{% endblock %}
+
+{% block content %}
+{# A scheme student opened something outside the weeks they've reached (apps/scheme/gate.py). #}
+<div class="px-page">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/heroGirl.jpg' %}" alt="">
+    <h1>{% if is_content %}This comes later{% else %}Not on your scheme{% endif %}</h1>
+    <p>{% if is_content %}It's on your scheme of work in a later week.{% else %}Your lessons are on your home page, week by week.{% endif %}</p>
+  </section>
+  <div class="px-wrap" style="margin-top: 18px">
+    <a href="{% url 'accounts:dashboard' %}" class="px-item" style="min-height: 64px">
+      <span class="px-item__ii t-sky" aria-hidden="true">{% include "includes/icon.html" with name="home" size=24 %}</span>
+      <span class="px-item__it"><b>Back to this week</b><span>Your lessons for today and this week</span></span>
+      <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -17,9 +17,8 @@ from apps.echospell.models import Group, GroupProgress, Level
 from apps.schools.models import LevelChange, School
 
 from .calendar import terms_for, where_we_are
-from .models import Grading, ReportCard, SchemeWeek, SchoolTermDates, Session, Term
+from .models import Grading, ReportCard, SchoolTermDates, Session, Term
 from .results import publish, term_results
-from .weeks import scheme_lesson
 
 User = get_user_model()
 
@@ -46,8 +45,13 @@ class YearTestCase(TestCase):
         self.ben = make("ben@example.com", role="student", school=self.school, level="Level 2")
 
     def on(self, day):
-        """Pretend today is `day` for the calendar."""
-        return mock.patch("apps.scheme.calendar.timezone.localdate", return_value=day)
+        """Pretend today is `day` for the calendar and the timetable."""
+        from contextlib import ExitStack
+
+        stack = ExitStack()
+        for where in ("apps.scheme.calendar.timezone.localdate", "apps.scheme.timetable.timezone.localdate"):
+            stack.enter_context(mock.patch(where, return_value=day))
+        return stack
 
 
 class CalendarTests(YearTestCase):
@@ -94,50 +98,6 @@ class CalendarTests(YearTestCase):
             self.assertFalse(SchoolTermDates.objects.exists())
 
 
-class SchemeTests(YearTestCase):
-    def setUp(self):
-        super().setUp()
-        Group.objects.all().delete()
-        self.level, _ = Level.objects.update_or_create(name="Level 2", defaults={"is_published": True})
-        self.g1 = Group.objects.create(level=self.level, number=1, slug="s1")
-        self.g5 = Group.objects.create(level=self.level, number=5, slug="s5")
-        self.week = SchemeWeek.objects.create(level="Level 2", term=1, week=2, title="Long vowels")
-        self.week.groups.add(self.g5)
-
-    def test_this_weeks_scheme_comes_first_in_todays_lesson(self):
-        lesson = scheme_lesson(self.ada, date(2026, 9, 14))
-        self.assertEqual(lesson["title"], "EchoSpell: Level 2, Group 5")
-        self.assertEqual(lesson["label"], "This week: Long vowels")
-        from apps.accounts.dashboard_data import todays_lesson
-
-        with self.on(date(2026, 9, 14)):
-            self.assertEqual(todays_lesson(self.ada)["title"], "EchoSpell: Level 2, Group 5")
-        with self.on(date(2026, 9, 21)):        # week 3 has no scheme: back to the usual order
-            self.assertEqual(todays_lesson(self.ada)["title"], "EchoSpell: Level 2, Group 1")
-
-    def test_then_the_weeks_test_and_then_nothing(self):
-        test = Assessment.objects.create(title="CA 1", kind=Assessment.Kind.CA, level="Level 2", term=1, ca_number=1)
-        self.week.assessment = test
-        self.week.save()
-        GroupProgress.objects.create(user=self.ada, group=self.g5)
-        self.assertEqual(scheme_lesson(self.ada, date(2026, 9, 14))["kind"], "assessment")
-        Attempt.objects.create(user=self.ada, assessment=test, status="marked", percent=70, submitted_at=timezone.now())
-        self.assertIsNone(scheme_lesson(self.ada, date(2026, 9, 14)))
-
-    def test_only_pupils_at_a_school_follow_the_scheme(self):
-        solo = make("solo@example.com", level="Level 2")
-        self.assertIsNone(scheme_lesson(solo, date(2026, 9, 14)))
-
-    def test_the_teacher_sees_this_week_on_my_class(self):
-        self.client.force_login(self.teacher)
-        with self.on(date(2026, 9, 14)):
-            page = self.client.get("/school/class/")
-        self.assertContains(page, "data-scheme-week")
-        self.assertContains(page, "First Term, Week 2")
-        self.assertContains(page, "Long vowels")
-        self.assertContains(page, 'class="has-scheme is-now"')
-
-
 class SchoolTestTests(YearTestCase):
     def test_a_ca_test_needs_its_level_term_and_number_and_is_sat_once(self):
         with self.assertRaises(ValidationError):
@@ -152,21 +112,24 @@ class SchoolTestTests(YearTestCase):
         test = Assessment.objects.create(title="Exam", kind=Assessment.Kind.EXAM, level="Level 2", term=1,
                                          opens_at=now + timedelta(days=1), closes_at=now + timedelta(days=2))
         Question.objects.create(assessment=test, prompt="Pick", options="a\nb", answer="a")
-        self.client.force_login(self.ada)
+        # A student with no school: a school's students reach tests through
+        # their scheme of work (test_timetable.py), which isn't what's tested here.
+        pupil = make("loose@example.com", role="student", level="Level 2")
+        self.client.force_login(pupil)
         page = self.client.post(f"/assessments/{test.slug}/start/", follow=True)
         self.assertContains(page, "This test opens on")
         Assessment.objects.filter(pk=test.pk).update(opens_at=now - timedelta(days=2), closes_at=now - timedelta(days=1))
         self.assertContains(self.client.post(f"/assessments/{test.slug}/start/", follow=True), "This test has closed")
         Assessment.objects.filter(pk=test.pk).update(closes_at=now + timedelta(days=1))
         self.client.post(f"/assessments/{test.slug}/start/")
-        self.assertTrue(Attempt.objects.filter(user=self.ada, assessment=test).exists())
+        self.assertTrue(Attempt.objects.filter(user=pupil, assessment=test).exists())
 
     def test_individuals_do_not_see_school_tests(self):
         Assessment.objects.create(title="Exam", kind=Assessment.Kind.EXAM, level="Level 2", term=1)
         self.client.force_login(make("solo@example.com"))
         self.assertNotIn("exam", [k["value"] for k in self.client.get("/assessments/").context["kinds"]])
         self.assertEqual(self.client.get("/assessments/type/exam/").status_code, 404)
-        self.client.force_login(self.ada)
+        self.client.force_login(make("loose@example.com", role="student", level="Level 2"))
         self.assertIn("exam", [k["value"] for k in self.client.get("/assessments/").context["kinds"]])
 
 

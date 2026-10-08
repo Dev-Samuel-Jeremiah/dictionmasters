@@ -11,6 +11,14 @@ The school-year pages.
                   level tools (apps/schools/levels.py, with undo)
     term_dates    a school's own term dates, when it doesn't keep the
                   platform's
+
+And for a student following the scheme (timetable.py):
+
+    home          their dashboard: this week, today first (accounts.views
+                  .dashboard hands over to it)
+    weeks         My weeks: every week they've reached, to go back to
+    week          one of those weeks
+    go            open an entry from the scheme, noting that it was opened
 """
 
 from django.contrib import messages
@@ -20,6 +28,7 @@ from django.db.models import Avg, Count
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.accounts import grown_ups
 from apps.accounts.access import is_pupil_of, pupils_of
@@ -28,7 +37,9 @@ from apps.accounts.models import User
 from apps.schools import levels as level_moves
 
 from .calendar import last_term, terms_for
-from .models import Grading, ReportCard, SchoolTermDates
+from .models import TERM_CHOICES as TERM_LABELS
+from . import timetable as tt
+from .models import Grading, ReportCard, SchemeEntry, SchemeOpened, SchoolTermDates
 from .results import publish, save_comments, term_results
 
 
@@ -84,8 +95,6 @@ def reports(request):
 
 
 def _today():
-    from django.utils import timezone
-
     return timezone.localdate()
 
 
@@ -205,3 +214,67 @@ def term_dates(request):
     return render(request, "scheme/term_dates.html", {
         "terms": [{"dated": t, "own": t.term.pk in own, "error": errors.get(t.term.pk, "")} for t in terms],
     })
+
+
+# ---------------------------------------------------------------------------
+# The student's side
+# ---------------------------------------------------------------------------
+
+def home(request):
+    """A scheme student's dashboard. Called from accounts.views.dashboard."""
+    from apps.accounts import switcher
+    from apps.accounts.dashboard_data import _greeting
+
+    return render(request, "scheme/home.html", {
+        **tt.timetable(request.user),
+        "greeting": _greeting(timezone.now()),
+        "today": _today(),
+        "switcher": switcher.context(request),
+    })
+
+
+def _scheme_student(view):
+    """Only a student following the scheme; anyone else goes home."""
+    @login_required(login_url="accounts:login")
+    def guard(request, *args, **kwargs):
+        if not tt.on_scheme(request.user):
+            return redirect("accounts:dashboard")
+        return view(request, *args, **kwargs)
+
+    guard.__name__ = view.__name__
+    guard.__doc__ = view.__doc__
+    return guard
+
+
+@_scheme_student
+def practise(request):
+    """The practice tools a scheme student can always open."""
+    return render(request, "scheme/practise.html")
+
+
+@_scheme_student
+def weeks(request):
+    """My weeks: the weeks they've reached, newest first."""
+    return render(request, "scheme/weeks.html", {"weeks": tt.past_weeks(request.user)})
+
+
+@_scheme_student
+def week(request, term, number):
+    rows = tt.week_rows(request.user, term, number)
+    if rows is None:
+        raise Http404
+    return render(request, "scheme/week.html", {
+        "rows": rows, "term_label": dict(TERM_LABELS).get(term, ""), "number": number,
+        "done": sum(1 for r in rows if r["done"]), "total": len(rows),
+    })
+
+
+@_scheme_student
+def go(request, pk):
+    """Open an entry from the scheme: noted, then on to its content. Only
+    entries for their level in a week they've reached."""
+    entry = get_object_or_404(SchemeEntry, pk=pk, level=request.user.level)
+    if tt.content_key(entry) not in tt.open_keys(request.user):
+        raise Http404
+    SchemeOpened.objects.get_or_create(user=request.user, entry=entry)
+    return redirect(tt.content_url(entry))

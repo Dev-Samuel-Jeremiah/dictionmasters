@@ -17,6 +17,8 @@ def branding(request):
 # so the sidebar and the bottom tab bar can light the right one.
 NAV_SECTIONS = (
     ("progress", ("/assessments/results/",)),
+    ("learn", ("/scheme/weeks/",)),
+    ("practice", ("/scheme/practise/",)),
     ("practice", ("/daily-practice/", "/assessments/", "/clash/", "/tutor/")),
     ("learn", (
         "/learning-tools/", "/lesson-audio/", "/book/", "/tricks/", "/echospell/", "/learning-modules/",

@@ -128,7 +128,9 @@
       <div class="lp-done__star" aria-hidden="true">&#11088;</div>
       <h2>{{ day.get_day_name_display }} complete!</h2>
       <p class="lp-start__note">{% if lesson.total %}You went through every lesson. Well done!{% else %}This day's lessons are being put together, so you can go straight on.{% endif %}</p>
-      {% if next_entry %}
+      {% if on_scheme %}
+      <a href="{% url 'accounts:dashboard' %}" class="lp-go"><span><small>Next</small>Back to this week</span><span aria-hidden="true">&rarr;</span></a>
+      {% elif next_entry %}
       <a href="{% url 'learning_modules:day_detail' module.slug next_entry.term.slug next_entry.week.slug next_entry.day.day_name %}" class="lp-go"><span><small>Next lesson</small>{{ next_entry.day.get_day_name_display }}, {{ next_entry.week.display_name }}</span><span aria-hidden="true">&rarr;</span></a>
       {% else %}
       <a href="{% url 'accounts:dashboard' %}" class="lp-go"><span><small>All done here</small>Back home</span><span aria-hidden="true">&rarr;</span></a>
@@ -155,7 +157,7 @@
     </section>
     {% endif %}
 
-    {% if not step and prev_entry or not step and next_entry %}
+    {% if not on_scheme and not step and prev_entry or not on_scheme and not step and next_entry %}
     <nav class="lm-pager" aria-label="Other days">
       {% if prev_entry %}
       <a href="{% url 'learning_modules:day_detail' module.slug prev_entry.term.slug prev_entry.week.slug prev_entry.day.day_name %}" class="lm-lift">

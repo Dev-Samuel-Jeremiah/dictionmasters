@@ -98,3 +98,42 @@
   .sw-scores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sw-report { padding: 18px; }
 }
+
+/* =========================================================
+   A scheme student's pages (scheme/home.html, weeks.html, week.html)
+   ========================================================= */
+.sh-place { display: inline-block; margin-top: 4px; font-weight: 800; color: var(--yellow); }
+.sh-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.sh-item {
+  display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px;
+  background: var(--card); border-radius: 18px; box-shadow: var(--shadow); color: var(--text); text-decoration: none;
+}
+.sh-item.is-done { background: var(--bg); box-shadow: none; border: 1px solid var(--line); }
+.sh-item__tick {
+  width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%;
+  border: 2px solid var(--line); background: var(--card); font-weight: 800; color: var(--muted);
+}
+.sh-item.is-done .sh-item__tick { background: var(--blue); border-color: var(--blue); color: #fff; }
+.sh-item__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sh-item__text b { font-size: 16px; }
+.sh-item__text small { font-size: 13px; color: var(--muted); }
+.px-wrap .sh-alldone, .px-wrap .sh-rest, .px-wrap .sh-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px; text-align: center;
+}
+.sh-alldone span { font-size: 40px; line-height: 1; }
+.sh-alldone b, .sh-rest b, .sh-empty b { font-size: 19px; }
+.sh-alldone small, .sh-rest small, .sh-empty small { color: var(--muted); font-size: 14px; }
+.sh-alldone { border: 3px solid var(--yellow); }
+.sh-weeks-link { display: flex; align-items: center; min-height: 56px; margin-top: 16px; padding: 0 16px; border-radius: 16px; background: var(--sky); color: var(--blue); font-weight: 800; text-decoration: none; }
+.sh-practise { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.sh-tile { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 10px 12px; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); color: var(--text); text-decoration: none; font-size: 15px; }
+.sh-back { margin: 16px 0 10px; }
+.sh-back a { display: inline-flex; align-items: center; min-height: 44px; color: var(--blue); font-weight: 700; text-decoration: none; }
+
+/* My class: this week's timetable */
+.sw-tt { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.sw-tt li { display: flex; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 12px; background: var(--bg); }
+.sw-tt li.is-today { background: var(--butter); }
+.sw-tt__day { flex: none; width: 82px; font-size: 13px; font-weight: 800; color: var(--muted); }
+.sw-tt a { color: var(--text); font-weight: 700; text-decoration: none; }
+@media (max-width: 380px) { .sh-practise { grid-template-columns: minmax(0, 1fr); } }

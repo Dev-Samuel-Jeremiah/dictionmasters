@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Practise — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+
+{% block content %}
+{# The practice corner for a scheme student (apps/scheme/views.practise): open any day. #}
+<div class="px-page sh">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/practiceGirl.jpg' %}" alt="">
+    <h1>Practise</h1>
+    <p>Open any day, as often as you like</p>
+  </section>
+  <div class="px-wrap" style="margin-top: 18px">{% include "scheme/_practise.html" %}</div>
+</div>
+{% endblock %}

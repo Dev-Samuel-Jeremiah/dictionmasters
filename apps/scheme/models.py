@@ -8,15 +8,16 @@ report cards that come out of them.
                         set by staff in the control room
     SchoolTermDates     one school's own dates for a term, when it resumes
                         on a different day (set by the school admin)
-    SchemeWeek          what a level does in one week of a term, pointing
-                        at content the site already has; staff only
+    SchemeEntry         the scheme of work: a piece of content a level does
+                        in one week of a term, on one day; staff only
+    SchemeOpened        a student opened an entry from their scheme
     Grading             the CA / exam weights and grade boundaries (one row)
     ReportCard          a student's term: scores, grade, days practised and
                         the teacher's comment, frozen when the school
                         admin publishes it
 
-Where today falls in the year is worked out in calendar.py, a term's
-results in results.py.
+Where today falls in the year is worked out in calendar.py, what a
+student sees and may open in timetable.py, a term's results in results.py.
 """
 
 from django.conf import settings
@@ -87,39 +88,112 @@ class SchoolTermDates(_Dates):
         return f"{self.school}: {self.term}"
 
 
-class SchemeWeek(models.Model):
-    """One week of the scheme of work for one level — the same every year,
-    so it is tied to a term number, not a dated term."""
+DAY_CHOICES = [
+    ("", "Any day this week"),
+    ("monday", "Monday"),
+    ("tuesday", "Tuesday"),
+    ("wednesday", "Wednesday"),
+    ("thursday", "Thursday"),
+    ("friday", "Friday"),
+]
+DAY_ORDER = [key for key, _label in DAY_CHOICES]
+
+
+class SchemeEntry(models.Model):
+    """One piece of content on the scheme of work: this level does it in
+    this week of this term, on this day (or any day that week). The same
+    every year, so it is tied to a term number, not a dated term.
+
+    Exactly one of the content fields is filled, the one its `kind` names
+    (Daily Practice needs none). apps/scheme/timetable.py turns entries into
+    what a student sees and may open."""
+
+    class Kind(models.TextChoices):
+        GROUP = "group", "EchoSpell group"
+        MODULE_DAY = "module_day", "Learning Modules day"
+        DIALOGUE = "dialogue", "Conversational Dialogue"
+        SOUND = "sound", "44 Academy sound"
+        TRICK = "trick", "Tricks to Sound Fluent lesson"
+        CHAPTER = "chapter", "Reading Club chapter"
+        RECITAL = "recital", "Assembly Recital"
+        LIBRARY = "library", "Diction Library item"
+        ASSESSMENT = "assessment", "Assessment"
+        DAILY_PRACTICE = "daily_practice", "Daily Practice"
+
+    # The content field each kind fills in.
+    FIELD_FOR = {
+        Kind.GROUP: "group", Kind.MODULE_DAY: "module_day", Kind.DIALOGUE: "dialogue",
+        Kind.SOUND: "sound", Kind.TRICK: "sound", Kind.CHAPTER: "chapter", Kind.RECITAL: "recital",
+        Kind.LIBRARY: "library_item", Kind.ASSESSMENT: "assessment", Kind.DAILY_PRACTICE: None,
+    }
 
     level = models.CharField(max_length=100, choices=LEVEL_NAME_CHOICES)
     term = models.PositiveSmallIntegerField(choices=TERM_CHOICES)
     week = models.PositiveSmallIntegerField(choices=WEEK_CHOICES)
-    title = models.CharField(max_length=150, help_text='The week\'s topic, e.g. "The /θ/ and /ð/ sounds".')
-    notes = models.TextField(blank=True, help_text="Short notes for the teacher: what to teach and how.")
-    groups = models.ManyToManyField(
-        "echospell.Group", blank=True, related_name="scheme_weeks",
-        help_text="EchoSpell groups for this week, in the order to do them.",
-    )
-    module_week = models.ForeignKey(
-        "learning_modules.Week", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheme_weeks",
-        help_text="A Learning Modules week to work through.",
-    )
-    dialogue_week = models.PositiveSmallIntegerField(
-        null=True, blank=True, choices=WEEK_CHOICES,
-        help_text="The Conversational Dialogue week for this level and term.",
-    )
-    assessment = models.ForeignKey(
-        "assessments.Assessment", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheme_weeks",
-        help_text="A test this week, e.g. a CA test.",
-    )
+    day = models.CharField(max_length=10, choices=DAY_CHOICES, blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+
+    group = models.ForeignKey("echospell.Group", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    module_day = models.ForeignKey("learning_modules.Day", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    dialogue = models.ForeignKey("conversational_dialogue.Dialogue", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    sound = models.ForeignKey("book.Sound", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    chapter = models.ForeignKey("reading_club.Chapter", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    recital = models.ForeignKey("assembly_recitals.Recital", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    library_item = models.ForeignKey("diction_library.LibraryItem", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    assessment = models.ForeignKey("assessments.Assessment", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
 
     class Meta:
-        ordering = ["level", "term", "week"]
-        constraints = [models.UniqueConstraint(fields=["level", "term", "week"], name="one_scheme_week")]
-        verbose_name = "scheme of work week"
+        ordering = ["level", "term", "week", "day", "order", "pk"]
+        indexes = [models.Index(fields=["level", "term", "week"])]
+        verbose_name = "scheme of work entry"
+        verbose_name_plural = "scheme of work entries"
 
     def __str__(self):
         return f"{self.level}, {self.get_term_display()}, Week {self.week}: {self.title}"
+
+    @property
+    def content(self):
+        field = self.FIELD_FOR.get(self.kind)
+        return getattr(self, field) if field else None
+
+    @property
+    def title(self):
+        if self.kind == self.Kind.DAILY_PRACTICE:
+            return "Daily Practice"
+        content = self.content
+        if content is None:
+            return self.get_kind_display()
+        if self.kind == self.Kind.GROUP:
+            return f"EchoSpell Group {content.number}"
+        if self.kind == self.Kind.MODULE_DAY:
+            return f"{content.week.term.module.name}: {content.get_day_name_display()}, {content.week.display_name}"
+        if self.kind == self.Kind.SOUND:
+            return f"44 Academy: {content.name}"
+        if self.kind == self.Kind.TRICK:
+            return f"Tricks: {content.name}"
+        return str(getattr(content, "title", None) or content)
+
+    def clean(self):
+        field = self.FIELD_FOR.get(self.kind)
+        filled = [name for name in set(self.FIELD_FOR.values()) if name and getattr(self, f"{name}_id")]
+        if field and filled != [field]:
+            raise ValidationError(f"Choose the {self.get_kind_display()} this entry is for, and nothing else.")
+        if not field and filled:
+            raise ValidationError("Daily Practice needs no content chosen.")
+
+
+class SchemeOpened(models.Model):
+    """A student opened a scheme entry from their scheme. For content whose
+    tool keeps no record of being done (a recital, a library item, Daily
+    Practice), opening it is what counts."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="scheme_opened")
+    entry = models.ForeignKey(SchemeEntry, on_delete=models.CASCADE, related_name="opened")
+    opened_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "entry"], name="one_opened_per_entry")]
 
 
 class Grading(models.Model):

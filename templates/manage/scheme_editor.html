@@ -1,0 +1,105 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Scheme of work — Control room{% endblock %}
+
+{% block content %}
+{% comment %}
+  The scheme of work as a timetable (apps/manage/scheme_editor.py): one
+  level's term, week 1 to 14. What's here is exactly what that level's
+  students see, week by week (apps/scheme/timetable.py).
+{% endcomment %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#128467;&#65039; Scheme of work</p>
+    <h1 class="cr-pagehead__title">{{ level }} · {% for value, label in terms %}{% if value == term %}{{ label }}{% endif %}{% endfor %}</h1>
+    <p class="cr-pagehead__note">{{ total }} entr{{ total|pluralize:"y,ies" }} this term. Students in {{ level }} see only the current week, and can go back to earlier weeks.</p>
+  </div>
+</header>
+
+<form method="get" class="cr-filter">
+  <select name="level" class="cr-input cr-select" aria-label="Level">{% for one in levels %}<option value="{{ one }}"{% if one == level %} selected{% endif %}>{{ one }}</option>{% endfor %}</select>
+  <select name="term" class="cr-input cr-select" aria-label="Term">{% for value, label in terms %}<option value="{{ value }}"{% if value == term %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <button type="submit" class="cr-btn cr-btn--ghost">Open</button>
+</form>
+
+<div class="se-tools">
+  <form method="post" class="cr-card se-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}">
+    <h2 class="cr-card__title">Add to the timetable</h2>
+    <label>Week<select name="week" class="cr-input cr-select">{% for value, label in week_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+    <label>Day<select name="day" class="cr-input cr-select">{% for value, label in days %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+    <label class="se-wide">Content<select name="content" class="cr-input cr-select" required>
+      <option value="">Choose…</option>
+      {% for group_label, options in content_choices %}{% if options %}<optgroup label="{{ group_label }}">{% for value, label in options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</optgroup>{% endif %}{% endfor %}
+    </select></label>
+    <button type="submit" class="cr-btn cr-btn--gold">Add</button>
+  </form>
+
+  <form method="post" class="cr-card se-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="fill"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}">
+    <h2 class="cr-card__title">Fill the weeks</h2>
+    <label class="se-wide">With<select name="set" class="cr-input cr-select" required>{% for value, label in fill_sets %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+    <label>From week<select name="start_week" class="cr-input cr-select">{% for value, label in week_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+    <label>Pace<select name="pace" class="cr-input cr-select"><option value="week">One a week</option><option value="day">One a school day (Mon–Fri)</option></select></label>
+    <label>Day (one a week)<select name="day" class="cr-input cr-select">{% for value, label in days %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+    <label>Start at item<input type="number" name="start_at" value="1" min="1" class="cr-input"></label>
+    <label>How many (blank: all)<input type="number" name="how_many" min="1" class="cr-input"></label>
+    <button type="submit" class="cr-btn cr-btn--gold">Fill</button>
+    <p class="cr-help se-wide">Example: {{ level }} EchoSpell groups, from Week 1, one a week, starting at item 1 puts Group 1 in Week 1, Group 2 in Week 2, and so on. Dialogues go on the week and day they were written for.</p>
+  </form>
+</div>
+
+<div class="se-weeks">
+  {% for week in weeks %}
+  <section class="cr-card se-week{% if not week.entries %} is-empty{% endif %}">
+    <h2 class="cr-card__title">Week {{ week.number }}</h2>
+    {% if week.entries %}
+    <ol class="se-entries">
+      {% for entry in week.entries %}
+      <li>
+        <span class="se-day">{{ entry.get_day_display }}</span>
+        <span class="se-title"><b>{{ entry.title }}</b><small>{{ entry.get_kind_display }}</small></span>
+        <form method="post" class="se-actions">
+          {% csrf_token %}
+          <input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="entry" value="{{ entry.pk }}">
+          <button type="submit" name="action" value="up" class="cr-btn cr-btn--ghost" aria-label="Move up">&uarr;</button>
+          <button type="submit" name="action" value="down" class="cr-btn cr-btn--ghost" aria-label="Move down">&darr;</button>
+          <button type="submit" name="action" value="remove" class="cr-btn cr-btn--ghost" aria-label="Take off">&times;</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p class="cr-help">Nothing yet.</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+
+{% if total %}
+<form method="post" class="se-clear" onsubmit="return confirm('Take everything off {{ level }} for this term?');">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="clear"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}">
+  <button type="submit" class="cr-btn cr-btn--ghost">Clear this term for {{ level }}</button>
+</form>
+{% endif %}
+
+<style>
+  .se-tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+  .se-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; align-content: start; }
+  .se-form h2, .se-form .se-wide, .se-form button { grid-column: 1 / -1; }
+  .se-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; }
+  .se-weeks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 16px; }
+  .se-week.is-empty { opacity: 0.7; }
+  .se-entries { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .se-entries li { display: flex; align-items: center; gap: 10px; }
+  .se-day { flex: none; width: 76px; font-size: 12px; font-weight: 700; color: var(--cr-muted, #667); }
+  .se-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .se-title small { font-size: 12px; color: var(--cr-muted, #667); }
+  .se-actions { display: flex; gap: 4px; }
+  .se-actions .cr-btn { min-width: 36px; padding: 0 8px; }
+  .se-clear { margin-top: 20px; }
+</style>
+{% endblock %}

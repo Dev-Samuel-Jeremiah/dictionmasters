@@ -13,10 +13,23 @@
   <nav class="px-side__nav">
     <a href="{{ dashboard_url }}" class="px-side__link{% if nav_section == 'home' %} is-on{% endif %}"{% if nav_section == 'home' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="home" %}<span>Home</span></a>
     {% if user.is_teacher %}<a href="{% url 'schools:class_dashboard' %}" class="px-side__link{% if request.path|slice:':14' == '/school/class/' %} is-on{% endif %}">{% include "includes/icon.html" with name="school" %}<span>My class</span></a>{% endif %}
+    {% if on_scheme %}
+    {# A student on the scheme of work finds lessons week by week (apps/scheme). #}
+    <a href="{% url 'scheme:weeks' %}" class="px-side__link{% if nav_section == 'learn' %} is-on{% endif %}">{% include "includes/icon.html" with name="book" %}<span>My weeks</span></a>
+    <a href="{% url 'scheme:practise' %}" class="px-side__link{% if nav_section == 'practice' %} is-on{% endif %}">{% include "includes/icon.html" with name="mic" %}<span>Practice</span></a>
+    {% else %}
     <a href="{% url 'learning_tools:hub' %}" class="px-side__link{% if nav_section == 'learn' %} is-on{% endif %}"{% if nav_section == 'learn' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="book" %}<span>Learn</span></a>
     <a href="{% url 'daily_practice:home' %}" class="px-side__link{% if nav_section == 'practice' %} is-on{% endif %}"{% if nav_section == 'practice' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="mic" %}<span>Practice</span></a>
+    {% endif %}
     <a href="{% url 'assessments:my_results' %}" class="px-side__link{% if nav_section == 'progress' %} is-on{% endif %}"{% if nav_section == 'progress' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="chart" %}<span>Progress</span></a>
 
+    {% if on_scheme %}
+    <p class="px-side__label">Practise</p>
+    <a href="{% url 'clash:hub' %}" class="px-side__sub{% if request.path|slice:':7' == '/clash/' %} is-on{% endif %}"><span class="px-side__dot t-blush">{% include "includes/icon.html" with name="swords" size=16 %}</span>Diction Clash</a>
+    <a href="{% url 'quick_words:hub' %}" class="px-side__sub{% if request.path|slice:':13' == '/quick-words/' %} is-on{% endif %}"><span class="px-side__dot t-butter">{% include "includes/icon.html" with name="words" size=16 %}</span>Quick Words</a>
+    <a href="{% url 'book:phonemic_chart' %}" class="px-side__sub{% if request.resolver_match.url_name == 'phonemic_chart' %} is-on{% endif %}"><span class="px-side__dot t-sky">{% include "includes/icon.html" with name="ipa" size=16 %}</span>Phonemic chart</a>
+    <a href="{% url 'tutor:hub' %}" class="px-side__sub{% if request.path|slice:':7' == '/tutor/' %} is-on{% endif %}"><span class="px-side__dot t-sky">{% include "includes/icon.html" with name="robot" size=16 %}</span>Read with Yela</a>
+    {% else %}
     <p class="px-side__label">Courses</p>
     <a href="{% url 'book:home' %}" class="px-side__sub{% if request.path|slice:':6' == '/book/' and request.resolver_match.url_name != 'phonemic_chart' %} is-on{% endif %}"><span class="px-side__dot t-butter">{% include "includes/icon.html" with name="cap" size=16 %}</span>The 44 Academy</a>
     <a href="{% url 'echospell:hub' %}" class="px-side__sub{% if request.path|slice:':11' == '/echospell/' %} is-on{% endif %}"><span class="px-side__dot t-sky">{% include "includes/icon.html" with name="abc" size=16 %}</span>EchoSpell</a>
@@ -37,6 +50,7 @@
     <a href="{% url 'diction_library:hub' %}" class="px-side__sub{% if request.path|slice:':9' == '/library/' %} is-on{% endif %}"><span class="px-side__dot t-mint">{% include "includes/icon.html" with name="shelf" size=16 %}</span>Diction Library</a>
     <a href="{% url 'reference_library:home' %}" class="px-side__sub{% if request.path|slice:':19' == '/reference-library/' %} is-on{% endif %}"><span class="px-side__dot t-stone">{% include "includes/icon.html" with name="search" size=16 %}</span>Reference Library</a>
     <a href="{% url 'diction_radio:home' %}" class="px-side__sub{% if request.path|slice:':7' == '/radio/' %} is-on{% endif %}"><span class="px-side__dot t-butter">{% include "includes/icon.html" with name="radio" size=16 %}</span>Diction Radio</a>
+    {% endif %}
   </nav>
   <a href="{% if billing.can_pay %}{% url 'billing:account' %}{% else %}{% url 'videos:offline' %}{% endif %}" class="px-side__me{% if nav_section == 'me' %} is-on{% endif %}">
     <span class="px-avatar" aria-hidden="true">{{ user.first_name|default:user.email|slice:":1"|upper }}</span>
@@ -51,8 +65,13 @@
 
 <nav class="px-tabbar" aria-label="Main">
   <a href="{{ dashboard_url }}" class="{% if nav_section == 'home' %}is-on{% endif %}"{% if nav_section == 'home' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="home" size=24 %}Home</a>
+  {% if on_scheme %}
+  <a href="{% url 'scheme:weeks' %}" class="{% if nav_section == 'learn' %}is-on{% endif %}">{% include "includes/icon.html" with name="book" size=24 %}My weeks</a>
+  <a href="{% url 'scheme:practise' %}" class="{% if nav_section == 'practice' %}is-on{% endif %}">{% include "includes/icon.html" with name="mic" size=24 %}Practice</a>
+  {% else %}
   <a href="{% url 'learning_tools:hub' %}" class="{% if nav_section == 'learn' %}is-on{% endif %}"{% if nav_section == 'learn' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="book" size=24 %}Learn</a>
   <a href="{% url 'daily_practice:home' %}" class="{% if nav_section == 'practice' %}is-on{% endif %}"{% if nav_section == 'practice' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="mic" size=24 %}Practice</a>
+  {% endif %}
   <a href="{% url 'assessments:my_results' %}" class="{% if nav_section == 'progress' %}is-on{% endif %}"{% if nav_section == 'progress' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="chart" size=24 %}Progress</a>
   <details class="account-menu px-tabbar__me{% if nav_section == 'me' %} is-on{% endif %}" data-account-menu>
     <summary aria-label="Me: your account">{% include "includes/icon.html" with name="user" size=24 %}Me</summary>

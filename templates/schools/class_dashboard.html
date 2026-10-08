@@ -27,26 +27,19 @@
     </nav>
     {% endif %}
 
-    {# This week in the scheme of work (apps/scheme/weeks.py). #}
-    {% if scheme.place.label %}
+    {# This week of the scheme of work (apps/scheme/timetable.class_week). #}
+    {% if scheme.label %}
     <section class="px-card sw-week" data-scheme-week>
-      <p class="sw-week__label">{{ scheme.place.label }}</p>
-      {% if scheme.week %}
-      <h2>{{ scheme.week.title }}</h2>
-      {% if scheme.week.notes %}<p class="sw-week__notes">{{ scheme.week.notes|linebreaksbr }}</p>{% endif %}
-      <ul class="sw-week__links">
-        {% for group in scheme.week.groups.all %}<li><a href="{% url 'echospell:group_detail' group.level.slug group.slug %}">EchoSpell Group {{ group.number }}</a></li>{% endfor %}
-        {% if scheme.week.module_week %}<li><a href="{% url 'learning_modules:week_detail' scheme.week.module_week.term.module.slug scheme.week.module_week.term.slug scheme.week.module_week.slug %}">{{ scheme.week.module_week.term.module.name }}, {{ scheme.week.module_week.display_name }}</a></li>{% endif %}
-        {% if scheme.week.dialogue_week %}<li><a href="{% url 'conversational_dialogue:hub' %}">Conversational Dialogue, Week {{ scheme.week.dialogue_week }}</a></li>{% endif %}
-        {% if scheme.week.assessment %}<li><a href="{% url 'assessments:detail' scheme.week.assessment.slug %}">{{ scheme.week.assessment.title }}</a></li>{% endif %}
+      <p class="sw-week__label">{{ scheme.label }}</p>
+      {% if scheme.rows %}
+      <h2>This week's scheme</h2>
+      <ul class="sw-tt">
+        {% for row in scheme.rows %}
+        <li class="{% if row.is_today %}is-today{% endif %}"><span class="sw-tt__day">{{ row.day_label }}</span><a href="{{ row.url }}">{{ row.title }}</a></li>
+        {% endfor %}
       </ul>
-      {% elif scheme.place.state == "term" %}
-      <p class="sw-week__notes">Nothing in the scheme of work for this week yet.</p>
-      {% endif %}
-      {% if scheme.strip %}
-      <ol class="sw-strip" aria-label="Weeks this term">
-        {% for w in scheme.strip %}<li class="{% if w.scheme %}has-scheme{% endif %}{% if w.is_now %} is-now{% endif %}"{% if w.scheme %} title="{{ w.scheme.title }}"{% endif %}>{{ w.number }}</li>{% endfor %}
-      </ol>
+      {% elif "break" not in scheme.label %}
+      <p class="sw-week__notes">Nothing on the scheme of work for this week.</p>
       {% endif %}
     </section>
     {% endif %}
@@ -103,6 +96,7 @@
             <span class="cd-pupil__echo">EchoSpell {{ row.echospell_done }} of {{ row.echospell_total }} groups</span>
             <span class="px-meter" aria-hidden="true"><i style="width: {{ row.echospell_percent }}%"></i></span>
             {% endif %}
+            {% if scheme.total %}<span class="cd-pupil__echo">This week: {{ row.scheme_done }} of {{ scheme.total }} done</span>{% endif %}
             <span class="cd-pupil__nums">
               {% if row.activity_avg is not None %}<span>Activities {{ row.activity_avg }}%</span>{% endif %}
               {% if row.assessment_avg is not None %}<span>Assessments {{ row.assessment_avg }}%</span>{% endif %}

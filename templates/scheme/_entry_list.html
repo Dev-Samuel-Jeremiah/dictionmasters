@@ -1,0 +1,12 @@
+{# A list of scheme entries with ticks (apps/scheme/timetable._row). Needs `rows`; `show_day` adds the day. #}
+<ol class="sh-list">
+  {% for row in rows %}
+  <li>
+    <a href="{{ row.url }}" class="sh-item{% if row.done %} is-done{% endif %}">
+      <span class="sh-item__tick" aria-hidden="true">{% if row.done %}&#10003;{% else %}{{ forloop.counter }}{% endif %}</span>
+      <span class="sh-item__text"><b>{{ row.title }}</b><small>{% if show_day %}{{ row.day_label }} · {% endif %}{{ row.kind }}{% if row.done %} · Done{% endif %}</small></span>
+      <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ol>

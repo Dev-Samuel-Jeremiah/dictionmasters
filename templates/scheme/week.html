@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ term_label }}, Week {{ number }} — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+
+{% block content %}
+{# One week a student has reached (apps/scheme/views.week). #}
+<div class="px-page sh">
+  <section class="px-phead">
+    <h1>{{ term_label }}, Week {{ number }}</h1>
+    <p>{{ done }} of {{ total }} done</p>
+  </section>
+  <div class="px-wrap">
+    <p class="sh-back"><a href="{% url 'scheme:weeks' %}">&larr; My weeks</a></p>
+    {% include "scheme/_entry_list.html" with rows=rows show_day=True %}
+  </div>
+</div>
+{% endblock %}

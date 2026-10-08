@@ -449,6 +449,12 @@ def dashboard(request):
     on, and the tools themselves."""
     if request.user.role == User.Role.SCHOOL_ADMIN:
         return redirect("schools:dashboard")
+    # A student at a school follows the scheme of work: it alone decides
+    # what their dashboard shows (apps/scheme).
+    from apps.scheme import timetable, views as scheme_views
+
+    if timetable.on_scheme(request.user):
+        return scheme_views.home(request)
     if _uses_simple_home(request.user):
         home = learner_home(request.user)
         home["switcher"] = switcher.context(request)

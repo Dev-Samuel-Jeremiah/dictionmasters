@@ -179,6 +179,8 @@ MIDDLEWARE = [
     "apps.billing.middleware.SubscriptionRequiredMiddleware",
     # After billing: a tool kept for other levels (learning_tools.ToolLevels).
     "apps.learning_tools.middleware.ToolLevelsMiddleware",
+    # A student at a school sees only their scheme of work's weeks (apps/scheme/gate.py).
+    "apps.scheme.gate.SchemeGateMiddleware",
 ]
 
 # Serves the site's own CSS, JS and images in production, so no separate
@@ -207,6 +209,7 @@ TEMPLATES = [
                 "apps.landing.context_processors.nav",
                 "apps.accounts.master_login.context",
                 "apps.billing.context_processors.billing",
+                "apps.scheme.context_processors.scheme",
                 "apps.landing.native_app.context",
             ],
             # {{ colour|palette }} everywhere, for colours stored in the database.

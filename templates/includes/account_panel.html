@@ -16,10 +16,17 @@
       <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="chart" size=18 %}</span>
       <span class="account-menu__text"><span>My results</span><small>Scores across all programmes</small></span>
     </a>
+    {% if on_scheme %}
+    <a href="{% url 'scheme:weeks' %}" class="account-menu__item">
+      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="grid" size=18 %}</span>
+      <span class="account-menu__text"><span>My weeks</span><small>Every lesson you've had</small></span>
+    </a>
+    {% else %}
     <a href="{% url 'learning_tools:hub' %}" class="account-menu__item"{% if '/learning-tools/' in request.path %} aria-current="page"{% endif %}>
       <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="grid" size=18 %}</span>
       <span class="account-menu__text"><span>Learn</span><small>All courses and tools</small></span>
     </a>
+    {% endif %}
     {% if billing.can_pay %}
     <a href="{% url 'billing:account' %}" class="account-menu__item"{% if request.path == '/billing/' %} aria-current="page"{% endif %}>
       <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="card" size=18 %}</span>
