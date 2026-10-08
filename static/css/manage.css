@@ -533,3 +533,7 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .cr-bulkbar[hidden] { display: none; }
 .cr-bulkbar .cr-link { color: #C9D0E2; background: none; border: 0; cursor: pointer; font: inherit; }
 .cr-bulkbar .cr-btn--danger { margin-left: auto; }
+
+/* Back, on every control room page but its home (templates/manage/base.html) */
+.cr-back { margin: 0 0 14px; }
+.cr-back .cr-btn { min-height: 40px; }

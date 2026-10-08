@@ -3,8 +3,8 @@ Views for the Learning Modules pathway: Module > Term > Week > Day,
 where a Day holds a short list of LessonItems rather than being one
 lesson itself.
 
-Terms and Weeks unlock in order — see _progress_chain, which is the
-one place that decides locked/active/done for a list of siblings.
+Every term and week is open — _progress_chain is the one place that
+gives a list of siblings their active/done ticks.
 Nothing is stored: status is recomputed from DayProgress on every
 request, which is cheap at this scale and means it's never stale.
 """
@@ -58,18 +58,16 @@ def _progress(day_ids, completed_ids):
 
 
 def _progress_chain(items, get_day_ids, completed_ids, label):
-    """Attach a locked/active/done status to each item in order — each
-    one stays locked until the one before it is fully complete. An
-    empty item (no days yet) doesn't block what follows it."""
+    """Attach an active/done status to each item. Nothing is locked: a
+    learner can open any term or week, in any order; "done" is a tick for
+    one where every day is complete."""
     cards = []
-    unlocked = True
     for item in items:
         day_ids = get_day_ids(item)
         prog = _progress(day_ids, completed_ids)
         complete = prog["total"] == 0 or prog["done"] == prog["total"]
-        status = "locked" if not unlocked else ("done" if complete and prog["total"] else "active")
+        status = "done" if complete and prog["total"] else "active"
         cards.append({label: item, "status": status, **prog})
-        unlocked = unlocked and complete
     return cards
 
 
@@ -84,39 +82,23 @@ def _flatten(terms):
 
 
 def _reachable_flat(terms, completed_ids):
-    """Every (term, week, day) that sits inside an unlocked term and an unlocked week."""
+    """Every (term, week, day) of the module, in order."""
     flat = []
     term_cards = _progress_chain(
         terms, lambda t: [d.id for w in t.weeks.all() for d in w.days.all()], completed_ids, "term"
     )
     for tcard in term_cards:
-        if tcard["status"] == "locked":
-            break
         week_cards = _progress_chain(
             list(tcard["term"].weeks.all()), lambda w: [d.id for d in w.days.all()], completed_ids, "week"
         )
         for wcard in week_cards:
-            if wcard["status"] == "locked":
-                break
             for day in wcard["week"].days.all():
                 flat.append({"term": tcard["term"], "week": wcard["week"], "day": day})
     return flat
 
 
-def _term_status(module, term, completed_ids):
-    terms = list(_module_tree(module))
-    cards = _progress_chain(
-        terms, lambda t: [d.id for w in t.weeks.all() for d in w.days.all()], completed_ids, "term"
-    )
-    return next((c["status"] for c in cards if c["term"].id == term.id), "locked")
 
 
-def _week_status(term, week, completed_ids):
-    weeks = term.weeks.order_by("number").prefetch_related(
-        Prefetch("days", queryset=Day.objects.filter(is_published=True).order_by("order", "id"))
-    )
-    cards = _progress_chain(list(weeks), lambda w: [d.id for d in w.days.all()], completed_ids, "week")
-    return next((c["status"] for c in cards if c["week"].id == week.id), "locked")
 
 
 @login_required
@@ -184,10 +166,6 @@ def term_detail(request, module_slug, term_slug):
     term = get_object_or_404(module.terms, slug=term_slug)
     completed_ids = _completed_day_ids(request.user, module)
 
-    if _term_status(module, term, completed_ids) == "locked":
-        messages.warning(request, "Complete the term before this one to unlock it.")
-        return redirect("learning_modules:module_detail", module_slug=module_slug)
-
     weeks = term.weeks.order_by("number").prefetch_related(
         Prefetch("days", queryset=Day.objects.filter(is_published=True).order_by("order", "id"))
     )
@@ -214,15 +192,7 @@ def week_detail(request, module_slug, term_slug, week_slug):
     term = get_object_or_404(module.terms, slug=term_slug)
     completed_ids = _completed_day_ids(request.user, module)
 
-    if _term_status(module, term, completed_ids) == "locked":
-        messages.warning(request, "Complete the term before this one to unlock it.")
-        return redirect("learning_modules:module_detail", module_slug=module_slug)
-
     week = get_object_or_404(term.weeks, slug=week_slug)
-    if _week_status(term, week, completed_ids) == "locked":
-        messages.warning(request, "Complete the week before this one to unlock it.")
-        return redirect("learning_modules:term_detail", module_slug=module_slug, term_slug=term_slug)
-
     days = week.days.filter(is_published=True).order_by("order", "id").prefetch_related(
         Prefetch("lesson_items", queryset=LessonItem.objects.filter(is_published=True))
     )
@@ -260,15 +230,7 @@ def day_detail(request, module_slug, term_slug, week_slug, day_name):
     term = get_object_or_404(module.terms, slug=term_slug)
     completed_ids = _completed_day_ids(request.user, module)
 
-    if _term_status(module, term, completed_ids) == "locked":
-        messages.warning(request, "Complete the term before this one to unlock it.")
-        return redirect("learning_modules:module_detail", module_slug=module_slug)
-
     week = get_object_or_404(term.weeks, slug=week_slug)
-    if _week_status(term, week, completed_ids) == "locked":
-        messages.warning(request, "Complete the week before this one to unlock it.")
-        return redirect("learning_modules:term_detail", module_slug=module_slug, term_slug=term_slug)
-
     day = get_object_or_404(week.days, day_name=day_name, is_published=True)
     items = list(day.lesson_items.filter(is_published=True).order_by("order", "id"))
 

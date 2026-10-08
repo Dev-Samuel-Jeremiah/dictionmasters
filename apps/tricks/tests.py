@@ -4,7 +4,7 @@ from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.assessments.models import Assessment
-from apps.book.models import Articulation, Sound, SoundCategory, WordBankEntry
+from apps.book.models import TRICKS, Articulation, Sound, SoundCategory, WordBankEntry
 
 from .models import LessonActivity, LessonActivityAttempt, LessonActivityItem
 
@@ -36,6 +36,11 @@ class TrickUnlockTests(TestCase):
         self.learner = User.objects.create_user(email="learner@example.com", password="pw-12345678", first_name="Ada")
         self.client.force_login(self.learner)
 
+    def state(self, lesson):
+        from .progress import journey
+
+        return next(s for s in journey(self.learner, TRICKS) if s["lesson"] == lesson)["state"]
+
     def take_test(self, answer, activity=None, question=None):
         activity, question = activity or self.test, question or self.question
         self.client.post(f"/tricks/lessons/{activity.lesson.slug}/assessment/{activity.slug}/",
@@ -46,17 +51,15 @@ class TrickUnlockTests(TestCase):
         for tab in ("lens", "word-bank"):
             self.client.get(f"/tricks/lessons/{trick.slug}/{tab}/")
 
-    def test_only_the_first_trick_is_open_at_the_start(self):
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.one.slug}/").status_code, 200)
-        locked = self.client.get(f"/tricks/lessons/{self.two.slug}/")
-        self.assertEqual(locked.status_code, 403)
-        self.assertContains(locked, "Trick 1: -age Ending", status_code=403)
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/word-bank/").status_code, 403)
+    def test_every_trick_is_open_from_the_start(self):
+        # Nothing is locked: learners take the tricks in any order.
+        for trick in (self.one, self.two, self.three):
+            # A trick with nothing on its first tab goes on to the next one.
+            self.assertEqual(self.client.get(f"/tricks/lessons/{trick.slug}/", follow=True).status_code, 200, trick.name)
+        self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/word-bank/").status_code, 200)
         listing = self.client.get("/tricks/lessons/")
-        self.assertContains(listing, "ui-numlist__item--current")
-        self.assertContains(listing, "ui-numlist__item--locked", count=2)
-        self.assertNotContains(listing, f'href="/tricks/lessons/{self.two.slug}/"')
-
+        self.assertNotContains(listing, "ui-numlist__item--locked")
+        self.assertContains(listing, f'href="/tricks/lessons/{self.two.slug}/"')
     def test_the_assessment_waits_until_every_part_is_opened(self):
         page = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/")
         self.assertContains(page, "Not opened yet")
@@ -78,7 +81,7 @@ class TrickUnlockTests(TestCase):
         self.open_every_tab(self.one)
         failed = self.take_test("lage")
         self.assertFalse(failed.passed)
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 403)
+        self.assertNotEqual(self.state(self.one), "done")
         result = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/result/{failed.pk}/")
         self.assertContains(result, "1 activity left to pass")
 
@@ -86,26 +89,24 @@ class TrickUnlockTests(TestCase):
         self.assertTrue(passed.passed)
         result = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/result/{passed.pk}/")
         self.assertContains(result, "Trick 2 is unlocked")
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 200)
+        self.assertEqual(self.state(self.one), "done")
         # Only the one after it: Trick 3 waits for Trick 2.
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.three.slug}/").status_code, 403)
+        self.assertNotEqual(self.state(self.two), "done")
         self.assertContains(self.client.get("/tricks/lessons/"), "ui-numlist__item--done")
 
-    def test_a_trick_without_an_assessment_opens_the_next_once_finished(self):
-        self.open_every_tab(self.one)
-        self.take_test("vil")
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.three.slug}/").status_code, 403)
+    def test_a_trick_without_an_assessment_is_done_once_finished(self):
+        from .progress import journey
+
         self.client.get(f"/tricks/lessons/{self.two.slug}/word-bank/")
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.three.slug}/").status_code, 200)
+        step = next(s for s in journey(self.learner, TRICKS) if s["lesson"] == self.two)
+        self.assertEqual(step["state"], "done")
+    def test_an_empty_trick_is_done_once_opened(self):
+        from .progress import journey
 
-    def test_an_empty_trick_still_has_to_be_opened(self):
         self.two.word_bank_entries.all().delete()
-        self.open_every_tab(self.one)
-        self.take_test("vil")
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.three.slug}/").status_code, 403)
+        self.assertEqual(next(s for s in journey(self.learner, TRICKS) if s["lesson"] == self.two)["state"], "current")
         self.client.get(f"/tricks/lessons/{self.two.slug}/")
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.three.slug}/").status_code, 200)
-
+        self.assertEqual(next(s for s in journey(self.learner, TRICKS) if s["lesson"] == self.two)["state"], "done")
     def test_every_activity_must_be_passed_and_recordings_count_once_sent(self):
         sort = LessonActivity.objects.create(lesson=self.one, kind="sound-sort", title="Sort them",
                                             buckets="/ɪdʒ/\n/eɪdʒ/", order=2)
@@ -115,15 +116,15 @@ class TrickUnlockTests(TestCase):
         self.open_every_tab(self.one)
 
         self.take_test("vil")
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 403)
+        self.assertNotEqual(self.state(self.one), "done")
         self.assertTrue(self.take_test("/ɪdʒ/", sort, village).passed)
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 403)
+        self.assertNotEqual(self.state(self.one), "done")
 
         self.client.post(f"/tricks/lessons/{self.one.slug}/assessment/{aloud.slug}/",
                          {f"recording-{line.pk}": SimpleUploadedFile("me.webm", b"voice", content_type="audio/webm")})
         sent = LessonActivityAttempt.objects.get(user=self.learner, activity=aloud)
         self.assertEqual(sent.status, sent.STATUS_AWAITING)
-        self.assertEqual(self.client.get(f"/tricks/lessons/{self.two.slug}/").status_code, 200)
+        self.assertEqual(self.state(self.one), "done")
 
     def test_the_activity_pages_lead_back_to_the_trick(self):
         self.open_every_tab(self.one)
@@ -212,8 +213,8 @@ class TrickUnlockTests(TestCase):
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 })
 class AcademyUnlockTests(TestCase):
-    """44 Academy works the same way: each sound has an assessment, and the
-    sounds are taken in order."""
+    """44 Academy works the same way: each sound has an assessment, and a
+    sound is done once finished and passed. Every sound is open."""
 
     def setUp(self):
         group = SoundCategory.objects.create(name="Long vowels", order=1)
@@ -229,15 +230,19 @@ class AcademyUnlockTests(TestCase):
         self.learner = User.objects.create_user(email="sam@example.com", password="pw-12345678", first_name="Sam")
         self.client.force_login(self.learner)
 
-    def test_sounds_open_one_at_a_time(self):
+    def state(self, lesson):
+        from apps.book.models import ACADEMY
+
+        from .progress import journey
+
+        return next(s for s in journey(self.learner, ACADEMY) if s["lesson"] == lesson)["state"]
+
+    def test_every_sound_is_open(self):
         self.assertEqual(self.client.get(f"/book/44-academy/{self.first.slug}/").status_code, 200)
-        locked = self.client.get(f"/book/44-academy/{self.second.slug}/")
-        self.assertEqual(locked.status_code, 403)
-        self.assertContains(locked, "Long EE", status_code=403)
+        self.assertEqual(self.client.get(f"/book/44-academy/{self.second.slug}/").status_code, 200)
         listing = self.client.get("/book/44-academy/")
-        self.assertContains(listing, "ui-sound--locked")
-        self.assertContains(listing, "Up next")
-        self.assertNotContains(listing, f'href="/book/44-academy/{self.second.slug}/"')
+        self.assertNotContains(listing, "ui-sound--locked")
+        self.assertContains(listing, f'href="/book/44-academy/{self.second.slug}/"')
 
     def test_a_sounds_assessment_unlocks_the_next_sound(self):
         page = self.client.get(f"/book/44-academy/{self.first.slug}/assessment/")
@@ -251,7 +256,7 @@ class AcademyUnlockTests(TestCase):
 
         self.client.post(f"/book/44-academy/{self.first.slug}/assessment/{self.test.slug}/",
                          {f"item-{self.question.pk}": "ship"})
-        self.assertEqual(self.client.get(f"/book/44-academy/{self.second.slug}/").status_code, 403)
+        self.assertNotEqual(self.state(self.first), "done")
 
         self.client.post(f"/book/44-academy/{self.first.slug}/assessment/{self.test.slug}/",
                          {f"item-{self.question.pk}": "sheep"})
@@ -261,8 +266,8 @@ class AcademyUnlockTests(TestCase):
             f"/book/44-academy/{self.first.slug}/assessment/{self.test.slug}/result/{attempt.pk}/")
         self.assertContains(result, "Sound 2 is unlocked")
         self.assertNotContains(result, "Trick 2")
-        self.assertEqual(self.client.get(f"/book/44-academy/{self.second.slug}/").status_code, 200)
-        self.assertContains(self.client.get("/accounts/dashboard/"), "1 of 2 complete")
+        self.assertEqual(self.state(self.first), "done")
+        self.assertEqual(self.state(self.second), "current")             # done: 1 of the 2
 
     def test_the_two_programmes_are_counted_apart(self):
         from apps.book.models import TRICKS

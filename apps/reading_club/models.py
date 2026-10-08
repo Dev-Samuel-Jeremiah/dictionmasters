@@ -7,8 +7,8 @@ week or a day in between, since a chapter already *is* the lesson —
 model reading audio, the chapter text, and any downloads.
 
 A Book holds Terms (First, Second, Third...), each Term holds
-numbered Chapters. Terms unlock in order, exactly like Learning
-Modules — see apps.learning_modules.views for the shared pattern.
+numbered Chapters. Every term is open, with done ticks, exactly like
+Learning Modules — see apps.learning_modules.views for the shared pattern.
 """
 
 from django.conf import settings
@@ -69,7 +69,7 @@ class Book(models.Model):
 
 class Term(models.Model):
     """First / Second / Third term — however many a book needs.
-    Terms unlock in order; see views._term_status."""
+    Every term is open; see views._progress_chain for its ticks."""
 
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="terms")
     name = models.CharField(max_length=100, help_text='e.g. "First Term"')

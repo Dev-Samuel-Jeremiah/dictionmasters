@@ -29,10 +29,16 @@ NAV_SECTIONS = (
 )
 
 
+# The home pages: everywhere else gets a Back button (templates/base.html).
+HOME_PATHS = {"/", "/accounts/dashboard/", "/school/dashboard/"}
+
+
 def nav(request):
-    """`nav_section` in every template: the main tab the current page sits under."""
+    """`nav_section` in every template: the main tab the current page sits
+    under; and `show_back`: whether the page gets the Back button."""
     path = getattr(request, "path", "") or ""
+    show_back = path not in HOME_PATHS
     for section, prefixes in NAV_SECTIONS:
         if path.startswith(prefixes):
-            return {"nav_section": section}
-    return {"nav_section": ""}
+            return {"nav_section": section, "show_back": show_back}
+    return {"nav_section": "", "show_back": show_back}

@@ -1,8 +1,7 @@
 """
-A programme's lessons are taken in order — 44 Academy's sounds, and
-Tricks to Sound Fluent's tricks, each separately. The first lesson is
-open to everyone; each one after it opens only once the one before it
-is complete:
+A programme's lessons — 44 Academy's sounds, and Tricks to Sound
+Fluent's tricks, each separately — are all open: a learner can take them
+in any order. A lesson is complete (ticked) once they:
 
   1. finish it — open the lesson, and every tab of it that has something in it;
   2. pass its assessment — every one of its activities (any EchoSpell
@@ -13,8 +12,7 @@ A recorded activity (read aloud, listen and repeat, tongue twister)
 counts once it has been sent: a teacher marks it later, in the control
 room, and the learner isn't kept waiting for them. A lesson with no
 activities yet is complete as soon as it is finished, so missing
-questions never shut learners out. Staff see every lesson open, to check
-the content.
+questions never hold anyone up.
 """
 
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -114,7 +112,7 @@ def journey(user, programme):
     for attempt in LessonActivityAttempt.objects.filter(user=user, activity__lesson__in=lessons).order_by("created_at"):
         attempts.setdefault(attempt.activity_id, []).append(attempt)
 
-    steps, open_so_far = [], True
+    steps = []
     for number, lesson in enumerate(lessons, start=1):
         needed = needed_by_lesson.get(lesson.pk, [])
         done_tabs = [tab for tab in needed if tab in seen.get(lesson.pk, [])]
@@ -136,7 +134,9 @@ def journey(user, programme):
         finished = lesson.pk in seen and len(done_tabs) == len(needed)
         passed_all = all(test["done"] for test in tests)
         complete = finished and passed_all
-        unlocked = open_so_far or user.is_staff
+        # Every lesson is open: learners go in any order. "done" still needs
+        # the lesson finished and its assessment passed.
+        unlocked = True
         steps.append({
             "lesson": lesson, "number": number,
             "state": "done" if (unlocked and complete) else ("current" if unlocked else "locked"),
@@ -146,7 +146,6 @@ def journey(user, programme):
             "tests": tests, "tests_left": sum(1 for test in tests if not test["done"]),
             "passed": bool(tests) and passed_all,
         })
-        open_so_far = open_so_far and complete
     for step, following in zip(steps, steps[1:] + [None]):
         step["next"] = following
     return steps

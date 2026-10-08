@@ -11,10 +11,9 @@ track, or both, each with its own title), the same way a school day
 covers a few short activities rather than one long one.
 
 Progress is tracked per Day (DayProgress), earned by opening every one
-of the day's lesson items (DayItemsSeen; see lesson_path.py). Terms and
-Weeks unlock in order: a Term/Week stays locked until the one before it is complete,
-computed live from DayProgress rather than stored — see
-views._term_status / _week_status.
+of the day's lesson items (DayItemsSeen; see lesson_path.py). Every term
+and week is open; a term's or week's "done" tick is computed live from
+DayProgress rather than stored — see views._progress_chain.
 """
 
 from django.conf import settings
@@ -125,8 +124,7 @@ class LearningModule(models.Model):
 
 
 class Term(models.Model):
-    """First / Second / Third term — however many a module needs.
-    Terms unlock in order; see views._term_status."""
+    """First / Second / Third term — however many a module needs."""
 
     module = models.ForeignKey(LearningModule, on_delete=models.CASCADE, related_name="terms")
     name = models.CharField(max_length=100, help_text='e.g. "First Term"')
@@ -153,8 +151,7 @@ class Term(models.Model):
 
 
 class Week(models.Model):
-    """One numbered week inside a term. Weeks unlock in order within
-    their term; see views._week_status."""
+    """One numbered week inside a term."""
 
     term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name="weeks")
     number = models.PositiveIntegerField(help_text="Week number within the term, e.g. 1")
@@ -295,9 +292,8 @@ class LessonResource(models.Model):
 
 
 class DayProgress(models.Model):
-    """One row per (user, day) they've marked complete. Terms and
-    weeks unlock in order based on whether every Day in the previous
-    one has a DayProgress row for the current user."""
+    """One row per (user, day) they've completed (earned in
+    lesson_path.py). A term's or week's "done" tick comes from these."""
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="day_progress")
     day = models.ForeignKey(Day, on_delete=models.CASCADE, related_name="progress_entries")

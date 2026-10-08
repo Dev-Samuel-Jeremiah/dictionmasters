@@ -72,6 +72,9 @@
     <div class="cr-scrim" hidden></div>
 
     <main class="cr-main" id="cr-main">
+      {% url 'manage:home' as cr_home %}
+      {# Back on every control room page but its home (static/js/history_back.js). #}
+      {% if request.path != cr_home %}<p class="cr-back"><a href="{{ cr_home }}" class="cr-btn cr-btn--ghost" data-history-back>&larr; Back</a></p>{% endif %}
       {% if messages %}
       <ul class="cr-messages">
         {% for message in messages %}<li class="cr-message cr-message--{{ message.tags }}">{{ message }}</li>{% endfor %}
@@ -82,6 +85,7 @@
   </div>
 
   {% if native_app %}<script src="{% static 'js/native_app.js' %}" defer></script>{% endif %}
+  <script src="{% static 'js/history_back.js' %}" defer></script>
   <script src="{% static 'js/upload_progress.js' %}" defer></script>
   <script src="{% static 'js/rich_text_editor.js' %}" defer></script>
   <script src="{% static 'js/manage_audio_feedback.js' %}" defer></script>

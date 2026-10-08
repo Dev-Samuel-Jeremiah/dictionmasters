@@ -63,15 +63,12 @@ class GuidedDayTests(TestCase):
         self.assertFalse(self.done())
         self.assertContains(response, "completed by going through every one")
 
-    def test_the_next_week_stays_locked_until_this_one_is_done(self):
-        locked = "/learning-modules/sound-discovery/first-term/week-2/monday/"
-        self.assertRedirects(self.client.get(locked), "/learning-modules/sound-discovery/first-term/",
-                             fetch_redirect_response=False)
-        for n in (1, 2, 3):
-            self.client.get(f"{self.url}?step={n}")
+    def test_every_week_is_open_from_the_start(self):
+        later = "/learning-modules/sound-discovery/first-term/week-2/monday/"
+        self.assertEqual(self.client.get(later).status_code, 200)
+        # Finishing a day still ticks it, in any order.
         self.client.get("/learning-modules/sound-discovery/first-term/week-1/tuesday/")
         self.assertTrue(self.done(self.tuesday))
-        self.assertEqual(self.client.get(locked).status_code, 200)
 
     def test_a_step_out_of_range_shows_the_next_item(self):
         self.assertContains(self.client.get(self.url + "?step=99"), "Step 1 of 3")

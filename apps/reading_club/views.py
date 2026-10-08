@@ -1,13 +1,12 @@
 """
 Views for Reading Club: Book > Term > Chapter, one level shallower
 than Learning Modules since a chapter is opened straight from its
-term — no week, no day, no separate lesson items. Terms still unlock
-in order, using the same locked/active/done pattern as
-apps.learning_modules.views (kept separate here since the two apps
-are decoupled, but the logic is intentionally the same shape).
+term — no week, no day, no separate lesson items. Every term is open,
+with the same active/done ticks as apps.learning_modules.views (kept
+separate here since the two apps are decoupled, but the logic is
+intentionally the same shape).
 """
 
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
@@ -47,17 +46,15 @@ def _progress(chapter_ids, completed_ids):
 
 
 def _progress_chain(items, get_chapter_ids, completed_ids, label):
-    """Attach a locked/active/done status to each item in order — each
-    one stays locked until the one before it is fully complete."""
+    """Attach an active/done status to each item. Nothing is locked: any
+    term can be opened, in any order; "done" ticks one fully read."""
     cards = []
-    unlocked = True
     for item in items:
         chapter_ids = get_chapter_ids(item)
         prog = _progress(chapter_ids, completed_ids)
         complete = prog["total"] == 0 or prog["done"] == prog["total"]
-        status = "locked" if not unlocked else ("done" if complete and prog["total"] else "active")
+        status = "done" if complete and prog["total"] else "active"
         cards.append({label: item, "status": status, **prog})
-        unlocked = unlocked and complete
     return cards
 
 
@@ -71,23 +68,17 @@ def _flatten(terms):
 
 
 def _reachable_flat(terms, completed_ids):
-    """Every (term, chapter) that sits inside an unlocked term."""
+    """Every (term, chapter) of the book, in order."""
     flat = []
     term_cards = _progress_chain(
         terms, lambda t: [c.id for c in t.chapters.all()], completed_ids, "term"
     )
     for tcard in term_cards:
-        if tcard["status"] == "locked":
-            break
         for chapter in tcard["term"].chapters.all():
             flat.append({"term": tcard["term"], "chapter": chapter})
     return flat
 
 
-def _term_status(book, term, completed_ids):
-    terms = list(_book_tree(book))
-    cards = _progress_chain(terms, lambda t: [c.id for c in t.chapters.all()], completed_ids, "term")
-    return next((c["status"] for c in cards if c["term"].id == term.id), "locked")
 
 
 @login_required
@@ -136,10 +127,6 @@ def term_detail(request, book_slug, term_slug):
     term = get_object_or_404(book.terms, slug=term_slug)
     completed_ids = _completed_chapter_ids(request.user, book)
 
-    if _term_status(book, term, completed_ids) == "locked":
-        messages.warning(request, "Complete the term before this one to unlock it.")
-        return redirect("reading_club:book_detail", book_slug=book_slug)
-
     chapters = term.chapters.filter(is_published=True).order_by("number")
     current_id = next((c.id for c in chapters if c.id not in completed_ids), None)
     chapter_rows = [
@@ -163,10 +150,6 @@ def chapter_detail(request, book_slug, term_slug, chapter_slug):
     book = get_object_or_404(_books(request.user), slug=book_slug)
     term = get_object_or_404(book.terms, slug=term_slug)
     completed_ids = _completed_chapter_ids(request.user, book)
-
-    if _term_status(book, term, completed_ids) == "locked":
-        messages.warning(request, "Complete the term before this one to unlock it.")
-        return redirect("reading_club:book_detail", book_slug=book_slug)
 
     chapter = get_object_or_404(term.chapters, slug=chapter_slug, is_published=True)
 

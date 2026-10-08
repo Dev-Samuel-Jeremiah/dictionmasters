@@ -6,8 +6,7 @@ Each published lesson item is a step, done once it has been opened —
 the same rule as the 44 Academy's tabs and EchoSpell's cards. When every
 item has been opened, DayProgress is written here, and nowhere else. A
 day with no items yet counts as done once opened, so an empty day never
-stops a learner moving on. Week and term locks are untouched
-(views._term_status / _week_status).
+stops a learner moving on. Every week and term is open.
 """
 
 from django.urls import reverse

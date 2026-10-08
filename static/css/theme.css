@@ -1452,3 +1452,19 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .master-banner form { margin: 0; }
 .master-banner button { padding: 5px 12px; border: 1.5px solid rgba(255,255,255,.7); border-radius: 999px; background: transparent; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 .master-banner button:hover { background: rgba(255,255,255,.15); }
+
+
+/* ---------- Back, on every page but home (templates/base.html) ---------- */
+.px-back { padding: 12px 28px 0; }
+.px-back__btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 18px; border-radius: 99px;
+  background: var(--card); box-shadow: var(--shadow); border: 1px solid var(--line);
+  color: var(--blue); font-weight: 800; font-size: 15px; text-decoration: none;
+}
+.px-back__btn:hover { box-shadow: var(--shadow-lift); }
+@media (max-width: 700px) {
+  .px-back { padding: 10px 16px 0; }
+  .px-back__btn { min-height: 56px; padding: 0 20px; font-size: 16px; }   /* children's tap target */
+}
+@media print { .px-back { display: none !important; } }

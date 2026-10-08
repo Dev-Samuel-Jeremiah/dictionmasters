@@ -40,9 +40,6 @@
   </section>
 
   <div class="wrap es-body es-body--narrow">
-    {% if programme.sections %}
-    {% with back_fallback=back_url %}{% include "includes/history_back.html" %}{% endwith %}
-    {% endif %}
 
     {% if attempt.status == "awaiting" %}
     <section class="es-panel es-score es-score--wait">
