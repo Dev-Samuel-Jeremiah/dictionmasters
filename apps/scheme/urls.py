@@ -10,6 +10,7 @@ urlpatterns = [
     path("promote/", views.promote, name="promote"),
     path("term-dates/", views.term_dates, name="term_dates"),
     path("school/", views.school_scheme, name="school_scheme"),
+    path("teach/", views.teaching_plan, name="teaching_plan"),
     path("weeks/", views.weeks, name="weeks"),
     path("practise/", views.practise, name="practise"),
     path("weeks/<int:term>/<int:number>/", views.week, name="week"),

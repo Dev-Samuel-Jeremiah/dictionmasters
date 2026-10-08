@@ -28,7 +28,7 @@ from datetime import timedelta
 from django.urls import reverse
 from django.utils import timezone
 
-from .calendar import terms_for, week_of, weeks_in
+from .calendar import break_after_week, terms_for, week_of, week_starts, weeks_in
 from .models import DAY_CHOICES, DAY_ORDER, SchemeEntry, SchemeOpened
 
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"]
@@ -338,3 +338,84 @@ def class_week(teacher, level, pupils, today=None):
         done={pk: len(ids) for pk, ids in done.items()},
     )
     return result
+
+
+# ---------------------------------------------------------------------------
+# A teacher's plan: the whole term, to prepare ahead
+# ---------------------------------------------------------------------------
+
+def _next_school_day(dated_terms, today):
+    """The next teaching day after today: (term, date), skipping weekends,
+    the mid-term break and holidays — or (None, None)."""
+    day = today + timedelta(days=1)
+    for _ in range(200):
+        if day.weekday() < 5:
+            for dated in dated_terms:
+                in_break = dated.break_starts and dated.break_starts <= day <= dated.break_ends
+                if dated.starts <= day <= dated.ends and not in_break:
+                    return dated, day
+        day += timedelta(days=1)
+    return None, None
+
+
+def term_plan(teacher, level, number, pupils, today=None):
+    """The whole of one term of `level`'s scheme for a teacher, to prepare:
+    {"dated", "weeks": [...], "next_day": {...}, "pupils": n}. Each week has
+    its dates, its state ("taught", "now", "coming"), and its days Monday to
+    Friday (plus "any day"), each lesson with how many pupils have done it
+    (up to this week). A fixed number of queries, however big the class."""
+    today = today or timezone.localdate()
+    terms = terms_for(teacher.school)
+    newest = terms[-1].term.session_id if terms else None
+    year = [t for t in terms if t.term.session_id == newest]
+    dated = next((t for t in year if t.number == number), None)
+    entries = _sorted(_entries(level=level, term=number))
+    reach = {t["number"]: t for t in reached(teacher, today)}.get(number)
+    upto = reach["upto"] if reach else 0
+    shown = [e for e in entries if e.week <= upto]
+    done = done_for(pupils, shown) if pupils else {}
+    counts = {}
+    for ids in done.values():
+        for pk in ids:
+            counts[pk] = counts.get(pk, 0) + 1
+
+    firsts = dict(week_starts(dated)) if dated else {}
+    # Every teaching week of the term, and any week the scheme goes beyond it.
+    spans = [e.week for e in entries] + ([weeks_in(dated)] if dated else [])
+    last = max(spans or [12])
+    break_after = break_after_week(dated) if dated else 0
+    current = reach["upto"] if reach and reach["current"] else None
+
+    by_week = {}
+    for entry in entries:
+        by_week.setdefault(entry.week, []).append(entry)
+    weeks = []
+    for number_ in range(1, last + 1):
+        monday = firsts.get(number_)
+        days = []
+        for key, label in DAY_CHOICES:
+            rows = [e for e in by_week.get(number_, []) if e.day == key]
+            if not rows:
+                continue
+            on = monday + timedelta(days=WEEKDAYS.index(key)) if monday and key in WEEKDAYS else None
+            days.append({
+                "key": key, "label": label if key else "Any day this week", "date": on, "is_today": on == today,
+                "rows": [{"entry": e, "title": e.title, "kind": e.get_kind_display(), "url": content_url(e),
+                          "done": counts.get(e.pk, 0) if number_ <= upto else None} for e in rows],
+            })
+        weeks.append({
+            "number": number_, "monday": monday, "friday": monday + timedelta(days=4) if monday else None,
+            "state": "now" if number_ == current else "taught" if number_ <= upto else "coming",
+            "days": days, "break_after": break_after and number_ == break_after,
+        })
+
+    next_day = None
+    term_of_day, day = _next_school_day(year, today)
+    if term_of_day is not None:
+        week = week_of(term_of_day, day)
+        name = WEEKDAYS[day.weekday()]
+        rows = [e for e in _sorted(_entries(level=level, term=term_of_day.number, week=week)) if e.day in ("", name)]
+        next_day = {"date": day, "term": term_of_day, "week": week,
+                    "rows": [{"title": e.title, "kind": e.get_kind_display(), "url": content_url(e),
+                              "any_day": not e.day} for e in rows]}
+    return {"dated": dated, "weeks": weeks, "next_day": next_day, "pupils": len(pupils), "current": current}

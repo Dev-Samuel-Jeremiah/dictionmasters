@@ -73,6 +73,14 @@
       </span>
       <span class="px-playbig" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
     </a>
+    <a href="{% url 'scheme:teaching_plan' %}" class="px-card px-cont" style="margin-bottom: 14px" data-teaching-plan>
+      <span class="px-cont__t">
+        <span class="px-cont__lab">Teaching plan</span>
+        <span class="px-cont__title">The scheme of work, week by week</span>
+        <span class="px-cont__meta">See what's coming and prepare before the day</span>
+      </span>
+      <span class="px-playbig" aria-hidden="true">{% include "includes/icon.html" with name="calendar" size=22 %}</span>
+    </a>
     {% endif %}
 
     {# ================= Continue, streak, this week ================= #}

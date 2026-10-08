@@ -56,10 +56,13 @@ class StudentViewTests(TimetableCase):
             page = self.client.get("/accounts/dashboard/")
         self.assertTemplateUsed(page, "scheme/home.html")
         self.assertContains(page, "First Term · Week 1 · Tuesday")
-        self.assertContains(page, "The Fox")
-        self.assertContains(page, "EchoSpell Group 1")
+        self.assertContains(page, "The Fox")                       # today's lesson
+        # No Today / This week lists: one My weeks card instead.
+        self.assertNotContains(page, "<h2>Today</h2>", html=False)
+        self.assertNotContains(page, "<h2>This week</h2>", html=False)
+        self.assertContains(page, 'href="/scheme/weeks/" class="px-card sh-weeks-card"')
+        self.assertContains(page, "This week: 0 of 2 done")
         self.assertNotContains(page, "EchoSpell Group 2")
-        self.assertContains(page, "My weeks")
 
     def test_no_scheme_this_term_is_an_empty_page(self):
         five = make("five@example.com", role="student", school=self.school, level="Level 5")
@@ -211,3 +214,55 @@ class SeedDemoTests(TimetableCase):
         call_command("seed_scheme_demo", "--level", "Level 2", "--remove", stdout=StringIO())
         self.assertFalse(SchemeEntry.objects.filter(level="Level 2").exists())
         self.assertFalse(School.objects.filter(name="Demo Scheme School").exists())
+
+
+class TeachingPlanTests(TimetableCase):
+    MONDAY_WEEK_1 = date(2026, 9, 7)
+
+    def page(self, user=None, day=None, query=""):
+        self.client.force_login(user or self.teacher)
+        with self.on(day or self.MONDAY_WEEK_1):
+            return self.client.get("/scheme/teach/" + query)
+
+    def test_the_whole_term_with_dates_including_weeks_to_come(self):
+        page = self.page()
+        self.assertContains(page, "Week 1")
+        self.assertContains(page, "7 Sep – 11 Sep")
+        self.assertContains(page, "This week")
+        self.assertContains(page, "EchoSpell Group 3")                  # Week 3, still to come
+        self.assertContains(page, 'href="/echospell/level-2/t3/"')     # open it to prepare
+        self.assertContains(page, "Mid-term break: 26 Oct – 30 Oct")
+
+    def test_prepare_for_the_next_school_day(self):
+        page = self.page()
+        self.assertContains(page, "Prepare for Tuesday 8 September")
+        self.assertContains(page, "The Fox")
+        # On a Friday, the next school day is Monday.
+        self.assertContains(self.page(day=date(2026, 9, 11)), "Prepare for Monday 14 September")
+
+    def test_how_the_class_is_getting_on(self):
+        GroupProgress.objects.create(user=self.ada, group=self.g1)
+        page = self.page()
+        self.assertContains(page, "1 of 2 done")                        # Group 1: Ada, not Ben
+        self.assertContains(page, "0 of 2 done")                        # The Fox
+        # Weeks to come have no counts yet.
+        self.assertEqual(page.content.decode().count(" of 2 done"), 2)
+
+    def test_linked_from_my_class_and_home(self):
+        self.client.force_login(self.teacher)
+        with self.on(self.MONDAY_WEEK_1):
+            self.assertContains(self.client.get("/school/class/"), "data-teaching-plan")
+            self.assertContains(self.client.get("/accounts/dashboard/"), "data-teaching-plan")
+
+    def test_only_teachers(self):
+        self.assertRedirects(self.page(user=self.ada), "/", fetch_redirect_response=False)
+
+    def test_a_bigger_class_costs_the_same(self):
+        from .timetable import term_plan
+
+        with CaptureQueriesContext(connection) as few:
+            term_plan(self.teacher, "Level 2", 1, [self.ada, self.ben], self.MONDAY_WEEK_1)
+        more = [make(f"k{n}@example.com", role="student", school=self.school, level="Level 2") for n in range(10)]
+        with CaptureQueriesContext(connection) as lots:
+            term_plan(self.teacher, "Level 2", 1, [self.ada, self.ben, *more], self.MONDAY_WEEK_1)
+        self.assertEqual(len(few), len(lots))

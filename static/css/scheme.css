@@ -147,3 +147,54 @@
 .ss-weeks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; margin-top: 16px; }
 .ss-week h2 { margin: 0 0 8px; font-size: 17px; }
 .ss-week h2 small { margin-left: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+
+/* The home's single "My weeks" card */
+.px-wrap .sh-weeks-card { display: flex; align-items: center; gap: 14px; min-height: 76px; margin-top: 16px; padding: 14px 18px; }
+.sh-weeks-card__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sh-weeks-card__text b { font-size: 18px; }
+.sh-weeks-card__text small { font-size: 14px; color: var(--muted); }
+
+/* =========================================================
+   A teacher's teaching plan (scheme/teaching_plan.html)
+   ========================================================= */
+.tp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 18px; }
+.tp-bar .px-chip { text-decoration: none; min-height: 44px; }
+.tp-print { min-height: 44px; margin-left: auto; padding: 0 18px; border: 0; border-radius: 99px; background: var(--blue); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.px-wrap .tp-next { margin-top: 16px; border: 3px solid var(--yellow); }
+.tp-next__label { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--blue); }
+.tp-next h2 { margin: 4px 0 10px; font-size: 20px; }
+.tp-muted { margin: 0; color: var(--muted); }
+.tp-weeks { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.tp-week.is-now { border: 3px solid var(--yellow); }
+.tp-week.is-taught { background: var(--bg); box-shadow: none; border: 1px solid var(--line); }
+.tp-week__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-bottom: 10px; }
+.tp-week__head h2 { margin: 0; font-size: 19px; }
+.tp-week__head span { font-size: 14px; color: var(--muted); }
+.tp-days { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.tp-day { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--bg); }
+.tp-week.is-taught .tp-day { background: var(--card); }
+.tp-day.is-today { background: var(--butter); }
+.tp-day dt { font-weight: 800; font-size: 14px; display: flex; flex-direction: column; }
+.tp-day dt small { font-weight: 600; color: var(--muted); font-size: 12px; }
+.tp-day dd { margin: 0; }
+.tp-lessons { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tp-lessons li { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.tp-lesson { display: flex; flex-direction: column; min-height: 44px; justify-content: center; color: var(--text); text-decoration: none; }
+.tp-lesson b { font-size: 15px; }
+.tp-lesson small { font-size: 12px; color: var(--muted); }
+.tp-done { flex: none; padding: 3px 10px; border-radius: 99px; background: var(--sky); color: var(--blue); font-size: 12px; font-weight: 800; }
+.tp-done.is-all { background: var(--blue); color: #fff; }
+.tp-break { padding: 10px 16px; border-radius: 14px; background: var(--butter); font-weight: 800; text-align: center; }
+@media (max-width: 520px) { .tp-day { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+@media print {
+  .tp-bar, .tp-next, .site-header, .px-bar, .bl-banner, .install-fab { display: none !important; }
+  .tp .px-phead { background: #fff !important; color: #000; padding: 0; }
+  .tp .px-phead h1, .tp .px-phead p { color: #000 !important; }
+  .tp .px-phead__img { display: none; }
+  .tp-week { break-inside: avoid; box-shadow: none !important; border: 1px solid #ccc !important; background: #fff !important; }
+  .tp-day { background: #fff !important; }
+}
+.tp-week.is-taught summary { cursor: pointer; list-style: none; min-height: 44px; margin: 0; align-items: center; }
+.tp-week.is-taught summary::-webkit-details-marker { display: none; }
+.tp-week.is-taught[open] summary { margin-bottom: 10px; }
+@media print { .tp-week.is-taught { display: none !important; } }

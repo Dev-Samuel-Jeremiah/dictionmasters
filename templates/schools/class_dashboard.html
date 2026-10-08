@@ -44,6 +44,11 @@
     </section>
     {% endif %}
 
+    <a href="{% url 'scheme:teaching_plan' %}{% if level %}?level={{ level|urlencode }}{% endif %}" class="px-item cd-mark" data-teaching-plan>
+      <span class="px-item__ii t-sky">{% include "includes/icon.html" with name="calendar" size=22 %}</span>
+      <span class="px-item__it"><b>Teaching plan</b><span>The whole term, week by week, and what to prepare for the next school day</span></span>
+      <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+    </a>
     <a href="{% url 'scheme:reports' %}" class="px-item cd-mark">
       <span class="px-item__ii t-butter">{% include "includes/icon.html" with name="cert" size=22 %}</span>
       <span class="px-item__it"><b>Report cards</b><span>This term's scores, and your comment for each pupil</span></span>

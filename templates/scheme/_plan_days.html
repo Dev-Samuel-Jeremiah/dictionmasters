@@ -1,0 +1,20 @@
+{# One week's days in the teaching plan (scheme/teaching_plan.html). Needs `week`, `pupils`. #}
+{% if week.days %}
+<dl class="tp-days">
+  {% for day in week.days %}
+  <div class="tp-day{% if day.is_today %} is-today{% endif %}">
+    <dt>{{ day.label }}{% if day.date %}<small>{{ day.date|date:"j M" }}</small>{% endif %}</dt>
+    <dd>
+      <ul class="tp-lessons">
+        {% for row in day.rows %}
+        <li>
+          <a href="{{ row.url }}" class="tp-lesson"><b>{{ row.title }}</b><small>{{ row.kind }}</small></a>
+          {% if row.done is not None and pupils %}<span class="tp-done{% if row.done == pupils %} is-all{% endif %}">{{ row.done }} of {{ pupils }} done</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </dd>
+  </div>
+  {% endfor %}
+</dl>
+{% else %}<p class="tp-muted">Nothing on the scheme this week.</p>{% endif %}

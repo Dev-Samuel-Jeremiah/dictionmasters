@@ -38,29 +38,18 @@
     <div class="px-card sh-alldone"><span aria-hidden="true">&#11088;</span><b>All done this week!</b><small>Well done. Practise below, or look back at your weeks.</small></div>
     {% endif %}
 
-    {% if today_rows %}
-    <div class="px-sec"><h2>Today</h2></div>
-    {% include "scheme/_entry_list.html" with rows=today_rows %}
-    {% endif %}
-
-    {% if rows|length > today_rows|length %}
-    <div class="px-sec"><h2>This week</h2></div>
-    <ol class="sh-list">
-      {% for row in rows %}{% if not row.is_today %}
-      <li>
-        <a href="{{ row.url }}" class="sh-item{% if row.done %} is-done{% endif %}">
-          <span class="sh-item__tick" aria-hidden="true">{% if row.done %}&#10003;{% else %}&bull;{% endif %}</span>
-          <span class="sh-item__text"><b>{{ row.title }}</b><small>{{ row.day_label }} · {{ row.kind }}{% if row.done %} · Done{% endif %}</small></span>
-          <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=20 %}</span>
-        </a>
-      </li>
-      {% endif %}{% endfor %}
-    </ol>
-    {% endif %}
-
     {% if not total %}<div class="px-card px-empty">Nothing on your scheme this week.</div>{% endif %}
 
-    <a href="{% url 'scheme:weeks' %}" class="sh-weeks-link">My weeks: go back to earlier lessons &rarr;</a>
+    {# One card for the whole week and every week before it (scheme/weeks.html). #}
+    <a href="{% url 'scheme:weeks' %}" class="px-card sh-weeks-card" data-my-weeks>
+      <span class="px-item__ii t-sky" aria-hidden="true">{% include "includes/icon.html" with name="book" size=26 %}</span>
+      <span class="sh-weeks-card__text">
+        <b>My weeks</b>
+        <small>{% if total %}This week: {{ done }} of {{ total }} done · {% endif %}Every lesson, week by week</small>
+      </span>
+      <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
+    </a>
+
     <div class="px-sec"><h2>Practise</h2></div>
     {% include "scheme/_practise.html" %}
 

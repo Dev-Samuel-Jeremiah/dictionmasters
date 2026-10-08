@@ -325,3 +325,21 @@ def go(request, pk):
         raise Http404
     SchemeOpened.objects.get_or_create(user=request.user, entry=entry)
     return redirect(tt.content_url(entry))
+
+
+@role_required(User.Role.TEACHER)
+def teaching_plan(request):
+    """A teacher's plan for the term: every week of the scheme for their
+    level, laid out Monday to Friday with the dates, what to prepare for
+    the next school day, and how the class is getting on. Printable."""
+    teacher = request.user
+    levels = teacher.all_levels or level_moves.LEVELS[1:2]
+    level = request.GET.get("level") if request.GET.get("level") in levels else levels[0]
+    current = last_term(teacher)
+    raw = request.GET.get("term", "")
+    number = int(raw) if raw in {"1", "2", "3"} else (current.number if current else 1)
+    pupils = list(pupils_of(teacher).filter(level=level))
+    return render(request, "scheme/teaching_plan.html", {
+        **tt.term_plan(teacher, level, number, pupils),
+        "levels": levels, "level": level, "number": number, "terms": TERM_LABELS, "today": _today(),
+    })

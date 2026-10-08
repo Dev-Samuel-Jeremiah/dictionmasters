@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Teaching plan — {{ level }} — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/class_dashboard.css' %}"><link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  A teacher's teaching plan (apps/scheme/views.teaching_plan, timetable.term_plan):
+  the whole term of their level's scheme, Monday to Friday with the dates,
+  what to prepare for the next school day, and how many pupils have done
+  each lesson so far. Printable on A4.
+{% endcomment %}
+<div class="px-page cd tp">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/teacher.jpg' %}" alt="">
+    <h1>Teaching plan</h1>
+    <p>{{ level }}{% for value, label in terms %}{% if value == number %}, {{ label }}{% endif %}{% endfor %}{% if dated %}: {{ dated.starts|date:"j M" }} – {{ dated.ends|date:"j M Y" }}{% endif %}</p>
+  </section>
+
+  <div class="px-wrap">
+    <div class="tp-bar">
+      {% if levels|length > 1 %}
+      <nav class="px-chips" aria-label="Level">{% for one in levels %}<a href="?level={{ one|urlencode }}&term={{ number }}" class="px-chip{% if one == level %} is-on{% endif %}">{{ one }}</a>{% endfor %}</nav>
+      {% endif %}
+      <nav class="px-chips" aria-label="Term">{% for value, label in terms %}<a href="?level={{ level|urlencode }}&term={{ value }}" class="px-chip{% if value == number %} is-on{% endif %}">{{ label }}</a>{% endfor %}</nav>
+      <button type="button" class="tp-print" onclick="window.print()">Print the term</button>
+    </div>
+
+    {% if next_day %}
+    <section class="px-card tp-next" data-prepare>
+      <p class="tp-next__label">Prepare for {{ next_day.date|date:"l j F" }}</p>
+      <h2>{{ next_day.term.term.get_number_display }}, Week {{ next_day.week }}</h2>
+      {% if next_day.rows %}
+      <ul class="tp-lessons">
+        {% for row in next_day.rows %}
+        <li><a href="{{ row.url }}" class="tp-lesson"><b>{{ row.title }}</b><small>{{ row.kind }}{% if row.any_day %} · any day this week{% endif %}</small></a></li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="tp-muted">Nothing on the scheme that day.</p>{% endif %}
+    </section>
+    {% endif %}
+
+    {% if weeks %}
+    <div class="tp-weeks">
+      {% for week in weeks %}
+      {% if week.state == "taught" %}
+      {# Taught weeks fold away, so this week and what's coming come first. #}
+      <details class="px-card tp-week is-taught" id="week-{{ week.number }}">
+        <summary class="tp-week__head">
+          <h2>Week {{ week.number }}</h2>
+          <span>{% if week.monday %}{{ week.monday|date:"j M" }} – {{ week.friday|date:"j M" }} · {% endif %}Taught · tap to open</span>
+        </summary>
+        {% include "scheme/_plan_days.html" %}
+      </details>
+      {% else %}
+      <section class="px-card tp-week is-{{ week.state }}" id="week-{{ week.number }}">
+        <header class="tp-week__head">
+          <h2>Week {{ week.number }}</h2>
+          <span>{% if week.monday %}{{ week.monday|date:"j M" }} – {{ week.friday|date:"j M" }}{% endif %}{% if week.state == "now" %} · <b>This week</b>{% endif %}</span>
+        </header>
+        {% include "scheme/_plan_days.html" %}
+      </section>
+      {% endif %}
+      {% if week.break_after %}<div class="tp-break">Mid-term break{% if dated.break_starts %}: {{ dated.break_starts|date:"j M" }} – {{ dated.break_ends|date:"j M" }}{% endif %}</div>{% endif %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-card px-empty" style="margin-top: 16px">The scheme of work for {{ level }} this term isn't ready yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

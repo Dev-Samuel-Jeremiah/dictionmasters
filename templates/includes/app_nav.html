@@ -12,6 +12,7 @@
   </div>
   <nav class="px-side__nav">
     <a href="{{ dashboard_url }}" class="px-side__link{% if nav_section == 'home' %} is-on{% endif %}"{% if nav_section == 'home' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="home" %}<span>Home</span></a>
+    {% if user.is_teacher %}<a href="{% url 'scheme:teaching_plan' %}" class="px-side__link{% if request.path|slice:':14' == '/scheme/teach/' %} is-on{% endif %}">{% include "includes/icon.html" with name="calendar" %}<span>Teaching plan</span></a>{% endif %}
     {% if user.is_teacher %}<a href="{% url 'schools:class_dashboard' %}" class="px-side__link{% if request.path|slice:':14' == '/school/class/' %} is-on{% endif %}">{% include "includes/icon.html" with name="school" %}<span>My class</span></a>{% endif %}
     {% if on_scheme %}
     {# A student on the scheme of work finds lessons week by week (apps/scheme). #}
