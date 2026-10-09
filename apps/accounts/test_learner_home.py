@@ -200,7 +200,7 @@ class LearnPageTests(TestCase):
         self.assertEqual(sorted(shown), sorted(names))
         self.assertContains(page, "<h1>Learn</h1>", html=False)
         self.assertContains(page, "All courses and tools")
-        self.assertContains(page, "The Etiquette Advantage", count=1)
+        self.assertNotContains(page, "The Etiquette Advantage")       # nothing to open yet, so not listed
 
     def test_students_do_not_see_teacher_tools(self):
         _page, shown = self.shown(make("pupil@example.com", role="student", level="Level 1"))
