@@ -1,6 +1,8 @@
-"""The scheme builder (apps/scheme/builder.py), the draft it makes, the
-control room's Calendar, and the school admin's view of the scheme. OpenAI
-is never called: its answers are faked."""
+"""The scheme builder with AI (apps/scheme/builder.py: Learning Modules,
+the 44 Academy and Tricks), the draft it makes, the control room's
+Calendar, and the school admin's view of the scheme. OpenAI is never
+called: its answers are faked. Its sharing the draft with Build from the
+book is in test_book.py."""
 
 import io
 import json
@@ -10,7 +12,7 @@ from unittest import mock
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 
-from apps.assessments.models import Assessment
+from apps.book.models import ACADEMY, TRICKS, Sound, SoundCategory
 from apps.echospell.models import Group, Level
 from apps.learning_modules.models import Day, LearningModule, Term as ModuleTerm, Week
 
@@ -41,60 +43,73 @@ class BuilderCase(YearTestCase):
                     made = Day.objects.create(week=week, day_name=day)
                     if module_ is module:
                         self.days.append(made)
-        self.ca1 = Assessment.objects.create(title="CA 1", kind="ca", level="Level 2", term=1, ca_number=1)
-        self.ca2 = Assessment.objects.create(title="CA 2", kind="ca", level="Level 2", term=1, ca_number=2)
-        self.exam = Assessment.objects.create(title="Exam", kind="exam", level="Level 2", term=1)
-        Assessment.objects.create(title="Second term CA", kind="ca", level="Level 2", term=2, ca_number=1)
+        Sound.objects.all().delete()
+        academy = SoundCategory.objects.create(name="Vowels", programme=ACADEMY)
+        tricks = SoundCategory.objects.create(name="Tricks", programme=TRICKS)
+        self.sounds = [Sound.objects.create(category=academy, name=f"Sound {n}", slug=f"sb{n}", order=n, is_published=True)
+                       for n in range(1, 5)]
+        self.tricks = [Sound.objects.create(category=tricks, name=f"Trick {n}", slug=f"tb{n}", order=n, is_published=True)
+                       for n in range(1, 3)]
+
+    def ids(self, kind, found):
+        return [f"{kind}:{x.pk}" for x in found]
 
 
 class CatalogueAndCheckTests(BuilderCase):
-    def test_the_catalogue_is_the_levels_content_in_order(self):
+    def test_the_catalogue_is_the_three_courses_in_order(self):
         items = builder.catalogue("Level 2", TERM_1)
-        self.assertEqual([i["id"] for i in items["group"]], [f"group:{g.pk}" for g in self.groups])
-        self.assertEqual(len(items["module_day"]), 15)                 # not the Level 9 module
-        self.assertEqual({i["title"] for i in items["assessment"]}, {"CA 1", "CA 2", "Exam"})
-        self.assertIn("daily_practice", items)
+        self.assertEqual(set(items), {"module_day", "sound", "trick"})        # not EchoSpell, recitals, …
+        self.assertEqual([i["id"] for i in items["module_day"]], self.ids("module_day", self.days))   # not Level 9's
+        self.assertEqual([i["id"] for i in items["sound"]], self.ids("sound", self.sounds))
+        self.assertEqual([i["id"] for i in items["trick"]], self.ids("trick", self.tricks))
 
     def test_only_real_placements_survive(self):
         items = builder.catalogue("Level 2", TERM_1)
-        g = f"group:{self.groups[0].pk}"
+        m, s = f"module_day:{self.days[0].pk}", f"sound:{self.sounds[0].pk}"
         kept = builder.clean_plan([
-            {"term": 1, "week": 1, "day": "monday", "item": g},
-            {"term": 1, "week": 1, "day": "monday", "item": g},                  # again
-            {"term": 1, "week": 13, "day": "monday", "item": g},                 # past the term
-            {"term": 2, "week": 1, "day": "monday", "item": g},                  # a term not asked for
-            {"term": 1, "week": 2, "day": "saturday", "item": g},                # not a school day
-            {"term": 1, "week": 2, "day": "any", "item": "group:999999"},        # not in the catalogue
-            {"term": 1, "week": 3, "day": "friday", "item": "daily_practice:"},
-            {"term": 1, "week": "x", "day": "monday", "item": g},
+            {"term": 1, "week": 1, "day": "monday", "item": m},
+            {"term": 1, "week": 1, "day": "monday", "item": m},                  # again
+            {"term": 1, "week": 13, "day": "monday", "item": m},                 # past the term
+            {"term": 2, "week": 1, "day": "monday", "item": m},                  # a term not asked for
+            {"term": 1, "week": 2, "day": "saturday", "item": m},                # not a school day
+            {"term": 1, "week": 2, "day": "any", "item": f"group:{self.groups[0].pk}"},   # the book's part
+            {"term": 1, "week": 3, "day": "any", "item": s},
+            {"term": 1, "week": "x", "day": "monday", "item": m},
         ], items, TERM_1)
-        self.assertEqual(kept, [(1, 1, "monday", g), (1, 3, "friday", "daily_practice:")])
+        self.assertEqual(kept, [(1, 1, "monday", m), (1, 3, "", s)])
 
-    def test_at_most_three_a_day(self):
+    def test_at_most_three_a_day_counting_the_books_lessons(self):
         items = builder.catalogue("Level 2", TERM_1)
-        plan = [{"term": 1, "week": 1, "day": "monday", "item": f"group:{g.pk}"} for g in self.groups]
+        plan = [{"term": 1, "week": 1, "day": "monday", "item": i} for i in self.ids("module_day", self.days[:4])]
         self.assertEqual(len(builder.clean_plan(plan, items, TERM_1)), 3)
+        self.assertEqual(len(builder.clean_plan(plan, items, TERM_1, {(1, 1, "monday"): 2})), 1)
 
 
 class RulePlanTests(BuilderCase):
-    def test_every_school_day_has_something_and_the_tests_land_well(self):
+    def test_a_module_day_each_school_day_and_two_sounds_a_week(self):
         items = builder.catalogue("Level 2", TERM_1)
         kept = builder.clean_plan(builder.rule_plan(TERM_1, items), items, TERM_1)
-        for week in range(1, 13):
-            days = {d for t, w, d, i in kept if w == week}
-            self.assertTrue({"friday"} <= days, week)                        # Daily Practice at least
-        self.assertIn((1, 5, "thursday", f"assessment:{self.ca1.pk}"), kept)
-        self.assertIn((1, 9, "thursday", f"assessment:{self.ca2.pk}"), kept)
-        self.assertIn((1, 12, "wednesday", f"assessment:{self.exam.pk}"), kept)
-        # Courses keep their order: group 1 before group 2 ...
-        weeks = {}
-        for t, w, d, i in kept:
-            if i.startswith("group:"):
-                weeks.setdefault(i, w)                                       # first time it's taught
-        self.assertEqual(sorted(weeks, key=weeks.get), [f"group:{g.pk}" for g in self.groups])
-        # The revision week (11) brings no new course content.
+        week_1 = [(d, i) for t, w, d, i in kept if w == 1]
+        self.assertEqual([i for d, i in week_1 if i.startswith("module_day:")], self.ids("module_day", self.days[:5]))
+        self.assertEqual([(d, i) for d, i in week_1 if i.startswith("sound:")],
+                         list(zip(["tuesday", "thursday"], self.ids("sound", self.sounds[:2]))))
+        # The sounds, then the tricks.
+        self.assertEqual([i for t, w, d, i in kept if w == 3 and i.startswith("trick:")], self.ids("trick", self.tricks))
+        # The revision week (11) brings nothing new.
         new = {i for t, w, d, i in kept if w < 11}
-        self.assertTrue({i for t, w, d, i in kept if w == 11 and i != "daily_practice:"} <= new)
+        self.assertTrue({i for t, w, d, i in kept if w == 11} <= new)
+
+    def test_it_fits_around_the_books_days(self):
+        items = builder.catalogue("Level 2", TERM_1)
+        taken = {(1, 1, "monday"): 3, (1, 1, "tuesday"): 2}
+        kept = builder.clean_plan(builder.rule_plan(TERM_1, items, taken), items, TERM_1, taken)
+        week_1 = {}
+        for t, w, d, i in kept:
+            if w == 1:
+                week_1.setdefault(d, []).append(i)
+        self.assertNotIn("monday", week_1)                                  # full already
+        self.assertEqual(week_1["tuesday"], [f"module_day:{self.days[0].pk}"])   # the first day, no sound
+        self.assertIn(f"sound:{self.sounds[0].pk}", week_1["wednesday"] + week_1["friday"])
 
 
 class BuildTests(BuilderCase):
@@ -103,17 +118,18 @@ class BuildTests(BuilderCase):
         result = builder.build("Level 2", TERM_1)
         self.assertEqual(result["source"], "rules")
         self.assertIn("No OpenAI key", result["message"])
-        self.assertTrue(SchemeEntry.objects.filter(is_draft=True).exists())
+        self.assertEqual(set(SchemeEntry.objects.filter(is_draft=True).values_list("kind", flat=True)),
+                         {"module_day", "sound", "trick"})
         self.assertFalse(SchemeEntry.objects.filter(is_draft=False).exists())
         self.assertEqual(timetable(self.ada, date(2026, 9, 8))["state"], "empty")
 
     @override_settings(OPENAI_API_KEY="test-key", OPENAI_MODEL="gpt-test")
     def test_the_ai_plan_is_checked_and_saved_as_the_draft(self):
-        g1, g2 = (f"group:{g.pk}" for g in self.groups[:2])
+        m1, m2 = self.ids("module_day", self.days[:2])
         answer = {"entries": [
-            {"term": 1, "week": 1, "day": "monday", "item": g1},
-            {"term": 1, "week": 2, "day": "any", "item": g2},
-            {"term": 1, "week": 2, "day": "monday", "item": "group:999999"},
+            {"term": 1, "week": 1, "day": "monday", "item": m1},
+            {"term": 1, "week": 2, "day": "any", "item": m2},
+            {"term": 1, "week": 2, "day": "monday", "item": f"group:{self.groups[0].pk}"},   # not the AI's to place
         ]}
         reply = {"choices": [{"message": {"content": json.dumps(answer)}}]}
         sent = {}
@@ -122,14 +138,17 @@ class BuildTests(BuilderCase):
             sent["body"] = json.loads(request.data)
             return io.BytesIO(json.dumps(reply).encode())
 
+        SchemeEntry.objects.create(level="Level 2", term=1, week=1, day="monday", kind="group", group=self.groups[0])
         with mock.patch("apps.scheme.builder.urllib.request.urlopen", fake_urlopen):
             result = builder.build("Level 2", TERM_1, note="Vowels first")
         self.assertEqual((result["source"], result["count"]), ("ai", 2))
         self.assertEqual(sent["body"]["model"], "gpt-test")
         self.assertEqual(sent["body"]["response_format"]["json_schema"]["name"], "scheme_of_work")
-        self.assertIn("Vowels first", sent["body"]["messages"][1]["content"])
-        self.assertEqual(list(SchemeEntry.objects.filter(is_draft=True).order_by("week").values_list("week", "day")),
-                         [(1, "monday"), (2, "")])
+        told = json.loads(sent["body"]["messages"][1]["content"])
+        self.assertEqual(told["planner_note"], "Vowels first")
+        self.assertEqual(told["echospell_lessons_per_day"], [{"term": 1, "week": 1, "day": "monday", "lessons": 1}])
+        self.assertEqual(list(SchemeEntry.objects.filter(is_draft=True, kind="module_day").order_by("week")
+                              .values_list("week", "day")), [(1, "monday"), (2, "")])
 
     @override_settings(OPENAI_API_KEY="test-key")
     def test_an_ai_failure_falls_back_to_the_rules(self):
@@ -140,12 +159,10 @@ class BuildTests(BuilderCase):
         self.assertGreater(result["count"], 0)
 
     def test_a_level_with_nothing_to_teach(self):
-        Assessment.objects.all().delete()
-        # No groups or modules of its own, but the shared courses (44 Academy,
-        # recitals, the library) and Daily Practice still make a plan…
+        # No module of its own, but the shared ones, the 44 Academy and Tricks…
         result = builder.build("Level 11", TERM_1, use_ai=False)
         self.assertGreater(result["count"], 0)
-        self.assertFalse(SchemeEntry.objects.filter(level="Level 11", kind="group").exists())
+        self.assertFalse(SchemeEntry.objects.filter(level="Level 11", module_day__week__term__module__slug="big-words").exists())
         # …and a level with truly nothing gives a clear message.
         with mock.patch("apps.scheme.builder.catalogue", return_value={}):
             self.assertIn("no content", builder.build("Level 11", TERM_1)["message"])
@@ -169,19 +186,22 @@ class EditorDraftTests(BuilderCase):
         drafts = SchemeEntry.objects.filter(is_draft=True).count()
         # Editing works on the draft, not the live scheme.
         self.client.post(self.url, {**self.base, "view": "draft", "action": "add", "week": "3", "day": "friday",
-                                    "content": "daily_practice:"})
+                                    "content": f"module_day:{self.days[0].pk}"})
         self.assertEqual(SchemeEntry.objects.filter(is_draft=True).count(), drafts + 1)
         self.assertTrue(SchemeEntry.objects.filter(pk=self.live.pk, is_draft=False).exists())
-        # Publishing replaces the live scheme.
+        # The draft started from the live scheme's EchoSpell…
+        self.assertTrue(SchemeEntry.objects.filter(is_draft=True, kind="group", group=self.groups[4]).exists())
+        # …and publishing replaces the live scheme, EchoSpell still on it.
         self.client.post(self.url, {**self.base, "action": "publish"})
         self.assertFalse(SchemeEntry.objects.filter(pk=self.live.pk).exists())
         self.assertEqual(SchemeEntry.objects.filter(is_draft=False).count(), drafts + 1)
+        self.assertTrue(SchemeEntry.objects.filter(is_draft=False, kind="group", group=self.groups[4]).exists())
         self.assertFalse(SchemeEntry.objects.filter(is_draft=True).exists())
 
     @override_settings(OPENAI_API_KEY="")
     def test_discard_leaves_the_live_scheme(self):
         self.client.post(self.url, {**self.base, "action": "build", "scope": "year"})
-        self.assertTrue(SchemeEntry.objects.filter(is_draft=True, term=3).exists())
+        self.assertTrue(SchemeEntry.objects.filter(is_draft=True, term=1).exists())
         self.client.post(self.url, {**self.base, "action": "discard"})
         self.assertFalse(SchemeEntry.objects.filter(is_draft=True, term=1).exists())
         self.assertTrue(SchemeEntry.objects.filter(pk=self.live.pk, is_draft=False).exists())

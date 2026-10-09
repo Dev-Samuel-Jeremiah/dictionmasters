@@ -4,7 +4,9 @@
   admin's own group, then Learn / Practice / Progress, then every course
   and tool folded away under "All courses" and "All tools". A student on
   the scheme of work sees just their weeks, practice and progress. Phones
-  and tablets get the bottom tab bar from the prototype. nav_section
+  and tablets get the bottom tab bar from the prototype. A student on the
+  scheme also gets every course and tool the scheme doesn't schedule
+  (apps/scheme/gate.py), folded under "More to explore". nav_section
   comes from apps/landing/context_processors.nav.
 {% endcomment %}
 {% if user.role == 'school_admin' %}{% url 'schools:dashboard' as dashboard_url %}{% else %}{% url 'accounts:dashboard' as dashboard_url %}{% endif %}
@@ -44,7 +46,20 @@
     <a href="{% url 'assessments:my_results' %}" class="px-side__link{% if nav_section == 'progress' %} is-on{% endif %}"{% if nav_section == 'progress' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="chart" %}<span>Progress</span></a>
     {% if user.is_student %}<a href="{% url 'diction_library:hub' %}" class="px-side__link{% if request.path|slice:':9' == '/library/' %} is-on{% endif %}">{% include "includes/icon.html" with name="shelf" %}<span>Diction Library</span></a>{% endif %}
 
-    {% if not on_scheme %}
+    {% if on_scheme %}
+    {# What the scheme doesn't schedule: open any day (apps/scheme/gate.py). #}
+    <details class="px-side__fold" data-side-fold="explore">
+      <summary class="px-side__label">More to explore</summary>
+    <a href="{% url 'assembly_recitals:hub' %}" class="px-side__sub{% if request.path|slice:':19' == '/assembly-recitals/' %} is-on{% endif %}"><span class="px-side__dot t-sky">{% include "includes/icon.html" with name="mic" size=16 %}</span>Assembly Recitals</a>
+    <a href="{% url 'conversational_dialogue:hub' %}" class="px-side__sub{% if request.path|slice:':25' == '/conversational-dialogue/' %} is-on{% endif %}"><span class="px-side__dot t-butter">{% include "includes/icon.html" with name="mic" size=16 %}</span>Conversational Dialogue</a>
+    <a href="{% url 'reading_club:hub' %}" class="px-side__sub{% if request.path|slice:':14' == '/reading-club/' %} is-on{% endif %}"><span class="px-side__dot t-lilac">{% include "includes/icon.html" with name="shelf" size=16 %}</span>Reading Club</a>
+    <a href="{% url 'daily_practice:home' %}" class="px-side__sub{% if request.path|slice:':16' == '/daily-practice/' %} is-on{% endif %}"><span class="px-side__dot t-mint">{% include "includes/icon.html" with name="mic" size=16 %}</span>Daily Practice</a>
+    <a href="{% url 'assessments:hub' %}" class="px-side__sub{% if request.path|slice:':13' == '/assessments/' and request.resolver_match.url_name != 'my_results' %} is-on{% endif %}"><span class="px-side__dot t-lilac">{% include "includes/icon.html" with name="task" size=16 %}</span>Assessments</a>
+    <a href="{% url 'learning_tools:book_scanner' %}" class="px-side__sub{% if request.resolver_match.url_name == 'book_scanner' %} is-on{% endif %}"><span class="px-side__dot t-sky">{% include "includes/icon.html" with name="scan" size=16 %}</span>Scan &amp; Listen</a>
+    <a href="{% url 'reference_library:home' %}" class="px-side__sub{% if request.path|slice:':19' == '/reference-library/' %} is-on{% endif %}"><span class="px-side__dot t-stone">{% include "includes/icon.html" with name="search" size=16 %}</span>Reference Library</a>
+    <a href="{% url 'diction_radio:home' %}" class="px-side__sub{% if request.path|slice:':7' == '/radio/' %} is-on{% endif %}"><span class="px-side__dot t-butter">{% include "includes/icon.html" with name="radio" size=16 %}</span>Diction Radio</a>
+    </details>
+    {% else %}
     {# Every course and tool, folded away until wanted (static/js/side_folds.js remembers each one). #}
     <details class="px-side__fold" data-side-fold="courses">
       <summary class="px-side__label">All courses</summary>

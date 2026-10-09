@@ -111,10 +111,21 @@ class GateTests(TimetableCase):
         self.assertEqual(self.get(self.ada, "/echospell/level-2/t2/", TUESDAY_WEEK_2).status_code, 200)
         self.assertEqual(self.get(self.ada, "/library/the-fox/").status_code, 200)
 
-    def test_hubs_lead_to_my_weeks_and_other_tools_are_closed(self):
-        self.assertRedirects(self.get(self.ada, "/echospell/"), "/scheme/weeks/", fetch_redirect_response=False)
-        self.assertRedirects(self.get(self.ada, "/learning-tools/"), "/scheme/weeks/", fetch_redirect_response=False)
-        self.assertContains(self.get(self.ada, "/reference-library/"), "Not on your scheme", status_code=403)
+    def test_hubs_lead_to_my_weeks(self):
+        for url in ("/echospell/", "/learning-tools/", "/book/", "/tricks/", "/learning-modules/"):
+            self.assertRedirects(self.get(self.ada, url), "/scheme/weeks/", fetch_redirect_response=False, msg_prefix=url)
+
+    def test_what_the_scheme_does_not_schedule_is_open(self):
+        for url in ("/assembly-recitals/", "/conversational-dialogue/", "/reading-club/", "/daily-practice/",
+                    "/assessments/", "/reference-library/", "/radio/", "/learning-tools/book-scanner/"):
+            response = self.get(self.ada, url)
+            self.assertNotEqual(response.status_code, 403, url)
+            self.assertNotEqual(response.get("Location"), "/scheme/weeks/", url)
+        self.client.force_login(self.ada)
+        with self.on(TUESDAY_WEEK_1):
+            side = self.client.get("/scheme/weeks/")
+        self.assertContains(side, "More to explore")
+        self.assertContains(side, 'href="/assembly-recitals/"')
 
     def test_practice_tools_stay_open(self):
         for url in ("/clash/", "/quick-words/", "/book/phonemic-chart/", "/tutor/"):

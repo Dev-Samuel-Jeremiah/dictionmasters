@@ -2,19 +2,23 @@
 The scheme of work editor in the control room: one level's term as a
 timetable, week 1 to 14, Monday to Friday.
 
+The scheme holds four courses: EchoSpell, Learning Modules, the 44
+Academy and Tricks to Sound Fluent. Every other course and tool is open
+to students from the sidebar, so it isn't put on the scheme.
+
 Staff put content on it one piece at a time (week, day, content), move it
 up or down within its day, take it off, or fill the weeks in one go from a
 whole set — a level's EchoSpell groups one a week, a module's days one a
-school day, the level's dialogues on the weeks they were written for. What
-is on it is exactly what the level's students see and may open
-(apps/scheme/timetable.py).
+school day. What is on it is exactly what the level's students see and
+may open (apps/scheme/timetable.py).
 
-"Build from the book" lays out a level's year the way the book is:
-EchoSpell Group 1 is Week 1, its cards one a day, its activities on
-Friday. The scheme builder (apps/scheme/builder.py) plans a term or a whole year
-from the content on the site and saves it as a draft. The editor then
-shows the draft, every tool above works on it, and Publish makes it the
-live scheme (Discard throws it away). Students never see a draft.
+Two builders (apps/scheme/builder.py) share the draft, each replacing only
+its own part: "Build from the book" lays out EchoSpell for the year
+(Group 1 is Week 1, its cards one a day, its activities on Friday), and
+"Build with AI" plans Learning Modules, the 44 Academy and Tricks for a
+term or the year around the book's days. The editor then shows the
+draft, every tool above works on it, and Publish makes it the live
+scheme (Discard throws it away). Students never see a draft.
 """
 
 from django.conf import settings
@@ -24,14 +28,9 @@ from django.db.models import Max
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
-from apps.assessments.models import Assessment
-from apps.assembly_recitals.models import Recital
 from apps.book.models import ACADEMY, TRICKS
-from apps.conversational_dialogue.models import Dialogue
-from apps.diction_library.models import LibraryItem
 from apps.echospell.models import LEVEL_NAME_CHOICES, Group
 from apps.learning_modules.models import Day, LearningModule
-from apps.reading_club.models import Book, Chapter
 from apps.scheme import builder
 from apps.scheme.calendar import break_after_week, terms_for, weeks_in
 from apps.scheme.models import DAY_CHOICES, TERM_CHOICES, WEEK_CHOICES, SchemeEntry
@@ -46,8 +45,8 @@ K = SchemeEntry.Kind
 
 
 def _content_choices(level):
-    """[(group label, [(value, label)])] for the Add form: everything that
-    can go on this level's scheme. Values are "kind:pk"."""
+    """[(group label, [(value, label)])] for the Add form: the four
+    courses' content this level's scheme can hold. Values are "kind:pk"."""
     modules = (Day.objects.filter(is_published=True, week__term__module__is_published=True)
                .select_related("week__term__module")
                .order_by("week__term__module__order", "week__term__module__name", "week__term__order",
@@ -70,30 +69,18 @@ def _content_choices(level):
         ("Learning Modules days", [(f"{K.MODULE_DAY}:{d.pk}",
                                     f"{d.week.term.module.name}: {d.week.term.name}, {d.week.display_name}, {d.get_day_name_display()}")
                                    for d in modules]),
-        ("Conversational Dialogue", [(f"{K.DIALOGUE}:{d.pk}", f"Term {d.term}, Week {d.week}, {d.get_day_display()}: {d.title}")
-                                     for d in Dialogue.objects.filter(level__name=level)]),
         ("44 Academy", [(f"{K.SOUND}:{s.pk}", s.name) for s in lessons_in_order(ACADEMY)]),
         ("Tricks to Sound Fluent", [(f"{K.TRICK}:{s.pk}", s.name) for s in lessons_in_order(TRICKS)]),
-        ("Reading Club", [(f"{K.CHAPTER}:{c.pk}", f"{c.term.book.title}: {c.term.name}, {c.title}")
-                          for c in Chapter.objects.select_related("term__book").order_by("term__book__order", "term__order", "number", "id")]),
-        ("Assembly Recitals", [(f"{K.RECITAL}:{r.pk}", f"{r.section.name}: {r.title}")
-                               for r in Recital.objects.select_related("section").order_by("section__order", "order")]),
-        ("Diction Library", [(f"{K.LIBRARY}:{i.pk}", i.title) for i in LibraryItem.objects.filter(school__isnull=True).order_by("title")]),
-        ("Assessments", [(f"{K.ASSESSMENT}:{a.pk}", f"{a.title} ({a.get_kind_display()})")
-                         for a in Assessment.objects.filter(level__in=[level, ""]).order_by("kind", "title")]),
-        ("Other", [(f"{K.DAILY_PRACTICE}:", "Daily Practice")]),
     ]
 
 
 def _fill_sets(level, term):
     """[(value, label)] of the sets the weeks can be filled from."""
     sets = [("groups", f"{level} EchoSpell groups, in number order"),
-            ("dialogues", f"{level} Conversational Dialogues for this term, on their own weeks and days"),
             ("academy", "44 Academy sounds, in order"),
             ("tricks", "Tricks to Sound Fluent lessons, in order")]
     sets += [(f"module:{m.pk}", f"Learning Modules: {m.name}, every day in order")
              for m in LearningModule.objects.order_by("order", "name")]
-    sets += [(f"book:{b.pk}", f"Reading Club: {b.title}, every chapter in order") for b in Book.objects.order_by("order", "title")]
     return sets
 
 
@@ -109,9 +96,6 @@ def _set_items(name, level, term):
         return K.MODULE_DAY, "module_day", list(
             Day.objects.filter(week__term__module_id=name.split(":")[1], is_published=True)
             .order_by("week__term__order", "week__term__id", "week__number", "order"))
-    if name.startswith("book:"):
-        return K.CHAPTER, "chapter", list(
-            Chapter.objects.filter(term__book_id=name.split(":")[1]).order_by("term__order", "number", "id"))
     return None, None, []
 
 
@@ -203,7 +187,8 @@ def scheme_editor(request):
 
 
 def _build(request, level, term):
-    """Plan this term, or the whole year, as a draft."""
+    """Plan Learning Modules, the 44 Academy and Tricks for this term, or
+    the whole year, as a draft. The draft's EchoSpell stays as it is."""
     numbers = [1, 2, 3] if request.POST.get("scope") == "year" else [term]
     note = request.POST.get("note", "")
     result = builder.build(level, _term_specs(numbers), note=note, use_ai=request.POST.get("use_ai") != "no")
@@ -212,7 +197,8 @@ def _build(request, level, term):
         return _back(level, term)
     how = "planned by AI" if result["source"] == "ai" else "planned by rule"
     where = "the whole year" if len(numbers) > 1 else dict(TERM_CHOICES)[term]
-    messages.success(request, f"Draft ready for {level}, {where}: {result['count']} entries, {how}. "
+    messages.success(request, f"Draft ready for {level}, {where}: {result['count']} Learning Modules, 44 Academy "
+                              f"and Tricks lessons, {how}, around the EchoSpell lessons. "
                               "Check and edit it, then Publish to make it live.")
     if result["message"]:
         messages.info(request, result["message"])
@@ -220,14 +206,16 @@ def _build(request, level, term):
 
 
 def _book(request, level, term):
-    """The whole year from the book, as a draft: EchoSpell Group 1 is Week 1."""
+    """EchoSpell for the whole year, as a draft: Group 1 is Week 1. The
+    draft's Learning Modules, 44 Academy and Tricks stay as they are."""
     result = builder.build_from_book(level, _term_specs([1, 2, 3]))
     if not result["count"]:
         messages.error(request, f"{level} has no EchoSpell groups yet, so there's nothing to lay out.")
         return _back(level, term)
     messages.success(request, f"Draft ready for {level}: {result['groups']} EchoSpell group{'s' if result['groups'] != 1 else ''} "
                               f"laid out as {result['groups']} week{'s' if result['groups'] != 1 else ''} "
-                              f"({result['count']} lessons). Check and edit each term, then Publish it.")
+                              f"({result['count']} lessons). Learning Modules, 44 Academy and Tricks are left as they were. "
+                              "Check and edit each term, then Publish it.")
     if result["groups"] < result["weeks"]:
         messages.info(request, f"The year has {result['weeks']} school weeks, so the last "
                                f"{result['weeks'] - result['groups']} are empty until more groups are added.")
@@ -303,29 +291,22 @@ def _fill(request, level, term, is_draft=False):
     pace = request.POST.get("pace", "week")
     day = request.POST.get("day", "")
     new = []
-    if name == "dialogues":
-        # Dialogues were written for a week and day of each term: keep them there.
-        for dialogue in Dialogue.objects.filter(level__name=level, term=term):
-            if dialogue.week <= LAST_WEEK:
-                new.append(SchemeEntry(level=level, term=term, week=dialogue.week, day=dialogue.day,
-                                       kind=K.DIALOGUE, dialogue=dialogue, is_draft=is_draft))
-    else:
-        kind, field, items = _set_items(name, level, term)
-        if kind is None:
-            messages.error(request, "Choose what to fill the weeks with.")
-            return
-        items = items[skip:]
-        if limit:
-            items = items[:limit]
-        for i, item in enumerate(items):
-            if pace == "day":
-                week, on = start + i // 5, WEEKDAYS[i % 5]
-            else:
-                week, on = start + i, day
-            if week > LAST_WEEK:
-                break
-            new.append(SchemeEntry(level=level, term=term, week=week, day=on, kind=kind, is_draft=is_draft,
-                                   **{field: item}))
+    kind, field, items = _set_items(name, level, term)
+    if kind is None:
+        messages.error(request, "Choose what to fill the weeks with.")
+        return
+    items = items[skip:]
+    if limit:
+        items = items[:limit]
+    for i, item in enumerate(items):
+        if pace == "day":
+            week, on = start + i // 5, WEEKDAYS[i % 5]
+        else:
+            week, on = start + i, day
+        if week > LAST_WEEK:
+            break
+        new.append(SchemeEntry(level=level, term=term, week=week, day=on, kind=kind, is_draft=is_draft,
+                               **{field: item}))
     # Each goes after anything already on its day.
     tops = {}
     for row in (SchemeEntry.objects.filter(level=level, term=term, is_draft=is_draft).values("week", "day")

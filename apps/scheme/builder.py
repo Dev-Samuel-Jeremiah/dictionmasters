@@ -1,13 +1,24 @@
 """
-The scheme builder: a whole term (or year) of the scheme of work for one
-level, planned from the content already on the site, saved as a draft to
-check, edit and publish in the control room's Scheme of work.
+The scheme builders: a level's scheme of work, planned from the content
+already on the site, saved as a draft to check, edit and publish in the
+control room's Scheme of work.
 
-    catalogue(level, terms)     everything the level can be taught, by kind,
-                                in each course's own order
-    book_plan(level, terms)     the book's layout, no AI: Group N is Week N,
-                                its cards one a day, its activities on Friday
-    build(level, terms, note)   plan it and save it as the level's draft
+The scheme holds four courses, and two builders share it, each looking
+after its own part and leaving the other's alone:
+
+    book_plan(level, terms)     EchoSpell, the book (BOOK_KINDS), no AI:
+                                Group N is Week N, its cards one a day,
+                                its activities on Friday
+    build(level, terms, note)   Learning Modules, the 44 Academy and Tricks
+                                to Sound Fluent (AI_KINDS), fitted around
+                                the days the book already fills
+    catalogue(level, terms)     what build can place, in each course's order
+
+Every other course and tool (Assembly Recitals, Reading Club, Daily
+Practice, …) is open to students from the sidebar, not scheduled. A build
+replaces everything in the draft but the other builder's part, so old
+entries of those kinds go with it. With no draft yet, a build starts from
+the live scheme, so building one part keeps the other part as published.
 
 The plan comes from OpenAI when a key is set (OPENAI_API_KEY, the model in
 OPENAI_MODEL — the same as the rest of the site), told to plan the way a
@@ -27,7 +38,7 @@ import urllib.request
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Max, Q
 
 from apps.accounts.access import limit_to_level_list
 
@@ -43,24 +54,25 @@ MAX_PER_DAY = 3
 DAYS = ["any", "monday", "tuesday", "wednesday", "thursday", "friday"]
 WEEKDAYS = DAYS[1:]
 K = SchemeEntry.Kind
+BOOK_KINDS = {K.CARD, K.ACTIVITY, K.GROUP}           # Build from the book
+AI_KINDS = {K.MODULE_DAY, K.SOUND, K.TRICK}           # Build with AI
 
-RULES = """You plan a school scheme of work for British English pronunciation for Nigerian
-school children. You get one level's terms (how many teaching weeks each has, and the
-week its mid-term break follows) and a catalogue of the content that level can be taught,
-each course listed in its own teaching order. Place content on weeks and days.
+RULES = """You plan part of a school scheme of work for British English pronunciation for
+Nigerian school children: three courses, Learning Modules, the 44 Academy (the 44 sounds)
+and Tricks to Sound Fluent. You get one level's terms (how many teaching weeks each has,
+and the week its mid-term break follows), a catalogue of those courses' content, each
+listed in its own teaching order, and how many EchoSpell lessons (the book, placed
+already and not yours to place) each day holds. Place your courses' content on weeks and days.
 
 Plan like an experienced curriculum planner:
-- Every school day (Monday to Friday) of every week has at least one item; at most 3 a day.
+- Learning Modules days are a daily course: one a school day (Monday to Friday), in order.
+- The 44 Academy sounds about two a week; Tricks to Sound Fluent after the sounds.
 - Keep each course in its catalogue order; never put a later item before an earlier one.
-- Spread courses across the week for variety rather than one course all week.
-- Learning Modules days are a daily course: one a school day, in order.
-- EchoSpell groups: about one a week. 44 Academy sounds come before Tricks to Sound Fluent.
-- Conversational Dialogues have the term and week they were written for: use those.
-- Daily Practice ("daily_practice:") on Fridays.
-- CA 1 around week 4 or 5, CA 2 around week 8 or 9, the exam in the last week;
-  the week before the exam is revision: lighter, revisiting earlier content.
+- At most 3 lessons a day, counting the EchoSpell lessons already there: put the sounds
+  and tricks on the lighter days.
+- The week before the last week of a term is revision: lighter, revisiting earlier content.
 - Use "any" as the day for an item that can be done on any day that week.
-- Only use ids from the catalogue, and an assessment only in the term it's for.
+- Only use ids from the catalogue.
 Return every placement."""
 
 
@@ -69,21 +81,13 @@ Return every placement."""
 # ---------------------------------------------------------------------------
 
 def catalogue(level, terms):
-    """{kind: [{"id": "kind:pk", "title", ...}]} in each course's own order."""
-    from apps.assembly_recitals.models import Recital
-    from apps.assessments.models import Assessment
+    """{kind: [{"id": "kind:pk", "title"}]} of the AI builder's courses
+    (AI_KINDS), each in its own order."""
     from apps.book.models import ACADEMY, TRICKS
-    from apps.conversational_dialogue.models import Dialogue
-    from apps.diction_library.models import LibraryItem
-    from apps.echospell.models import Group
     from apps.learning_modules.models import Day
-    from apps.reading_club.models import Chapter
     from apps.tricks.progress import lessons_in_order
 
-    numbers = [t["number"] for t in terms]
     found = {
-        K.GROUP: [{"id": f"group:{g.pk}", "title": f"EchoSpell Group {g.number}{': ' + g.title if g.title else ''}"}
-                  for g in Group.objects.filter(level__name=level, level__is_published=True).order_by("number")],
         K.MODULE_DAY: [
             {"id": f"module_day:{d.pk}", "title": f"{d.week.term.module.name}, {d.week.term.name}, {d.week.display_name}, {d.get_day_name_display()}"}
             for d in limit_to_level_list(
@@ -93,25 +97,8 @@ def catalogue(level, terms):
                 "week__term__module__order", "week__term__module__name", "week__term__order", "week__term__id",
                 "week__number", "order")
         ],
-        K.DIALOGUE: [{"id": f"dialogue:{d.pk}", "title": d.title, "term": d.term, "week": d.week, "day": d.day}
-                     for d in Dialogue.objects.filter(level__name=level, is_published=True, term__in=numbers)],
         K.SOUND: [{"id": f"sound:{s.pk}", "title": s.name} for s in lessons_in_order(ACADEMY)],
         K.TRICK: [{"id": f"trick:{s.pk}", "title": s.name} for s in lessons_in_order(TRICKS)],
-        K.CHAPTER: [{"id": f"chapter:{c.pk}", "title": f"{c.term.book.title}: {c.title}"}
-                    for c in limit_to_level_list(Chapter.objects.filter(is_published=True), _as_level(level),
-                                                 field="term__book__levels")
-                    .select_related("term__book").order_by("term__book__order", "term__order", "number")],
-        K.RECITAL: [{"id": f"recital:{r.pk}", "title": f"{r.section.name}: {r.title}"}
-                    for r in Recital.objects.filter(is_published=True).select_related("section").order_by("section__order", "order")],
-        K.LIBRARY: [{"id": f"library:{i.pk}", "title": i.title}
-                    for i in limit_to_level_list(LibraryItem.objects.filter(is_published=True, school__isnull=True),
-                                                 _as_level(level)).order_by("order", "title")],
-        K.ASSESSMENT: [
-            {"id": f"assessment:{a.pk}", "title": a.title, "kind": a.kind, "term": a.term, "ca_number": a.ca_number}
-            for a in Assessment.objects.filter(is_published=True, level=level, kind__in=["ca", "exam"], term__in=numbers)
-            .order_by("term", "kind", "ca_number")
-        ],
-        K.DAILY_PRACTICE: [{"id": "daily_practice:", "title": "Daily Practice"}],
     }
     return {kind: items[:MAX_PER_KIND] for kind, items in found.items() if items}
 
@@ -133,13 +120,14 @@ class _as_level:
 # Checking a plan
 # ---------------------------------------------------------------------------
 
-def clean_plan(placements, items, terms):
+def clean_plan(placements, items, terms, taken=None):
     """Keep only placements that are real: a catalogue id, a term asked for,
-    a week inside it, a real day; an assessment only in its own term; no
-    duplicates; at most MAX_PER_DAY a day. [(term, week, day, id)]."""
+    a week inside it, a real day; no duplicates; at most MAX_PER_DAY a day,
+    counting what's `taken` already ({(term, week, day): n}, the book's
+    lessons). [(term, week, day, id)]."""
     weeks = {t["number"]: t["weeks"] for t in terms}
-    known = {item["id"]: item for found in items.values() for item in found}
-    kept, seen, per_day = [], set(), {}
+    known = {item["id"] for found in items.values() for item in found}
+    kept, seen, per_day = [], set(), dict(taken or {})
     for p in placements:
         try:
             term, week, day, item = int(p["term"]), int(p["week"]), str(p["day"]).lower(), str(p["item"])
@@ -147,9 +135,6 @@ def clean_plan(placements, items, terms):
             continue
         day = "" if day == "any" else day
         if term not in weeks or not 1 <= week <= weeks[term] or (day and day not in WEEKDAYS) or item not in known:
-            continue
-        found = known[item]
-        if item.startswith("assessment:") and found.get("term") != term:
             continue
         key = (term, week, day, item)
         if key in seen or per_day.get((term, week, day), 0) >= MAX_PER_DAY:
@@ -179,7 +164,7 @@ def _schema():
     }
 
 
-def ai_plan(level, terms, items, note=""):
+def ai_plan(level, terms, items, note="", taken=None):
     """Placements from OpenAI, or PlanError."""
     if not getattr(settings, "OPENAI_API_KEY", ""):
         raise PlanError("No OpenAI key is set.")
@@ -193,6 +178,8 @@ def ai_plan(level, terms, items, note=""):
                 "terms": [{"term": t["number"], "teaching_weeks": t["weeks"], "break_after_week": t["break_after"]}
                           for t in terms],
                 "catalogue": {kind: found for kind, found in items.items()},
+                "echospell_lessons_per_day": [{"term": t, "week": w, "day": d or "any", "lessons": n}
+                                              for (t, w, d), n in sorted((taken or {}).items())],
                 "planner_note": note[:MAX_NOTE],
             })},
         ],
@@ -212,59 +199,50 @@ def ai_plan(level, terms, items, note=""):
         raise PlanError(f"The AI planner didn't answer usefully: {error}") from error
 
 
-def rule_plan(terms, items):
-    """A careful plan from the same rules, with no AI: placements as dicts.
-    Courses run on in order from one term to the next."""
-    queues = {kind: [i["id"] for i in found if kind not in (K.ASSESSMENT, K.DIALOGUE, K.DAILY_PRACTICE)]
-              for kind, found in items.items()}
-    take = lambda kind: queues[kind].pop(0) if queues.get(kind) else None
+SOUND_DAYS = ["tuesday", "thursday"]                 # two sounds (then tricks) a week
+
+
+def rule_plan(terms, items, taken=None):
+    """A careful plan from the same rules, with no AI: placements as dicts,
+    fitted around what's `taken` already. Courses run on in order from one
+    term to the next."""
+    queues = {kind: [i["id"] for i in found] for kind, found in items.items()}
+    load = dict(taken or {})
     plan = []
-    put = lambda term, week, day, item: item and plan.append({"term": term, "week": week, "day": day, "item": item})
-    # A weekly slot for each course: (day, kind), the sounds before the tricks.
-    weekly = [("monday", K.GROUP), ("tuesday", K.SOUND), ("wednesday", K.CHAPTER),
-              ("thursday", K.RECITAL), ("any", K.LIBRARY)]
+
+    def put(term, week, day, kind=None, item=None):
+        """Place the next of `kind` (or `item`) if the day has room."""
+        if load.get((term, week, day), 0) >= MAX_PER_DAY:
+            return False
+        item = item or (queues[kind].pop(0) if queues.get(kind) else None)
+        if not item:
+            return False
+        plan.append({"term": term, "week": week, "day": day, "item": item})
+        load[(term, week, day)] = load.get((term, week, day), 0) + 1
+        return True
+
     for term in terms:
         n, last = term["number"], term["weeks"]
-        tests = {i.get("kind") + str(i.get("ca_number") or ""): i["id"]
-                 for i in items.get(K.ASSESSMENT, []) if i.get("term") == n}
-        ca1, ca2 = max(2, round(last * 0.4)), max(3, round(last * 0.75))
         revision = last - 1 if last >= 4 else 0
         for week in range(1, last + 1):
             if week == revision:
                 # Revision: no new course content; a day each on lessons from
                 # earlier in the term, spread across it.
-                earlier = list(dict.fromkeys(
-                    p["item"] for p in plan
-                    if p["term"] == n and not p["item"].startswith(("assessment:", "daily_practice:"))))
+                earlier = list(dict.fromkeys(p["item"] for p in plan if p["term"] == n))
                 step = max(1, len(earlier) // 5)
                 for day, item in zip(WEEKDAYS, earlier[::step]):
-                    put(n, week, day, item)
-                if items.get(K.DAILY_PRACTICE):
-                    put(n, week, "friday", "daily_practice:")
+                    put(n, week, day, item=item)
                 continue
             for day in WEEKDAYS:
-                put(n, week, day, take(K.MODULE_DAY))
-            for day, kind in weekly:
-                if kind == K.SOUND and not queues.get(K.SOUND):
-                    kind = K.TRICK
-                put(n, week, day, take(kind))
-            if items.get(K.DAILY_PRACTICE):
-                put(n, week, "friday", "daily_practice:")
-            if week == ca1:
-                put(n, week, "thursday", tests.get("ca1"))
-            if week == ca2:
-                put(n, week, "thursday", tests.get("ca2"))
-            if week == last:
-                put(n, week, "wednesday", tests.get("exam"))
-        for dialogue in items.get(K.DIALOGUE, []):
-            if dialogue.get("term") == n and dialogue.get("week", 99) <= last:
-                put(n, dialogue["week"], dialogue.get("day") or "any", dialogue["id"])
+                put(n, week, day, K.MODULE_DAY)
+            for day in SOUND_DAYS:
+                kind = K.SOUND if queues.get(K.SOUND) else K.TRICK
+                # Its own day, or the lightest day with room.
+                for choice in [day] + sorted(WEEKDAYS, key=lambda d: load.get((n, week, d), 0)):
+                    if put(n, week, choice, kind):
+                        break
     return plan
 
-
-# ---------------------------------------------------------------------------
-# Building the draft
-# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # From the book: EchoSpell's groups are the weeks
@@ -278,8 +256,8 @@ def book_plan(level, terms):
     Group 1 is Week 1, Group 2 Week 2, … running on through the terms'
     weeks. A week holds its group's cards that have something in them, one
     a day Monday to Thursday in the level's card order (two a day when
-    there are more than four), and the group's activities on Friday —
-    Daily Practice instead when it has none. [(term, week, day, item)]."""
+    there are more than four), and the group's activities on Friday.
+    [(term, week, day, item)]."""
     from apps.echospell.lesson_path import _cards_with_content
     from apps.echospell.models import Activity, Group, Level
 
@@ -300,29 +278,60 @@ def book_plan(level, terms):
             plan.append((term, week, day, f"card:{group.pk}-{category.pk}"))
         for activity in activities.get(group.pk, []):
             plan.append((term, week, "friday", f"activity:{activity.pk}"))
-        if not activities.get(group.pk):
-            plan.append((term, week, "friday", "daily_practice:"))
     return plan
 
 
 def build_from_book(level, terms):
-    """book_plan saved as the level's draft. {"count", "groups", "weeks"}."""
+    """book_plan saved as the level's draft, keeping the AI builder's part.
+    {"count", "groups", "weeks"}."""
     plan = book_plan(level, terms)
-    count = save_draft(level, terms, plan)
+    count = save_draft(level, terms, plan, keep=AI_KINDS)
     weeks_filled = {(term, week) for term, week, _day, _item in plan}      # one group per week
     return {"count": count, "groups": len(weeks_filled), "weeks": sum(t["weeks"] for t in terms)}
 
 
-@transaction.atomic
-def save_draft(level, terms, placements):
-    """Replace the level's draft for these terms with `placements`."""
+# ---------------------------------------------------------------------------
+# Building the draft
+# ---------------------------------------------------------------------------
+
+def _drafted(level, numbers):
+    """The terms that have a draft already."""
+    return set(SchemeEntry.objects.filter(level=level, term__in=numbers, is_draft=True)
+               .values_list("term", flat=True))
+
+
+def taken_days(level, terms, keep):
+    """{(term, week, day): n} of the `keep` kinds a build must fit around:
+    in the draft, or in the live scheme for a term with no draft yet."""
     numbers = [t["number"] for t in terms]
-    SchemeEntry.objects.filter(level=level, term__in=numbers, is_draft=True).delete()
-    new, orders = [], {}
+    drafted = _drafted(level, numbers)
+    rows = (SchemeEntry.objects.filter(level=level, kind__in=keep)
+            .filter(Q(is_draft=True, term__in=drafted) | Q(is_draft=False, term__in=set(numbers) - drafted))
+            .values("term", "week", "day").annotate(n=Count("id")))
+    return {(r["term"], r["week"], r["day"]): r["n"] for r in rows}
+
+
+@transaction.atomic
+def save_draft(level, terms, placements, keep=()):
+    """Replace the level's draft for these terms with `placements`, keeping
+    its entries of the `keep` kinds (the other builder's part). A term with
+    no draft yet starts from its live scheme's `keep` entries."""
+    numbers = [t["number"] for t in terms]
+    fresh = set(numbers) - _drafted(level, numbers)
+    copies = list(SchemeEntry.objects.filter(level=level, term__in=fresh, is_draft=False, kind__in=keep))
+    for entry in copies:
+        entry.pk, entry.is_draft = None, True
+    SchemeEntry.objects.bulk_create(copies)
+    SchemeEntry.objects.filter(level=level, term__in=numbers, is_draft=True).exclude(kind__in=keep).delete()
+    # New entries go after the kept ones on their day.
+    orders = {(r["term"], r["week"], r["day"]): r["top"]
+              for r in SchemeEntry.objects.filter(level=level, term__in=numbers, is_draft=True)
+              .values("term", "week", "day").annotate(top=Max("order"))}
+    new = []
     for term, week, day, item in placements:
         kind, _sep, pk = item.partition(":")
         field = SchemeEntry.FIELD_FOR.get(kind)
-        orders[(term, week, day)] = order = orders.get((term, week, day), 0) + 1
+        orders[(term, week, day)] = order = (orders.get((term, week, day)) or 0) + 1
         entry = SchemeEntry(level=level, term=term, week=week, day=day, kind=kind, order=order, is_draft=True)
         if kind == SchemeEntry.Kind.CARD:
             # "card:<group>-<card type>"
@@ -336,15 +345,18 @@ def save_draft(level, terms, placements):
 
 
 def build(level, terms, note="", use_ai=True):
-    """Plan `terms` ([{"number", "weeks", "break_after"}]) for `level` and save
-    it as the draft. {"count", "source": "ai" | "rules", "message"}."""
+    """Plan Learning Modules, the 44 Academy and Tricks for `terms`
+    ([{"number", "weeks", "break_after"}]) around the book's days, and save
+    them as `level`'s draft, keeping the book's part.
+    {"count", "source": "ai" | "rules", "message"}."""
     items = catalogue(level, terms)
     if not items:
         return {"count": 0, "source": "", "message": f"There's no content for {level} to plan with yet."}
+    taken = taken_days(level, terms, BOOK_KINDS)
     source, message, placements = "rules", "", []
     if use_ai:
         try:
-            placements = clean_plan(ai_plan(level, terms, items, note), items, terms)
+            placements = clean_plan(ai_plan(level, terms, items, note, taken), items, terms, taken)
             source = "ai"
             if not placements:
                 message = "The AI planner's answer had nothing usable, so the plan was made by rule."
@@ -354,6 +366,6 @@ def build(level, terms, note="", use_ai=True):
                        if "No OpenAI key" in str(error) else "The AI planner didn't answer, so the plan was made by rule.")
     if not placements:
         source = "rules"
-        placements = clean_plan(rule_plan(terms, items), items, terms)
-    count = save_draft(level, terms, placements)
+        placements = clean_plan(rule_plan(terms, items, taken), items, terms, taken)
+    count = save_draft(level, terms, placements, keep=BOOK_KINDS)
     return {"count": count, "source": source, "message": message}
