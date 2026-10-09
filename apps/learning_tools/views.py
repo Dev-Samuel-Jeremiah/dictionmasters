@@ -129,10 +129,9 @@ TOOLS = [
 
 
 # The Learn page by age band (apps.accounts.access.age_band): little ones
-# get only these sections, with pictures and names; everyone else gets
-# them all. A band's "blurbs" is how much of each description shows.
+# get only these sections; everyone else gets them all. The list shows
+# each course's and tool's name, never a description.
 BAND_SECTIONS = {"little": ("courses", "practise")}
-BAND_BLURBS = {"little": "none", "middle": "short"}
 
 
 @login_required
@@ -158,7 +157,7 @@ def hub(request):
     return render(request, "learning_tools/hub.html", {
         "sections": [s for s in sections if s["tools"]],
         "band": band,
-        "blurbs": BAND_BLURBS.get(band["key"], "full") if band else "full",
+        "blurbs": "none",
     })
 
 

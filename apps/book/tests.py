@@ -197,13 +197,9 @@ class TricksToSoundFluentTests(TestCase):
         # Just the card: the sections live on the Tricks pages, not here.
         self.assertNotContains(page, 'href="/tricks/sections/')
 
-    def test_the_etiquette_advantage_card_is_locked(self):
-        # It has no lessons yet: shown on Learn as coming soon, not a link.
-        page = self.client.get("/learning-tools/").content.decode()
-        card = page[page.index("The Etiquette Advantage") - 400:page.index("The Etiquette Advantage") + 300]
-        self.assertIn("is-locked", card)
-        self.assertIn("Coming soon", card)
-        self.assertNotIn("<a ", card[card.index("is-locked"):])
+    def test_the_etiquette_advantage_card_is_not_shown(self):
+        # It has no lessons yet, and Learn shows only what can be opened.
+        self.assertNotContains(self.client.get("/learning-tools/"), "The Etiquette Advantage")
 
     def test_tricks_has_its_own_pages(self):
         home = self.client.get("/tricks/")

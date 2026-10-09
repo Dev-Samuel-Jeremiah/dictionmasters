@@ -1481,3 +1481,14 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .px-side__fold[open] > summary::after { transform: rotate(90deg); }
 .px-side__fold > summary:hover { background: var(--bg); color: var(--text); }
 @media (prefers-reduced-motion: reduce) { .px-side__fold > summary::after { transition: none; } }
+
+/* ---------- No guide write-ups: pages stay clean ----------
+   The intro under a page's title, the note beside a section and the
+   description inside a card are hidden on every page, so a page shows
+   its name and what to do, not paragraphs about it. Information that
+   changes — counts, dates, progress — lives in other elements and stays. */
+.ui-hero__lede, .es-hero__lede, .lm-hero__lede, .qk-hero__lede, .tt-hero__lede,
+.ui-section__aside, .es-section__aside, .lm-section__aside, .dm-panel__aside,
+.ui-card__desc, .lm-module__desc, .section-lede, .search-page__lede, .clash-pick__blurb {
+  display: none !important;
+}

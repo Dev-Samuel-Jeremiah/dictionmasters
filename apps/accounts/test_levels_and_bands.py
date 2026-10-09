@@ -184,12 +184,13 @@ class BandPageTests(TestCase):
 
         self.client.force_login(pupil("Level 4"))
         middle = self.client.get("/learning-tools/")
-        self.assertContains(middle, 'class="lt-short"')
         self.assertIn("read", [s["key"] for s in middle.context["sections"]])
 
         teacher = User.objects.create_user("t@example.com", "pw-12345678", first_name="T", role="teacher", level="Level 1")
         self.client.force_login(teacher)
         full = self.client.get("/learning-tools/")
-        self.assertNotContains(full, "lt-short")
-        self.assertContains(full, "Spelling and phonics by level")
         self.assertIn("teachers", [s["key"] for s in full.context["sections"]])
+        # Names only for everyone: no descriptions on the Learn list.
+        for page in (little, middle, full):
+            self.assertNotContains(page, "Spelling and phonics by level")
+            self.assertNotContains(page, "lt-short")

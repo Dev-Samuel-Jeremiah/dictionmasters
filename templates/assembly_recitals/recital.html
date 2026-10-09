@@ -72,7 +72,6 @@
         {% endif %}
       </div>
       {% if recital.audio_source %}
-      {% if verses %}<p class="ui-panel__lede">Press play and each word lights up as it is said.</p>{% endif %}
       <audio controls src="{{ recital.audio_source }}" data-ra-media data-recital-audio class="rc-audio"></audio>
       {% endif %}
       {% if verses %}

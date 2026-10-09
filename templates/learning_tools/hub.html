@@ -24,8 +24,8 @@
         <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
       </a>
       {% endfor %}
-      {% if section.key == "courses" and blurbs != "none" %}
-      {# The Etiquette Advantage: shown, but locked until its lessons are ready. Not in TOOLS, which site search reads. #}
+      {% if section.key == "courses" and show_coming_soon %}
+      {# The Etiquette Advantage, when it's to be shown as coming soon (off for now: Learn lists only what opens). #}
       <div class="px-item is-locked" aria-disabled="true">
         <img class="px-thumb" src="{% static 'img/app/cEtiq.jpg' %}" alt="">
         <span class="px-item__it"><b>The Etiquette Advantage</b><span>Poise and polish for every conversation.</span><span class="px-item__prog">Coming soon</span></span>

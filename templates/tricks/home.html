@@ -25,8 +25,6 @@
             </div>
           </div>
         </div>
-        <div class="ui-hero__side">
-        </div>
       </div>
     </div>
   </section>
@@ -46,12 +44,6 @@
         <span class="ui-card__name">All Tricks</span>
         <span class="ui-card__desc">{{ total_tricks }} trick{{ total_tricks|pluralize }}, taken in order: finish each one and pass its assessment to unlock the next.</span>
         <span class="ui-card__cta">Open the tricks &rarr;</span>
-      </a>
-      <a href="{% url 'tricks:sections' %}" class="ui-card ui-lift" style="--tone: #1846e0; --i: 1">
-        <span class="ui-card__top"><span class="ui-card__icon" aria-hidden="true">&#128450;</span></span>
-        <span class="ui-card__name">Browse by section</span>
-        <span class="ui-card__desc">Go straight to one part — {% for slug, label in sections %}{{ label }}{% if not forloop.last %}, {% endif %}{% endfor %} — of any trick.</span>
-        <span class="ui-card__cta">Choose a section &rarr;</span>
       </a>
     </div>
   </div>

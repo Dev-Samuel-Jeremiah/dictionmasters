@@ -29,15 +29,6 @@
           {% if sound.example_words %}<p class="ui-hero__lede">{{ sound.example_words }}</p>{% endif %}
         </div>
       </div>
-      <div class="ui-hero__side">
-        {% if programme.sections %}
-        {% endif %}
-        {% if programme.sections %}
-        <a href="{% url programme.section active_tab %}" class="ui-btn ui-btn--glass">Browse by section</a>
-        {% else %}
-        <a href="{% url 'book:phonemic_chart' %}" class="ui-btn ui-btn--glass">iː Phonemic chart</a>
-        {% endif %}
-      </div>
     </div>
     <nav class="ui-hero__tabs" aria-label="Lesson sections">
       {% for tab_slug, tab_label in tabs %}
