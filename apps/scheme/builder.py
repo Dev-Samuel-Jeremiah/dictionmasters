@@ -9,9 +9,10 @@ after its own part and leaving the other's alone:
     book_plan(level, terms)     EchoSpell, the book (BOOK_KINDS), no AI:
                                 Group N is Week N, its cards one a day,
                                 its activities on Friday
-    build(level, terms, note)   Learning Modules, the 44 Academy and Tricks
-                                to Sound Fluent (AI_KINDS), fitted around
-                                the days the book already fills
+    build(level, terms, note)   Learning Modules (a day every school day),
+                                the 44 Academy and Tricks to Sound Fluent
+                                (a sound and a trick a week, side by side)
+                                (AI_KINDS), fitted around the book's days
     catalogue(level, terms)     what build can place, in each course's order
 
 Every other course and tool (Assembly Recitals, Reading Club, Daily
@@ -65,11 +66,13 @@ listed in its own teaching order, and how many EchoSpell lessons (the book, plac
 already and not yours to place) each day holds. Place your courses' content on weeks and days.
 
 Plan like an experienced curriculum planner:
-- Learning Modules days are a daily course: one a school day (Monday to Friday), in order.
-- The 44 Academy sounds about two a week; Tricks to Sound Fluent after the sounds.
+- Learning Modules days are a daily course: exactly one every school day (Monday to
+  Friday), in order, even on a day the EchoSpell lessons fill.
+- The 44 Academy and Tricks to Sound Fluent run side by side from week 1: one sound and
+  one trick each week (sounds on Tuesday, tricks on Thursday, or the lightest day).
 - Keep each course in its catalogue order; never put a later item before an earlier one.
-- At most 3 lessons a day, counting the EchoSpell lessons already there: put the sounds
-  and tricks on the lighter days.
+- Besides the Learning Modules day, at most 3 lessons a day, counting the EchoSpell
+  lessons already there: put the sounds and tricks on the lighter days.
 - The week before the last week of a term is revision: lighter, revisiting earlier content.
 - Use "any" as the day for an item that can be done on any day that week.
 - Only use ids from the catalogue.
@@ -124,7 +127,8 @@ def clean_plan(placements, items, terms, taken=None):
     """Keep only placements that are real: a catalogue id, a term asked for,
     a week inside it, a real day; no duplicates; at most MAX_PER_DAY a day,
     counting what's `taken` already ({(term, week, day): n}, the book's
-    lessons). [(term, week, day, id)]."""
+    lessons) — besides the day's Learning Modules day, the daily course,
+    which is never squeezed out. [(term, week, day, id)]."""
     weeks = {t["number"]: t["weeks"] for t in terms}
     known = {item["id"] for found in items.values() for item in found}
     kept, seen, per_day = [], set(), dict(taken or {})
@@ -137,10 +141,12 @@ def clean_plan(placements, items, terms, taken=None):
         if term not in weeks or not 1 <= week <= weeks[term] or (day and day not in WEEKDAYS) or item not in known:
             continue
         key = (term, week, day, item)
-        if key in seen or per_day.get((term, week, day), 0) >= MAX_PER_DAY:
+        daily = item.startswith(f"{K.MODULE_DAY}:")
+        if key in seen or (not daily and per_day.get((term, week, day), 0) >= MAX_PER_DAY):
             continue
         seen.add(key)
-        per_day[(term, week, day)] = per_day.get((term, week, day), 0) + 1
+        if not daily:
+            per_day[(term, week, day)] = per_day.get((term, week, day), 0) + 1
         kept.append(key)
     return kept
 
@@ -199,7 +205,8 @@ def ai_plan(level, terms, items, note="", taken=None):
         raise PlanError(f"The AI planner didn't answer usefully: {error}") from error
 
 
-SOUND_DAYS = ["tuesday", "thursday"]                 # two sounds (then tricks) a week
+# A sound and a trick each week, side by side from week 1.
+WEEKLY = [("tuesday", K.SOUND), ("thursday", K.TRICK)]
 
 
 def rule_plan(terms, items, taken=None):
@@ -211,14 +218,17 @@ def rule_plan(terms, items, taken=None):
     plan = []
 
     def put(term, week, day, kind=None, item=None):
-        """Place the next of `kind` (or `item`) if the day has room."""
-        if load.get((term, week, day), 0) >= MAX_PER_DAY:
+        """Place the next of `kind` (or `item`) if the day has room. A
+        Learning Modules day always has room: it's the daily course."""
+        daily = kind == K.MODULE_DAY or (item or "").startswith(f"{K.MODULE_DAY}:")
+        if not daily and load.get((term, week, day), 0) >= MAX_PER_DAY:
             return False
         item = item or (queues[kind].pop(0) if queues.get(kind) else None)
         if not item:
             return False
         plan.append({"term": term, "week": week, "day": day, "item": item})
-        load[(term, week, day)] = load.get((term, week, day), 0) + 1
+        if not daily:
+            load[(term, week, day)] = load.get((term, week, day), 0) + 1
         return True
 
     for term in terms:
@@ -235,8 +245,9 @@ def rule_plan(terms, items, taken=None):
                 continue
             for day in WEEKDAYS:
                 put(n, week, day, K.MODULE_DAY)
-            for day in SOUND_DAYS:
-                kind = K.SOUND if queues.get(K.SOUND) else K.TRICK
+            for day, kind in WEEKLY:
+                if not queues.get(kind):                    # one course done: two of the other
+                    kind = K.TRICK if kind == K.SOUND else K.SOUND
                 # Its own day, or the lightest day with room.
                 for choice in [day] + sorted(WEEKDAYS, key=lambda d: load.get((n, week, d), 0)):
                     if put(n, week, choice, kind):

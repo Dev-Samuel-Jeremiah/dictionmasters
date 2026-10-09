@@ -165,7 +165,7 @@ class TwoBuildersTests(BookCase):
         self.post("book")
         self.post("build", scope="term")
         per_day = {}
-        for entry in SchemeEntry.objects.filter(is_draft=True, term=1, week=1):
+        for entry in SchemeEntry.objects.filter(is_draft=True, term=1, week=1).exclude(kind="module_day"):
             per_day[entry.day] = per_day.get(entry.day, 0) + 1
         self.assertTrue(all(n <= MAX_PER_DAY for n in per_day.values()), per_day)
         monday = list(SchemeEntry.objects.filter(is_draft=True, term=1, week=1, day="monday").order_by("order"))

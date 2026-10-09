@@ -80,21 +80,26 @@ class CatalogueAndCheckTests(BuilderCase):
 
     def test_at_most_three_a_day_counting_the_books_lessons(self):
         items = builder.catalogue("Level 2", TERM_1)
-        plan = [{"term": 1, "week": 1, "day": "monday", "item": i} for i in self.ids("module_day", self.days[:4])]
+        plan = [{"term": 1, "week": 1, "day": "monday", "item": i} for i in self.ids("sound", self.sounds)]
         self.assertEqual(len(builder.clean_plan(plan, items, TERM_1)), 3)
         self.assertEqual(len(builder.clean_plan(plan, items, TERM_1, {(1, 1, "monday"): 2})), 1)
+        # The Learning Modules day, the daily course, is never squeezed out.
+        day = [{"term": 1, "week": 1, "day": "monday", "item": f"module_day:{self.days[0].pk}"}]
+        self.assertEqual(len(builder.clean_plan(day, items, TERM_1, {(1, 1, "monday"): 3})), 1)
 
 
 class RulePlanTests(BuilderCase):
-    def test_a_module_day_each_school_day_and_two_sounds_a_week(self):
+    def test_a_module_day_each_school_day_and_a_sound_and_a_trick_a_week(self):
         items = builder.catalogue("Level 2", TERM_1)
         kept = builder.clean_plan(builder.rule_plan(TERM_1, items), items, TERM_1)
         week_1 = [(d, i) for t, w, d, i in kept if w == 1]
         self.assertEqual([i for d, i in week_1 if i.startswith("module_day:")], self.ids("module_day", self.days[:5]))
-        self.assertEqual([(d, i) for d, i in week_1 if i.startswith("sound:")],
-                         list(zip(["tuesday", "thursday"], self.ids("sound", self.sounds[:2]))))
-        # The sounds, then the tricks.
-        self.assertEqual([i for t, w, d, i in kept if w == 3 and i.startswith("trick:")], self.ids("trick", self.tricks))
+        # A sound and a trick from week 1, side by side…
+        self.assertEqual([(d, i) for d, i in week_1 if i.startswith(("sound:", "trick:"))],
+                         [("tuesday", f"sound:{self.sounds[0].pk}"), ("thursday", f"trick:{self.tricks[0].pk}")])
+        self.assertIn((1, 2, "thursday", f"trick:{self.tricks[1].pk}"), kept)
+        # …and once the tricks are done, two sounds a week.
+        self.assertEqual([i for t, w, d, i in kept if w == 3 and i.startswith("sound:")], self.ids("sound", self.sounds[2:]))
         # The revision week (11) brings nothing new.
         new = {i for t, w, d, i in kept if w < 11}
         self.assertTrue({i for t, w, d, i in kept if w == 11} <= new)
@@ -107,9 +112,15 @@ class RulePlanTests(BuilderCase):
         for t, w, d, i in kept:
             if w == 1:
                 week_1.setdefault(d, []).append(i)
-        self.assertNotIn("monday", week_1)                                  # full already
-        self.assertEqual(week_1["tuesday"], [f"module_day:{self.days[0].pk}"])   # the first day, no sound
-        self.assertIn(f"sound:{self.sounds[0].pk}", week_1["wednesday"] + week_1["friday"])
+        # The module day still comes every day, in order, on a full day too…
+        self.assertEqual([week_1[d][0] for d in ("monday", "tuesday", "wednesday", "thursday", "friday")],
+                         self.ids("module_day", self.days[:5]))
+        self.assertEqual(week_1["monday"], [f"module_day:{self.days[0].pk}"])
+        # …and the sound takes Tuesday's last place.
+        self.assertEqual(week_1["tuesday"], self.ids("module_day", self.days[1:2]) + self.ids("sound", self.sounds[:1]))
+        taken[(1, 1, "thursday")] = 3                                          # no room: the lightest day
+        kept = builder.clean_plan(builder.rule_plan(TERM_1, items, taken), items, TERM_1, taken)
+        self.assertIn((1, 1, "wednesday", f"trick:{self.tricks[0].pk}"), kept)
 
 
 class BuildTests(BuilderCase):
