@@ -42,6 +42,7 @@
     <a href="{% url 'daily_practice:home' %}" class="px-side__link{% if nav_section == 'practice' %} is-on{% endif %}"{% if nav_section == 'practice' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="mic" %}<span>Practice</span></a>
     {% endif %}
     <a href="{% url 'assessments:my_results' %}" class="px-side__link{% if nav_section == 'progress' %} is-on{% endif %}"{% if nav_section == 'progress' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="chart" %}<span>Progress</span></a>
+    {% if user.is_student %}<a href="{% url 'diction_library:hub' %}" class="px-side__link{% if request.path|slice:':9' == '/library/' %} is-on{% endif %}">{% include "includes/icon.html" with name="shelf" %}<span>Diction Library</span></a>{% endif %}
 
     {% if not on_scheme %}
     {# Every course and tool, folded away until wanted (static/js/side_folds.js remembers each one). #}
@@ -65,7 +66,7 @@
     <a href="{% url 'tutor:hub' %}" class="px-side__sub{% if request.path|slice:':7' == '/tutor/' %} is-on{% endif %}"><span class="px-side__dot t-sky">{% include "includes/icon.html" with name="robot" size=16 %}</span>Read with Yela</a>
     <a href="{% url 'clash:hub' %}" class="px-side__sub{% if request.path|slice:':7' == '/clash/' %} is-on{% endif %}"><span class="px-side__dot t-blush">{% include "includes/icon.html" with name="swords" size=16 %}</span>Diction Clash</a>
     <a href="{% url 'assessments:hub' %}" class="px-side__sub{% if request.path|slice:':13' == '/assessments/' and request.resolver_match.url_name != 'my_results' %} is-on{% endif %}"><span class="px-side__dot t-lilac">{% include "includes/icon.html" with name="task" size=16 %}</span>Assessments</a>
-    <a href="{% url 'diction_library:hub' %}" class="px-side__sub{% if request.path|slice:':9' == '/library/' %} is-on{% endif %}"><span class="px-side__dot t-mint">{% include "includes/icon.html" with name="shelf" size=16 %}</span>Diction Library</a>
+    {% if not user.is_student %}<a href="{% url 'diction_library:hub' %}" class="px-side__sub{% if request.path|slice:':9' == '/library/' %} is-on{% endif %}"><span class="px-side__dot t-mint">{% include "includes/icon.html" with name="shelf" size=16 %}</span>Diction Library</a>{% endif %}
     <a href="{% url 'reference_library:home' %}" class="px-side__sub{% if request.path|slice:':19' == '/reference-library/' %} is-on{% endif %}"><span class="px-side__dot t-stone">{% include "includes/icon.html" with name="search" size=16 %}</span>Reference Library</a>
     <a href="{% url 'diction_radio:home' %}" class="px-side__sub{% if request.path|slice:':7' == '/radio/' %} is-on{% endif %}"><span class="px-side__dot t-butter">{% include "includes/icon.html" with name="radio" size=16 %}</span>Diction Radio</a>
     </details>

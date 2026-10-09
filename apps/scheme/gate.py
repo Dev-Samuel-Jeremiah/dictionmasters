@@ -4,7 +4,9 @@ Keeps a scheme student (timetable.on_scheme) to their scheme of work.
 For each page they open, the address's view name and arguments say what
 content it is. Then:
 
-  - the practice tools stay open to everyone (PRACTICE);
+  - the practice tools and the Diction Library stay open to everyone
+    (PRACTICE) — the library still shows only what's for their school and
+    level (apps/diction_library/views.visible_items);
   - a tool's own lists and hubs (EchoSpell's levels, the Learn page, …)
     go to their weeks instead (HUBS), since the scheme is how they find
     content;
@@ -24,7 +26,7 @@ from .timetable import on_scheme, open_keys
 # Always open: practice tools, and the parts of a scheme tool that are a
 # student's own work in progress (their attempts, saving their place).
 PRACTICE = {
-    "clash", "quick_words", "tutor",
+    "clash", "quick_words", "tutor", "diction_library",
     "book:phonemic_chart", "book:read_along",
     "echospell:save_card_position", "echospell:check_vocabulary_sentences",
     "assessments:take", "assessments:save_answer", "assessments:check_answer", "assessments:result",
@@ -34,7 +36,7 @@ PRACTICE = {
 # Tools whose content is reached only through the scheme.
 SCHEME_TOOLS = {
     "echospell", "learning_modules", "conversational_dialogue", "book", "tricks", "reading_club",
-    "assembly_recitals", "diction_library", "daily_practice", "assessments", "learning_tools",
+    "assembly_recitals", "daily_practice", "assessments", "learning_tools",
     "reference_library", "diction_radio",
 }
 
@@ -48,7 +50,7 @@ HUBS = {
     "tricks:home", "tricks:lessons", "tricks:sections", "tricks:section",
     "reading_club:hub", "reading_club:book_detail", "reading_club:term_detail",
     "assembly_recitals:hub", "assembly_recitals:section",
-    "diction_library:hub", "assessments:hub", "assessments:kind_list",
+    "assessments:hub", "assessments:kind_list",
     "learning_tools:hub",
 }
 

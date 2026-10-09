@@ -267,3 +267,24 @@ class TeachingPlanTests(TimetableCase):
         with CaptureQueriesContext(connection) as lots:
             term_plan(self.teacher, "Level 2", 1, [self.ada, self.ben, *more], self.MONDAY_WEEK_1)
         self.assertEqual(len(few), len(lots))
+
+
+class StudentLibraryTests(TimetableCase):
+    def test_the_diction_library_is_in_the_sidebar_and_open(self):
+        self.client.force_login(self.ada)
+        with self.on(TUESDAY_WEEK_1):
+            page = self.client.get("/accounts/dashboard/")
+            side = page.content.decode()
+            side = side[side.index('<nav class="px-side__nav">'):side.index("</nav>", side.index('<nav class="px-side__nav">'))]
+            self.assertEqual(side.count('href="/library/"'), 1)
+            self.assertEqual(self.client.get("/library/").status_code, 200)
+            self.assertEqual(self.client.get("/library/the-fox/").status_code, 200)
+            # Everything else the scheme keeps is still kept.
+            self.assertContains(self.client.get("/echospell/level-2/t3/"), "This comes later", status_code=403)
+
+    def test_a_student_without_a_school_sees_it_once_too(self):
+        loose = make("loose@example.com", role="student", level="Level 2")
+        self.client.force_login(loose)
+        html = self.client.get("/learning-tools/").content.decode()
+        side = html[html.index('<nav class="px-side__nav">'):html.index("</nav>", html.index('<nav class="px-side__nav">'))]
+        self.assertEqual(side.count('href="/library/"'), 1)
