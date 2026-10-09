@@ -5,8 +5,9 @@ For each page they open, the address's view name and arguments say what
 content it is. Then:
 
   - the practice tools and the Diction Library stay open to everyone
-    (PRACTICE) — the library still shows only what's for their school and
-    level (apps/diction_library/views.visible_items);
+    (PRACTICE) — the library shows a school's students only their own
+    school's books, plus any on their scheme in a week they've reached
+    (apps/diction_library/views.visible_items / openable_items);
   - a tool's own lists and hubs (EchoSpell's levels, the Learn page, …)
     go to their weeks instead (HUBS), since the scheme is how they find
     content;

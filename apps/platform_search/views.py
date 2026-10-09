@@ -44,7 +44,10 @@ def _search_items(request, query, per_type=MAX_RESULTS_PER_TYPE):
         library = limit_to_level_list(LibraryItem.objects.filter(is_published=True), request.user).filter(
             Q(title__icontains=needle) | Q(summary__icontains=needle) | Q(description__icontains=needle)
         )
-        if request.user.is_authenticated and request.user.school_id:
+        if request.user.is_authenticated and request.user.school_id and request.user.is_student:
+            # A school's students search their school's own books only.
+            library = library.filter(school_id=request.user.school_id)
+        elif request.user.is_authenticated and request.user.school_id:
             library = library.filter(Q(school__isnull=True) | Q(school_id=request.user.school_id))
         else:
             library = library.filter(school__isnull=True)

@@ -13,12 +13,31 @@ from .models import LibraryItem
 
 
 def visible_items(user):
-    """Published items for everyone or this person's school, and for
-    their level (or every level)."""
+    """The library someone sees: published items for their level (or every
+    level). A school's students see only the books their school uploaded;
+    teachers and admins also see Diction Masters' own, and everyone else
+    sees Diction Masters' own."""
     items = limit_to_level_list(LibraryItem.objects.filter(is_published=True), user)
+    if user.school_id and user.is_student:
+        return items.filter(school_id=user.school_id)
     if user.school_id:
         return items.filter(Q(school__isnull=True) | Q(school_id=user.school_id))
     return items.filter(school__isnull=True)
+
+
+def openable_items(user):
+    """What someone may open: what they see, and for a student on the
+    scheme of work also any library book on their scheme in a week they've
+    reached — it isn't listed in their library, but its lesson opens."""
+    items = visible_items(user)
+    if user.school_id and user.is_student:
+        from apps.scheme.timetable import on_scheme, open_keys
+
+        if on_scheme(user):
+            slugs = [key[1] for key in open_keys(user) if key[0] == "library"]
+            if slugs:
+                items = items | LibraryItem.objects.filter(is_published=True, slug__in=slugs)
+    return items
 
 
 @login_required
@@ -40,7 +59,7 @@ def hub(request):
 
 @login_required
 def item_detail(request, slug):
-    item = get_object_or_404(visible_items(request.user).select_related("school"), slug=slug)
+    item = get_object_or_404(openable_items(request.user).select_related("school"), slug=slug)
     chapters = item.ready_chapters
     return render(request, "diction_library/item_detail.html", {
         "item": item, "reader": reader_for(item), "chapters": chapters, "listenable": bool(chapters),
@@ -79,7 +98,7 @@ def item_file(request, slug):
 
     from apps.videos import streaming
 
-    item = get_object_or_404(visible_items(request.user), slug=slug)
+    item = get_object_or_404(openable_items(request.user), slug=slug)
     if not item.file:
         raise Http404("This item has no file.")
     extension = _extension(item)

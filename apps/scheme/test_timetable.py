@@ -288,3 +288,40 @@ class StudentLibraryTests(TimetableCase):
         html = self.client.get("/learning-tools/").content.decode()
         side = html[html.index('<nav class="px-side__nav">'):html.index("</nav>", html.index('<nav class="px-side__nav">'))]
         self.assertEqual(side.count('href="/library/"'), 1)
+
+
+class SchoolOnlyLibraryTests(TimetableCase):
+    """A school's students see only their school's own books."""
+
+    def setUp(self):
+        super().setUp()
+        self.ours = LibraryItem.objects.create(title="Our school play", slug="our-play", school=self.school)
+        self.shared = LibraryItem.objects.create(title="Shared story", slug="shared-story")
+
+    def test_the_library_lists_their_schools_books_only(self):
+        self.client.force_login(self.ada)
+        with self.on(TUESDAY_WEEK_1):
+            hub = self.client.get("/library/")
+            self.assertContains(hub, "Our school play")
+            self.assertNotContains(hub, "Shared story")
+            self.assertNotContains(hub, "The Fox")                    # shared, even though it's on the scheme
+            self.assertEqual(self.client.get("/library/our-play/").status_code, 200)
+            self.assertEqual(self.client.get("/library/shared-story/").status_code, 404)
+            # A shared book on their scheme still opens from its lesson.
+            self.assertEqual(self.client.get("/library/the-fox/").status_code, 200)
+
+    def test_search_finds_their_schools_books_only(self):
+        from django.test import RequestFactory
+
+        from apps.platform_search.views import _search_items
+
+        request = RequestFactory().get("/")
+        request.user = self.ada
+        self.assertIn("Our school play", [item["title"] for item in _search_items(request, "play")])
+        self.assertNotIn("Shared story", [item["title"] for item in _search_items(request, "story")])
+
+    def test_teachers_still_see_both(self):
+        self.client.force_login(self.teacher)
+        hub = self.client.get("/library/")
+        self.assertContains(hub, "Our school play")
+        self.assertContains(hub, "Shared story")
