@@ -50,8 +50,11 @@
       <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
     </a>
 
-    <div class="px-sec"><h2>Practise</h2></div>
-    {% include "scheme/_practise.html" %}
+    <a href="{% url 'scheme:practise' %}" class="px-card sh-weeks-card sh-practise-card" data-practise>
+      <span class="px-item__ii t-blush" aria-hidden="true">{% include "includes/icon.html" with name="mic" size=26 %}</span>
+      <span class="sh-weeks-card__text"><b>Practise</b><small>Diction Clash, Quick Words, the Phonemic chart and Yela, any time</small></span>
+      <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
+    </a>
 
     {% elif state == "break" or state == "holiday" %}
     <div class="px-card sh-rest" data-scheme-rest>
@@ -59,8 +62,11 @@
       <small>Enjoy the rest. You can go back over earlier lessons or practise.</small>
     </div>
     <a href="{% url 'scheme:weeks' %}" class="sh-weeks-link">My weeks: go back to earlier lessons &rarr;</a>
-    <div class="px-sec"><h2>Practise</h2></div>
-    {% include "scheme/_practise.html" %}
+    <a href="{% url 'scheme:practise' %}" class="px-card sh-weeks-card sh-practise-card" data-practise>
+      <span class="px-item__ii t-blush" aria-hidden="true">{% include "includes/icon.html" with name="mic" size=26 %}</span>
+      <span class="sh-weeks-card__text"><b>Practise</b><small>Diction Clash, Quick Words, the Phonemic chart and Yela, any time</small></span>
+      <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
+    </a>
 
     {% else %}
     <div class="px-card sh-empty" data-scheme-empty>

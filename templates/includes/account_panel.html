@@ -8,23 +8,11 @@
     </span>
   </div>
   <nav class="account-menu__list" aria-label="Your account">
-    <a href="{{ dashboard_url }}" class="account-menu__item"{% if request.path == dashboard_url %} aria-current="page"{% endif %}>
-      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="home" size=18 %}</span>
-      <span class="account-menu__text"><span>My dashboard</span><small>Your progress and next lesson</small></span>
-    </a>
-    <a href="{% url 'assessments:my_results' %}" class="account-menu__item"{% if request.resolver_match.url_name == 'my_results' %} aria-current="page"{% endif %}>
-      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="chart" size=18 %}</span>
-      <span class="account-menu__text"><span>My results</span><small>Scores across all programmes</small></span>
-    </a>
-    {% if on_scheme %}
-    <a href="{% url 'scheme:weeks' %}" class="account-menu__item">
-      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="grid" size=18 %}</span>
-      <span class="account-menu__text"><span>My weeks</span><small>Every lesson you've had</small></span>
-    </a>
-    {% else %}
-    <a href="{% url 'learning_tools:hub' %}" class="account-menu__item"{% if '/learning-tools/' in request.path %} aria-current="page"{% endif %}>
-      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="grid" size=18 %}</span>
-      <span class="account-menu__text"><span>Learn</span><small>All courses and tools</small></span>
+    {# Only account things here; Home, Learn and Progress are in the main menu. #}
+    {% if user.is_student or user.is_individual %}
+    <a href="{% url 'accounts:grown_ups' %}" class="account-menu__item"{% if request.path == '/accounts/grown-ups/' %} aria-current="page"{% endif %}>
+      <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="user" size=18 %}</span>
+      <span class="account-menu__text"><span>For grown-ups</span><small>Progress, report cards and settings</small></span>
     </a>
     {% endif %}
     {% if billing.can_pay %}

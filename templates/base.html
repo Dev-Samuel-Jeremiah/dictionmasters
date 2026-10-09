@@ -87,6 +87,7 @@
   {% if native_app %}<script src="{% static 'js/native_app.js' %}" defer></script>{% endif %}
   <script src="{% static 'js/pwa.js' %}" defer></script>
   <script src="{% static 'js/history_back.js' %}" defer></script>
+  {% if user.is_authenticated %}<script src="{% static 'js/side_folds.js' %}" defer></script>{% endif %}
   <script src="{% static 'js/platform_search.js' %}" defer></script>
   {% comment %}The rest are fetched only by the pages that use them
   (static/js/boot.js), each by its real address so hashed names work.{% endcomment %}

@@ -142,7 +142,5 @@ class ClassTests(TestCase):
         self.client.force_login(self.teacher)
         page = self.client.get("/accounts/dashboard/")
         self.assertContains(page, "data-my-class")
-        self.assertContains(page, "2 pupils")
+        self.assertContains(page, "<b>2</b>pupils", html=False)
         self.assertNotContains(page, "Your class dashboard is on its way")
-        # Their own learner view is still there underneath.
-        self.assertContains(page, "Continue in EchoSpell")

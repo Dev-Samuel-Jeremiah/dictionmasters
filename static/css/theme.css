@@ -1468,3 +1468,16 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
   .px-back__btn { min-height: 56px; padding: 0 20px; font-size: 16px; }   /* children's tap target */
 }
 @media print { .px-back { display: none !important; } }
+
+/* ---------- the sidebar's folded groups (includes/app_nav.html) ---------- */
+.px-side__fold { margin-top: 6px; }
+.px-side__fold > summary {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 44px; margin: 0; padding: 0 14px; border-radius: 12px;
+  cursor: pointer; list-style: none;
+}
+.px-side__fold > summary::-webkit-details-marker { display: none; }
+.px-side__fold > summary::after { content: "▸"; font-size: 0.9rem; transition: transform 0.2s ease; }
+.px-side__fold[open] > summary::after { transform: rotate(90deg); }
+.px-side__fold > summary:hover { background: var(--bg); color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .px-side__fold > summary::after { transition: none; } }

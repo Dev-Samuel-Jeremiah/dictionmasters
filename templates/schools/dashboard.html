@@ -8,6 +8,7 @@
 <script src="{% static 'js/switcher.js' %}" defer></script>
 <script src="{% static 'js/school_levels.js' %}" defer></script>
 <script src="{% static 'js/school_logins.js' %}" defer></script>
+<script src="{% static 'js/fold_open.js' %}" defer></script>
 <script>
   // "Copy link" for the teacher sign-up link.
   document.addEventListener("click", function (e) {
@@ -43,9 +44,6 @@
             </div>
             <div class="ui-hero__actions">
               <a href="{% url 'billing:account' %}" class="ui-btn ui-btn--gold">&#128179; {% if billing.state == "active" %}School plan{% else %}Plans &amp; billing{% endif %}</a>
-              <a href="{% url 'learning_tools:hub' %}" class="ui-btn ui-btn--glass">&#129520; Learning tools</a>
-              <a href="{% url 'lesson_audio:hub' %}" class="ui-btn ui-btn--glass">&#127911; Lesson Notes to Audio</a>
-              <a href="{% url 'diction_library:manage' %}" class="ui-btn ui-btn--glass">&#128218; Diction Library</a>
             </div>
             {% include "accounts/_switcher.html" %}
           </div>
@@ -70,6 +68,14 @@
         <div><dt>Plan</dt><dd class="sd2-plan">{% if plan %}{{ plan.name }}{% elif billing.state == "trial" %}Free trial{% else %}None yet{% endif %}</dd></div>
       </dl>
       {% if help_requests %}<a href="#password-help" class="sd2-alert">&#128587; {{ help_requests|length }} {% if help_requests|length == 1 %}person needs{% else %}people need{% endif %} a new password · Help them</a>{% endif %}
+      {# The school year (apps/scheme): its pages, one tap away. #}
+      <nav class="sd2-year" aria-label="The school year" id="school-year">
+        <span class="sd2-year__label">The school year</span>
+        <a href="{% url 'scheme:school_scheme' %}">Scheme of work</a>
+        <a href="{% url 'scheme:term_dates' %}">Term dates</a>
+        <a href="{% url 'scheme:reports' %}">Report cards</a>
+        <a href="{% url 'scheme:promote' %}">Promote from results</a>
+      </nav>
       <nav class="sd2-jump" aria-label="On this page">
         <a href="#join">Add people</a>
         <a href="#teachers">Teachers <b>{{ teachers|length }}</b></a>
@@ -80,11 +86,12 @@
       </nav>
     </section>
 
-    <section class="sd2-section" id="join">
-      <div class="ui-section__head">
+    {# Folded once the school has people; open while it has nobody yet. #}
+    <details class="sd2-section sd2-fold" id="join"{% if not teachers and not students %} open{% endif %}>
+      <summary class="ui-section__head">
         <h2 class="ui-section__title"><span class="ui-section__num">1</span> Bring people in</h2>
         <p class="ui-section__aside">Everyone uses your school code, {{ school.code }}</p>
-      </div>
+      </summary>
       <div class="sd2-two">
         <section class="ui-panel sd-teachers">
           <p class="ui-panel__label">Teachers</p>
@@ -155,13 +162,13 @@
           </div>
         </section>
         {% endif %}
-    </section>
+    </details>
 
-    <section class="sd2-section">
-      <div class="ui-section__head">
+    <details class="sd2-section sd2-fold" open>
+      <summary class="ui-section__head">
         <h2 class="ui-section__title"><span class="ui-section__num">2</span> Your people</h2>
         <p class="ui-section__aside">Change levels, promote, see logins or remove</p>
-      </div>
+      </summary>
       <div class="sd2-stack">
         <section class="ui-panel" id="teachers">
           <p class="ui-panel__label">Teachers</p>
@@ -182,13 +189,14 @@
           {% endif %}
         </section>
       </div>
-    </section>
+    </details>
 
-    <section class="sd2-section">
-      <div class="ui-section__head">
+    {# Open by itself when someone needs a password, or logins were just unlocked. #}
+    <details class="sd2-section sd2-fold"{% if help_requests or logins_unlocked %} open{% endif %}>
+      <summary class="ui-section__head">
         <h2 class="ui-section__title"><span class="ui-section__num">3</span> Logins and records</h2>
         <p class="ui-section__aside">Login sheets, level history and removed accounts</p>
-      </div>
+      </summary>
       <div class="sd2-two">
         <section class="ui-panel sl-logins" id="logins">
           <p class="ui-panel__label">Login details</p>
@@ -239,17 +247,6 @@
           {% endif %}
         </section>
         <div class="sd2-stack">
-          {# The school year (apps/scheme): term dates, report cards, promotion from results. #}
-          <section class="ui-panel" id="school-year">
-            <p class="ui-panel__label">The school year</p>
-            <p class="ui-panel__lede">Your terms and weeks, the scheme of work your students follow, this term's report cards, and promoting students from their results at the end of the year.</p>
-            <p class="sd2-year-links">
-              <a href="{% url 'scheme:term_dates' %}" class="sd-btn sd-btn--login">Term dates</a>
-              <a href="{% url 'scheme:school_scheme' %}" class="sd-btn sd-btn--login">Scheme of work</a>
-              <a href="{% url 'scheme:reports' %}" class="sd-btn sd-btn--login">Report cards</a>
-              <a href="{% url 'scheme:promote' %}" class="sd-btn sd-btn--login">Promote from results</a>
-            </p>
-          </section>
           {% if level_history %}
           <section class="ui-panel" id="level-changes">
             <p class="ui-panel__label">Level changes</p>
@@ -300,7 +297,7 @@
           </section>
         </div>
       </div>
-    </section>
+    </details>
   </div>
 </div>
 

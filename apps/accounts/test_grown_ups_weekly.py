@@ -146,7 +146,7 @@ class StuckTests(TestCase):
         page = self.client.get("/school/class/")
         self.assertContains(page, "data-needs-help")
         self.assertContains(page, "Stuck on Spell it: 3 tries, not passed yet.")
-        self.assertContains(self.client.get("/accounts/dashboard/"), "1 needs help")
+        self.assertContains(self.client.get("/accounts/dashboard/"), "<b>1</b>needs help", html=False)
 
     def test_the_summary_says_so(self):
         self.fail(3)

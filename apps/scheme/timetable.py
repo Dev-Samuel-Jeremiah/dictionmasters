@@ -411,13 +411,24 @@ def term_plan(teacher, level, number, pupils, today=None):
             "days": days, "break_after": break_after and number_ == break_after,
         })
 
-    next_day = None
-    term_of_day, day = _next_school_day(year, today)
-    if term_of_day is not None:
-        week = week_of(term_of_day, day)
-        name = WEEKDAYS[day.weekday()]
-        rows = [e for e in _sorted(_entries(level=level, term=term_of_day.number, week=week)) if e.day in ("", name)]
-        next_day = {"date": day, "term": term_of_day, "week": week,
-                    "rows": [{"title": e.title, "kind": e.get_kind_display(), "url": content_url(e),
-                              "any_day": not e.day} for e in rows]}
+    next_day = prepare_for(teacher, level, today, year)
     return {"dated": dated, "weeks": weeks, "next_day": next_day, "pupils": len(pupils), "current": current}
+
+
+def prepare_for(teacher, level, today=None, year=None):
+    """What the class has on the next school day, for a teacher to prepare:
+    {"date", "term", "week", "rows"}, or None outside a school year."""
+    today = today or timezone.localdate()
+    if year is None:
+        terms = terms_for(teacher.school)
+        newest = terms[-1].term.session_id if terms else None
+        year = [t for t in terms if t.term.session_id == newest]
+    term_of_day, day = _next_school_day(year, today)
+    if term_of_day is None or not level:
+        return None
+    week = week_of(term_of_day, day)
+    name = WEEKDAYS[day.weekday()]
+    rows = [e for e in _sorted(_entries(level=level, term=term_of_day.number, week=week)) if e.day in ("", name)]
+    return {"date": day, "term": term_of_day, "week": week,
+            "rows": [{"title": e.title, "kind": e.get_kind_display(), "url": content_url(e), "any_day": not e.day}
+                     for e in rows]}

@@ -117,7 +117,7 @@ class PathTests(TestCase):
         staff = make("staff@example.com", is_staff=True)
         child = make("child@example.com", simple_home=True)
         self.client.force_login(staff)
-        self.assertTemplateUsed(self.client.get("/accounts/dashboard/"), "accounts/dashboard.html")
+        self.assertTemplateUsed(self.client.get("/accounts/dashboard/"), "accounts/staff_home.html")
         self.client.force_login(child)
         self.assertTemplateUsed(self.client.get("/accounts/dashboard/"), "accounts/learner_home.html")
         for other in (staff, make("teach@example.com", role="teacher", level="Level 2")):

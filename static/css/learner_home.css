@@ -99,3 +99,13 @@
   .lh .lh-lesson .px-cont__title { font-size: 19px; }
   .lh-lesson__go { width: 56px; height: 56px; }
 }
+
+/* ---------- a teacher's home (teacher_home.html) ---------- */
+.th .tp-next { margin-top: 0; }
+.px-wrap .th-class { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; color: var(--text); text-decoration: none; }
+.th-class__head { display: flex; align-items: center; justify-content: space-between; font-size: 18px; }
+.th-class__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.th-class__stats span { display: flex; flex-direction: column; padding: 10px; border-radius: 14px; background: var(--bg); font-size: 13px; color: var(--muted); font-weight: 600; }
+.th-class__stats b { font-size: 24px; color: var(--text); }
+.th-class__stats .is-alert { background: var(--butter); }
+@media (max-width: 520px) { .th-class__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

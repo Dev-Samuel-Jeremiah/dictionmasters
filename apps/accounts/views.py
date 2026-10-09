@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.billing.access import subscription_for
@@ -16,7 +17,7 @@ from apps.billing.services import begin_access
 
 from . import grown_ups as grown_up_pin
 from .access import pupils_of
-from .dashboard_data import learner_dashboard, learner_home, todays_lesson
+from .dashboard_data import _greeting, learner_dashboard, learner_home
 from .forms import (
     EmailAuthenticationForm,
     SimpleHomeForm,
@@ -30,7 +31,7 @@ from .forms import (
 from . import switcher
 from .weekly import learner_summary
 from .welcome import send_welcome
-from .models import DashboardCardImage, User
+from .models import User
 
 
 logger = logging.getLogger(__name__)
@@ -443,10 +444,10 @@ def _uses_simple_home(user):
 
 @login_required(login_url="accounts:login")
 def dashboard(request):
-    """The learner's home. Students (and children on an individual
-    account) get one big "Today's lesson" button; everyone else gets the
-    full dashboard: streak, progress across every tool, where to carry
-    on, and the tools themselves."""
+    """Everyone's home, each kept simple: a school student's scheme week,
+    an individual's own scheme (or the child's one-button home), a
+    teacher's teaching home, and staff's short list. School admins have
+    their school dashboard."""
     if request.user.role == User.Role.SCHOOL_ADMIN:
         return redirect("schools:dashboard")
     # A student at a school follows the scheme of work: it alone decides
@@ -464,21 +465,35 @@ def dashboard(request):
 
     if own_scheme.follows_path(request.user):
         return scheme_views.path_home(request)
-    dashboard = learner_dashboard(request.user)
-    if request.user.is_individual:
-        # Adults keep every tool, but still get a clear place to start.
-        dashboard["lesson"] = todays_lesson(request.user, dashboard["echospell"], dashboard["modules"])
-    elif request.user.is_teacher:
-        from apps.schools.class_progress import class_progress
+    if request.user.is_teacher:
+        return _teacher_home(request)
+    return _staff_home(request)
 
-        dashboard["my_class"] = class_progress(pupils_of(request.user))["summary"]
-    dashboard["dashboard_card_images"] = {
-        card.key.replace("-", "_"): card.image.url
-        for card in DashboardCardImage.objects.exclude(image="")
-        if card.image
-    }
-    dashboard["switcher"] = switcher.context(request)
-    return render(request, "accounts/dashboard.html", dashboard)
+
+def _teacher_home(request):
+    """A teacher's home, for teaching: what to prepare for the next school
+    day, their class at a glance, and their four main tools. Everything a
+    learner has is still under Learn."""
+    from apps.scheme.timetable import prepare_for
+    from apps.schools.class_progress import class_progress
+
+    teacher = request.user
+    return render(request, "accounts/teacher_home.html", {
+        "greeting": _greeting(timezone.now()),
+        "today": timezone.localdate(),
+        "my_class": class_progress(pupils_of(teacher))["summary"],
+        "prepare": prepare_for(teacher, teacher.level),
+        "switcher": switcher.context(request),
+    })
+
+
+def _staff_home(request):
+    """Platform staff on the learning side: the control room's main pages,
+    and Learn to look at everything as a learner would."""
+    return render(request, "accounts/staff_home.html", {
+        "greeting": _greeting(timezone.now()), "today": timezone.localdate(),
+        "switcher": switcher.context(request),
+    })
 
 
 @login_required(login_url="accounts:login")

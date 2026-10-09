@@ -65,3 +65,59 @@ class NothingLockedTests(TestCase):
         for sound in (first, second):
             WordBankEntry.objects.create(sound=sound, word=sound.name.lower())
         self.assertEqual(self.client.get(f"/book/44-academy/{second.slug}/").status_code, 200)
+
+
+class TidyMenuTests(TestCase):
+    """Each link once: the sidebar's own groups, the folded course and tool
+    lists, and an account menu with account things only."""
+
+    def sidebar(self, user):
+        self.client.force_login(user)
+        page = self.client.get("/learning-tools/" if not user.is_school_admin else "/scheme/term-dates/", follow=True)
+        html = page.content.decode()
+        return html[html.index('<nav class="px-side__nav">'):html.index("</nav>", html.index('<nav class="px-side__nav">'))]
+
+    def test_a_learner_gets_the_main_links_and_folded_lists(self):
+        side = self.sidebar(User.objects.create_user("solo@example.com", "mango7", first_name="Solo"))
+        self.assertIn('data-side-fold="courses"', side)
+        self.assertIn('data-side-fold="tools"', side)
+        self.assertNotIn("Teaching</p>", side)
+        self.assertEqual(side.count('href="/daily-practice/"'), 1)        # the Practice tab, not again in tools
+
+    def test_a_teacher_gets_a_teaching_group(self):
+        teacher = User.objects.create_user("t@example.com", "mango7", first_name="T", role="teacher", level="Level 1")
+        side = self.sidebar(teacher)
+        for url in ("/school/class/", "/scheme/teach/", "/scheme/reports/", "/assessments/marking/"):
+            self.assertEqual(side.count(f'href="{url}"'), 1, url)
+
+    def test_a_school_admin_gets_the_school_group(self):
+        from apps.schools.models import School
+
+        admin = User.objects.create_user("h@example.com", "mango7", first_name="H", role="school_admin",
+                                         school=School.objects.create(name="Unity", email="u@example.com"))
+        side = self.sidebar(admin)
+        for url in ("/scheme/school/", "/scheme/term-dates/", "/scheme/reports/", "/scheme/promote/"):
+            self.assertEqual(side.count(f'href="{url}"'), 1, url)
+        self.assertNotIn("data-side-fold", side)
+
+    def test_the_account_menu_has_account_things_only(self):
+        self.client.force_login(User.objects.create_user("kid@example.com", "mango7", first_name="Kid"))
+        html = self.client.get("/learning-tools/").content.decode()
+        panel = html[html.index('class="account-menu__panel"'):]
+        panel = panel[:panel.index("</nav>")]
+        self.assertIn('href="/accounts/grown-ups/"', panel)
+        self.assertIn('href="/accounts/password/change/"', panel)
+        for gone in ('href="/assessments/results/"', 'href="/learning-tools/"', 'href="/accounts/dashboard/"'):
+            self.assertNotIn(gone, panel)
+
+    def test_the_school_dashboard_folds_and_puts_the_school_year_first(self):
+        from apps.schools.models import School
+
+        school = School.objects.create(name="Unity", email="u@example.com")
+        self.client.force_login(User.objects.create_user("h@example.com", "mango7", first_name="H",
+                                                         role="school_admin", school=school))
+        page = self.client.get("/school/dashboard/")
+        self.assertContains(page, 'id="school-year"')
+        self.assertContains(page, 'class="sd2-section sd2-fold"', count=3)
+        self.assertContains(page, 'id="join" open')                   # nobody yet: open
+        self.assertContains(page, "js/fold_open.js")

@@ -154,17 +154,9 @@ SECTIONS = [
              "content_levels": True},
         ],
     },
-    {
-        "slug": "dashboard", "name": "Dashboard appearance", "icon": "🖼️", "tone": "#1846E0",
-        "blurb": "Upload a separate background image for every learner dashboard card.",
-        "screens": [
-            {"key": "dashboard-card-images", "model": "accounts.DashboardCardImage",
-             "name": "Dashboard card images", "singular": "dashboard card image",
-             "columns": ["label", "image"], "search": ["key"], "form": ["image"],
-             "no_add": True, "no_delete": True,
-             "labels": {"image": ("Background image", "Upload a photo or illustration from this device. Leave empty to use the built-in card colors.")}},
-        ],
-    },
+    # "Dashboard appearance" (accounts.DashboardCardImage) is gone from here:
+    # the full dashboard it dressed was replaced by simpler homes. Saved
+    # images are kept.
     {
         "slug": "echospell", "name": "EchoSpell", "icon": "🔊", "tone": "#3D63E6",
         "blurb": "Levels, groups, card lessons and scored activities.",

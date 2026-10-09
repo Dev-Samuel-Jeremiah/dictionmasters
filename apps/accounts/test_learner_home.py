@@ -97,26 +97,29 @@ class HomeTests(TestCase):
         self.assertNotContains(page, "Quick tools")
         self.assertNotContains(page, "Your courses")
 
-    def test_staff_keep_the_full_dashboard_with_the_card_on_top(self):
-        # An individual learner now follows a scheme they choose
-        # (apps/scheme/test_path.py); the full dashboard is staff's.
+    def test_staff_get_a_short_home_with_the_control_room(self):
+        # An individual learner follows a scheme they choose
+        # (apps/scheme/test_path.py); staff get their own short home.
         page = self.home(make("adult@example.com", is_staff=True))
-        self.assertTemplateUsed(page, "accounts/dashboard.html")
-        self.assertContains(page, "data-todays-lesson", count=1)
-        self.assertContains(page, "Quick tools")
-        # The card replaces Continue in EchoSpell, so it isn't offered twice.
-        self.assertNotContains(page, "Continue in EchoSpell")
-        self.assertContains(page, 'href="/accounts/grown-ups/"')
+        self.assertTemplateUsed(page, "accounts/staff_home.html")
+        self.assertContains(page, "data-control-room")
+        self.assertContains(page, 'href="/manage/scheme-of-work/"')
+        self.assertNotContains(page, "Quick tools")
 
     def test_an_individual_with_the_simple_home_switched_on(self):
         page = self.home(make("child@example.com", simple_home=True))
         self.assertTemplateUsed(page, "accounts/learner_home.html")
 
-    def test_teachers_keep_their_dashboard_unchanged(self):
+    def test_teachers_get_a_home_for_teaching(self):
         page = self.home(make("teach@example.com", role="teacher", level="Level 2", simple_home=True))
-        self.assertTemplateUsed(page, "accounts/dashboard.html")
+        self.assertTemplateUsed(page, "accounts/teacher_home.html")
         self.assertNotContains(page, "data-todays-lesson")
-        self.assertContains(page, "Continue in EchoSpell")
+        self.assertContains(page, "data-my-class")
+        for url in ("/scheme/teach/", "/scheme/reports/", "/assessments/marking/", "/lesson-audio/"):
+            self.assertContains(page, f'href="{url}" class="lh-more__link"', msg_prefix=url)
+        # The learner dashboard's parts are gone from it.
+        self.assertNotContains(page, "Quick tools")
+        self.assertNotContains(page, "Continue in EchoSpell")
 
     def test_school_admins_still_go_to_the_school_dashboard(self):
         page = self.home(make("head@example.com", role="school_admin"))

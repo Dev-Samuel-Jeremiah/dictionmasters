@@ -54,6 +54,14 @@
 .sd2-alert { display: block; margin: 14px 0 0; padding: 10px 14px; border-radius: 12px; background: #FFF6D8; border: 1px solid #FFE08A; color: #5B4300; font-weight: 800; text-decoration: none; }
 .sd2-alert:hover { background: #FFEFB8; }
 
-/* The school year panel (apps/scheme): three links, wrapping on a phone. */
-.sd2-year-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
-.sd2-year-links .sd-btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 12px; text-decoration: none; font-weight: 700; }
+
+/* The folded sections: the heading is the handle (templates/schools/dashboard.html). */
+.sd2-fold > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; min-height: 48px; }
+.sd2-fold > summary::-webkit-details-marker { display: none; }
+.sd2-fold > summary .ui-section__title::after { content: " ▸"; font-size: 0.8em; color: var(--ink-40); }
+.sd2-fold[open] > summary .ui-section__title::after { content: " ▾"; }
+/* The school year, at the top */
+.sd2-year { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.sd2-year__label { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-40); margin-right: 4px; }
+.sd2-year a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1.5px solid #FFC72C; background: #FFF8E1; color: #0B1A4A; font-weight: 700; text-decoration: none; }
+.sd2-year a:hover, .sd2-year a:focus-visible { background: #FFC72C; }

@@ -198,14 +198,12 @@ class TricksToSoundFluentTests(TestCase):
         self.assertNotContains(page, 'href="/tricks/sections/')
 
     def test_the_etiquette_advantage_card_is_locked(self):
-        page = self.client.get("/accounts/dashboard/").content.decode()
-        card = page[page.index("The Etiquette Advantage") - 400:page.index("The Etiquette Advantage") + 900]
-        self.assertIn("dash-stat--locked", card)
-        self.assertIn("Locked", card)
-        self.assertNotIn("Coming soon", page)
-        # It comes before 44 Academy, and isn't a link.
-        self.assertLess(page.index("The Etiquette Advantage"), page.index(">44 Academy<"))
-        self.assertNotIn("<a ", card[card.index("dash-stat--locked"):card.index("dash-stat__foot")])
+        # It has no lessons yet: shown on Learn as coming soon, not a link.
+        page = self.client.get("/learning-tools/").content.decode()
+        card = page[page.index("The Etiquette Advantage") - 400:page.index("The Etiquette Advantage") + 300]
+        self.assertIn("is-locked", card)
+        self.assertIn("Coming soon", card)
+        self.assertNotIn("<a ", card[card.index("is-locked"):])
 
     def test_tricks_has_its_own_pages(self):
         home = self.client.get("/tricks/")

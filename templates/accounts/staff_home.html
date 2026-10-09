@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Home — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}"><link rel="stylesheet" href="{% static 'css/learner_home.css' %}"><link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/switcher.js' %}" defer></script>{% endblock %}
+
+{% block content %}
+{# Platform staff's home on the learning side (apps/accounts/views._staff_home): the control room's main pages and Learn. #}
+<div class="px-page px-home lh">
+  <section class="px-hero lh-hero">
+    <img class="px-hero__img" src="{% static 'img/app/heroBoy.jpg' %}" alt="">
+    <div class="px-hero__text">
+      <p class="px-hero__date">{{ today|date:"l j F" }}<br><span class="sh-place">Diction Masters staff</span></p>
+      <h1 class="lh-hero__title">{{ greeting }},<br>{{ user.first_name|default:"there" }}</h1>
+      {% include "accounts/_switcher.html" %}
+    </div>
+  </section>
+  <div class="px-wrap px-lift lh-body">
+    <a href="{% url 'manage:home' %}" class="px-card sh-weeks-card" data-control-room>
+      <span class="px-item__ii t-sky" aria-hidden="true">{% include "includes/icon.html" with name="gear" size=26 %}</span>
+      <span class="sh-weeks-card__text"><b>Control room</b><small>Content, schools and people, billing and settings</small></span>
+      <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span>
+    </a>
+    <nav class="lh-more lh-more--four" aria-label="Staff tools">
+      <a href="{% url 'manage:scheme_editor' %}" class="lh-more__link"><span class="px-item__ii t-butter" aria-hidden="true">{% include "includes/icon.html" with name="calendar" size=24 %}</span><b>Scheme of work</b></a>
+      <a href="{% url 'manage:calendar' %}" class="lh-more__link"><span class="px-item__ii t-mint" aria-hidden="true">{% include "includes/icon.html" with name="clock" size=24 %}</span><b>Calendar</b></a>
+      <a href="{% url 'manage:results' %}" class="lh-more__link"><span class="px-item__ii t-lilac" aria-hidden="true">{% include "includes/icon.html" with name="task" size=24 %}</span><b>Results &amp; marking</b></a>
+      <a href="{% url 'learning_tools:hub' %}" class="lh-more__link"><span class="px-item__ii t-sky" aria-hidden="true">{% include "includes/icon.html" with name="book" size=24 %}</span><b>Learn</b></a>
+    </nav>
+  </div>
+</div>
+{% endblock %}
