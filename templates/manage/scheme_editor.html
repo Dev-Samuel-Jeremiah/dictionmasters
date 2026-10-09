@@ -43,6 +43,16 @@
 </section>
 {% endif %}
 
+<form method="post" class="cr-card se-book" data-scheme-book onsubmit="this.querySelector('button').disabled = true;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="book"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}">
+  <div>
+    <h2 class="cr-card__title">&#128214; Build from the book</h2>
+    <p class="cr-help">Lays out {{ level }}'s whole year the way EchoSpell is written: <b>Group 1 is Week 1</b>, Group 2 is Week 2, and so on through the terms. Each week has its group's cards one a day (Spelling, Passage Reading, Dialogue, Vocabulary…) and its activities on Friday. Saved as a draft to check, add other courses to, and publish.</p>
+  </div>
+  <button type="submit" class="cr-btn cr-btn--gold">Build from the book</button>
+</form>
+
 <form method="post" class="cr-card se-build" data-scheme-build onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Building… this can take a minute';">
   {% csrf_token %}
   <input type="hidden" name="action" value="build"><input type="hidden" name="level" value="{{ level }}"><input type="hidden" name="term" value="{{ term }}">
@@ -137,6 +147,8 @@
   .se-views { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
   .se-draft { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; border: 2px solid #FFC72C; }
   .se-draft__actions { display: flex; gap: 8px; }
+  .se-book { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; border: 2px solid #FFC72C; }
+  .se-book > div { flex: 1 1 420px; }
   .se-build { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 10px 14px; align-items: end; }
   .se-build__head { grid-column: 1 / -1; }
   .se-build label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; }

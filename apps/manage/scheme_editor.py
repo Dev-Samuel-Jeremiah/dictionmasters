@@ -9,7 +9,9 @@ school day, the level's dialogues on the weeks they were written for. What
 is on it is exactly what the level's students see and may open
 (apps/scheme/timetable.py).
 
-The scheme builder (apps/scheme/builder.py) plans a term or a whole year
+"Build from the book" lays out a level's year the way the book is:
+EchoSpell Group 1 is Week 1, its cards one a day, its activities on
+Friday. The scheme builder (apps/scheme/builder.py) plans a term or a whole year
 from the content on the site and saves it as a draft. The editor then
 shows the draft, every tool above works on it, and Publish makes it the
 live scheme (Discard throws it away). Students never see a draft.
@@ -50,7 +52,19 @@ def _content_choices(level):
                .select_related("week__term__module")
                .order_by("week__term__module__order", "week__term__module__name", "week__term__order",
                          "week__term__id", "week__number", "order"))
+    from apps.echospell.lesson_path import _cards_with_content
+    from apps.echospell.models import Activity, Level as EchoLevel
+
+    echo_level = EchoLevel.objects.filter(name=level).first()
+    level_groups = list(Group.objects.filter(level__name=level).order_by("number"))
+    cards = [(f"{K.CARD}:{g.pk}-{c.pk}", f"Group {g.number}: {c.name}")
+             for g in level_groups for c in (_cards_with_content(echo_level, g) if echo_level else [])]
+    activities = [(f"{K.ACTIVITY}:{a.pk}", f"Group {a.group.number}: {a.title}")
+                  for a in Activity.objects.filter(group__in=level_groups, is_published=True)
+                  .select_related("group").order_by("group__number", "order", "id")]
     return [
+        ("EchoSpell cards", cards),
+        ("EchoSpell activities", activities),
         ("EchoSpell groups", [(f"{K.GROUP}:{g.pk}", f"Group {g.number}{' — ' + g.title if g.title else ''}")
                               for g in Group.objects.filter(level__name=level).order_by("number")]),
         ("Learning Modules days", [(f"{K.MODULE_DAY}:{d.pk}",
@@ -142,6 +156,8 @@ def scheme_editor(request):
         entries = SchemeEntry.objects.filter(level=level, term=term, is_draft=is_draft)
         if action == "build":
             return _build(request, level, term)
+        if action == "book":
+            return _book(request, level, term)
         if action == "publish":
             _publish(request, level, term)
             return _back(level, term, "live")
@@ -169,7 +185,7 @@ def scheme_editor(request):
 
     rows = {}
     for entry in (SchemeEntry.objects.filter(level=level, term=term, is_draft=is_draft)
-                  .select_related("group", "module_day__week__term__module", "dialogue", "sound", "chapter",
+                  .select_related("group", "category", "activity__group", "module_day__week__term__module", "dialogue", "sound", "chapter",
                                   "recital", "library_item", "assessment")):
         rows.setdefault(entry.week, []).append(entry)
     day_index = {key: i for i, (key, _label) in enumerate(DAY_CHOICES)}
@@ -203,6 +219,21 @@ def _build(request, level, term):
     return _back(level, term, "draft")
 
 
+def _book(request, level, term):
+    """The whole year from the book, as a draft: EchoSpell Group 1 is Week 1."""
+    result = builder.build_from_book(level, _term_specs([1, 2, 3]))
+    if not result["count"]:
+        messages.error(request, f"{level} has no EchoSpell groups yet, so there's nothing to lay out.")
+        return _back(level, term)
+    messages.success(request, f"Draft ready for {level}: {result['groups']} EchoSpell group{'s' if result['groups'] != 1 else ''} "
+                              f"laid out as {result['groups']} week{'s' if result['groups'] != 1 else ''} "
+                              f"({result['count']} lessons). Check and edit each term, then Publish it.")
+    if result["groups"] < result["weeks"]:
+        messages.info(request, f"The year has {result['weeks']} school weeks, so the last "
+                               f"{result['weeks'] - result['groups']} are empty until more groups are added.")
+    return _back(level, term, "draft")
+
+
 def _publish(request, level, term):
     drafts = SchemeEntry.objects.filter(level=level, term=term, is_draft=True)
     if not drafts.exists():
@@ -228,7 +259,13 @@ def _add(request, level, term, is_draft=False):
         return
     entry = SchemeEntry(level=level, term=term, week=week, day=day, kind=kind, is_draft=is_draft,
                         order=_next_order(level, term, week, day, is_draft))
-    if field:
+    if kind == K.CARD:
+        group_id, _dash, category_id = pk.partition("-")
+        if not (group_id.isdigit() and category_id.isdigit()):
+            messages.error(request, "Choose something to add.")
+            return
+        entry.group_id, entry.category_id = int(group_id), int(category_id)
+    elif field:
         if not pk.isdigit():
             messages.error(request, "Choose something to add.")
             return

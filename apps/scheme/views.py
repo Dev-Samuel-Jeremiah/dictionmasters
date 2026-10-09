@@ -245,7 +245,8 @@ def school_scheme(request):
     labels = dict(DAY_CHOICES)
     by_week = {}
     for entry in (SchemeEntry.objects.filter(level=level, term=number, is_draft=False)
-                  .select_related("group__level", "module_day__week__term__module", "dialogue__level", "sound",
+                  .select_related("group__level", "category", "activity__group__level",
+                                  "module_day__week__term__module", "dialogue__level", "sound",
                                   "chapter__term__book", "recital__section", "library_item", "assessment")
                   .order_by("week", "order")):
         by_week.setdefault(entry.week, []).append(

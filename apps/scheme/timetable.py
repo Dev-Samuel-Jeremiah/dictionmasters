@@ -16,8 +16,9 @@ gets an empty page saying so: the scheme alone decides what a student sees.
     done_for(users, entries)       {user id: done entry ids}, for many users
     content_key(entry)             what the gate matches an address against
 
-Done follows each tool's own record — a group earned (GroupProgress), a
-module day earned (DayProgress), a dialogue practised, a chapter finished,
+Done follows each tool's own record — an EchoSpell card opened
+(GroupStepsSeen), an activity passed (or, recorded, sent), a group earned
+(GroupProgress), a module day earned (DayProgress), a dialogue practised, a chapter finished,
 a test sat, a lesson's every tab opened — and for tools that keep none (a
 recital, a library item, Daily Practice), being opened from the scheme
 (SchemeOpened). Everything is gathered in a fixed number of queries.
@@ -48,7 +49,8 @@ def _entries(**filters):
     return (
         SchemeEntry.objects.filter(is_draft=False, **filters)
         .select_related(
-            "group__level", "module_day__week__term__module", "dialogue__level", "sound",
+            "group__level", "category", "activity__group__level",
+            "module_day__week__term__module", "dialogue__level", "sound",
             "chapter__term__book", "recital__section", "library_item", "assessment",
         )
     )
@@ -124,6 +126,27 @@ def done_for(users, entries):
     def ids_of(kind, field):
         return [getattr(e, f"{field}_id") for e in by_kind.get(kind, [])]
 
+    if K.CARD in by_kind:
+        from apps.echospell.models import GroupStepsSeen
+
+        cards = by_kind[K.CARD]
+        seen = {(user, group): set(ids or []) for user, group, ids in GroupStepsSeen.objects.filter(
+            user__in=ids, group__in={e.group_id for e in cards}).values_list("user", "group", "cards_seen")}
+        for entry in cards:
+            for pk in ids:
+                if entry.category_id in seen.get((pk, entry.group_id), ()):
+                    done[pk].add(entry.pk)
+    if K.ACTIVITY in by_kind:
+        from apps.echospell.models import ActivityAttempt
+
+        activities = {e.activity_id: e.activity for e in by_kind[K.ACTIVITY]}
+        passed = set()
+        for user, activity, status, ok in ActivityAttempt.objects.filter(
+                user__in=ids, activity__in=list(activities)).values_list("user", "activity", "status", "passed"):
+            # Passed, or for a recorded activity sent: the guided lesson's rule.
+            if (ok and status != "awaiting") or (status == "awaiting" and activities[activity].mode == "record"):
+                passed.add((user, activity))
+        mark(K.ACTIVITY, "activity", passed)
     if K.GROUP in by_kind:
         mark(K.GROUP, "group", GroupProgress.objects.filter(user__in=ids, group__in=ids_of(K.GROUP, "group"))
              .values_list("user", "group"))
@@ -264,8 +287,10 @@ def content_key(entry):
         return ("daily_practice",)
     if c is None:
         return None
-    if entry.kind == K.GROUP:
+    if entry.kind in (K.GROUP, K.CARD):
         return ("group", c.level.slug, c.slug)
+    if entry.kind == K.ACTIVITY:
+        return ("group", c.group.level.slug, c.group.slug)
     if entry.kind == K.MODULE_DAY:
         week, term = c.week, c.week.term
         return ("module_day", term.module.slug, term.slug, week.slug, c.day_name)
@@ -295,6 +320,10 @@ def content_url(entry):
     K, c = SchemeEntry.Kind, entry.content
     if entry.kind == K.DAILY_PRACTICE:
         return reverse("daily_practice:home")
+    if entry.kind == K.CARD:
+        return reverse("echospell:card_detail", args=[c.level.slug, c.slug, entry.category.slug])
+    if entry.kind == K.ACTIVITY:
+        return reverse("echospell:activity_detail", args=[c.group.level.slug, c.group.slug, c.slug])
     if entry.kind == K.GROUP:
         return reverse("echospell:group_detail", args=[c.level.slug, c.slug])
     if entry.kind == K.MODULE_DAY:

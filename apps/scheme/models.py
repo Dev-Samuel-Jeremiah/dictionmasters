@@ -103,7 +103,9 @@ DAY_ORDER = [key for key, _label in DAY_CHOICES]
 
 class SchemeEntry(models.Model):
     """One piece of content on the scheme of work: this level does it in
-    this week of this term, on this day (or any day that week). The same
+    this week of this term, on this day (or any day that week). Built from
+    the book (builder.book_plan) a level's EchoSpell Group 1 is Week 1, its
+    cards one a day and its activities on Friday. The same
     every year, so it is tied to a term number, not a dated term.
 
     Exactly one of the content fields is filled, the one its `kind` names
@@ -111,6 +113,8 @@ class SchemeEntry(models.Model):
     what a student sees and may open."""
 
     class Kind(models.TextChoices):
+        CARD = "card", "EchoSpell card"
+        ACTIVITY = "activity", "EchoSpell activity"
         GROUP = "group", "EchoSpell group"
         MODULE_DAY = "module_day", "Learning Modules day"
         DIALOGUE = "dialogue", "Conversational Dialogue"
@@ -124,6 +128,7 @@ class SchemeEntry(models.Model):
 
     # The content field each kind fills in.
     FIELD_FOR = {
+        Kind.CARD: "group", Kind.ACTIVITY: "activity",
         Kind.GROUP: "group", Kind.MODULE_DAY: "module_day", Kind.DIALOGUE: "dialogue",
         Kind.SOUND: "sound", Kind.TRICK: "sound", Kind.CHAPTER: "chapter", Kind.RECITAL: "recital",
         Kind.LIBRARY: "library_item", Kind.ASSESSMENT: "assessment", Kind.DAILY_PRACTICE: None,
@@ -140,6 +145,9 @@ class SchemeEntry(models.Model):
     is_draft = models.BooleanField(default=False)
 
     group = models.ForeignKey("echospell.Group", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    # A card: one of the group's card types (Spelling, Passage Reading, …).
+    category = models.ForeignKey("echospell.Category", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    activity = models.ForeignKey("echospell.Activity", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
     module_day = models.ForeignKey("learning_modules.Day", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
     dialogue = models.ForeignKey("conversational_dialogue.Dialogue", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
     sound = models.ForeignKey("book.Sound", null=True, blank=True, on_delete=models.CASCADE, related_name="+")
@@ -169,6 +177,10 @@ class SchemeEntry(models.Model):
         content = self.content
         if content is None:
             return self.get_kind_display()
+        if self.kind == self.Kind.CARD:
+            return f"{self.category.name if self.category_id else 'Card'}, Group {content.number}"
+        if self.kind == self.Kind.ACTIVITY:
+            return f"{content.title}, Group {content.group.number}"
         if self.kind == self.Kind.GROUP:
             return f"EchoSpell Group {content.number}"
         if self.kind == self.Kind.MODULE_DAY:
@@ -186,6 +198,8 @@ class SchemeEntry(models.Model):
             raise ValidationError(f"Choose the {self.get_kind_display()} this entry is for, and nothing else.")
         if not field and filled:
             raise ValidationError("Daily Practice needs no content chosen.")
+        if (self.kind == self.Kind.CARD) != bool(self.category_id):
+            raise ValidationError("A card needs its group and its card type, and only a card has a card type.")
 
 
 class SchemeOpened(models.Model):

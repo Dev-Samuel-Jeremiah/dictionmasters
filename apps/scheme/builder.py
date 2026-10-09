@@ -5,6 +5,8 @@ check, edit and publish in the control room's Scheme of work.
 
     catalogue(level, terms)     everything the level can be taught, by kind,
                                 in each course's own order
+    book_plan(level, terms)     the book's layout, no AI: Group N is Week N,
+                                its cards one a day, its activities on Friday
     build(level, terms, note)   plan it and save it as the level's draft
 
 The plan comes from OpenAI when a key is set (OPENAI_API_KEY, the model in
@@ -25,6 +27,7 @@ import urllib.request
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Count
 
 from apps.accounts.access import limit_to_level_list
 
@@ -263,6 +266,53 @@ def rule_plan(terms, items):
 # Building the draft
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# From the book: EchoSpell's groups are the weeks
+# ---------------------------------------------------------------------------
+
+BOOK_DAYS = ["monday", "tuesday", "wednesday", "thursday"]      # Friday is for the activities
+
+
+def book_plan(level, terms):
+    """The scheme the way the book is laid out: the level's EchoSpell
+    Group 1 is Week 1, Group 2 Week 2, … running on through the terms'
+    weeks. A week holds its group's cards that have something in them, one
+    a day Monday to Thursday in the level's card order (two a day when
+    there are more than four), and the group's activities on Friday —
+    Daily Practice instead when it has none. [(term, week, day, item)]."""
+    from apps.echospell.lesson_path import _cards_with_content
+    from apps.echospell.models import Activity, Group, Level
+
+    found = Level.objects.filter(name=level).first()
+    if found is None:
+        return []
+    groups = list(Group.objects.filter(level=found).order_by("number"))
+    activities = {}
+    for activity in (Activity.objects.filter(group__in=groups, is_published=True)
+                     .annotate(item_count=Count("items")).filter(item_count__gt=0).order_by("order", "id")):
+        activities.setdefault(activity.group_id, []).append(activity)
+    weeks = [(term["number"], week) for term in terms for week in range(1, term["weeks"] + 1)]
+    plan = []
+    for (term, week), group in zip(weeks, groups):
+        cards = _cards_with_content(found, group)
+        for i, category in enumerate(cards):
+            day = BOOK_DAYS[i * len(BOOK_DAYS) // len(cards)] if len(cards) > len(BOOK_DAYS) else BOOK_DAYS[i]
+            plan.append((term, week, day, f"card:{group.pk}-{category.pk}"))
+        for activity in activities.get(group.pk, []):
+            plan.append((term, week, "friday", f"activity:{activity.pk}"))
+        if not activities.get(group.pk):
+            plan.append((term, week, "friday", "daily_practice:"))
+    return plan
+
+
+def build_from_book(level, terms):
+    """book_plan saved as the level's draft. {"count", "groups", "weeks"}."""
+    plan = book_plan(level, terms)
+    count = save_draft(level, terms, plan)
+    weeks_filled = {(term, week) for term, week, _day, _item in plan}      # one group per week
+    return {"count": count, "groups": len(weeks_filled), "weeks": sum(t["weeks"] for t in terms)}
+
+
 @transaction.atomic
 def save_draft(level, terms, placements):
     """Replace the level's draft for these terms with `placements`."""
@@ -274,7 +324,11 @@ def save_draft(level, terms, placements):
         field = SchemeEntry.FIELD_FOR.get(kind)
         orders[(term, week, day)] = order = orders.get((term, week, day), 0) + 1
         entry = SchemeEntry(level=level, term=term, week=week, day=day, kind=kind, order=order, is_draft=True)
-        if field:
+        if kind == SchemeEntry.Kind.CARD:
+            # "card:<group>-<card type>"
+            group_id, _dash, category_id = pk.partition("-")
+            entry.group_id, entry.category_id = int(group_id), int(category_id)
+        elif field:
             setattr(entry, f"{field}_id", int(pk))
         new.append(entry)
     SchemeEntry.objects.bulk_create(new)
