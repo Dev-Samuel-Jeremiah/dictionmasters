@@ -1,0 +1,59 @@
+{% extends "manage/base.html" %}
+
+{% block title %}What students see — Control room{% endblock %}
+
+{% block content %}
+{% comment %}
+  Every course and tool against every grade (apps/manage/students_see.py):
+  a tick lets that grade's students open it.
+{% endcomment %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#128065;&#65039; Students</p>
+    <h1 class="cr-pagehead__title">What students see</h1>
+    <p class="cr-pagehead__note">Tick the grades whose students may open each course and tool. Untick a grade and its students won't see it in Learn, their menus or search. Teachers, staff and individual learners always see everything.</p>
+  </div>
+</header>
+
+<form method="post" class="cr-card ss">
+  {% csrf_token %}
+  <div class="cr-tablewrap ss-wrap">
+    <table class="ss-grid">
+      <thead>
+        <tr>
+          <th scope="col" class="ss-tool">Course or tool</th>
+          {% for col in columns %}<th scope="col" class="ss-grade"><span>{{ col.label }}</span><small>{{ col.level }}</small></th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in table %}
+        <tr{% if row.limited %} class="is-limited"{% endif %}>
+          <th scope="row" class="ss-tool">{{ row.tool.name }}{% if row.limited %}<small>Some grades only</small>{% endif %}</th>
+          {% for cell in row.cells %}
+          <td><input type="checkbox" name="{{ row.tool.url_name }}|{{ cell.level }}"{% if cell.open %} checked{% endif %}
+                     aria-label="{{ row.tool.name }}: {{ cell.label }}"></td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="cr-actions"><button type="submit" class="cr-btn cr-btn--gold">Save</button></div>
+</form>
+
+<style>
+  .ss-wrap { overflow-x: auto; }
+  .ss-grid { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: .9rem; }
+  .ss-grid th, .ss-grid td { padding: 10px 8px; border-bottom: 1px solid rgba(11, 26, 74, .08); text-align: center; }
+  .ss-grid thead th { position: sticky; top: 0; background: #F6F8FD; font-weight: 700; vertical-align: bottom; }
+  .ss-grade span { display: block; white-space: nowrap; }
+  .ss-grade small, .ss-tool small { display: block; font-weight: 500; color: #6B7593; font-size: .75rem; }
+  .ss-grade small { white-space: nowrap; }
+  .ss-grade { min-width: 64px; }
+  .ss-tool { position: sticky; left: 0; background: #fff; text-align: left !important; min-width: 190px; font-weight: 700; z-index: 1; }
+  thead .ss-tool { background: #F6F8FD; z-index: 2; }
+  .ss-grid tr.is-limited .ss-tool { box-shadow: inset 4px 0 0 #FFC72C; }
+  .ss-grid input[type="checkbox"] { width: 22px; height: 22px; accent-color: #1846E0; cursor: pointer; }
+  .ss-grid tbody tr:hover td, .ss-grid tbody tr:hover .ss-tool { background: #F9FAFE; }
+</style>
+{% endblock %}

@@ -84,7 +84,7 @@ class ToolGatingTests(TestCase):
         self.assertNotIn("Reference Library", titles)
 
     def test_the_phonemic_chart_is_told_apart_from_the_44_academy(self):
-        ToolLevels.objects.create(tool="book:home", levels=",Level 9,")
+        ToolLevels.objects.update_or_create(tool="book:home", defaults={"levels": ",Level 9,"})
         self.client.force_login(pupil("Level 3"))
         self.assertEqual(self.client.get("/book/").status_code, 403)
         self.assertNotEqual(self.client.get("/book/phonemic-chart/").status_code, 403)

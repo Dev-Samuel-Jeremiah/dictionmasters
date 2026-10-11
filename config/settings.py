@@ -207,6 +207,7 @@ TEMPLATES = [
                 "apps.landing.context_processors.nav",
                 "apps.accounts.master_login.context",
                 "apps.billing.context_processors.billing",
+                "apps.learning_tools.context_processors.hidden_tools",
                 "apps.landing.native_app.context",
             ],
             # {{ colour|palette }} everywhere, for colours stored in the database.

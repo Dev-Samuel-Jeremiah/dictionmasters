@@ -33,7 +33,14 @@ def _tool_prefixes():
     return _prefixes
 
 
+# Addresses inside a tool's own that belong to everyone: the read-along
+# timings audio books play from, and old 44 Academy links to Tricks.
+ALWAYS_OPEN = ("/book/read-along/", "/book/tricks/")
+
+
 def tool_for_path(path):
+    if path.startswith(ALWAYS_OPEN):
+        return None
     return next((name for prefix, name in _tool_prefixes() if path.startswith(prefix)), None)
 
 
