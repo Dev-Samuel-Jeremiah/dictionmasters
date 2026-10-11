@@ -20,6 +20,7 @@
         <button type="submit" class="cr-btn cr-btn--gold">&#11015; Download current logins (Excel)</button>
       </form>
       {% endif %}
+      {% if school %}<a href="{% url 'manage:classes_overview' %}?school={{ school.pk }}" class="cr-btn cr-btn--ghost">&#128203; Classes</a>{% endif %}
       {% if school %}<a href="{% url 'manage:edit' 'schools' school.pk %}" class="cr-btn cr-btn--gold">Edit school</a>{% endif %}
     </div>
   </header>

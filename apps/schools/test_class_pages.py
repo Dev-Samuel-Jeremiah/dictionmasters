@@ -165,3 +165,21 @@ class ControlRoomTests(ClassCase):
         self.assertContains(self.client.get("/manage/classes/"), "Primary 3")
         self.assertEqual(self.client.get("/manage/classes/new/").status_code, 200)
         self.assertContains(self.client.get(f"/manage/schools/{self.school.pk}/"), "Classes")
+
+    def test_the_classes_and_grades_page(self):
+        self.client.force_login(person("staff@example.com", is_staff=True))
+        page = self.client.get("/manage/classes-grades/")
+        self.assertContains(page, "<td>JSS 1</td>", html=True)                  # the grades and their levels
+        self.assertContains(page, "<td>Level 7</td>", html=True)
+        self.assertContains(page, "Unity")
+        self.assertContains(page, f'href="/manage/classes/{self.p3.pk}/"')       # each class to edit
+        self.assertContains(page, 'href="/manage/classes-grades/"')              # in the sidebar
+        other = School.objects.create(name="Hope", email="h@example.com")
+        SchoolClass.objects.create(school=other, grade="sss_2", name="Lion")
+        one = self.client.get(f"/manage/classes-grades/?school={other.pk}")
+        self.assertContains(one, "SSS 2 Lion")
+        self.assertNotContains(one, f'href="/manage/classes/{self.p3.pk}/"')
+        self.assertContains(one, f'href="/manage/classes/new/?in={other.pk}"')
+        self.assertContains(self.client.get("/manage/"), 'href="/manage/classes/new/"')   # Add something new
+        self.assertContains(self.client.get(f"/manage/schools-directory/{self.school.pk}/"),
+                            f'href="/manage/classes-grades/?school={self.school.pk}"')

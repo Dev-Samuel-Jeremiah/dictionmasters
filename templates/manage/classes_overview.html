@@ -1,0 +1,79 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Classes &amp; grades — Control room{% endblock %}
+
+{% block content %}
+{% comment %}
+  The grades and every school's classes (apps/manage/classes_page.py).
+  Each class opens in the "classes" screen to edit; schools manage their
+  own on their Classes page too.
+{% endcomment %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#127979; Schools</p>
+    <h1 class="cr-pagehead__title">Classes &amp; grades</h1>
+    <p class="cr-pagehead__note">Every school student is in one class. A class is a grade and the school's own name for it; its students learn the grade's content level.</p>
+  </div>
+  <div class="cr-pagehead__actions">
+    <a href="{% url 'manage:add' 'classes' %}{% if chosen %}?in={{ chosen.pk }}{% endif %}" class="cr-btn cr-btn--gold">+ Add a class{% if chosen %} to {{ chosen.name }}{% endif %}</a>
+  </div>
+</header>
+
+<section class="cr-card">
+  <h2 class="cr-card__title">Grades and the content they follow</h2>
+  <div class="cr-tablewrap">
+    <table class="cr-table cr-table--rows">
+      <thead><tr><th>Stage</th><th>Grade</th><th>Content level</th><th>Classes</th></tr></thead>
+      <tbody>
+        {% for stage in stages %}{% for row in stage.grades %}
+        <tr>
+          <td>{% if forloop.first %}<b>{{ stage.label }}</b>{% endif %}</td>
+          <td>{{ row.grade.label }}</td>
+          <td>{{ row.grade.level }}</td>
+          <td>{{ row.classes }}</td>
+        </tr>
+        {% endfor %}{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="cr-help">Individual learners don't have grades: they choose a level (Level 1, 2, 3 …) for themselves.</p>
+</section>
+
+<section class="cr-card">
+  <h2 class="cr-card__title">Classes{% if chosen %} at {{ chosen.name }}{% else %} at every school{% endif %} <small>({{ total }} in all)</small></h2>
+  <form method="get" class="cr-filter">
+    <label for="pick-school">School</label>
+    <select name="school" id="pick-school" class="cr-input cr-select" onchange="this.form.submit()">
+      <option value="">Every school</option>
+      {% for one in schools %}<option value="{{ one.pk }}"{% if one == chosen %} selected{% endif %}>{{ one.name }}</option>{% endfor %}
+    </select>
+    <noscript><button type="submit" class="cr-btn cr-btn--ghost">Show</button></noscript>
+  </form>
+  {% if capped %}<p class="cr-help">Showing the first classes only. Choose a school to see all of its classes.</p>{% endif %}
+
+  {% for group in groups %}
+  <h3 class="cr-card__title"><a href="{% url 'manage:school_people' group.school.pk %}">{{ group.school.name }}</a></h3>
+  {% for year in group.years %}
+  <p class="cr-help"><b>{{ year.session|default:"No school year" }}</b></p>
+  <div class="cr-tablewrap">
+    <table class="cr-table cr-table--rows">
+      <thead><tr><th>Class</th><th>Content level</th><th>Students</th><th>Class teacher</th><th class="cr-table__end"></th></tr></thead>
+      <tbody>
+        {% for one in year.classes %}
+        <tr>
+          <td><b>{{ one.display_name }}</b></td>
+          <td>{{ one.level }}</td>
+          <td>{{ one.students_n }}</td>
+          <td>{% if one.class_teacher %}{{ one.class_teacher.get_full_name|default:one.class_teacher.login_name }}{% else %}—{% endif %}</td>
+          <td class="cr-table__end"><a href="{% url 'manage:edit' 'classes' one.pk %}" class="cr-btn cr-btn--ghost">Edit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+  {% empty %}
+  <p class="cr-help">No classes yet{% if chosen %} at {{ chosen.name }}{% endif %}. Students are put into classes as they join, or add one above.</p>
+  {% endfor %}
+</section>
+{% endblock %}

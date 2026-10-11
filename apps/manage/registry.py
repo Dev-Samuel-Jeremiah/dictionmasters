@@ -552,6 +552,7 @@ QUICK_ADDS = [
     ("radio-programs", "Radio programme", "📻"),
     ("radio-episodes", "Radio episode", "🎙️"),
     ("schools", "School", "🏫"),
+    ("classes", "Class", "🧑‍🏫"),
     ("users", "User", "👤"),
     ("plans", "Billing plan", "💳"),
     ("promo-codes", "Promo code", "🏷️"),
