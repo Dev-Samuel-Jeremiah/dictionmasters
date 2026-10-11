@@ -92,7 +92,9 @@ class HomeTests(TestCase):
         self.assertTemplateUsed(page, "accounts/learner_home.html")
         self.assertContains(page, "data-todays-lesson", count=1)
         self.assertContains(page, "Today's lesson")
-        self.assertContains(page, 'href="/learning-tools/" class="lh-more__link"')
+        self.assertContains(page, 'href="/learning-tools/" class="kh-more"')          # See everything
+        self.assertContains(page, 'href="/echospell/" class="kh-tile')                 # their courses as tiles
+        self.assertContains(page, "My week")
         self.assertContains(page, 'href="/accounts/grown-ups/"')
         self.assertNotContains(page, "Quick tools")
         self.assertNotContains(page, "Your courses")

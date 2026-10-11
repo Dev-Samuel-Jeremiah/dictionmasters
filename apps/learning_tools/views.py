@@ -134,6 +134,18 @@ TOOLS = [
 BAND_SECTIONS = {"little": ("courses", "practise")}
 
 
+def tools_for(user):
+    """The courses and tools this person may open, in TOOLS order: a
+    student only those open to their level, and never teachers' own tools.
+    Learn and the learner's home both use it, so they always agree."""
+    kept = tool_levels()
+    return [
+        tool for tool in TOOLS
+        if can_use_tool(user, tool["url_name"], kept)
+        and not (tool.get("teachers") and user.is_student and not user.is_staff)
+    ]
+
+
 @login_required
 def hub(request):
     """Learn: every course and tool, once each, under a few plain
@@ -141,12 +153,7 @@ def hub(request):
     A student sees only the tools open to their level, laid out for their
     age band."""
     user = request.user
-    kept = tool_levels()
-    tools = [
-        tool for tool in TOOLS
-        if can_use_tool(user, tool["url_name"], kept)
-        and not (tool.get("teachers") and user.is_student and not user.is_staff)
-    ]
+    tools = tools_for(user)
     band = age_band(user)
     wanted = BAND_SECTIONS.get(band["key"]) if band else None
     sections = [

@@ -3,44 +3,102 @@
 
 {% block title %}Home — Diction Masters{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}"><link rel="stylesheet" href="{% static 'css/learner_home.css' %}">{% endblock %}
-{% block extra_js %}<script src="{% static 'js/switcher.js' %}" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/switcher.js' %}" defer></script><script src="{% static 'js/kid_home.js' %}" defer></script>{% endblock %}
 
 {% block content %}
 {% comment %}
-  The simple home (apps/accounts/views.dashboard): one big button, so a
-  child always knows where to start. Everything else is one tap away under
-  Learn; progress, results and the plan are on the For grown-ups page.
+  The learner's home (apps/accounts/views.dashboard, dashboard_data.learner_home):
+  a bright welcome, one big Today's lesson button so a child always knows
+  where to start, their week of practice, and their own courses and games
+  (exactly what Learn shows them: learning_tools.views.tools_for). Styles:
+  the "kid home" section of static/css/learner_home.css; motion:
+  static/js/kid_home.js. Every animation stops under reduced motion.
 {% endcomment %}
-<div class="px-page px-home lh{% if band %} lh--{{ band.key }}{% endif %}">
+<div class="px-page px-home lh kh{% if band %} lh--{{ band.key }}{% endif %}" data-kid-home>
 
-  <section class="px-hero lh-hero">
+  <section class="px-hero lh-hero kh-hero">
     <img class="px-hero__img" src="{% static 'img/app/heroBoy.jpg' %}" alt="">
+    {# Sounds of English rising out of the tablet (theme.css .px-hero__sounds): decoration only. #}
+    <div class="px-hero__sounds" aria-hidden="true">
+      <span class="px-hero__emit">
+        <i class="px-hero__wave"></i><i class="px-hero__wave"></i>
+        <b style="--dx:-20cqw;--dy:-26cqh;--r:-12deg;--d:0s">iː</b>
+        <b class="is-gold" style="--dx:6cqw;--dy:-44cqh;--r:8deg;--d:.8s">θ</b>
+        <b style="--dx:-30cqw;--dy:-34cqh;--r:10deg;--d:1.6s">ʃ</b>
+        <b class="is-gold" style="--dx:-12cqw;--dy:-52cqh;--r:-10deg;--d:2.4s">æ</b>
+        <b style="--dx:2cqw;--dy:-30cqh;--r:-6deg;--d:3.2s">ð</b>
+        <b class="is-gold" style="--dx:-36cqw;--dy:-18cqh;--r:12deg;--d:4s">ŋ</b>
+      </span>
+    </div>
     <div class="px-hero__text">
       <p class="px-hero__date">{{ today|date:"l j F" }}</p>
-      <h1 class="lh-hero__title">{{ greeting }},<br>{{ user.first_name|default:"there" }}</h1>
+      <h1 class="lh-hero__title kh-hello">{{ greeting }},<br>{{ user.first_name|default:"there" }} <span class="kh-wave" aria-hidden="true">👋</span></h1>
+      <div class="kh-chips">
+        <span class="kh-chip kh-chip--flame{% if streak %} is-lit{% endif %}" title="Days in a row you've practised">
+          <span class="kh-flame" aria-hidden="true">🔥</span>
+          {% if streak %}<b data-count-up="{{ streak }}">{{ streak }}</b>&nbsp;day{{ streak|pluralize }} in a row{% else %}Start your streak{% endif %}
+        </span>
+        {% if user.level_display %}<span class="kh-chip"><span aria-hidden="true">🎒</span> {{ user.level_display }}</span>{% endif %}
+      </div>
       {% include "accounts/_switcher.html" %}
     </div>
   </section>
 
-  <div class="px-wrap px-lift lh-body">
+  <div class="px-wrap px-lift lh-body kh-body">
     {% include "accounts/_qualification.html" %}
-    {% include "accounts/_todays_lesson.html" %}
 
-    <p class="lh-streak">
-      <span class="px-streak__flame" aria-hidden="true">{% include "includes/icon.html" with name="flame" size=22 %}</span>
-      {% if band.key == "little" %}{% if streak %}<b>{{ streak }} day{{ streak|pluralize }}!</b>{% else %}Let's play!{% endif %}
-      {% elif streak %}<b>{{ streak }} day{{ streak|pluralize }} in a row.</b> {% if practised_today %}Well done today!{% else %}Practise today to keep it going.{% endif %}{% else %}Start a streak today.{% endif %}
-    </p>
+    <div class="kh-lesson">{% include "accounts/_todays_lesson.html" %}</div>
 
-    {# The tiles depend on the age band (dashboard_data._home_tiles): little ones get big pictures with one word. #}
-    <nav class="lh-more{% if band.key == 'little' %} lh-more--pictures{% endif %}{% if tiles|length == 1 %} lh-more--one{% elif tiles|length == 3 %} lh-more--three{% elif tiles|length > 2 %} lh-more--four{% endif %}" aria-label="More">
-      {% for tile in tiles %}
-      <a href="{{ tile.url }}" class="lh-more__link">
-        {% if band.key == "little" %}<img class="lh-more__pic" src="{% static tile.image %}" alt="">{% else %}<span class="px-item__ii {{ tile.tone }}" aria-hidden="true">{% include "includes/icon.html" with name=tile.icon size=24 %}</span>{% endif %}
-        <b>{{ tile.label }}</b>
-      </a>
-      {% endfor %}
-    </nav>
+    <section class="kh-card kh-week" aria-labelledby="kh-week-title">
+      <div class="kh-week__head">
+        <h2 id="kh-week-title">My week</h2>
+        <p>{% if practised_today %}<b>Great work today!</b> {% endif %}{{ week_done }} of 7 days practised{% if not practised_today %}. Play today to light up a star!{% else %}.{% endif %}</p>
+      </div>
+      <ol class="kh-days">
+        {% for day in week %}
+        <li class="kh-day{% if day.done %} is-done{% endif %}{% if day.is_today %} is-today{% endif %}{% if day.later %} is-later{% endif %}" style="--i: {{ forloop.counter0 }}">
+          <span class="kh-day__dot" aria-hidden="true">{% if day.done %}✓{% elif day.is_today %}★{% endif %}</span>
+          <small>{{ day.label }}</small>
+          <span class="kh-sr">{{ day.date|date:"l" }}: {% if day.done %}practised{% elif day.later %}still to come{% else %}not yet{% endif %}</span>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    {% if courses %}
+    <section class="kh-section" aria-labelledby="kh-learn">
+      <div class="kh-section__head">
+        <h2 id="kh-learn"><span class="kh-badge" aria-hidden="true">📚</span> Learn</h2>
+        <a href="{% url 'learning_tools:hub' %}" class="kh-more">See everything <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="kh-grid">
+        {% for tool in courses %}
+        <a href="{% url tool.url_name %}" class="kh-tile {{ tool.tone }}{% if tool.image %} has-pic{% endif %}" style="--i: {{ forloop.counter0 }}" data-tilt>
+          {% if tool.image %}<img class="kh-tile__pic" src="{% static tool.image %}" alt="" loading="lazy">{% else %}<span class="kh-tile__icon" aria-hidden="true">{% include "includes/icon.html" with name=tool.icon size=34 %}</span>{% endif %}
+          <b class="kh-tile__name">{{ tool.name }}</b>
+          <span class="kh-tile__go" aria-hidden="true">{% include "includes/icon.html" with name="play" size=16 %}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if play %}
+    <section class="kh-section" aria-labelledby="kh-play">
+      <div class="kh-section__head">
+        <h2 id="kh-play"><span class="kh-badge kh-badge--play" aria-hidden="true">🎮</span> Practise and play</h2>
+      </div>
+      <div class="kh-grid kh-grid--play">
+        {% for tool in play %}
+        <a href="{% url tool.url_name %}" class="kh-tile kh-tile--play {{ tool.tone }}{% if tool.image %} has-pic{% endif %}" style="--i: {{ forloop.counter0|add:4 }}" data-tilt>
+          {% if tool.image %}<img class="kh-tile__pic" src="{% static tool.image %}" alt="" loading="lazy">{% else %}<span class="kh-tile__icon" aria-hidden="true">{% include "includes/icon.html" with name=tool.icon size=34 %}</span>{% endif %}
+          <b class="kh-tile__name">{{ tool.name }}</b>
+          <span class="kh-tile__go" aria-hidden="true">{% include "includes/icon.html" with name="play" size=16 %}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

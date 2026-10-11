@@ -155,25 +155,32 @@ class BandPageTests(TestCase):
         self.client.force_login(user)
         return self.client.get("/accounts/dashboard/")
 
-    def test_little_ones_get_a_big_picture_tile(self):
-        page = self.home(pupil("Level 1"))
-        self.assertContains(page, "lh-more--pictures")
-        self.assertContains(page, 'class="lh-more__link"', count=1)          # Learn; no Grown-ups tile
-        self.assertNotContains(page, "<b>Grown-ups</b>", html=False)
+    def test_each_band_gets_its_own_home(self):
+        self.assertContains(self.home(pupil("Level 1")), "lh--little")             # bigger tiles and words
+        self.assertContains(self.home(pupil("Level 4", email="mid@example.com")), "lh--middle")
+        self.assertNotContains(self.home(pupil("Level 1", email="tiny@example.com")), 'href="/accounts/grown-ups/" class="kh-tile')
 
-    def test_the_middle_band_keeps_the_simple_home(self):
-        page = self.home(pupil("Level 4"))
-        self.assertNotContains(page, "lh-more--pictures")
-        self.assertContains(page, 'class="lh-more__link"', count=1)
-
-    def test_older_pupils_get_three_tiles_unless_a_tool_is_held_back(self):
+    def test_the_tiles_are_what_the_pupil_may_open(self):
         page = self.home(pupil("Level 9"))
-        self.assertContains(page, 'class="lh-more__link"', count=3)
-        self.assertContains(page, 'href="/clash/" class="lh-more__link"')
-        ToolLevels.objects.create(tool="clash:hub", levels=",Level 12,")
+        self.assertContains(page, 'href="/clash/" class="kh-tile')
+        self.assertContains(page, 'href="/book/" class="kh-tile')                   # the 44 Academy from Grade 3
+        ToolLevels.objects.update_or_create(tool="clash:hub", defaults={"levels": ",Level 12,"})
         page = self.home(pupil("Level 9", email="other9@example.com"))
-        self.assertContains(page, 'class="lh-more__link"', count=2)
-        self.assertNotContains(page, 'href="/clash/" class="lh-more__link"')
+        self.assertNotContains(page, 'href="/clash/" class="kh-tile')
+        self.assertNotContains(self.home(pupil("Level 2", email="two@example.com")), 'href="/book/" class="kh-tile')
+
+    def test_my_week_lights_up_the_days_practised(self):
+        from apps.clash.models import Match
+
+        learner = pupil("Level 4", email="week@example.com")
+        from django.utils import timezone
+
+        Match.objects.create(user=learner, status=Match.Status.FINISHED, seed=1, mode="classic", difficulty="beginner",
+                             finished_at=timezone.now())
+        page = self.home(learner)
+        self.assertContains(page, "1 of 7 days practised")
+        self.assertContains(page, "kh-day is-done is-today")
+        self.assertContains(page, "Great work today!")
 
     def test_learn_by_band(self):
         self.client.force_login(pupil("Level 1"))

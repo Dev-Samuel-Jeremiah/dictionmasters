@@ -21,7 +21,7 @@ from apps.echospell.models import ActivityAttempt, CardPosition, Group, GroupPro
 from apps.learning_modules.models import Day, DayProgress
 from apps.quick_words.models import QuickWord
 
-from .access import age_band, can_use_tool, limit_to_level_list, limit_to_levels, tool_levels
+from .access import age_band, limit_to_level_list, limit_to_levels
 
 FEED_SIZE = 6
 WEEK = 7
@@ -233,32 +233,39 @@ def _greeting(now):
     return "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
 
 
-def _home_tiles(user, band):
-    """The tiles under Today's lesson, by age band: Learn for everyone, and
-    for older pupils two more of their own tools (if open to their level).
-    (For grown-ups is no longer a tile; it stays in the Me menu.)"""
-    learn = {"url": reverse("learning_tools:hub"), "label": "Learn", "icon": "book", "tone": "t-sky",
-             "image": "img/app/heroGirl.jpg"}
-    key = band["key"] if band else ""
-    if key == "older":
-        kept = tool_levels()
-        extra = [
-            {"url": reverse("daily_practice:home"), "label": "Practice", "icon": "mic", "tone": "t-mint", "tool": "daily_practice:home"},
-            {"url": reverse("clash:hub"), "label": "Diction Clash", "icon": "swords", "tone": "t-blush", "tool": "clash:hub"},
-        ]
-        return [learn, *[t for t in extra if can_use_tool(user, t["tool"], kept)]]
-    return [learn]
+def _home_week(active_days, today):
+    """This week, Monday to Sunday, for the home's "My week" strip: each
+    day's short name, whether they practised, and which day is today."""
+    monday = today - timedelta(days=today.weekday())
+    return [
+        {"label": day.strftime("%a"), "date": day, "done": day in active_days,
+         "is_today": day == today, "later": day > today}
+        for day in (monday + timedelta(days=n) for n in range(7))
+    ]
+
+
+def _home_courses(user):
+    """The child's courses and games for the home, as Learn shows them
+    (apps/learning_tools/views.tools_for): only what they may open."""
+    from apps.learning_tools.views import tools_for
+
+    tools = tools_for(user)
+    return ([t for t in tools if t["section"] == "courses"],
+            [t for t in tools if t["section"] == "practise"])
 
 
 def learner_home(user):
-    """Just what the one-button home shows: a greeting, the streak, today's
-    lesson and a few tiles, laid out for the learner's age band. Lighter
+    """What the learner's home shows: a greeting, the streak, today's lesson,
+    this week's practice days, and their courses and games, laid out for
+    their age band. Lighter
     than learner_dashboard, which also counts every tool's results for
     the grown-ups."""
     now = timezone.now()
     today = _local_date(now)
     active_days = {_local_date(e[0]) for e in _events(user)}
     band = age_band(user)
+    week = _home_week(active_days, today)
+    courses, play = _home_courses(user)
     return {
         "greeting": _greeting(now),
         "today": today,
@@ -266,7 +273,10 @@ def learner_home(user):
         "practised_today": today in active_days,
         "lesson": todays_lesson(user),
         "band": band,
-        "tiles": _home_tiles(user, band),
+        "week": week,
+        "week_done": sum(1 for day in week if day["done"]),
+        "courses": courses,
+        "play": play,
     }
 
 
