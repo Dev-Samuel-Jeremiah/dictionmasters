@@ -38,10 +38,10 @@ XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 KINDS = {
     "student": {
         "role": User.Role.STUDENT, "one": "student", "many": "students", "One": "Student", "Many": "Students",
-        "level_head": "Class (grade) *", "level_help": "Each student learns their grade's lessons, e.g. Primary 3 learns Level 3.",
+        "level_head": "Class (grade) *", "level_help": "Each student learns their grade's lessons, e.g. Grade 3 learns Level 3.",
         "choices": "grades", "class_name": True,             # the grades' names now (grades.current)
         "email_help": "The student's or a parent's email. Leave it blank and they sign in with their username.",
-        "examples": [("1", "Ada", "Okafor · Primary 1 · (no email)"), ("2", "Tunde", "Bello · JSS 2 · Gold · tunde.parent@example.com")],
+        "examples": [("1", "Ada", "Okafor · Grade 1 · (no email)"), ("2", "Tunde", "Bello · Grade 8 · Gold · tunde.parent@example.com")],
     },
     "teacher": {
         "role": User.Role.TEACHER, "one": "teacher", "many": "teachers", "One": "Teacher", "Many": "Teachers",
@@ -204,7 +204,7 @@ def template_file(school, kind="student"):
     if k["class_name"]:
         name_tip = DataValidation(type="custom", formula1="TRUE", allow_blank=True, showInputMessage=True,
                                   promptTitle="Class name (optional)",
-                                  prompt='Only if the grade has more than one class, e.g. "Gold" for Primary 3 Gold.')
+                                  prompt='Only if the grade has more than one class, e.g. "Gold" for Grade 3 Gold.')
         ws.add_data_validation(name_tip)
         name_tip.add(f"F{FIRST_DATA_ROW}:F{last}")
     ws.auto_filter.ref = f"A{head}:{end}{last}"
@@ -221,7 +221,7 @@ def template_file(school, kind="student"):
         ("3", "Last name", f"Optional, but it helps the school tell {k['many']} apart."),
         ("4", k["level_head"], f"Required. Pick from the dropdown: {choices[0]} to {choices[-1]}. {k['level_help']}"),
         ("5", "Email (optional)", k["email_help"]),
-        *([("5b", "Class name (optional)", 'Only if the grade has more than one class, e.g. "Gold" puts them in Primary 3 Gold. '
+        *([("5b", "Class name (optional)", 'Only if the grade has more than one class, e.g. "Gold" puts them in Grade 3 Gold. '
                                             "Leave it blank and they go in the grade's class.")] if k["class_name"] else []),
         ("6", "Upload", f"Save the file and upload it in the Diction Masters control room: Bulk add {k['many']}. Up to {MAX_ROWS} at a time."),
         ("7", "Logins", f"Straight after the upload you can download every {k['one']}'s username and password to share."),
@@ -263,8 +263,12 @@ def _level(raw):
 
 
 def _grade(raw):
-    """A grade written in the level column ("Primary 3", "JSS1", "nursery 2"), or None."""
+    """A grade written in the level column ("Grade 3", "grade3", "Nursery 2", or an old
+    name like "Primary 3" or "JSS1"), or None."""
     wanted = re.sub(r"[^a-z0-9]", "", _norm(raw).lower())
+    old = {re.sub(r"[^a-z0-9]", "", name.lower()): key for name, key in grades.OLD_NAMES.items()}
+    if wanted in old:
+        return old[wanted]
     return next((g.key for g in grades.current() if re.sub(r"[^a-z0-9]", "", g.label.lower()) == wanted), None)
 
 
@@ -342,11 +346,11 @@ def check(school, rows, kind="student"):
         errs = []
         if not r["first"]:
             errs.append("first name is missing")
-        # A grade (Primary 3) or a level (Level 3, or just 3) is fine.
+        # A grade (Grade 3) or a level (Level 3, or just 3) is fine.
         grade = _grade(r["level_raw"])
         level = grades.level_for(grade) if grade else _level(r["level_raw"])
         if not level:
-            errs.append(f"“{r['level_raw'] or '(blank)'}” isn't a grade (Creche … SSS 3) or a level ({LEVELS[0]}–{LEVELS[-1]})")
+            errs.append(f"“{r['level_raw'] or '(blank)'}” isn't a grade (Creche … Grade 12) or a level ({LEVELS[0]}–{LEVELS[-1]})")
         if r["email"]:
             try:
                 validate_email(r["email"])

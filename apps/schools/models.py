@@ -160,7 +160,7 @@ class AccessCode(models.Model):
     level = models.CharField(max_length=100, blank=True)
     code = models.CharField(max_length=10, unique=True, editable=False)
 
-    # A free-text note for the admin's own reference, e.g. "Primary 5
+    # A free-text note for the admin's own reference, e.g. "Grade 5
     # — Mrs Okafor's class". Never shown to anyone outside the school.
     label = models.CharField(max_length=100, blank=True)
 
@@ -233,9 +233,9 @@ class LevelChange(models.Model):
 
 
 class SchoolClass(models.Model):
-    """A class at a school for one school year: a grade (Primary 3, JSS 1 …,
+    """A class at a school for one school year: a grade (Grade 3, Grade 7 …,
     apps/schools/grades.py) and the school's own name for it ("Gold"), so a
-    school can have Primary 3 Gold and Primary 3 Blue. Its students follow
+    school can have Grade 3 Gold and Grade 3 Blue. Its students follow
     the grade's content level; each school student is in exactly one class
     (User.school_class), placed by apps/schools/classes.py."""
 
@@ -267,7 +267,7 @@ class SchoolClass(models.Model):
 
     @property
     def display_name(self):
-        """"Primary 3 Gold", or just "Primary 3"."""
+        """"Grade 3 Gold", or just "Grade 3"."""
         return f"{grades.label_for(self.grade)} {self.name}".strip()
 
     @property

@@ -53,17 +53,17 @@ class PlacementTests(TestCase):
 
     def test_a_new_student_goes_into_their_grades_class(self):
         ada = self.student("ada@example.com")
-        self.assertEqual(ada.school_class.display_name, "Primary 3")
+        self.assertEqual(ada.school_class.display_name, "Grade 3")
         self.assertEqual((ada.school_class.school, ada.school_class.session), (self.school, self.session))
         # A classmate shares it; another level, or another school, gets its own.
         self.assertEqual(self.student("bo@example.com").school_class, ada.school_class)
-        self.assertEqual(self.student("cy@example.com", "Level 7").school_class.display_name, "JSS 1")
+        self.assertEqual(self.student("cy@example.com", "Level 7").school_class.display_name, "Grade 7")
         self.assertNotEqual(self.student("di@example.com", school=self.other).school_class, ada.school_class)
 
     def test_an_existing_class_of_the_grade_is_used(self):
         gold = SchoolClass.objects.create(school=self.school, session=self.session, grade="primary_3", name="Gold")
         self.assertEqual(self.student("ada@example.com").school_class, gold)
-        self.assertEqual(str(gold), "Primary 3 Gold")
+        self.assertEqual(str(gold), "Grade 3 Gold")
         nursery = SchoolClass.objects.create(school=self.school, session=self.session, grade="nursery_1")
         self.assertEqual(self.student("bo@example.com", "Pre-Level").school_class, nursery)
 
@@ -72,7 +72,7 @@ class PlacementTests(TestCase):
         admin = person("head@example.com", role="school_admin", school=self.school)
         levels.promote(admin, [ada])
         ada.refresh_from_db()
-        self.assertEqual((ada.level, ada.school_class.display_name), ("Level 4", "Primary 4"))
+        self.assertEqual((ada.level, ada.school_class.display_name), ("Level 4", "Grade 4"))
 
     def test_only_school_students_with_a_level_have_a_class(self):
         for user in (person("t@example.com", role="teacher", school=self.school, level="Level 3"),
@@ -130,9 +130,9 @@ class MigrationTests(TestCase):
         importlib.import_module("apps.schools.migrations.0009_place_students_in_classes").forwards(django_apps, None)
 
         ada.refresh_from_db(), bo.refresh_from_db()
-        self.assertEqual((ada.school_class.display_name, ada.level), ("Primary 3", "Level 3"))
+        self.assertEqual((ada.school_class.display_name, ada.level), ("Grade 3", "Level 3"))
         self.assertEqual((bo.school_class.display_name, bo.level), ("Kindergarten", "Pre-Level"))
-        self.assertEqual(sorted(c.display_name for c in solo.teaching_classes.all()), ["JSS 2", "Primary 3"])
+        self.assertEqual(sorted(c.display_name for c in solo.teaching_classes.all()), ["Grade 3", "Grade 8"])
         self.assertEqual(ada.school_class.class_teacher, solo)          # its only teacher
         self.assertEqual(set(bo.school_class.teachers.all()), set(pair))
         self.assertIsNone(bo.school_class.class_teacher)               # two teachers: the school decides

@@ -8,9 +8,12 @@ age bands, billing), so every grade follows one level.
 By default:
 
     Pre-School          Creche, Nursery 1, Nursery 2, Kindergarten   Pre-Level
-    Primary             Primary 1 – Primary 6                        Level 1 – 6
-    Junior Secondary    JSS 1 – JSS 3                                Level 7 – 9
-    Senior Secondary    SSS 1 – SSS 3                                Level 10 – 12
+    Primary             Grade 1 – Grade 6                            Level 1 – 6
+    Junior Secondary    Grade 7 – Grade 9                            Level 7 – 9
+    Senior Secondary    Grade 10 – Grade 12                          Level 10 – 12
+
+(The grades were called Primary 1-6, JSS 1-3 and SSS 1-3 at first;
+OLD_NAMES still reads those, e.g. in a bulk-add spreadsheet.)
 
 Staff can rename a grade and change the level it follows in the control
 room (Classes & grades; GradeSetting). current() is the grades with those
@@ -23,9 +26,9 @@ School people see grades; individual learners keep levels.
     current()               the grades as they are now, in order
     level_for(grade)        "primary_3" -> "Level 3"
     grade_for_level(level)  "Level 3" -> "primary_3"; Pre-Level -> Kindergarten
-    label_for(grade)        "primary_3" -> "Primary 3"
-    label_for_level(level)  "Level 3" -> "Primary 3", "Pre-Level" -> "Pre-School"
-    next_grade(grade)       the grade a class moves up to, None after SSS 3
+    label_for(grade)        "primary_3" -> "Grade 3"
+    label_for_level(level)  "Level 3" -> "Grade 3", "Pre-Level" -> "Pre-School"
+    next_grade(grade)       the grade a class moves up to, None after Grade 12
 """
 
 import time
@@ -56,11 +59,17 @@ DEFAULT_GRADES = [
     Grade("nursery_1", "Nursery 1", "pre_school", "Pre-Level"),
     Grade("nursery_2", "Nursery 2", "pre_school", "Pre-Level"),
     Grade("kindergarten", "Kindergarten", "pre_school", "Pre-Level"),
-    *[Grade(f"primary_{n}", f"Primary {n}", "primary", f"Level {n}") for n in range(1, 7)],
-    *[Grade(f"jss_{n}", f"JSS {n}", "junior_secondary", f"Level {n + 6}") for n in range(1, 4)],
-    *[Grade(f"sss_{n}", f"SSS {n}", "senior_secondary", f"Level {n + 9}") for n in range(1, 4)],
+    # Grade N follows Level N: Grade 1-6 are Primary, 7-9 Junior Secondary, 10-12 Senior Secondary.
+    *[Grade(f"primary_{n}", f"Grade {n}", "primary", f"Level {n}") for n in range(1, 7)],
+    *[Grade(f"jss_{n}", f"Grade {n + 6}", "junior_secondary", f"Level {n + 6}") for n in range(1, 4)],
+    *[Grade(f"sss_{n}", f"Grade {n + 9}", "senior_secondary", f"Level {n + 9}") for n in range(1, 4)],
 ]
 DEFAULTS = {grade.key: grade for grade in DEFAULT_GRADES}
+
+# The names the grades had at first, still understood when typed (bulk add).
+OLD_NAMES = {**{f"Primary {n}": f"primary_{n}" for n in range(1, 7)},
+             **{f"JSS {n}": f"jss_{n}" for n in range(1, 4)},
+             **{f"SSS {n}": f"sss_{n}" for n in range(1, 4)}}
 KEYS = [grade.key for grade in DEFAULT_GRADES]
 
 # For the model field: the keys never change; labels on pages come from current().
@@ -133,8 +142,8 @@ def label_for(grade):
 
 
 def label_for_level(level):
-    """How a content level reads to school people: "Level 3" -> "Primary 3",
-    "Level 8" -> "JSS 2"; a level several grades follow reads as their
+    """How a content level reads to school people: "Level 3" -> "Grade 3",
+    "Level 8" -> "Grade 8"; a level several grades follow reads as their
     stage when they make up the whole stage ("Pre-School"), else as its
     grades ("Nursery 2 and Kindergarten"); anything else as it is."""
     found = [g for g in current() if g.level == level]
@@ -157,8 +166,8 @@ def level_as_grade_choices():
 
 
 def next_grade(grade):
-    """The grade after `grade` (Kindergarten -> Primary 1, Primary 6 ->
-    JSS 1, JSS 3 -> SSS 1), or None after SSS 3 or for an unknown grade."""
+    """The grade after `grade` (Kindergarten -> Grade 1, Grade 6 ->
+    Grade 7 ...), or None after Grade 12 or for an unknown grade."""
     if grade not in DEFAULTS or grade == KEYS[-1]:
         return None
     return KEYS[KEYS.index(grade) + 1]

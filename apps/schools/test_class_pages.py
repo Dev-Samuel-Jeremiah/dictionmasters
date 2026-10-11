@@ -26,7 +26,7 @@ class ClassCase(TestCase):
         self.admin = person("head@example.com", role="school_admin", school=self.school)
         self.teacher = person("tola@example.com", role="teacher", school=self.school, level="Level 3")
         self.ada = person("ada@example.com", role="student", school=self.school, level="Level 3")
-        self.p3 = self.ada.school_class                       # "Primary 3", made for her
+        self.p3 = self.ada.school_class                       # "Grade 3", made for her
 
 
 class ClassesPageTests(ClassCase):
@@ -38,19 +38,19 @@ class ClassesPageTests(ClassCase):
         SchoolClass.objects.create(school=self.school, session=self.session, grade="nursery_1")
         page = self.client.get("/school/classes/")
         self.assertContains(page, "Pre-School")
-        self.assertContains(page, "Primary 3")
+        self.assertContains(page, "Grade 3")
         self.assertContains(page, f"/accounts/register/student/?school={self.school.code}&amp;class={self.p3.pk}")
-        self.assertLess(page.content.index(b"Nursery 1"), page.content.index(b"Primary 3"))
+        self.assertLess(page.content.index(b"Nursery 1"), page.content.index(b"Grade 3"))
         self.assertContains(self.client.get("/school/dashboard/"), 'href="/school/classes/"')
 
     def test_adding_a_class_with_its_teacher(self):
         response = self.client.post("/school/classes/", {"grade": "primary_3", "name": "  Gold ", "class_teacher": self.teacher.pk})
         gold = SchoolClass.objects.get(name="Gold")
         self.assertRedirects(response, f"/school/classes/{gold.pk}/")
-        self.assertEqual((gold.school, gold.session, gold.display_name), (self.school, self.session, "Primary 3 Gold"))
+        self.assertEqual((gold.school, gold.session, gold.display_name), (self.school, self.session, "Grade 3 Gold"))
         self.assertEqual(list(gold.teachers.all()), [self.teacher])     # the class teacher teaches it too
         again = self.client.post("/school/classes/", {"grade": "primary_3", "name": "gold"})
-        self.assertContains(again, "There&#x27;s already a Primary 3 gold class this year")
+        self.assertContains(again, "There&#x27;s already a Grade 3 gold class this year")
 
     def test_only_the_schools_own_teachers_can_be_chosen(self):
         stranger = person("x@example.com", role="teacher", school=School.objects.create(name="Hope", email="h@example.com"))
@@ -69,7 +69,7 @@ class ClassesPageTests(ClassCase):
     def test_renaming_and_deleting(self):
         self.client.post(f"/school/classes/{self.p3.pk}/", {"action": "save", "grade": "primary_3", "name": "Blue"})
         self.p3.refresh_from_db()
-        self.assertEqual(self.p3.display_name, "Primary 3 Blue")
+        self.assertEqual(self.p3.display_name, "Grade 3 Blue")
         kept = self.client.post(f"/school/classes/{self.p3.pk}/", {"action": "delete"}, follow=True)
         self.assertContains(kept, "still has students")
         empty = SchoolClass.objects.create(school=self.school, session=self.session, grade="sss_1")
@@ -103,8 +103,8 @@ class JoiningAClassTests(ClassCase):
         session[TOUR_DONE] = True
         session.save()
         page = self.client.get(link)
-        self.assertContains(page, f'<option value="class:{self.p3.pk}" selected>Primary 3</option>', html=True)
-        self.assertContains(page, '<option value="grade:jss_1">JSS 1</option>', html=True)    # no class yet
+        self.assertContains(page, f'<option value="class:{self.p3.pk}" selected>Grade 3</option>', html=True)
+        self.assertContains(page, '<option value="grade:jss_1">Grade 7</option>', html=True)    # no class yet
 
     def test_joining_a_class(self):
         self.client.post(self.url, self.form(f"class:{self.p3.pk}"))
@@ -125,7 +125,7 @@ class JoiningAClassTests(ClassCase):
     def test_the_classes_for_a_typed_code(self):
         found = self.client.get("/accounts/register/student/classes/", {"school": self.school.code.removeprefix("DM-").lower()})
         groups = {g["label"]: g["options"] for g in found.json()["groups"]}
-        self.assertIn([f"class:{self.p3.pk}", "Primary 3"], groups["Primary"])
+        self.assertIn([f"class:{self.p3.pk}", "Grade 3"], groups["Primary"])
         self.assertIn(["grade:creche", "Creche"], groups["Pre-School"])
         self.assertEqual(self.client.get("/accounts/register/student/classes/", {"school": "DM-NOPE"}).status_code, 404)
 
@@ -144,7 +144,7 @@ class BulkAddTests(ClassCase):
         bulk_students.create(self.school, clean)
         placed = {u.first_name: u.school_class.display_name for u in User.objects.filter(school=self.school, role="student")
                   .select_related("school_class")}
-        self.assertEqual(placed, {"Ada": "Primary 3", "Bo": "JSS 1 Gold", "Cy": "Primary 4", "Di": "Primary 2"})
+        self.assertEqual(placed, {"Ada": "Grade 3", "Bo": "Grade 7 Gold", "Cy": "Grade 4", "Di": "Grade 2"})
         self.assertEqual(User.objects.get(first_name="Ada", last_name="Obi").school_class, self.p3)
 
     def test_the_student_template_lists_grades_and_has_a_class_name_column(self):
@@ -162,14 +162,14 @@ class BulkAddTests(ClassCase):
 class ControlRoomTests(ClassCase):
     def test_staff_see_a_schools_classes(self):
         self.client.force_login(person("staff@example.com", is_staff=True))
-        self.assertContains(self.client.get("/manage/classes/"), "Primary 3")
+        self.assertContains(self.client.get("/manage/classes/"), "Grade 3")
         self.assertEqual(self.client.get("/manage/classes/new/").status_code, 200)
         self.assertContains(self.client.get(f"/manage/schools/{self.school.pk}/"), "Classes")
 
     def test_the_classes_and_grades_page(self):
         self.client.force_login(person("staff@example.com", is_staff=True))
         page = self.client.get("/manage/classes-grades/")
-        self.assertContains(page, "<td>JSS 1</td>", html=True)                  # the grades and their levels
+        self.assertContains(page, "<td>Grade 7</td>", html=True)                  # the grades and their levels
         self.assertContains(page, "<td>Level 7</td>", html=True)
         self.assertContains(page, "Unity")
         self.assertContains(page, f'href="/manage/classes/{self.p3.pk}/"')       # each class to edit
@@ -177,7 +177,7 @@ class ControlRoomTests(ClassCase):
         other = School.objects.create(name="Hope", email="h@example.com")
         SchoolClass.objects.create(school=other, grade="sss_2", name="Lion")
         one = self.client.get(f"/manage/classes-grades/?school={other.pk}")
-        self.assertContains(one, "SSS 2 Lion")
+        self.assertContains(one, "Grade 11 Lion")
         self.assertNotContains(one, f'href="/manage/classes/{self.p3.pk}/"')
         self.assertContains(one, f'href="/manage/classes/new/?in={other.pk}"')
         self.assertContains(self.client.get("/manage/"), 'href="/manage/classes/new/"')   # Add something new
@@ -211,7 +211,7 @@ class GradeEditTests(ClassCase):
         self.assertEqual(self.ada.level, "Level 3")                         # the lessons don't change
 
     def test_changing_its_level_moves_its_students_and_teachers(self):
-        self.client.post("/manage/classes-grades/grade/primary_3/", {"label": "Primary 3", "level": "Level 4"})
+        self.client.post("/manage/classes-grades/grade/primary_3/", {"label": "Grade 3", "level": "Level 4"})
         self.ada.refresh_from_db(), self.teacher.refresh_from_db()
         self.assertEqual((self.ada.level, self.ada.school_class), ("Level 4", self.p3))
         self.assertEqual(self.teacher.level, "Level 4")
@@ -224,11 +224,11 @@ class GradeEditTests(ClassCase):
         self.assertFalse(GradeSetting.objects.exists())
 
     def test_two_grades_cant_share_a_name(self):
-        page = self.client.post("/manage/classes-grades/grade/primary_3/", {"label": "jss 1", "level": "Level 3"})
+        page = self.client.post("/manage/classes-grades/grade/primary_3/", {"label": "grade 7", "level": "Level 3"})
         self.assertContains(page, "Another grade is already called")
 
     def test_a_student_on_a_level_no_grade_follows_keeps_their_class(self):
-        self.client.post("/manage/classes-grades/grade/primary_2/", {"label": "Primary 2", "level": "Level 3"})
+        self.client.post("/manage/classes-grades/grade/primary_2/", {"label": "Grade 2", "level": "Level 3"})
         bo = person("bo@example.com", role="student", school=self.school, level="Level 2")   # Level 2 has no grade now
         self.assertIsNone(bo.school_class)
         self.ada.level = "Level 2"

@@ -276,7 +276,7 @@ class SchoolTeamMemberForm(StyledFormMixin, forms.Form):
 
         super().__init__(*args, **kwargs)
         self.kind = kind
-        # Worded as grades (Primary 3, JSS 1); the value is still the level.
+        # Worded as grades (Grade 3, Grade 7); the value is still the level.
         self.fields["level"].choices = [("", "Choose a grade")] + level_as_grade_choices()
         self.fields["level"].label = "Grade taught" if kind == "teacher" else "Student's grade"
         self.fields["first_name"].widget.attrs["placeholder"] = "First name"

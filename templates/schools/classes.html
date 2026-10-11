@@ -59,7 +59,7 @@
     <section class="ui-panel" id="add">
       <p class="ui-panel__label">New class</p>
       <h2 class="ui-panel__title">Add a class</h2>
-      <p class="ui-panel__lede">Choose its grade, and give it a name if the grade has more than one class (Primary 3 Gold, Primary 3 Blue).</p>
+      <p class="ui-panel__lede">Choose its grade, and give it a name if the grade has more than one class (Grade 3 Gold, Grade 3 Blue).</p>
       <form method="post" class="sc-form" novalidate data-submit-once>
         {% csrf_token %}
         {% include "includes/form_fields.html" with fields=form.visible_fields|slice:":3" %}

@@ -68,7 +68,7 @@ class LessonNote(models.Model):
                                related_name="lesson_notes")
     title = models.CharField(max_length=200)
     subject = models.CharField(max_length=100, blank=True)
-    class_level = models.CharField(max_length=100, blank=True, help_text='e.g. "Primary 4" or "JSS 2".')
+    class_level = models.CharField(max_length=100, blank=True, help_text='e.g. "Grade 4" or "Grade 8".')
     body = models.TextField(help_text="The note, paragraphs separated by a blank line.")
     source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default="typed")
     created_at = models.DateTimeField(auto_now_add=True)

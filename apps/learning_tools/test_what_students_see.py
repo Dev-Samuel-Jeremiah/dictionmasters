@@ -1,4 +1,4 @@
-"""What each grade's students see: the 44 Academy from Primary 3 (Level 3)
+"""What each grade's students see: the 44 Academy from Grade 3 (Level 3)
 up, menus that leave out what a student can't open, and the control
 room's What students see grid that changes it."""
 
@@ -70,7 +70,7 @@ class GridTests(GradeToolsCase):
 
     def test_the_grid_shows_tools_by_grade(self):
         page = self.client.get(self.url)
-        self.assertContains(page, "<span>Primary 3</span>", html=True)
+        self.assertContains(page, "<span>Grade 3</span>", html=True)
         self.assertContains(page, "<span>Pre-School</span>", html=True)
         self.assertContains(page, 'name="book:home|Level 3" checked')
         self.assertNotContains(page, 'name="book:home|Level 2" checked')

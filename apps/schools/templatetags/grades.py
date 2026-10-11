@@ -1,5 +1,5 @@
 """Grade names for school people in templates: {% load grades %}, then
-{{ level|level_name:user }} shows "Primary 3" to someone at a school and
+{{ level|level_name:user }} shows "Grade 3" to someone at a school and
 "Level 3" to an individual learner (apps/schools/grades.py)."""
 
 from django import template

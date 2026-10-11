@@ -1,8 +1,8 @@
 """
 python manage.py seed_level_one
 
-Sample Level 1 content and test logins, to try the site as a Primary 1
-pupil (and a Primary 3 pupil, who also gets the 44 Academy). Safe to run
+Sample Level 1 content and test logins, to try the site as a Grade 1
+pupil (and a Grade 3 pupil, who also gets the 44 Academy). Safe to run
 again: it only adds what's missing and never changes or deletes anything
 already there.
 
@@ -20,9 +20,9 @@ The 90 Quick Words, the assembly recitals and the Learning Modules
 already on the site are used as they are.
 
 Logins (password Test-2026), at "Level 1 Test School":
-    p1.pupil     Primary 1 A student (no 44 Academy)
-    p3.pupil     Primary 3 A student (with the 44 Academy)
-    p1.teacher   teacher of Primary 1 A
+    p1.pupil     Grade 1 A student (no 44 Academy)
+    p3.pupil     Grade 3 A student (with the 44 Academy)
+    p1.teacher   teacher of Grade 1 A
     head@level1-test.example   the school admin
 """
 

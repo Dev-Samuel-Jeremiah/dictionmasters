@@ -64,7 +64,7 @@ class NothingLockedTests(TestCase):
         second = Sound.objects.create(category=sounds, name="Shoe", order=2)
         for sound in (first, second):
             WordBankEntry.objects.create(sound=sound, word=sound.name.lower())
-        # The 44 Academy starts at Primary 3 (learning_tools migration 0003).
+        # The 44 Academy starts at Grade 3 (learning_tools migration 0003).
         self.client.force_login(User.objects.create_user("p3@example.com", "mango7", first_name="Ada",
                                                          role="student", level="Level 3"))
         self.assertEqual(self.client.get(f"/book/44-academy/{second.slug}/").status_code, 200)

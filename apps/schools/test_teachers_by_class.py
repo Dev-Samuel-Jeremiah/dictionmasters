@@ -60,7 +60,7 @@ class TeacherTests(ClassesCase):
         grace = person("grace@example.com", role="teacher", school=self.school, level="Level 3")
         self.assertEqual(set(grace.teaching_classes.all()), {self.gold, self.blue})
         musa = person("musa@example.com", role="teacher", school=self.school, level="Level 8")
-        self.assertEqual([c.display_name for c in musa.teaching_classes.all()], ["JSS 2"])   # made for them
+        self.assertEqual([c.display_name for c in musa.teaching_classes.all()], ["Grade 8"])   # made for them
 
     def test_marking_follows_the_class(self):
         test = Assessment.objects.create(title="CA", kind="ca", level="Level 3", term=1)
@@ -92,7 +92,7 @@ class PromotionTests(ClassesCase):
     def test_within_the_year_ticked_students_move_up_and_sss_3_graduates(self):
         outcome = classes.promote(self.admin, self.school, [self.ada, self.cy])
         self.ada.refresh_from_db(), self.bo.refresh_from_db(), self.cy.refresh_from_db()
-        self.assertEqual((self.ada.school_class.display_name, self.ada.level), ("Primary 4 Gold", "Level 4"))
+        self.assertEqual((self.ada.school_class.display_name, self.ada.level), ("Grade 4 Gold", "Level 4"))
         self.assertEqual(self.ada.school_class.session, self.year)
         self.assertEqual(self.bo.school_class, self.blue)                       # not ticked: stays
         self.assertFalse(self.cy.is_active)                                     # graduated
@@ -106,11 +106,11 @@ class PromotionTests(ClassesCase):
         self.assertEqual(outcome.year, later)
         self.assertEqual(classes.school_year(self.school), later)
         names = {c.display_name for c in classes.this_year(self.school)}
-        self.assertEqual(names, {"Primary 3 Gold", "Primary 3 Blue", "Primary 4 Gold", "SSS 3"})
+        self.assertEqual(names, {"Grade 3 Gold", "Grade 3 Blue", "Grade 4 Gold", "Grade 12"})
         self.ada.refresh_from_db(), self.bo.refresh_from_db()
-        self.assertEqual((self.ada.school_class.display_name, self.ada.school_class.session), ("Primary 4 Gold", later))
-        self.assertEqual((self.bo.school_class.display_name, self.bo.school_class.session), ("Primary 3 Blue", later))
-        # Tola stays with Primary 3 Gold, now next year's: Ada has moved on, so she isn't theirs.
+        self.assertEqual((self.ada.school_class.display_name, self.ada.school_class.session), ("Grade 4 Gold", later))
+        self.assertEqual((self.bo.school_class.display_name, self.bo.school_class.session), ("Grade 3 Blue", later))
+        # Tola stays with Grade 3 Gold, now next year's: Ada has moved on, so she isn't theirs.
         self.assertEqual([c.session for c in self.tola.teaching_classes.filter(session=later)], [later])
         self.assertFalse(pupils_of(self.tola).filter(pk=self.ada.pk).exists())
 
@@ -127,7 +127,7 @@ class PromotionTests(ClassesCase):
         outcome = classes.promote(self.admin, self.school, [self.ada])
         self.client.force_login(self.admin)
         page = self.client.get("/school/dashboard/")
-        self.assertContains(page, "Primary 3 Gold")
+        self.assertContains(page, "Grade 3 Gold")
         self.client.post(f"/school/levels/undo/{outcome.batch}/")
         self.ada.refresh_from_db()
         self.assertEqual(self.ada.school_class, self.gold)
@@ -135,9 +135,9 @@ class PromotionTests(ClassesCase):
     def test_the_promote_page(self):
         self.client.force_login(self.admin)
         page = self.client.get("/scheme/promote/")
-        self.assertContains(page, "Primary 3 Gold → Primary 4 Gold")
-        self.assertContains(page, "SSS 3 → Graduates")
+        self.assertContains(page, "Grade 3 Gold → Grade 4 Gold")
+        self.assertContains(page, "Grade 12 → Graduates")
         self.assertContains(page, "The classes stay in this school year")
         self.client.post("/scheme/promote/", {"students": [self.ada.pk]})
         self.ada.refresh_from_db()
-        self.assertEqual(self.ada.school_class.display_name, "Primary 4 Gold")
+        self.assertEqual(self.ada.school_class.display_name, "Grade 4 Gold")

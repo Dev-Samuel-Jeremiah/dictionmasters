@@ -29,31 +29,31 @@ class GradeNameTests(TestCase):
         self.ada = person("ada@example.com", role="student", school=self.school, level="Level 3", school_class=self.gold)
 
     def test_how_a_level_reads(self):
-        self.assertEqual(User.objects.select_related("school_class").get(pk=self.ada.pk).level_display, "Primary 3 Gold")
-        self.assertEqual(User.objects.get(pk=self.ada.pk).level_display, "Primary 3")      # class not loaded: no query
+        self.assertEqual(User.objects.select_related("school_class").get(pk=self.ada.pk).level_display, "Grade 3 Gold")
+        self.assertEqual(User.objects.get(pk=self.ada.pk).level_display, "Grade 3")      # class not loaded: no query
         tola = person("tola@example.com", role="teacher", school=self.school, level="Level 3", additional_levels=",Level 7,")
-        self.assertEqual(tola.level_display, "Primary 3 and JSS 1")
+        self.assertEqual(tola.level_display, "Grade 3 and Grade 7")
         tiny = person("tiny@example.com", role="student", school=self.school, level="Pre-Level")
         self.assertEqual(User.objects.get(pk=tiny.pk).level_display, "Pre-School")
         self.assertEqual(person("solo@example.com", role="individual", level="Level 3").level_display, "Level 3")
 
     def test_the_level_name_filter(self):
         page = Template("{% load grades %}{{ level|level_name:who }}")
-        self.assertEqual(page.render(Context({"level": "Level 8", "who": self.ada})), "JSS 2")
+        self.assertEqual(page.render(Context({"level": "Level 8", "who": self.ada})), "Grade 8")
         solo = person("solo@example.com", role="individual")
         self.assertEqual(page.render(Context({"level": "Level 8", "who": solo})), "Level 8")
 
     def test_the_school_dashboard_speaks_in_grades(self):
         self.client.force_login(person("head@example.com", role="school_admin", school=self.school))
         page = self.client.get("/school/dashboard/").content.decode()
-        self.assertIn('<option value="Level 3">Primary 3</option>', page)
+        self.assertIn('<option value="Level 3">Grade 3</option>', page)
         self.assertIn('<option value="Pre-Level">Pre-School</option>', page)
         self.assertNotRegex(page, r">Level \d+<")
         self.assertIn("Move up a grade", page)
 
     def test_the_school_registration_form_offers_grades(self):
         choices = dict(SchoolTeamMemberForm(kind="student").fields["level"].choices)
-        self.assertEqual((choices["Level 7"], choices["Pre-Level"]), ("JSS 1", "Pre-School"))
+        self.assertEqual((choices["Level 7"], choices["Pre-Level"]), ("Grade 7", "Pre-School"))
 
 
 class QualificationTests(TestCase):

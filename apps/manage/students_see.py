@@ -3,7 +3,7 @@ The control room's What students see page: every course and tool on the
 Learn page against every grade, with a tick where that grade's students
 may open it.
 
-A tick means the grade's content level (Primary 3 is Level 3; Pre-School
+A tick means the grade's content level (Grade 3 is Level 3; Pre-School
 is Pre-Level) may use the tool; it's saved as the tool's levels
 (learning_tools.ToolLevels), the rule apps.accounts.access.can_use_tool
 applies everywhere: Learn, search, menus and the tool's own pages. Every

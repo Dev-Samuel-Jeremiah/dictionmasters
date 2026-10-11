@@ -134,7 +134,7 @@ def batches(school, limit=8):
         group["count"] = len(group["rows"])
         moves = {}
         for change in group["rows"]:
-            # Classes when the change was between classes ("Primary 3 → Primary 4").
+            # Classes when the change was between classes ("Grade 3 → Grade 4").
             before = change.old_class.display_name if change.old_class else (change.old_level or "No level")
             after = ("Graduated" if change.kind == "graduate" else
                      change.new_class.display_name if change.new_class else (change.new_level or "No level"))

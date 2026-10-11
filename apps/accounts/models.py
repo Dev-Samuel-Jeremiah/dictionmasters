@@ -99,7 +99,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         on_delete=models.CASCADE,
         related_name="members",
     )
-    # The class a school student is in (Primary 3 Gold …). Every school
+    # The class a school student is in (Grade 3 Gold …). Every school
     # student has one; their level comes from it and the two are kept in
     # step by save() below (apps/schools/classes.py). A class with students
     # in it can't be deleted; deleting the whole school still works.
@@ -264,8 +264,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     def level_display(self):
         """How their level(s) read on a page. School people see grades
         (apps/schools/grades.py): a student their class when it's loaded
-        ("Primary 3 Gold"), else their grade ("Primary 3"); a teacher of
-        several, "Primary 1, Primary 3 and JSS 2". Individual learners see
+        ("Grade 3 Gold"), else their grade ("Grade 3"); a teacher of
+        several, "Grade 1, Grade 3 and Grade 8". Individual learners see
         levels ("Level 3"). Never a query of its own."""
         levels = self.all_levels
         if not levels:

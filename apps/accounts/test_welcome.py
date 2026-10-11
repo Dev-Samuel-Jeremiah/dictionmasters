@@ -29,7 +29,7 @@ class WelcomeEmailTests(TestCase):
         self.assertIn("Unity School", admin_mail.subject)
         self.assertIn(self.school.code, admin_mail.body)                    # the code to share
         self.assertIn("Lesson Notes to Audio", teacher_mail.body)
-        self.assertIn("Primary 3", teacher_mail.body)                  # school people see grades
+        self.assertIn("Grade 3", teacher_mail.body)                  # school people see grades
         self.assertIn("free trial", learner_mail.body)
         html = learner_mail.alternatives[0][0]
         self.assertIn("/accounts/password/forgot/", html)

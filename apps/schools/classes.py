@@ -6,7 +6,7 @@ so the level leads and the class follows it: whenever a school student's
 level is set or changed — joining with a code, bulk add, the control room —
 they are placed in a class of the matching grade at their school
 (apps/schools/grades.py), in the school's year. An existing class of a grade
-on that level is used when there is one, else one is made (e.g. "Primary 3"),
+on that level is used when there is one, else one is made (e.g. "Grade 3"),
 which the school can rename or split later.
 
 A school's year is the newest school year it has classes in (or the
@@ -271,8 +271,8 @@ class Promotion:
 @transaction.atomic
 def promote(admin, school, chosen):
     """Move the school up a grade. Students in `chosen` go to the next
-    grade's class with the same name (Primary 3 Gold -> Primary 4 Gold);
-    SSS 3 students in it graduate (taken off the school, as if removed,
+    grade's class with the same name (Grade 3 Gold -> Grade 4 Gold);
+    Grade 12 students in it graduate (taken off the school, as if removed,
     and can be restored). Everyone else stays in their grade.
 
     When the calendar has the school's next year, the whole school moves
@@ -313,7 +313,7 @@ def promote(admin, school, chosen):
     for student in students:
         here = student.school_class
         up = grades.next_grade(here.grade) if student.pk in chosen_ids else here.grade
-        if student.pk in chosen_ids and up is None:            # SSS 3: graduated
+        if student.pk in chosen_ids and up is None:            # Grade 12: graduated
             _log(admin, school, outcome.batch, "graduate", student, None)
             student.is_active = False
             student.save(update_fields=["is_active"])

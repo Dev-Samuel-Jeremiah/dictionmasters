@@ -45,7 +45,7 @@
       </div>
       <form method="get" action="#la-results" class="la-find__form" role="search">
         <span class="la-find__icon" aria-hidden="true">{% include "includes/icon.html" with name="search" size=20 %}</span>
-        <input type="search" name="q" value="{{ query }}" placeholder="e.g. Photosynthesis, Primary 5, Basic Science" aria-label="Search lesson notes">
+        <input type="search" name="q" value="{{ query }}" placeholder="e.g. Photosynthesis, Grade 5, Basic Science" aria-label="Search lesson notes">
         <button type="submit" class="la-btn la-btn--gold">Search</button>
       </form>
     </section>
@@ -70,7 +70,7 @@
         <div class="la-fields">
           <label class="la-field la-field--wide"><span>Title</span><input type="text" name="title" maxlength="200" placeholder="e.g. Photosynthesis"></label>
           <label class="la-field"><span>Subject</span><input type="text" name="subject" maxlength="100" list="la-subjects" placeholder="e.g. Basic Science"></label>
-          <label class="la-field"><span>Class</span><input type="text" name="class_level" maxlength="100" list="la-classes" placeholder="e.g. Primary 5"></label>
+          <label class="la-field"><span>Class</span><input type="text" name="class_level" maxlength="100" list="la-classes" placeholder="e.g. Grade 5"></label>
         </div>
         <label class="la-field la-field--wide"><span>Your lesson note</span>
           <textarea name="body" rows="10" required maxlength="60000" data-la-count placeholder="Paste or type your lesson note here. Keep a blank line between sections."></textarea>
@@ -102,7 +102,7 @@
         <div class="la-fields">
           <label class="la-field la-field--wide"><span>Topic</span><input type="text" name="topic" maxlength="200" required placeholder="e.g. Photosynthesis"></label>
           <label class="la-field"><span>Subject</span><input type="text" name="subject" maxlength="100" list="la-subjects" placeholder="e.g. Basic Science"></label>
-          <label class="la-field"><span>Class</span><input type="text" name="class_level" maxlength="100" list="la-classes" placeholder="e.g. Primary 5"></label>
+          <label class="la-field"><span>Class</span><input type="text" name="class_level" maxlength="100" list="la-classes" placeholder="e.g. Grade 5"></label>
           <label class="la-field"><span>Duration</span>
             <select name="duration"><option>30 minutes</option><option selected>40 minutes</option><option>60 minutes</option><option>80 minutes (double period)</option></select>
           </label>

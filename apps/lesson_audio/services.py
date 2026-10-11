@@ -290,7 +290,7 @@ Reply with only a JSON object: {"title": "<the topic, short>", "body": "<the who
 def write_note(user, *, topic, subject="", class_level="", duration="", details=""):
     """A complete lesson note: {"title", "body"}."""
     allowance(user, "write")
-    request = (f"Topic: {topic}\nSubject: {subject or 'choose the right one'}\nClass: {class_level or 'Primary 5'}\n"
+    request = (f"Topic: {topic}\nSubject: {subject or 'choose the right one'}\nClass: {class_level or 'Grade 5'}\n"
                f"Duration: {duration or '40 minutes'}\nAnything else the teacher wants: {details or 'nothing'}")
     answer = _ask(WRITE_PROMPT, request[:2000], max_tokens=4000, temperature=0.5)
     body = tidy(str(answer.get("body") or ""))
