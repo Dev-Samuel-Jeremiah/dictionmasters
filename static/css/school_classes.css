@@ -1,0 +1,32 @@
+/* The school admin's Classes pages (templates/schools/classes.html,
+   class_detail.html): classes as cards grouped by stage, on the shared
+   ui-hero / ui-panel layout. */
+.sc-body > * + * { margin-top: 28px; }
+.sc-stage > h2 { margin: 0 0 14px; }
+.sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 16px; }
+.sc-card { display: grid; background: #fff; gap: 10px; align-content: start; padding: 18px; border-radius: 18px; background: var(--ui-card, #fff); border: 1px solid rgba(11, 26, 74, 0.08); box-shadow: 0 6px 18px rgba(11, 26, 74, 0.06); min-width: 0; }
+.sc-card__name { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; font-size: 1.15rem; font-weight: 800; color: var(--navy); text-decoration: none; }
+.sc-card__name:hover { color: var(--blue); }
+.sc-card__name:focus-visible, .sc-copy:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; border-radius: 10px; }
+.sc-count { display: inline-grid; place-items: center; min-width: 34px; height: 30px; padding: 0 10px; border-radius: 999px; background: rgba(24, 70, 224, 0.08); color: var(--blue); font-size: 0.86rem; font-weight: 800; }
+.sc-meta { margin: 0; font-size: 0.9rem; color: var(--ink-60, #4A5578); overflow-wrap: anywhere; }
+.sc-meta b { color: var(--ink, #0B1A4A); }
+.sc-link { display: flex; gap: 8px; flex-wrap: wrap; }
+.sc-link input { flex: 1 1 160px; min-width: 0; font-size: 0.8rem; }
+.sc-copy { min-height: 44px; }
+.sc-alert { padding: 12px 16px; border-radius: 14px; background: #FFF6D8; border: 1px solid #FFE08A; color: #5B4300; font-weight: 700; }
+.sc-form { display: grid; gap: 4px 18px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); align-items: start; }
+.sc-form .sc-wide { grid-column: 1 / -1; }
+.sc-teachers .field { display: block; }
+.sc-teachers [id$="teachers"] { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 6px 14px; margin: 6px 0; }
+.sc-teachers [id$="teachers"] label { display: flex; align-items: center; gap: 8px; min-height: 40px; font-weight: 600; }
+.sc-students { width: 100%; border-collapse: collapse; }
+.sc-students th, .sc-students td { text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(11, 26, 74, 0.08); }
+.sc-students th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-40); }
+.sc-students td:first-child { width: 44px; }
+.sc-students input[type="checkbox"] { width: 22px; height: 22px; }
+.sc-tablebox { overflow-x: auto; }
+.sc-move { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+.sc-move select { flex: 1 1 200px; min-height: 48px; }
+.sc-danger { color: #B42318; border-color: rgba(180, 35, 24, 0.35) !important; }
+.sc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

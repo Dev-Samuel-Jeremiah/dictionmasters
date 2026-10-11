@@ -20,6 +20,7 @@
 
     {% if user.is_school_admin %}
     <p class="px-side__label">Your school</p>
+    <a href="{% url 'schools:classes' %}" class="px-side__link{% if request.path|slice:':16' == '/school/classes/' %} is-on{% endif %}">{% include "includes/icon.html" with name="school" %}<span>Classes</span></a>
     <a href="{% url 'scheme:school_scheme' %}" class="px-side__link{% if request.path|slice:':15' == '/scheme/school/' %} is-on{% endif %}">{% include "includes/icon.html" with name="calendar" %}<span>Scheme of work</span></a>
     <a href="{% url 'scheme:term_dates' %}" class="px-side__link{% if request.path|slice:':19' == '/scheme/term-dates/' %} is-on{% endif %}">{% include "includes/icon.html" with name="clock" %}<span>Term dates</span></a>
     <a href="{% url 'scheme:reports' %}" class="px-side__link{% if request.path|slice:':16' == '/scheme/reports/' %} is-on{% endif %}">{% include "includes/icon.html" with name="cert" %}<span>Report cards</span></a>

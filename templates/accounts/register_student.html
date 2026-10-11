@@ -3,6 +3,8 @@
 
 {% block title %}Student sign up — Diction Masters{% endblock %}
 
+{% block extra_js %}<script src="{% static 'js/join_class.js' %}" defer></script>{% endblock %}
+
 {% block content %}
 <div class="ui">
   <div class="wrap">
@@ -17,7 +19,7 @@
         <ul class="ui-auth__points">
           <li>Your school's code links you to your school</li>
           <li>Your school's plan covers you: nothing to pay</li>
-          <li>Choose your class level and see that level's lessons</li>
+          <li>Choose your class and learn its lessons</li>
         </ul>
       </aside>
 
@@ -25,7 +27,7 @@
         <h2 class="ui-auth__heading">Create your student account</h2>
         <p class="ui-auth__note">A parent or guardian can fill this in.</p>
         <div class="form-card">
-          <form method="post" novalidate data-submit-once>
+          <form method="post" novalidate data-submit-once data-classes-url="{% url 'accounts:school_classes' %}">
             {% csrf_token %}
             {% if form.non_field_errors %}
             <ul class="non-field-errors">

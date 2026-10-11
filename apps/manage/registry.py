@@ -456,7 +456,14 @@ SECTIONS = [
              "search": ["name", "email", "code", "contact_person", "phone"],
              "plan_field": "school",
              "login_fields": True,
-             "children": ["joining-codes"]},
+             "children": ["classes", "joining-codes"]},
+            # Each school's classes (apps/schools/grades.py): a student's level
+            # follows their class's grade.
+            {"key": "classes", "model": "schools.SchoolClass", "name": "Classes", "singular": "class",
+             "columns": ["display_name", "school", "session", "class_teacher"],
+             "search": ["name", "school__name"], "parent": ("school", "schools"),
+             "form": ["school", "session", "grade", "name", "class_teacher", "teachers"],
+             "limit": {"class_teacher": {"role": "teacher"}, "teachers": {"role": "teacher"}}},
             {"key": "joining-codes", "model": "schools.AccessCode",
              "columns": ["code", "school", "role", "level", "label", "used_by"],
              "search": ["code", "label"], "parent": ("school", "schools"),

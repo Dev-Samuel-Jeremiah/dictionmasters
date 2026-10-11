@@ -29,6 +29,7 @@ from django.utils.text import slugify
 
 from apps.accounts.models import User
 from apps.echospell.models import LEVEL_NAME_CHOICES
+from apps.schools import grades
 
 LEVELS = [value for value, _label in LEVEL_NAME_CHOICES]
 MAX_ROWS = 1000
@@ -37,13 +38,15 @@ XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 KINDS = {
     "student": {
         "role": User.Role.STUDENT, "one": "student", "many": "students", "One": "Student", "Many": "Students",
-        "level_head": "Level *", "level_help": "Each student sees only their level.",
+        "level_head": "Class (grade) *", "level_help": "Each student learns their grade's lessons, e.g. Primary 3 learns Level 3.",
+        "choices": [grade.label for grade in grades.GRADES], "class_name": True,
         "email_help": "The student's or a parent's email. Leave it blank and they sign in with their username.",
-        "examples": [("1", "Ada", "Okafor · Level 1 · (no email)"), ("2", "Tunde", "Bello · Level 2 · tunde.parent@example.com")],
+        "examples": [("1", "Ada", "Okafor · Primary 1 · (no email)"), ("2", "Tunde", "Bello · JSS 2 · Gold · tunde.parent@example.com")],
     },
     "teacher": {
         "role": User.Role.TEACHER, "one": "teacher", "many": "teachers", "One": "Teacher", "Many": "Teachers",
         "level_head": "Level taught *", "level_help": "The level they teach: they see that level's lessons and its students' work.",
+        "choices": LEVELS, "class_name": False,
         "email_help": "The teacher's email. Leave it blank and they sign in with their username.",
         "examples": [("1", "Grace", "Adeyemi · Level 3 · grace.adeyemi@example.com"), ("2", "Musa", "Ibrahim · Level 5 · (no email)")],
     },
@@ -161,11 +164,15 @@ def template_file(school, kind="student"):
     ws.title = k["Many"]
     head = FIRST_DATA_ROW - 1
     last = head + MAX_ROWS
+    end = "F" if k["class_name"] else "E"            # a Class name column for students
     _banner(ws, school,
             f"School code {school.code}  ·  {k['One']} register  ·  One row per {k['one']}. "
-            "First name and Level are required; Email is optional.", "E")
-    _heading_row(ws, head, ["#", "First name *", "Last name", k["level_head"], "Email (optional)"], (6, 24, 24, 18, 38))
-    _body_rows(ws, FIRST_DATA_ROW, FIRST_DATA_ROW + 199, 5)
+            f"First name and {k['level_head'].rstrip(' *')} are required; the rest are optional.", end)
+    headings, widths = ["#", "First name *", "Last name", k["level_head"], "Email (optional)"], (6, 24, 24, 18, 38)
+    if k["class_name"]:
+        headings, widths = headings + ["Class name (optional)"], widths + (22,)
+    _heading_row(ws, head, headings, widths)
+    _body_rows(ws, FIRST_DATA_ROW, FIRST_DATA_ROW + 199, len(headings))
     for i, r in enumerate(range(FIRST_DATA_ROW, FIRST_DATA_ROW + 200), start=1):
         cell = ws.cell(row=r, column=1, value=i)
         cell.font = Font(name="Calibri", size=10, color=MUTED)
@@ -177,13 +184,15 @@ def template_file(school, kind="student"):
     ws["E4"].alignment = Alignment(horizontal="right", vertical="center")
     ws.row_dimensions[4].height = 18
 
+    choices = k["choices"]
     levels = wb.create_sheet("Levels")
-    for level in LEVELS:
-        levels.append([level])
+    for choice in choices:
+        levels.append([choice])
     levels.sheet_state = "hidden"
-    pick = DataValidation(type="list", formula1=f"=Levels!$A$1:$A${len(LEVELS)}", allow_blank=True,
-                          showErrorMessage=True, errorTitle="Level", error="Choose a level from the list.",
-                          showInputMessage=True, promptTitle="Level", prompt=f"Choose {LEVELS[0]} to {LEVELS[-1]}.")
+    what = k["level_head"].rstrip(" *")
+    pick = DataValidation(type="list", formula1=f"=Levels!$A$1:$A${len(choices)}", allow_blank=True,
+                          showErrorMessage=True, errorTitle=what, error="Choose one from the list.",
+                          showInputMessage=True, promptTitle=what, prompt=f"Choose {choices[0]} to {choices[-1]}.")
     ws.add_data_validation(pick)
     pick.add(f"D{FIRST_DATA_ROW}:D{last}")
     email_tip = DataValidation(type="custom", formula1="TRUE", allow_blank=True, showInputMessage=True,
@@ -192,7 +201,13 @@ def template_file(school, kind="student"):
     ws.add_data_validation(email_tip)
     email_tip.add(f"E{FIRST_DATA_ROW}:E{last}")
     ws.freeze_panes = f"B{FIRST_DATA_ROW}"
-    ws.auto_filter.ref = f"A{head}:E{last}"
+    if k["class_name"]:
+        name_tip = DataValidation(type="custom", formula1="TRUE", allow_blank=True, showInputMessage=True,
+                                  promptTitle="Class name (optional)",
+                                  prompt='Only if the grade has more than one class, e.g. "Gold" for Primary 3 Gold.')
+        ws.add_data_validation(name_tip)
+        name_tip.add(f"F{FIRST_DATA_ROW}:F{last}")
+    ws.auto_filter.ref = f"A{head}:{end}{last}"
     _print_setup(ws, school, f"{k['One']} register", head)
 
     guide = wb.create_sheet("How to fill this in")
@@ -204,8 +219,10 @@ def template_file(school, kind="student"):
         ("1", f"One row per {k['one']}", f"On the {k['Many']} sheet, fill in one row for each {k['one']}, starting on row 1."),
         ("2", "First name *", "Required."),
         ("3", "Last name", f"Optional, but it helps the school tell {k['many']} apart."),
-        ("4", k["level_head"], f"Required. Pick from the dropdown: {LEVELS[0]} to {LEVELS[-1]}. {k['level_help']}"),
+        ("4", k["level_head"], f"Required. Pick from the dropdown: {k['choices'][0]} to {k['choices'][-1]}. {k['level_help']}"),
         ("5", "Email (optional)", k["email_help"]),
+        *([("5b", "Class name (optional)", 'Only if the grade has more than one class, e.g. "Gold" puts them in Primary 3 Gold. '
+                                            "Leave it blank and they go in the grade's class.")] if k["class_name"] else []),
         ("6", "Upload", f"Save the file and upload it in the Diction Masters control room: Bulk add {k['many']}. Up to {MAX_ROWS} at a time."),
         ("7", "Logins", f"Straight after the upload you can download every {k['one']}'s username and password to share."),
     ]
@@ -245,6 +262,12 @@ def _level(raw):
     return next((lv for lv in LEVELS if lv.lower() == wanted), None)
 
 
+def _grade(raw):
+    """A grade written in the level column ("Primary 3", "JSS1", "nursery 2"), or None."""
+    wanted = re.sub(r"[^a-z0-9]", "", _norm(raw).lower())
+    return next((g.key for g in grades.GRADES if re.sub(r"[^a-z0-9]", "", g.label.lower()) == wanted), None)
+
+
 def read_rows(upload, kind="student"):
     """[(row number, {first, last, level, email})] from an .xlsx or .csv.
     The heading row is found wherever it is (the template has a banner
@@ -281,6 +304,8 @@ def read_rows(upload, kind="student"):
                     cols.setdefault("first", j)
                 elif k.startswith("lastname") or k.startswith("surname"):
                     cols.setdefault("last", j)
+                elif k.startswith("classname"):
+                    cols.setdefault("class_name", j)
                 elif k.startswith("level") or k.startswith("class"):
                     cols.setdefault("level", j)
                 elif k.startswith("email"):
@@ -296,7 +321,7 @@ def read_rows(upload, kind="student"):
     out = []
     for n, row in enumerate(rows[head_at + 1:], start=head_at + 2):
         r = {"first": cell(row, "first"), "last": cell(row, "last"), "level_raw": cell(row, "level"),
-             "email": cell(row, "email").lower()}
+             "email": cell(row, "email").lower(), "class_name": cell(row, "class_name")}
         if not any(r.values()):
             continue
         out.append((n, r))
@@ -317,9 +342,11 @@ def check(school, rows, kind="student"):
         errs = []
         if not r["first"]:
             errs.append("first name is missing")
-        level = _level(r["level_raw"])
+        # A grade (Primary 3) or a level (Level 3, or just 3) is fine.
+        grade = _grade(r["level_raw"])
+        level = grades.level_for(grade) if grade else _level(r["level_raw"])
         if not level:
-            errs.append(f"level “{r['level_raw'] or '(blank)'}” isn't one of {LEVELS[0]}–{LEVELS[-1]}")
+            errs.append(f"“{r['level_raw'] or '(blank)'}” isn't a grade (Creche … SSS 3) or a level ({LEVELS[0]}–{LEVELS[-1]})")
         if r["email"]:
             try:
                 validate_email(r["email"])
@@ -334,7 +361,7 @@ def check(school, rows, kind="student"):
         if errs:
             problems.append((n, "; ".join(errs)))
         else:
-            clean.append({**r, "level": level, "row": n})
+            clean.append({**r, "level": level, "grade": grade or grades.grade_for_level(level), "row": n})
     allowed, have = room_for(school, kind)
     if allowed is not None:
         room = allowed - have
@@ -354,13 +381,23 @@ def create(school, clean, kind="student"):
     Returns [{first, last, level, username, email, password}]."""
     from apps.accounts.forms import internal_email, unique_username
 
-    made = []
+    from apps.schools.classes import class_of_grade, current_session
+
+    made, classes, session = [], {}, current_session()
     for r in clean:
         username = unique_username(r["first"], r["last"])
         password = new_password()
+        extra = {}
+        if kind == "student":
+            # Their grade's class, or the named one ("Gold"): made once per file.
+            key = (r["grade"], r.get("class_name", ""))
+            if key not in classes:
+                classes[key] = class_of_grade(school, key[0], name=key[1], session=session)
+            extra["school_class"] = classes[key]
         User.objects.create_user(
             email=r["email"] or internal_email(username), username=username, password=password,
             first_name=r["first"], last_name=r["last"], role=KINDS[kind]["role"], school=school, level=r["level"],
+            **extra,
         )
         made.append({"first": r["first"], "last": r["last"], "level": r["level"], "username": username,
                      "email": r["email"], "password": password})

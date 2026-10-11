@@ -36,14 +36,15 @@
           <div class="sd2-hero__text">
             <p class="ui-hero__eyebrow">School dashboard</p>
             <h1 class="ui-hero__title">{{ school.name }}</h1>
-            <p class="ui-hero__lede">Teachers and students join with your school code and choose their level. Your plan covers everyone, so nobody pays separately.</p>
+            <p class="ui-hero__lede">Teachers and students join with your school code; students choose their class. Your plan covers everyone, so nobody pays separately.</p>
             <div class="ui-hero__chips">
               <span class="ui-chip ui-chip--gold">School code: {{ school.code }}</span>
               <span class="ui-chip">{% if school.teacher_limit is not None %}{{ teachers|length }} of {{ school.teacher_limit }} teacher{{ school.teacher_limit|pluralize }}{% else %}{{ teachers|length }} teacher{{ teachers|length|pluralize }}{% endif %}</span>
               <span class="ui-chip">{% if school.max_students is not None %}{{ students|length }} of {{ school.max_students }} student{{ school.max_students|pluralize }}{% else %}{{ students|length }} student{{ students|length|pluralize }}{% endif %}</span>
             </div>
             <div class="ui-hero__actions">
-              <a href="{% url 'billing:account' %}" class="ui-btn ui-btn--gold">&#128179; {% if billing.state == "active" %}School plan{% else %}Plans &amp; billing{% endif %}</a>
+              <a href="{% url 'schools:classes' %}" class="ui-btn ui-btn--gold">&#127979; Classes</a>
+              <a href="{% url 'billing:account' %}" class="ui-btn ui-btn--ghost">&#128179; {% if billing.state == "active" %}School plan{% else %}Plans &amp; billing{% endif %}</a>
             </div>
             {% include "accounts/_switcher.html" %}
           </div>
@@ -130,7 +131,7 @@
         <section class="ui-panel">
           <p class="ui-panel__label">Students</p>
           <h2 class="ui-panel__title">Students join with the same code</h2>
-          <p class="ui-panel__lede">Share this link, or give them the code to type when they sign up. You can also register a whole class from Excel with the control room team.</p>
+          <p class="ui-panel__lede">Share this link, or give them the code to type when they sign up; they choose their class. Each class also has its own link on the <a href="{% url 'schools:classes' %}">Classes</a> page, which puts students straight into it. You can also register a whole class from Excel with the control room team.</p>
           <div class="sd-code">
             <span class="sd-code__label">School code</span>
             <strong class="sd-code__value">{{ school.code }}</strong>

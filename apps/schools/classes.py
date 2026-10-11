@@ -84,3 +84,89 @@ def place_many(users):
     for user in need:
         user.school_class = _class_for(user.school_id, user.level, session, made)
     User.objects.bulk_update(need, ["school_class"], batch_size=200)
+
+
+# ---------------------------------------------------------------------------
+# A school's classes this year, for its pages and its sign-up form
+# ---------------------------------------------------------------------------
+
+GRADE_ORDER = {grade.key: i for i, grade in enumerate(grades.GRADES)}
+
+
+def this_year(school):
+    """The school's classes in the current school year (and any made before
+    there was a calendar), Creche first, then by name."""
+    from .models import SchoolClass
+
+    session = current_session()
+    found = SchoolClass.objects.filter(school=school, session=session) if session else \
+        SchoolClass.objects.filter(school=school, session__isnull=True)
+    return sorted(found.select_related("class_teacher"), key=lambda c: (GRADE_ORDER.get(c.grade, 99), c.name.lower()))
+
+
+def class_of_grade(school, grade, name="", session=None):
+    """The school's class of this grade and name this year, made if needed."""
+    from .models import SchoolClass
+
+    session = session or current_session()
+    return SchoolClass.objects.get_or_create(school=school, session=session, grade=grade, name=name)[0]
+
+
+def join_choices(school):
+    """The "Your class" choices on the sign-up form, grouped by stage: the
+    school's classes, and each grade with no class yet, so a student can
+    always find theirs. Values are "class:<pk>" or "grade:<key>". With no
+    school yet, every grade."""
+    classes = this_year(school) if school else []
+    has_class = {c.grade for c in classes}
+    groups = []
+    for stage, label in grades.STAGES:
+        options = []
+        for grade in (g for g in grades.GRADES if g.stage == stage):
+            if grade.key in has_class:
+                options += [(f"class:{c.pk}", c.display_name) for c in classes if c.grade == grade.key]
+            else:
+                options.append((f"grade:{grade.key}", grade.label))
+        groups.append((label, options))
+    return groups
+
+
+def chosen_class(school, value):
+    """The class a "class:<pk>" or "grade:<key>" choice means at this school
+    (a grade's class is made if needed), or None if it isn't one of the
+    school's."""
+    from .models import SchoolClass
+
+    kind, _sep, ref = str(value or "").partition(":")
+    if kind == "class" and ref.isdigit():
+        return SchoolClass.objects.filter(school=school, pk=int(ref)).first()
+    if kind == "grade" and ref in grades.BY_KEY:
+        return class_of_grade(school, ref)
+    return None
+
+
+def move(admin, students, school_class):
+    """Put these students in `school_class`, taking them to its grade's
+    level. Level changes go in the school's level history like any other
+    move (apps/schools/levels.py). The number moved."""
+    import uuid
+
+    from django.db import transaction
+
+    from .models import LevelChange
+
+    batch, moved = uuid.uuid4().hex, 0
+    with transaction.atomic():
+        for student in students:
+            if student.school_class_id == school_class.pk or student.school_id != school_class.school_id:
+                continue
+            if student.level != school_class.level:
+                LevelChange.objects.create(
+                    school=school_class.school, member=student, changed_by=admin, batch=batch, kind="move",
+                    old_level=student.level, old_additional=student.additional_levels,
+                    new_level=school_class.level, new_additional="",
+                )
+            student.school_class, student.level, student.additional_levels = school_class, school_class.level, ""
+            student.save(update_fields=["school_class", "level", "additional_levels"])
+            moved += 1
+    return moved

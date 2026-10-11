@@ -6,6 +6,7 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -283,8 +284,27 @@ def register_student(request):
             messages.success(request, f"Welcome, {user.first_name}! You're now part of {user.school.name}, and your school's plan covers you.")
             return redirect("accounts:dashboard")
     else:
-        form = StudentRegistrationForm(initial={"school_code": request.GET.get("school", "")})
+        # A class's own sign-up link carries its school and the class.
+        chosen = request.GET.get("class", "")
+        form = StudentRegistrationForm(initial={"school_code": request.GET.get("school", ""),
+                                                "school_class": f"class:{chosen}" if chosen.isdigit() else ""})
     return render(request, "accounts/register_student.html", {"form": form})
+
+
+def school_classes(request):
+    """The "Your class" choices for a school code, as JSON, for the student
+    sign-up form (static/js/join_class.js). 404 for a code that isn't one."""
+    from apps.schools.classes import join_choices
+
+    from .forms import school_for_code
+
+    school = school_for_code(request.GET.get("school", ""))
+    if school is None:
+        return JsonResponse({"error": "That school code isn't recognised."}, status=404)
+    return JsonResponse({"school": school.name, "groups": [
+        {"label": label, "options": [[value, text] for value, text in options]}
+        for label, options in join_choices(school)
+    ]})
 
 
 @through_tour

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ class.display_name }} — {{ school.name }} — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/school_classes.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/copy_link.js' %}" defer></script>{% endblock %}
+
+{% block content %}
+{% comment %}
+  One class for the school admin (apps/schools/class_views.class_detail):
+  its students (tick some to move them to another class), its details and
+  teachers, its sign-up link, and deleting it once it's empty.
+{% endcomment %}
+<div class="ui">
+  <section class="ui-hero ui-hero--blue">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'schools:dashboard' %}">School dashboard</a></li>
+        <li><a href="{% url 'schools:classes' %}">Classes</a></li>
+        <li>{{ class.display_name }}</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#127979;</span>
+          <div>
+            <p class="ui-hero__eyebrow">{{ school.name }}{% if class.session %} · {{ class.session }}{% endif %}</p>
+            <h1 class="ui-hero__title">{{ class.display_name }}</h1>
+            <p class="ui-hero__lede">{{ students|length }} student{{ students|length|pluralize }}.{% if class.class_teacher %} Class teacher: {{ class.class_teacher.get_full_name|default:class.class_teacher.login_name }}.{% endif %}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body sc-body">
+    <section class="ui-panel">
+      <p class="ui-panel__label">Joining</p>
+      <h2 class="ui-panel__title">Sign-up link for {{ class.display_name }}</h2>
+      <p class="ui-panel__lede">Students who sign up with this link join this class.</p>
+      <div class="sc-link" data-copy-box>
+        <input type="text" class="field-input" readonly value="{{ link }}" aria-label="Sign-up link" data-copy-source>
+        <button type="button" class="ui-btn ui-btn--ghost sc-copy" data-copy>Copy link</button>
+      </div>
+    </section>
+
+    <section class="ui-panel" id="students">
+      <p class="ui-panel__label">Students</p>
+      <h2 class="ui-panel__title">Students in {{ class.display_name }}</h2>
+      {% if students %}
+      <form method="post" data-submit-once>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="move">
+        <div class="sc-tablebox">
+          <table class="sc-students">
+            <thead><tr><th scope="col"><span class="sc-sr">Choose</span></th><th scope="col">Name</th><th scope="col">Signs in with</th></tr></thead>
+            <tbody>
+              {% for student in students %}
+              <tr>
+                <td><input type="checkbox" name="students" value="{{ student.pk }}" id="s{{ student.pk }}" aria-label="Choose {{ student.get_full_name }}"></td>
+                <td><label for="s{{ student.pk }}">{{ student.get_full_name|default:student.login_name }}</label></td>
+                <td>{{ student.login_name }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if others %}
+        <div class="sc-move">
+          <label for="move-to">Move the ticked students to</label>
+          <select name="to" id="move-to" class="field-input" required>
+            <option value="">Choose a class</option>
+            {% for other in others %}<option value="{{ other.pk }}">{{ other.display_name }}</option>{% endfor %}
+          </select>
+          <button type="submit" class="ui-btn ui-btn--gold">Move</button>
+        </div>
+        <p class="field-help">Moving to a class of another grade changes what they learn to that grade's lessons. It's kept in the school's level history.</p>
+        {% else %}
+        <p class="field-help">Add another class to move students into it.</p>
+        {% endif %}
+      </form>
+      {% else %}
+      <p class="ui-panel__lede">No students yet. Share the sign-up link above.</p>
+      {% endif %}
+    </section>
+
+    <section class="ui-panel" id="edit">
+      <p class="ui-panel__label">Details</p>
+      <h2 class="ui-panel__title">Name, grade and teachers</h2>
+      <form method="post" class="sc-form" novalidate data-submit-once>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save">
+        {% include "includes/form_fields.html" with fields=form.visible_fields|slice:":3" %}
+        <div class="sc-wide sc-teachers">{% include "includes/form_fields.html" with fields=form.visible_fields|slice:"3:" %}</div>
+        <div class="sc-wide"><button type="submit" class="ui-btn ui-btn--gold">Save</button></div>
+      </form>
+    </section>
+
+    <section class="ui-panel" id="delete">
+      <p class="ui-panel__label">Delete</p>
+      <h2 class="ui-panel__title">Delete {{ class.display_name }}</h2>
+      {% if students %}
+      <p class="ui-panel__lede">Move its students to another class first. A class with students can't be deleted.</p>
+      {% else %}
+      <form method="post" onsubmit="return confirm('Delete {{ class.display_name|escapejs }}?');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete">
+        <button type="submit" class="ui-btn ui-btn--ghost sc-danger">Delete this class</button>
+      </form>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

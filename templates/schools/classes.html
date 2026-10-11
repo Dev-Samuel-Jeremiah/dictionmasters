@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Classes — {{ school.name }} — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/school_classes.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/copy_link.js' %}" defer></script>{% endblock %}
+
+{% block content %}
+{% comment %}
+  The school admin's classes this school year (apps/schools/class_views.classes),
+  grouped by stage, each with its students, teachers and sign-up link, and a
+  form to add one.
+{% endcomment %}
+<div class="ui">
+  <section class="ui-hero ui-hero--blue">
+    <div class="wrap">
+      <ol class="ui-crumbs">
+        <li><a href="{% url 'schools:dashboard' %}">School dashboard</a></li>
+        <li>Classes</li>
+      </ol>
+      <div class="ui-hero__inner">
+        <div class="ui-hero__main">
+          <span class="ui-hero__icon" aria-hidden="true">&#127979;</span>
+          <div>
+            <p class="ui-hero__eyebrow">{{ school.name }}{% if session %} · {{ session }}{% endif %}</p>
+            <h1 class="ui-hero__title">Classes</h1>
+            <p class="ui-hero__lede">Every student is in one class. Students join their class with its sign-up link, and learn that grade's lessons.</p>
+            <div class="ui-hero__chips"><span class="ui-chip ui-chip--gold">{{ total }} class{{ total|pluralize:"es" }}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap ui-body sc-body">
+    {% if unplaced %}<p class="sc-alert" role="status">{{ unplaced }} student{{ unplaced|pluralize }} {{ unplaced|pluralize:"has,have" }} no class yet. Set their level on the school dashboard and they'll be put in that grade's class.</p>{% endif %}
+
+    {% for stage in stages %}
+    <section class="ui-panel sc-stage" aria-labelledby="stage-{{ forloop.counter }}">
+      <h2 id="stage-{{ forloop.counter }}" class="ui-panel__title">{{ stage.label }}</h2>
+      <div class="sc-grid">
+        {% for row in stage.rows %}
+        <article class="sc-card">
+          <a class="sc-card__name" href="{% url 'schools:class_detail' row.class.pk %}">{{ row.class.display_name }}<span class="sc-count" title="Students">{{ row.students }}</span></a>
+          <p class="sc-meta">Class teacher: <b>{% if row.class.class_teacher %}{{ row.class.class_teacher.get_full_name|default:row.class.class_teacher.login_name }}{% else %}not set{% endif %}</b></p>
+          {% if row.teachers %}<p class="sc-meta">Teachers: {% for t in row.teachers %}{{ t.get_full_name|default:t.login_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+          <div class="sc-link" data-copy-box>
+            <input type="text" class="field-input" readonly value="{{ row.link }}" aria-label="Sign-up link for {{ row.class.display_name }}" data-copy-source>
+            <button type="button" class="ui-btn ui-btn--ghost sc-copy" data-copy>Copy link</button>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+    {% empty %}
+    <section class="ui-panel"><p class="ui-panel__lede">No classes yet. Add your first one below.</p></section>
+    {% endfor %}
+
+    <section class="ui-panel" id="add">
+      <p class="ui-panel__label">New class</p>
+      <h2 class="ui-panel__title">Add a class</h2>
+      <p class="ui-panel__lede">Choose its grade, and give it a name if the grade has more than one class (Primary 3 Gold, Primary 3 Blue).</p>
+      <form method="post" class="sc-form" novalidate data-submit-once>
+        {% csrf_token %}
+        {% include "includes/form_fields.html" with fields=form.visible_fields|slice:":3" %}
+        <div class="sc-wide sc-teachers">{% include "includes/form_fields.html" with fields=form.visible_fields|slice:"3:" %}</div>
+        <div class="sc-wide"><button type="submit" class="ui-btn ui-btn--gold">Add class</button></div>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

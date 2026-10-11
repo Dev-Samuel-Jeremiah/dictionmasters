@@ -337,6 +337,20 @@ class IndividualRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
         )
 
 
+def normalise_school_code(raw):
+    """A typed school code as stored: upper case, with its "DM-" prefix."""
+    code = str(raw or "").strip().upper()
+    if code and not code.startswith("DM-"):
+        code = f"DM-{code}"
+    return code
+
+
+def school_for_code(raw):
+    """The school a typed code belongs to, or None."""
+    code = normalise_school_code(raw)
+    return School.objects.filter(code=code).first() if code else None
+
+
 class StudentRegistrationForm(StyledFormMixin, forms.Form):
     """A pupil joining their school with its code. The school's plan covers
     them, just like its teachers, so there's nothing to pay."""
@@ -345,7 +359,13 @@ class StudentRegistrationForm(StyledFormMixin, forms.Form):
         label="School code", max_length=16,
         help_text="Your school's code, e.g. DM-ABC234. Ask your teacher if you don't have it.",
     )
-    level = forms.ChoiceField(label="Your class level", choices=[])
+    # "class:<pk>" or "grade:<key>": the school's classes, and its grades
+    # with no class yet (apps/schools/classes.join_choices). Filled in from
+    # the school code typed (static/js/join_class.js) or the class's link.
+    school_class = forms.ChoiceField(
+        label="Your class", choices=[],
+        help_text="Choose your class. Not listed? Choose your grade.",
+    )
     first_name = forms.CharField(label="First name", max_length=150)
     last_name = forms.CharField(label="Last name", max_length=150, required=False)
     username = forms.CharField(
@@ -357,18 +377,19 @@ class StudentRegistrationForm(StyledFormMixin, forms.Form):
     password2 = forms.CharField(label="Confirm password", widget=forms.PasswordInput)
 
     def __init__(self, *args, **kwargs):
-        from apps.echospell.models import LEVEL_NAME_CHOICES
+        from apps.schools.classes import join_choices
 
         super().__init__(*args, **kwargs)
-        self.fields["level"].choices = [("", "Choose your level")] + LEVEL_NAME_CHOICES
+        code = self.data.get("school_code") if self.is_bound else self.initial.get("school_code")
+        self.fields["school_class"].choices = [("", "Choose your class")] + join_choices(school_for_code(code))
         self._style_fields()
-        self.fields["school_code"].widget.attrs.update({"autocapitalize": "characters", "autocomplete": "off"})
+        self.fields["school_code"].widget.attrs.update({"autocapitalize": "characters", "autocomplete": "off",
+                                                       "data-join-code": ""})
+        self.fields["school_class"].widget.attrs["data-join-class"] = ""
         self._school = None
 
     def clean_school_code(self):
-        code = self.cleaned_data["school_code"].strip().upper()
-        if code and not code.startswith("DM-"):
-            code = f"DM-{code}"
+        code = normalise_school_code(self.cleaned_data["school_code"])
         school = School.objects.filter(code=code).first()
         if school is None:
             raise forms.ValidationError("That school code isn't recognised. Check it with your teacher.")
@@ -406,9 +427,17 @@ class StudentRegistrationForm(StyledFormMixin, forms.Form):
         p1, p2 = cleaned.get("password1"), cleaned.get("password2")
         if p1 and p2 and p1 != p2:
             self.add_error("password2", "Those passwords don't match.")
+        choice = cleaned.get("school_class", "")
+        if self._school and choice.startswith("class:") and \
+                not self._school.classes.filter(pk=choice.partition(":")[2] or 0).exists():
+            self.add_error("school_class", "That class isn't at your school. Choose your class again.")
         return cleaned
 
     def save(self):
+        from apps.schools.classes import chosen_class
+
+        # The class decides the level: the grade's content (apps/schools/grades.py).
+        school_class = chosen_class(self._school, self.cleaned_data["school_class"])
         return User.objects.create_user(
             email=self.cleaned_data["email"] or internal_email(self.cleaned_data["username"]),
             username=self.cleaned_data["username"],
@@ -417,7 +446,8 @@ class StudentRegistrationForm(StyledFormMixin, forms.Form):
             last_name=self.cleaned_data["last_name"],
             role=User.Role.STUDENT,
             school=self._school,
-            level=self.cleaned_data["level"],
+            school_class=school_class,
+            level=school_class.level,
         )
 
 
