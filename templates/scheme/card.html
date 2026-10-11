@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static grades %}
 
 {% block title %}Report card — {{ student.get_full_name|default:student.login_name }} — {{ dated }}{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
@@ -20,7 +20,7 @@
       </header>
       <dl class="sw-report__who">
         <div><dt>Name</dt><dd>{{ student.get_full_name|default:student.login_name }}</dd></div>
-        <div><dt>Level</dt><dd>{{ row.card.level|default:student.level|default:"—" }}</dd></div>
+        <div><dt>Level</dt><dd>{{ row.card.level|default:student.level|level_name:student|default:"—" }}</dd></div>
         <div><dt>Days practised</dt><dd>{{ row.days }}</dd></div>
       </dl>
       <table class="sw-report__table">

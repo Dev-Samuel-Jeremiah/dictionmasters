@@ -1,0 +1,32 @@
+{% comment %}
+  The one-time question on an individual learner's home: their highest
+  qualification (apps/accounts/views.qualification). Shown until answered;
+  "Prefer not to say" counts as an answer.
+{% endcomment %}
+{% if user.is_individual and not user.qualification and not user.simple_home %}
+<form method="post" action="{% url 'accounts:qualification' %}" class="px-card qual-card" data-qualification>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <label for="qualification-pick" class="qual-card__label"><b>One quick question</b><span>What's your highest qualification?</span></label>
+  <div class="qual-card__row">
+    <select name="qualification" id="qualification-pick" class="field-input" required>
+      <option value="">Choose one</option>
+      <option value="undergraduate">Undergraduate</option>
+      <option value="graduate">Graduate</option>
+      <option value="masters">Master's degree</option>
+      <option value="phd">PhD</option>
+      <option value="none">Prefer not to say</option>
+    </select>
+    <button type="submit" class="qual-card__go">Save</button>
+  </div>
+</form>
+<style>
+  .qual-card { display: grid; gap: 12px; margin: 16px 0; }
+  .qual-card__label { display: grid; gap: 2px; }
+  .qual-card__label span { color: var(--ink-60, #4A5578); }
+  .qual-card__row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .qual-card__row select { flex: 1 1 200px; min-height: 56px; }
+  .qual-card__go { min-height: 56px; padding: 0 24px; border: 0; border-radius: 14px; background: var(--yellow, #FFC72C); color: var(--navy, #0B1A4A); font-weight: 800; cursor: pointer; }
+  .qual-card__go:focus-visible { outline: 3px solid var(--blue, #1846E0); outline-offset: 2px; }
+</style>
+{% endif %}

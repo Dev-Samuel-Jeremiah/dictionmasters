@@ -97,7 +97,8 @@ class BillingTests(TestCase):
     # ---- registering: trial or pay now -------------------------------------
 
     def adult_form(self, **extra):
-        return {"first_name": "Ada", "email": "new@example.com", "password1": PASSWORD, "password2": PASSWORD, **extra}
+        return {"first_name": "Ada", "email": "new@example.com", "password1": PASSWORD, "password2": PASSWORD,
+                "qualification": "graduate", **extra}
 
     def test_register_with_free_trial(self):
         response = self.client.post(reverse("accounts:register_individual"), self.adult_form(start="trial"))
@@ -402,7 +403,7 @@ class PromoCodeTests(TestCase):
 
     def test_registering_with_a_code(self):
         form = {"first_name": "Ada", "email": "new@example.com", "password1": PASSWORD, "password2": PASSWORD,
-                "start": "pay", "plan": self.monthly.slug, "promo_code": "jdm201"}
+                "qualification": "graduate", "start": "pay", "plan": self.monthly.slug, "promo_code": "jdm201"}
         with mock.patch("apps.billing.paystack.initialize", return_value=PAYSTACK_PAGE) as init:
             response = self.client.post(reverse("accounts:register_individual"), form)
         self.assertRedirects(response, PAYSTACK_PAGE["authorization_url"], fetch_redirect_response=False)
@@ -411,7 +412,7 @@ class PromoCodeTests(TestCase):
 
     def test_registering_with_a_code_that_is_wrong(self):
         form = {"first_name": "Ada", "email": "new@example.com", "password1": PASSWORD, "password2": PASSWORD,
-                "start": "pay", "plan": self.monthly.slug, "promo_code": "NOPE"}
+                "qualification": "graduate", "start": "pay", "plan": self.monthly.slug, "promo_code": "NOPE"}
         response = self.client.post(reverse("accounts:register_individual"), form)
         self.assertContains(response, "We don&#x27;t know that code")
         self.assertFalse(User.objects.filter(email="new@example.com").exists())

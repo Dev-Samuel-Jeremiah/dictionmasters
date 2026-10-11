@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static grades %}
 
 {% block title %}For grown-ups — Diction Masters{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/learner_home.css' %}">{% endblock %}
@@ -14,7 +14,7 @@
   <section class="px-phead">
     <img class="px-phead__img" src="{% static 'img/app/rParent.jpg' %}" alt="">
     <h1>For grown-ups</h1>
-    <p>How {{ user.first_name|default:"this learner" }} is getting on{% if level %}, {{ level }}{% endif %}.</p>
+    <p>How {{ user.first_name|default:"this learner" }} is getting on{% if level %}, {{ level|level_name:user }}{% endif %}.</p>
   </section>
 
   <div class="px-wrap">
@@ -37,7 +37,7 @@
       {% for card in report_cards %}
       <a href="{% url 'scheme:card' card.term_id user.pk %}" class="px-item">
         <span class="px-item__ii t-butter">{% include "includes/icon.html" with name="cert" size=22 %}</span>
-        <span class="px-item__it"><b>{{ card.term }}</b><span>{% if card.total is not None %}{{ card.total }}%{% if card.grade %}, grade {{ card.grade }}{% endif %}{% endif %}{% if card.level %} · {{ card.level }}{% endif %}</span></span>
+        <span class="px-item__it"><b>{{ card.term }}</b><span>{% if card.total is not None %}{{ card.total }}%{% if card.grade %}, grade {{ card.grade }}{% endif %}{% endif %}{% if card.level %} · {{ card.level|level_name:user }}{% endif %}</span></span>
         <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
       </a>
       {% endfor %}

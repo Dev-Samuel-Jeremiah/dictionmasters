@@ -31,7 +31,7 @@ def dashboard(request):
         "plan": school.chosen_plan(),
         "teacher_link": request.build_absolute_uri(reverse("accounts:join_with_code")) + f"?school={school.code}",
         "teachers": school.teachers,
-        "students": school.students,
+        "students": school.students.select_related("school_class"),     # each shows its class
         "removed": school.removed_members,
         "switcher": switcher.context(request),
         "pending_codes": codes.filter(used_by__isnull=True, role="teacher"),

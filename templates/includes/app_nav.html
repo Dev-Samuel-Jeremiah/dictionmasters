@@ -24,7 +24,7 @@
     <a href="{% url 'scheme:school_scheme' %}" class="px-side__link{% if request.path|slice:':15' == '/scheme/school/' %} is-on{% endif %}">{% include "includes/icon.html" with name="calendar" %}<span>Scheme of work</span></a>
     <a href="{% url 'scheme:term_dates' %}" class="px-side__link{% if request.path|slice:':19' == '/scheme/term-dates/' %} is-on{% endif %}">{% include "includes/icon.html" with name="clock" %}<span>Term dates</span></a>
     <a href="{% url 'scheme:reports' %}" class="px-side__link{% if request.path|slice:':16' == '/scheme/reports/' %} is-on{% endif %}">{% include "includes/icon.html" with name="cert" %}<span>Report cards</span></a>
-    <a href="{% url 'scheme:promote' %}" class="px-side__link{% if request.path|slice:':16' == '/scheme/promote/' %} is-on{% endif %}">{% include "includes/icon.html" with name="chart" %}<span>Promote</span></a>
+    <a href="{% url 'scheme:promote' %}" class="px-side__link{% if request.path|slice:':16' == '/scheme/promote/' %} is-on{% endif %}">{% include "includes/icon.html" with name="chart" %}<span>Move up a grade</span></a>
     <a href="{% url 'diction_library:manage' %}" class="px-side__link{% if request.path|slice:':16' == '/library/manage/' %} is-on{% endif %}">{% include "includes/icon.html" with name="shelf" %}<span>School library</span></a>
     <a href="{% url 'learning_tools:hub' %}" class="px-side__link{% if nav_section == 'learn' %} is-on{% endif %}">{% include "includes/icon.html" with name="book" %}<span>Learn</span></a>
     {% else %}

@@ -433,7 +433,8 @@ SECTIONS = [
             {"key": "users", "model": "accounts.User",
              "columns": ["login_name", "get_full_name", "role", "level_display", "school", "is_active"],
              "search": ["email", "username", "first_name", "last_name"],
-             "form": ["first_name", "last_name", "username", "email", "role", "level", "school", "is_active", "is_staff"],
+             "form": ["first_name", "last_name", "username", "email", "role", "level", "school", "qualification",
+                      "is_active", "is_staff"],
              "plan_field": "user", "levels_field": True, "password_field": True},
             # Learners without an email who asked for a new password. Their
             # school admin answers most; ones with no school wait here: open

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static grades %}
 
 {% block title %}Report cards — Diction Masters{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/class_dashboard.css' %}"><link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
@@ -29,7 +29,7 @@
     {% if levels|length > 1 %}
     <nav class="px-chips cd-levels" aria-label="Level">
       <a href="?term={{ dated.term.pk }}" class="px-chip{% if not level %} is-on{% endif %}">All levels</a>
-      {% for one in levels %}<a href="?term={{ dated.term.pk }}&level={{ one|urlencode }}" class="px-chip{% if one == level %} is-on{% endif %}">{{ one }}</a>{% endfor %}
+      {% for one in levels %}<a href="?term={{ dated.term.pk }}&level={{ one|urlencode }}" class="px-chip{% if one == level %} is-on{% endif %}">{{ one|level_name:user }}</a>{% endfor %}
     </nav>
     {% endif %}
 
@@ -52,7 +52,7 @@
       <article class="px-card sw-card{% if row.published %} is-published{% endif %}">
         <header class="sw-card__head">
           <b>{{ row.pupil.get_full_name|default:row.pupil.login_name }}</b>
-          <span>{{ row.pupil.level }}{% if row.published %} · Published{% endif %}</span>
+          <span>{{ row.pupil.level_display }}{% if row.published %} · Published{% endif %}</span>
         </header>
         <dl class="sw-scores">
           <div><dt>CA 1</dt><dd>{% if row.ca1 is not None %}{{ row.ca1 }}%{% elif "ca1" in row.pending %}Marking{% else %}—{% endif %}</dd></div>

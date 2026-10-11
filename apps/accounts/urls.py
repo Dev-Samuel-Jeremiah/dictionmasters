@@ -11,6 +11,7 @@ urlpatterns = [
     path("register/individual/", views.register_individual, name="register_individual"),
     path("register/student/", views.register_student, name="register_student"),
     path("register/student/classes/", views.school_classes, name="school_classes"),
+    path("qualification/", views.qualification, name="qualification"),
     path("join/", views.join_with_code, name="join_with_code"),
     path("login/", views.EmailLoginView.as_view(), name="login"),
     path("logout/", views.EmailLogoutView.as_view(), name="logout"),

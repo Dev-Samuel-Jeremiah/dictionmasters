@@ -112,13 +112,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name="class",
     )
 
-    # What an individual learner has studied to. Profile information only:
-    # it doesn't change what they see or pay.
+    # What an individual learner has studied to, asked at sign-up and once on
+    # their home (blank: not asked yet). Profile information only: it
+    # doesn't change what they see or pay.
     class Qualification(models.TextChoices):
         UNDERGRADUATE = "undergraduate", "Undergraduate"
         GRADUATE = "graduate", "Graduate"
         MASTERS = "masters", "Master's degree"
         PHD = "phd", "PhD"
+        NONE = "none", "Prefer not to say"
 
     qualification = models.CharField(max_length=20, choices=Qualification.choices, blank=True)
 
@@ -260,11 +262,21 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def level_display(self):
-        """How their level(s) read on a page: "Level 3", or, for a teacher
-        given more than one, "Level 1, Level 3 and Level 6"."""
+        """How their level(s) read on a page. School people see grades
+        (apps/schools/grades.py): a student their class when it's loaded
+        ("Primary 3 Gold"), else their grade ("Primary 3"); a teacher of
+        several, "Primary 1, Primary 3 and JSS 2". Individual learners see
+        levels ("Level 3"). Never a query of its own."""
         levels = self.all_levels
         if not levels:
             return ""
+        if self.school_id and self.role in (self.Role.STUDENT, self.Role.TEACHER):
+            from apps.schools.grades import label_for_level
+
+            school_class = self._state.fields_cache.get("school_class")
+            if self.role == self.Role.STUDENT and school_class is not None:
+                return school_class.display_name
+            levels = list(dict.fromkeys(label_for_level(level) for level in levels))
         if len(levels) == 1:
             return levels[0]
         return ", ".join(levels[:-1]) + f" and {levels[-1]}"

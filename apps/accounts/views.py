@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -289,6 +289,28 @@ def register_student(request):
         form = StudentRegistrationForm(initial={"school_code": request.GET.get("school", ""),
                                                 "school_class": f"class:{chosen}" if chosen.isdigit() else ""})
     return render(request, "accounts/register_student.html", {"form": form})
+
+
+@login_required
+@require_POST
+def qualification(request):
+    """An individual learner answering "Your highest qualification" from the
+    card on their home (templates/accounts/_qualification.html). Asked once."""
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    from .forms import QualificationForm
+
+    if request.user.is_individual:
+        form = QualificationForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Thank you.")
+        else:
+            messages.error(request, "Choose one of the options, or “Prefer not to say”.")
+    back = request.POST.get("next", "")
+    if not url_has_allowed_host_and_scheme(back, allowed_hosts={request.get_host()}):
+        back = reverse("accounts:dashboard")
+    return redirect(back)
 
 
 def school_classes(request):

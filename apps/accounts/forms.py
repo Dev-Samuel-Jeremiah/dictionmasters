@@ -272,12 +272,13 @@ class SchoolTeamMemberForm(StyledFormMixin, forms.Form):
     email = forms.EmailField(label="Email (optional)", max_length=254, required=False)
 
     def __init__(self, *args, kind="student", **kwargs):
-        from apps.echospell.models import LEVEL_NAME_CHOICES
+        from apps.schools.grades import LEVEL_AS_GRADE_CHOICES
 
         super().__init__(*args, **kwargs)
         self.kind = kind
-        self.fields["level"].choices = [("", "Choose a level")] + list(LEVEL_NAME_CHOICES)
-        self.fields["level"].label = "Level taught" if kind == "teacher" else "Student level"
+        # Worded as grades (Primary 3, JSS 1); the value is still the level.
+        self.fields["level"].choices = [("", "Choose a grade")] + LEVEL_AS_GRADE_CHOICES
+        self.fields["level"].label = "Grade taught" if kind == "teacher" else "Student's grade"
         self.fields["first_name"].widget.attrs["placeholder"] = "First name"
         self.fields["first_name"].widget.attrs["aria-label"] = "First name"
         self.fields["last_name"].widget.attrs["placeholder"] = "Last name"
@@ -301,6 +302,10 @@ class IndividualRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
     first_name = forms.CharField(label="First name", max_length=150)
     last_name = forms.CharField(label="Last name", max_length=150, required=False)
     email = forms.EmailField(label="Email")
+    qualification = forms.ChoiceField(
+        label="Your highest qualification", choices=[("", "Choose one")] + User.Qualification.choices,
+        help_text="Signing up for a child? Choose “Prefer not to say”.",
+    )
     password1 = forms.CharField(label="Password", widget=forms.PasswordInput, help_text=PASSWORD_HELP)
     password2 = forms.CharField(label="Confirm password", widget=forms.PasswordInput)
 
@@ -334,6 +339,7 @@ class IndividualRegistrationForm(StartChoiceMixin, StyledFormMixin, forms.Form):
             first_name=self.cleaned_data["first_name"],
             last_name=self.cleaned_data["last_name"],
             role=User.Role.INDIVIDUAL,
+            qualification=self.cleaned_data["qualification"],
         )
 
 
@@ -568,6 +574,21 @@ class EmailAuthenticationForm(StyledFormMixin, AuthenticationForm):
                 return by_name
         stored_email = User.objects.filter(email__iexact=typed).values_list("email", flat=True).first()
         return stored_email or typed.lower()
+
+
+class QualificationForm(StyledFormMixin, forms.ModelForm):
+    """The one-time question on an individual learner's home."""
+
+    class Meta:
+        model = User
+        fields = ["qualification"]
+        labels = {"qualification": "Your highest qualification"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["qualification"].required = True
+        self.fields["qualification"].choices = [("", "Choose one")] + User.Qualification.choices
+        self._style_fields()
 
 
 class SimpleHomeForm(forms.ModelForm):

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static grades %}
 
 {% block title %}Scheme of work — Diction Masters{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/class_dashboard.css' %}"><link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
@@ -13,11 +13,11 @@
 <div class="px-page cd">
   <section class="px-phead">
     <h1>Scheme of work</h1>
-    <p>{{ level }}{% for value, label in terms %}{% if value == number %}, {{ label }}{% endif %}{% endfor %}{% if dated %}: {{ dated.starts|date:"j M" }} – {{ dated.ends|date:"j M Y" }}{% endif %}</p>
+    <p>{{ level|level_name:user }}{% for value, label in terms %}{% if value == number %}, {{ label }}{% endif %}{% endfor %}{% if dated %}: {{ dated.starts|date:"j M" }} – {{ dated.ends|date:"j M Y" }}{% endif %}</p>
   </section>
   <div class="px-wrap">
     <nav class="px-chips cd-levels" aria-label="Level">
-      {% for one in levels %}<a href="?level={{ one|urlencode }}&term={{ number }}" class="px-chip{% if one == level %} is-on{% endif %}">{{ one }}</a>{% endfor %}
+      {% for one in levels %}<a href="?level={{ one|urlencode }}&term={{ number }}" class="px-chip{% if one == level %} is-on{% endif %}">{{ one|level_name:user }}</a>{% endfor %}
     </nav>
     <nav class="px-chips cd-levels" aria-label="Term">
       {% for value, label in terms %}<a href="?level={{ level|urlencode }}&term={{ value }}" class="px-chip{% if value == number %} is-on{% endif %}">{{ label }}</a>{% endfor %}
@@ -35,7 +35,7 @@
       {% endfor %}
     </div>
     {% else %}
-    <div class="px-card px-empty" style="margin-top: 16px">The scheme of work for {{ level }} this term isn't ready yet.</div>
+    <div class="px-card px-empty" style="margin-top: 16px">The scheme of work for {{ level|level_name:user }} this term isn't ready yet.</div>
     {% endif %}
   </div>
 </div>

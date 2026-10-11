@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static grades %}
 
 {% block title %}{{ school.name }} — Diction Masters{% endblock %}
 
@@ -97,7 +97,7 @@
         <section class="ui-panel sd-teachers">
           <p class="ui-panel__label">Teachers</p>
           <h2 class="ui-panel__title">Teachers join with your school code</h2>
-          <p class="ui-panel__lede">Share the code or the link below. Each teacher signs up, chooses the level they teach, and sees only that level's work. There's no code to make for each one.</p>
+          <p class="ui-panel__lede">Share the code or the link below. Each teacher signs up and chooses the grade they teach; you can then give them their classes on the Classes page. There's no code to make for each one.</p>
           <div class="sd-code">
             <span class="sd-code__label">School code</span>
             <strong class="sd-code__value">{{ school.code }}</strong>
@@ -156,7 +156,7 @@
               <thead><tr><th>Code</th><th>Level</th><th>Note</th></tr></thead>
               <tbody>
                 {% for code in pending_codes %}
-                <tr><td><span class="ui-code">{{ code.code }}</span></td><td>{{ code.level|default:"Every level" }}</td><td>{{ code.label|default:"—" }}</td></tr>
+                <tr><td><span class="ui-code">{{ code.code }}</span></td><td>{{ code.level|level_name:user|default:"Every grade" }}</td><td>{{ code.label|default:"—" }}</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -168,7 +168,7 @@
     <details class="sd2-section sd2-fold" open>
       <summary class="ui-section__head">
         <h2 class="ui-section__title"><span class="ui-section__num">2</span> Your people</h2>
-        <p class="ui-section__aside">Change levels, promote, see logins or remove</p>
+        <p class="ui-section__aside">Change grades, see logins or remove</p>
       </summary>
       <div class="sd2-stack">
         <section class="ui-panel" id="teachers">
@@ -183,7 +183,7 @@
         <section class="ui-panel" id="students">
           <p class="ui-panel__label">Students</p>
           {% if students %}
-          <p class="ui-panel__lede sl-lede">Tick students to <strong>promote them to their next level</strong> (at the end of a session, say) or move them to any level. Filter by level, then use “Select all shown” to tick everyone in it.</p>
+          <p class="ui-panel__lede sl-lede">Tick students to move them to another grade. At the end of the year, use <a href="{% url 'scheme:promote' %}">Move up a grade</a> instead: it moves whole classes. Filter by grade, then use “Select all shown” to tick everyone in it.</p>
           {% include "schools/_people_table.html" with people=students role="student" %}
           {% else %}
           <div class="ui-empty"><p>No students yet. Share your school code, <strong>{{ school.code }}</strong>, and the student sign-up link: {{ request.scheme }}://{{ request.get_host }}{% url 'accounts:register_student' %}?school={{ school.code }}</p></div>
@@ -196,7 +196,7 @@
     <details class="sd2-section sd2-fold"{% if help_requests or logins_unlocked %} open{% endif %}>
       <summary class="ui-section__head">
         <h2 class="ui-section__title"><span class="ui-section__num">3</span> Logins and records</h2>
-        <p class="ui-section__aside">Login sheets, level history and removed accounts</p>
+        <p class="ui-section__aside">Login sheets, class and grade history, and removed accounts</p>
       </summary>
       <div class="sd2-two">
         <section class="ui-panel sl-logins" id="logins">
@@ -207,7 +207,7 @@
             <ul class="sl-help__list">
               {% for req in help_requests %}
               <li>
-                <span><strong>{{ req.user.get_full_name|default:req.user.login_name }}</strong><small>{{ req.user.get_role_display }}{% if req.user.level %} · {{ req.user.level }}{% endif %} · {{ req.user.login_name }} · asked {{ req.created_at|timesince }} ago</small></span>
+                <span><strong>{{ req.user.get_full_name|default:req.user.login_name }}</strong><small>{{ req.user.get_role_display }}{% if req.user.level %} · {{ req.user.level_display }}{% endif %} · {{ req.user.login_name }} · asked {{ req.created_at|timesince }} ago</small></span>
                 <span class="sl-help__do">
                   <button type="button" class="sd-btn sd-btn--login" data-sl-login-open data-url="{% url 'schools:member_login' req.user.pk %}" data-reset-url="{% url 'schools:member_reset' req.user.pk %}">&#128273; Reset</button>
                   <form method="post" action="{% url 'schools:dismiss_help' req.pk %}">{% csrf_token %}<button type="submit" class="sd-btn sd-btn--remove">Dismiss</button></form>
@@ -230,7 +230,7 @@
               <select name="role"><option value="">Teachers and students</option><option value="teacher">Teachers only</option><option value="student">Students only</option></select>
             </label>
             <label><span>Level</span>
-              <select name="level"><option value="">Every level</option>{% for lvl in level_choices %}<option value="{{ lvl }}">{{ lvl }}</option>{% endfor %}</select>
+              <select name="level"><option value="">Every grade</option>{% for lvl in level_choices %}<option value="{{ lvl }}">{{ lvl|level_name:user }}</option>{% endfor %}</select>
             </label>
             <label class="sl-logins__fill"><input type="checkbox" name="fill_missing" value="1"> Give a new password to anyone whose current one can’t be shown</label>
             <button type="submit" class="ui-btn ui-btn--gold">&#11015; Download logins (Excel)</button>
@@ -305,14 +305,14 @@
 <dialog class="sl-dialog" data-sl-dialog aria-labelledby="sl-dialog-title">
   <form method="post" data-sl-dialog-form>
     {% csrf_token %}
-    <h2 id="sl-dialog-title" class="sl-dialog__title">Change level</h2>
+    <h2 id="sl-dialog-title" class="sl-dialog__title">Change grade</h2>
     <p class="sl-dialog__lede" data-sl-dialog-lede></p>
     <div class="sl-dialog__levels" data-sl-dialog-levels>
-      {% for lvl in level_choices %}<label class="sl-opt"><input type="checkbox" name="levels" value="{{ lvl }}"><span>{{ lvl }}</span></label>{% endfor %}
+      {% for lvl in level_choices %}<label class="sl-opt"><input type="checkbox" name="levels" value="{{ lvl }}"><span>{{ lvl|level_name:user }}</span></label>{% endfor %}
     </div>
     <div class="sl-dialog__actions">
       <button type="button" class="sd-btn sd-btn--remove" data-sl-dialog-close>Cancel</button>
-      <button type="submit" class="sd-btn sd-btn--restore">Save level</button>
+      <button type="submit" class="sd-btn sd-btn--restore">Save grade</button>
     </div>
   </form>
 </dialog>

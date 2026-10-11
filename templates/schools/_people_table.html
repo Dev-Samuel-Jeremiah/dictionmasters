@@ -1,4 +1,4 @@
-{% comment %}
+{% load grades %}{% comment %}
   The Teachers or Students list on the school dashboard, with level tools
   (static/js/school_levels.js): tick people to promote or move them
   together, or change one person's level. Needs `people`, `role`
@@ -11,8 +11,8 @@
     </label>
     <label class="sl-filter"><span class="sr-only">Show a level</span>
       <select data-sl-filter>
-        <option value="">All levels ({{ people|length }})</option>
-        {% for lvl in level_choices %}<option value="{{ lvl }}">{{ lvl }}</option>{% endfor %}
+        <option value="">All grades ({{ people|length }})</option>
+        {% for lvl in level_choices %}<option value="{{ lvl }}">{{ lvl|level_name:user }}</option>{% endfor %}
         <option value="none">No level yet</option>
       </select>
     </label>
@@ -28,7 +28,7 @@
       <table class="ui-table sd-people">
         <thead><tr>
           <th class="sl-check"><span class="sr-only">Select</span></th>
-          <th>Name</th><th>Level</th><th>Signs in with</th><th>Joined</th><th class="sd-actions"><span class="sr-only">Remove</span></th>
+          <th>Name</th><th>{% if role == 'student' %}Class{% else %}Grades{% endif %}</th><th>Signs in with</th><th>Joined</th><th class="sd-actions"><span class="sr-only">Remove</span></th>
         </tr></thead>
         <tbody>
           {% for member in people %}
@@ -58,7 +58,7 @@
         <label class="sr-only" for="sl-move-{{ role }}">Move to level</label>
         <select id="sl-move-{{ role }}" data-sl-move-to>
           <option value="">Move to…</option>
-          {% for lvl in level_choices %}<option value="{{ lvl }}">{{ lvl }}</option>{% endfor %}
+          {% for lvl in level_choices %}<option value="{{ lvl }}">{{ lvl|level_name:user }}</option>{% endfor %}
         </select>
         <button type="button" class="sl-bar__btn" data-sl-move>Move</button>
       </span>

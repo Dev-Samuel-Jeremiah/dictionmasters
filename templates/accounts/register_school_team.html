@@ -83,7 +83,7 @@
               {{ member.DELETE }}
               <div class="field"><label for="{{ member.first_name.id_for_label }}">First name</label>{{ member.first_name }}{% for error in member.first_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
               <div class="field"><label for="{{ member.last_name.id_for_label }}">Last name</label>{{ member.last_name }}{% for error in member.last_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
-              <div class="field"><label for="{{ member.level.id_for_label }}">Level taught</label>{{ member.level }}{% for error in member.level.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
+              <div class="field"><label for="{{ member.level.id_for_label }}">Grade taught</label>{{ member.level }}{% for error in member.level.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
               <div class="field"><label for="{{ member.email.id_for_label }}">Email (optional)</label>{{ member.email }}{% for error in member.email.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
               <button type="button" class="team-person-row__remove" aria-label="Remove this teacher">Remove</button>
             </div>
@@ -97,7 +97,7 @@
               {{ teachers.empty_form.DELETE }}
               <div class="field"><label>First name</label>{{ teachers.empty_form.first_name }}</div>
               <div class="field"><label>Last name</label>{{ teachers.empty_form.last_name }}</div>
-              <div class="field"><label>Level taught</label>{{ teachers.empty_form.level }}</div>
+              <div class="field"><label>Grade taught</label>{{ teachers.empty_form.level }}</div>
               <div class="field"><label>Email (optional)</label>{{ teachers.empty_form.email }}</div>
               <button type="button" class="team-person-row__remove" aria-label="Remove this teacher">Remove</button>
             </div>
@@ -120,7 +120,7 @@
               {{ member.DELETE }}
               <div class="field"><label for="{{ member.first_name.id_for_label }}">First name</label>{{ member.first_name }}{% for error in member.first_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
               <div class="field"><label for="{{ member.last_name.id_for_label }}">Last name</label>{{ member.last_name }}{% for error in member.last_name.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
-              <div class="field"><label for="{{ member.level.id_for_label }}">Student level</label>{{ member.level }}{% for error in member.level.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
+              <div class="field"><label for="{{ member.level.id_for_label }}">Student's grade</label>{{ member.level }}{% for error in member.level.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
               <div class="field"><label for="{{ member.email.id_for_label }}">Email (optional)</label>{{ member.email }}{% for error in member.email.errors %}<p class="field-errors">{{ error }}</p>{% endfor %}</div>
               <button type="button" class="team-person-row__remove" aria-label="Remove this student">Remove</button>
             </div>
@@ -134,7 +134,7 @@
               {{ students.empty_form.DELETE }}
               <div class="field"><label>First name</label>{{ students.empty_form.first_name }}</div>
               <div class="field"><label>Last name</label>{{ students.empty_form.last_name }}</div>
-              <div class="field"><label>Student level</label>{{ students.empty_form.level }}</div>
+              <div class="field"><label>Student's grade</label>{{ students.empty_form.level }}</div>
               <div class="field"><label>Email (optional)</label>{{ students.empty_form.email }}</div>
               <button type="button" class="team-person-row__remove" aria-label="Remove this student">Remove</button>
             </div>

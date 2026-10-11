@@ -29,7 +29,7 @@ class WelcomeEmailTests(TestCase):
         self.assertIn("Unity School", admin_mail.subject)
         self.assertIn(self.school.code, admin_mail.body)                    # the code to share
         self.assertIn("Lesson Notes to Audio", teacher_mail.body)
-        self.assertIn("Level 3", teacher_mail.body)
+        self.assertIn("Primary 3", teacher_mail.body)                  # school people see grades
         self.assertIn("free trial", learner_mail.body)
         html = learner_mail.alternatives[0][0]
         self.assertIn("/accounts/password/forgot/", html)
@@ -44,7 +44,7 @@ class WelcomeEmailTests(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             self.client.post("/accounts/register/individual/", {
                 "first_name": "Chioma", "last_name": "Obi", "email": "chioma@example.com",
-                "password1": "River-gate-77", "password2": "River-gate-77", "start": "trial",
+                "password1": "River-gate-77", "password2": "River-gate-77", "start": "trial", "qualification": "graduate",
             })
         self.assertTrue(User.objects.filter(email="chioma@example.com").exists())
         self.assertEqual([m.to for m in mail.outbox], [["chioma@example.com"]])

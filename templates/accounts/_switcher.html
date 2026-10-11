@@ -23,7 +23,7 @@
         <span class="px-switch__face px-switch__face--a px-switch__face--big" aria-hidden="true">{{ me.first_name|first|upper }}{{ me.last_name|first|upper }}</span>
         <span class="px-switch__who">
           <strong>{{ me.get_full_name|default:me.login_name }}</strong>
-          <small>{{ me.get_role_display }}{% if me.level %} · {{ me.level }}{% endif %}</small>
+          <small>{{ me.get_role_display }}{% if me.level %} · {{ me.level_display }}{% endif %}</small>
           <small>{{ s.here_name }}</small>
         </span>
         <span class="px-switch__badge">Signed in</span>

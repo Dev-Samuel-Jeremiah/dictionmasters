@@ -85,3 +85,17 @@ def next_grade(grade):
     if grade not in BY_KEY or grade == keys[-1]:
         return None
     return keys[keys.index(grade) + 1]
+
+
+def label_for_level(level):
+    """How a content level reads to school people: "Level 3" -> "Primary 3",
+    "Level 8" -> "JSS 2", "Pre-Level" -> "Pre-School"; anything else as it is."""
+    if level == "Pre-Level":
+        return STAGE_LABELS["pre_school"]
+    return label_for(grade_for_level(level)) or level
+
+
+# A level dropdown worded in grades, for school forms whose value is still
+# a level (the school registration form, the dashboard's level tools).
+LEVEL_AS_GRADE_CHOICES = [(grade.level, label_for_level(grade.level))
+                          for grade in GRADES if grade.stage != "pre_school" or grade.key == "kindergarten"]
