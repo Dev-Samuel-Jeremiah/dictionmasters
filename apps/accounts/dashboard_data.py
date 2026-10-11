@@ -244,14 +244,31 @@ def _home_week(active_days, today):
     ]
 
 
-def _home_courses(user):
-    """The child's courses and games for the home, as Learn shows them
-    (apps/learning_tools/views.tools_for): only what they may open."""
+# The home's tiles by age band (apps/accounts/access.age_band): a few big
+# ones for younger children, so the page isn't crowded and Today's lesson
+# stays the obvious start. Everything else is one tap away under Learn.
+# Older pupils and individual learners get every course and game.
+HOME_TILES = {
+    "little": ("echospell:hub", "learning_modules:hub", "clash:hub", "quick_words:hub"),    # Pre-School - Grade 2
+    "middle": ("book:home", "echospell:hub", "learning_modules:hub", "tricks:home",          # Grade 3 - 6
+               "clash:hub", "quick_words:hub"),
+}
+
+
+def _home_courses(user, band=None):
+    """The child's courses and games for the home: only what they may open
+    (apps/learning_tools/views.tools_for, as Learn shows it), and for
+    younger bands only the few in HOME_TILES. (courses, games, how many
+    more are under Learn)."""
     from apps.learning_tools.views import tools_for
 
-    tools = tools_for(user)
-    return ([t for t in tools if t["section"] == "courses"],
-            [t for t in tools if t["section"] == "practise"])
+    tools = [t for t in tools_for(user) if t["section"] in ("courses", "practise")]
+    picked = HOME_TILES.get(band["key"]) if band else None
+    shown = tools if picked is None else sorted((t for t in tools if t["url_name"] in picked),
+                                                key=lambda t: picked.index(t["url_name"]))
+    return ([t for t in shown if t["section"] == "courses"],
+            [t for t in shown if t["section"] == "practise"],
+            len(tools) - len(shown))
 
 
 def learner_home(user):
@@ -265,7 +282,7 @@ def learner_home(user):
     active_days = {_local_date(e[0]) for e in _events(user)}
     band = age_band(user)
     week = _home_week(active_days, today)
-    courses, play = _home_courses(user)
+    courses, play, more = _home_courses(user, band)
     return {
         "greeting": _greeting(now),
         "today": today,
@@ -277,6 +294,7 @@ def learner_home(user):
         "week_done": sum(1 for day in week if day["done"]),
         "courses": courses,
         "play": play,
+        "more_tools": more,
     }
 
 

@@ -47,7 +47,11 @@
   <div class="px-wrap px-lift lh-body kh-body">
     {% include "accounts/_qualification.html" %}
 
-    <div class="kh-lesson">{% include "accounts/_todays_lesson.html" %}</div>
+    <div class="kh-lesson">
+      {# The youngest get a pointer to the one place to start. #}
+      {% if band.key == "little" %}<span class="kh-start" aria-hidden="true">Start here <span class="kh-start__hand">👇</span></span>{% endif %}
+      {% include "accounts/_todays_lesson.html" %}
+    </div>
 
     <section class="kh-card kh-week" aria-labelledby="kh-week-title">
       <div class="kh-week__head">
@@ -86,7 +90,7 @@
     {% if play %}
     <section class="kh-section" aria-labelledby="kh-play">
       <div class="kh-section__head">
-        <h2 id="kh-play"><span class="kh-badge kh-badge--play" aria-hidden="true">🎮</span> Practise and play</h2>
+        <h2 id="kh-play"><span class="kh-badge kh-badge--play" aria-hidden="true">🎮</span> {% if band.key == "little" %}Games{% else %}Practise and play{% endif %}</h2>
       </div>
       <div class="kh-grid kh-grid--play">
         {% for tool in play %}
@@ -96,6 +100,13 @@
           <span class="kh-tile__go" aria-hidden="true">{% include "includes/icon.html" with name="play" size=16 %}</span>
         </a>
         {% endfor %}
+        {% if more_tools %}
+        {# Younger children see a few big tiles; everything else is one tap away. #}
+        <a href="{% url 'learning_tools:hub' %}" class="kh-tile kh-tile--more" style="--i: 9" data-tilt>
+          <span class="kh-tile__plus" aria-hidden="true">+{{ more_tools }}</span>
+          <b class="kh-tile__name">More to explore</b>
+        </a>
+        {% endif %}
       </div>
     </section>
     {% endif %}

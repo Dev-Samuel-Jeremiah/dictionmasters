@@ -169,6 +169,20 @@ class BandPageTests(TestCase):
         self.assertNotContains(page, 'href="/clash/" class="kh-tile')
         self.assertNotContains(self.home(pupil("Level 2", email="two@example.com")), 'href="/book/" class="kh-tile')
 
+    def test_younger_pupils_get_a_few_big_tiles_and_a_start_here(self):
+        little = self.home(pupil("Level 1", email="g1@example.com"))
+        self.assertContains(little, 'class="kh-tile ', count=5)                     # 4 tiles and "More to explore"
+        for url in ("/echospell/", "/learning-modules/", "/clash/", "/quick-words/"):
+            self.assertContains(little, f'href="{url}" class="kh-tile', msg_prefix=url)
+        self.assertContains(little, "More to explore")
+        self.assertContains(little, "Start here")
+        middle = self.home(pupil("Level 4", email="g4@example.com"))
+        self.assertContains(middle, 'class="kh-tile ', count=7)                     # 6 tiles and "More to explore"
+        self.assertContains(middle, 'href="/book/" class="kh-tile')
+        self.assertNotContains(middle, "Start here")
+        older = self.home(pupil("Level 9", email="g9@example.com"))
+        self.assertNotContains(older, "More to explore")                          # everything is on their home
+
     def test_my_week_lights_up_the_days_practised(self):
         from apps.clash.models import Match
 
