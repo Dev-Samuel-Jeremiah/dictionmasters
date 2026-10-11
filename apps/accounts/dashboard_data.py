@@ -234,24 +234,20 @@ def _greeting(now):
 
 
 def _home_tiles(user, band):
-    """The tiles under Today's lesson, by age band: little ones get two big
-    pictures with a word each, older pupils two more of their own tools
-    (if open to their level), everyone else Learn and For grown-ups."""
+    """The tiles under Today's lesson, by age band: Learn for everyone, and
+    for older pupils two more of their own tools (if open to their level).
+    (For grown-ups is no longer a tile; it stays in the Me menu.)"""
     learn = {"url": reverse("learning_tools:hub"), "label": "Learn", "icon": "book", "tone": "t-sky",
              "image": "img/app/heroGirl.jpg"}
-    grown_ups = {"url": reverse("accounts:grown_ups"), "label": "For grown-ups", "icon": "user", "tone": "t-butter",
-                 "image": "img/app/rParent.jpg"}
     key = band["key"] if band else ""
-    if key == "little":
-        return [learn, {**grown_ups, "label": "Grown-ups"}]
     if key == "older":
         kept = tool_levels()
         extra = [
             {"url": reverse("daily_practice:home"), "label": "Practice", "icon": "mic", "tone": "t-mint", "tool": "daily_practice:home"},
             {"url": reverse("clash:hub"), "label": "Diction Clash", "icon": "swords", "tone": "t-blush", "tool": "clash:hub"},
         ]
-        return [learn, *[t for t in extra if can_use_tool(user, t["tool"], kept)], grown_ups]
-    return [learn, grown_ups]
+        return [learn, *[t for t in extra if can_use_tool(user, t["tool"], kept)]]
+    return [learn]
 
 
 def learner_home(user):

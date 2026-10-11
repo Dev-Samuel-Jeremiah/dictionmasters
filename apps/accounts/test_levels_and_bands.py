@@ -155,24 +155,24 @@ class BandPageTests(TestCase):
         self.client.force_login(user)
         return self.client.get("/accounts/dashboard/")
 
-    def test_little_ones_get_two_picture_tiles(self):
+    def test_little_ones_get_a_big_picture_tile(self):
         page = self.home(pupil("Level 1"))
         self.assertContains(page, "lh-more--pictures")
-        self.assertContains(page, 'class="lh-more__link"', count=2)
-        self.assertContains(page, "<b>Grown-ups</b>", html=False)
+        self.assertContains(page, 'class="lh-more__link"', count=1)          # Learn; no Grown-ups tile
+        self.assertNotContains(page, "<b>Grown-ups</b>", html=False)
 
     def test_the_middle_band_keeps_the_simple_home(self):
         page = self.home(pupil("Level 4"))
         self.assertNotContains(page, "lh-more--pictures")
-        self.assertContains(page, 'class="lh-more__link"', count=2)
+        self.assertContains(page, 'class="lh-more__link"', count=1)
 
-    def test_older_pupils_get_four_tiles_unless_a_tool_is_held_back(self):
+    def test_older_pupils_get_three_tiles_unless_a_tool_is_held_back(self):
         page = self.home(pupil("Level 9"))
-        self.assertContains(page, 'class="lh-more__link"', count=4)
+        self.assertContains(page, 'class="lh-more__link"', count=3)
         self.assertContains(page, 'href="/clash/" class="lh-more__link"')
         ToolLevels.objects.create(tool="clash:hub", levels=",Level 12,")
         page = self.home(pupil("Level 9", email="other9@example.com"))
-        self.assertContains(page, 'class="lh-more__link"', count=3)
+        self.assertContains(page, 'class="lh-more__link"', count=2)
         self.assertNotContains(page, 'href="/clash/" class="lh-more__link"')
 
     def test_learn_by_band(self):

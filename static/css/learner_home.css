@@ -42,6 +42,8 @@
 .lh--little .lh-streak { font-size: 18px; }
 /* Older pupils: four tiles, two by two. */
 .lh-more--four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lh-more--one { grid-template-columns: minmax(0, 1fr); }            /* just Learn: the full width */
+.lh-more--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 /* The Learn page: middle years get one line of each description. */
 .lt-short { display: -webkit-box !important; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
@@ -92,6 +94,9 @@
 @media (max-width: 700px) {
   .lh-hero { min-height: 230px; }
   .lh .lh-lesson { padding: 18px; }
+}
+@media (max-width: 560px) {
+  .lh-more--three { grid-template-columns: minmax(0, 1fr); }   /* three tiles stack on a phone */
 }
 @media (max-width: 380px) {
   .lh-more:not(.lh-more--pictures):not(.lh-more--four) { grid-template-columns: minmax(0, 1fr); }
