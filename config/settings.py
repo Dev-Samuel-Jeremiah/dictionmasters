@@ -135,6 +135,7 @@ LOCAL_APPS = [
     "apps.accounts",
     "apps.schools",
     "apps.notifications",
+    "apps.assignments",
     "apps.learning_tools",
     "apps.lesson_audio",
     "apps.platform_search",

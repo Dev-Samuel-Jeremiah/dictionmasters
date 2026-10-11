@@ -4,11 +4,13 @@ they're always true and go away once done. For the bell, next to the saved
 updates (models.Notification).
 
     learners (pupils and individual learners)
+        an assignment due within 2 days, or late
         a test started but not handed in
         a school test closing within 3 days that they haven't sat
         a lesson started but not finished (Today's lesson)
         a streak that ends tonight unless they practise
     teachers
+        their assignments due (or just past) that some pupils haven't done
         answers waiting to be marked
         pupils who need help (My class)
     school admins
@@ -84,6 +86,15 @@ def _learner(user):
             out.append(_item("test", "clock", f"{test.title} closes soon",
                              f"Sit it before {timezone.localtime(test.closes_at):%A %H:%M}.",
                              reverse("assessments:detail", args=[test.slug])))
+    from apps.assignments.progress import open_for
+
+    for item in open_for(user, _local_date(now)):
+        if item["state"] == "later":
+            continue
+        assignment = item["assignment"]
+        when = {"overdue": "Late", "today": "Due today"}.get(item["state"], "Due tomorrow" if item["days"] == 1 else "Due soon")
+        out.append(_item("assignment", "task", f"{when}: {assignment.title}",
+                         assignment.note or "An assignment from your teacher.", assignment.url))
     lesson = todays_lesson(user)
     if lesson and lesson.get("label") == "Carry on where you stopped":      # a lesson started, not finished
         out.append(_item("lesson", "play", f"You haven't finished {lesson['title']}",
@@ -107,6 +118,18 @@ def _teacher(user):
     if to_mark:
         out.append(_item("to_mark", "task", f"{to_mark} answer{'s' if to_mark != 1 else ''} to mark",
                          "Your pupils are waiting for your marks.", reverse("assessments:marking_queue")))
+    from apps.assignments.models import Assignment
+    from apps.assignments.progress import summary
+
+    today = timezone.localdate()
+    due = (Assignment.objects.filter(created_by=user, due_on__lte=today + timedelta(days=1),
+                                     due_on__gte=today - timedelta(days=7)).order_by("due_on")[:5])
+    for assignment in due:
+        left = summary(assignment, today)["left"]
+        if left:
+            when = "was due" if assignment.due_on < today else "is due"
+            out.append(_item("assignment", "task", f"{left} pupil{'s' if left != 1 else ''} haven't done {assignment.title}",
+                             f"It {when} {assignment.due_on:%A}.", reverse("assignments:detail", args=[assignment.pk])))
     pupils = pupils_of(user)
     if pupils.exists():
         need = class_progress(pupils)["summary"].get("needs_help", 0)

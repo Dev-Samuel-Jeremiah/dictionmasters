@@ -1,0 +1,13 @@
+{# One assignment in the list. Needs row ({assignment, summary, past}) and today. #}
+{% with a=row.assignment s=row.summary %}
+<a href="{% url 'assignments:detail' a.pk %}" class="px-card as-row{% if row.past %} is-past{% endif %}">
+  <span class="as-row__icon as-kind--{{ a.kind }}" aria-hidden="true">{% if a.kind == "group" %}{% include "includes/icon.html" with name="abc" size=22 %}{% elif a.kind == "module_day" %}{% include "includes/icon.html" with name="book" size=22 %}{% elif a.kind == "sound" %}{% include "includes/icon.html" with name="cap" size=22 %}{% elif a.kind == "trick" %}{% include "includes/icon.html" with name="spark" size=22 %}{% else %}{% include "includes/icon.html" with name="task" size=22 %}{% endif %}</span>
+  <span class="as-row__main">
+    <b>{{ a.title }}</b>
+    <span class="as-row__meta">{% include "assignments/_due.html" with due=a.due_on %}{% for c in a.classes.all %}<span class="as-chip">{{ c.display_name }}</span>{% endfor %}</span>
+    <span class="as-bar" aria-hidden="true"><i style="width: {{ s.percent }}%"></i></span>
+    <small>{{ s.done }} of {{ s.pupils }} done{% if s.overdue %} · {{ s.overdue }} late{% endif %}</small>
+  </span>
+  <span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+</a>
+{% endwith %}

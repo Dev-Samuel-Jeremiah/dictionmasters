@@ -18,6 +18,7 @@
     {% if user.is_school_admin %}
     <p class="px-side__label">Your school</p>
     <a href="{% url 'schools:classes' %}" class="px-side__link{% if request.path|slice:':16' == '/school/classes/' %} is-on{% endif %}">{% include "includes/icon.html" with name="school" %}<span>Classes</span></a>
+    <a href="{% url 'assignments:list' %}" class="px-side__link{% if request.path|slice:':20' == '/school/assignments/' %} is-on{% endif %}">{% include "includes/icon.html" with name="task" %}<span>Assignments</span></a>
     <a href="{% url 'scheme:term_dates' %}" class="px-side__link{% if request.path|slice:':19' == '/scheme/term-dates/' %} is-on{% endif %}">{% include "includes/icon.html" with name="clock" %}<span>Term dates</span></a>
     <a href="{% url 'scheme:reports' %}" class="px-side__link{% if request.path|slice:':16' == '/scheme/reports/' %} is-on{% endif %}">{% include "includes/icon.html" with name="cert" %}<span>Report cards</span></a>
     <a href="{% url 'scheme:promote' %}" class="px-side__link{% if request.path|slice:':16' == '/scheme/promote/' %} is-on{% endif %}">{% include "includes/icon.html" with name="chart" %}<span>Move up a grade</span></a>
@@ -27,6 +28,7 @@
     {% if user.is_teacher %}
     <p class="px-side__label">Teaching</p>
     <a href="{% url 'schools:class_dashboard' %}" class="px-side__link{% if request.path|slice:':14' == '/school/class/' %} is-on{% endif %}">{% include "includes/icon.html" with name="school" %}<span>My class</span></a>
+    <a href="{% url 'assignments:list' %}" class="px-side__link{% if request.path|slice:':20' == '/school/assignments/' %} is-on{% endif %}">{% include "includes/icon.html" with name="task" %}<span>Assignments</span></a>
     <a href="{% url 'scheme:reports' %}" class="px-side__link{% if request.path|slice:':16' == '/scheme/reports/' %} is-on{% endif %}">{% include "includes/icon.html" with name="cert" %}<span>Report cards</span></a>
     <a href="{% url 'assessments:marking_queue' %}" class="px-side__link{% if request.resolver_match.url_name == 'marking_queue' %} is-on{% endif %}">{% include "includes/icon.html" with name="task" %}<span>Marking</span></a>
     <p class="px-side__label">Learning</p>

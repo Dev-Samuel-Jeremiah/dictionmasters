@@ -27,6 +27,11 @@
     </nav>
     {% endif %}
 
+    <a href="{% url 'assignments:list' %}" class="px-item cd-mark" data-assignments-link>
+      <span class="px-item__ii t-sky">{% include "includes/icon.html" with name="task" size=22 %}</span>
+      <span class="px-item__it"><b>Assignments</b><span>Set your class work with a due date, and see who's done it</span></span>
+      <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
+    </a>
     <a href="{% url 'scheme:reports' %}" class="px-item cd-mark">
       <span class="px-item__ii t-butter">{% include "includes/icon.html" with name="cert" size=22 %}</span>
       <span class="px-item__it"><b>Report cards</b><span>This term's scores, and your comment for each pupil</span></span>

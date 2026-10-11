@@ -283,6 +283,9 @@ def learner_home(user):
     band = age_band(user)
     week = _home_week(active_days, today)
     courses, play, more = _home_courses(user, band)
+    from apps.assignments.progress import open_for
+
+    assignments = open_for(user, today)
     return {
         "greeting": _greeting(now),
         "today": today,
@@ -295,6 +298,8 @@ def learner_home(user):
         "courses": courses,
         "play": play,
         "more_tools": more,
+        "assignments": assignments[:3],
+        "assignments_more": max(len(assignments) - 3, 0),
     }
 
 

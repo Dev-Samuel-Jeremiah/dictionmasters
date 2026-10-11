@@ -1,0 +1,2 @@
+{# A due-date chip. Needs `due` (a date) and `today`. #}
+{% if due < today %}<span class="as-due as-due--late">Overdue · {{ due|date:"D j M" }}</span>{% elif due == today %}<span class="as-due as-due--today">Due today</span>{% else %}<span class="as-due">Due {{ due|date:"D j M" }}</span>{% endif %}

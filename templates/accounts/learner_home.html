@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}Home — Diction Masters{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}"><link rel="stylesheet" href="{% static 'css/learner_home.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}"><link rel="stylesheet" href="{% static 'css/learner_home.css' %}"><link rel="stylesheet" href="{% static 'css/assignments.css' %}">{% endblock %}
 {% block extra_js %}<script src="{% static 'js/switcher.js' %}" defer></script><script src="{% static 'js/kid_home.js' %}" defer></script>{% endblock %}
 
 {% block content %}
@@ -47,9 +47,29 @@
   <div class="px-wrap px-lift lh-body kh-body">
     {% include "accounts/_qualification.html" %}
 
+    {% if assignments %}
+    {# Work their teacher set (apps/assignments), soonest due first; gone once done. #}
+    <section class="kh-card kh-assign" aria-labelledby="kh-assign-title" data-assignments>
+      {# Their teacher's work comes first: the youngest are pointed at it. #}
+      {% if band.key == "little" %}<span class="kh-start" aria-hidden="true">Start here <span class="kh-start__hand">👇</span></span>{% endif %}
+      <div class="kh-assign__head">
+        <h2 id="kh-assign-title"><span class="kh-badge kh-badge--play" aria-hidden="true">📝</span> My assignments</h2>
+        {% if assignments_more %}<span class="as-chip">+{{ assignments_more }} more</span>{% endif %}
+      </div>
+      <ul class="kh-assign__list">
+        {% for item in assignments %}
+        <li><a href="{{ item.assignment.url }}" class="kh-assign__item{% if item.state == 'overdue' %} is-overdue{% endif %}">
+          <b>{{ item.assignment.title }}<small>{% if item.state == "overdue" %}Late: it was due {{ item.assignment.due_on|date:"l j F" }}{% elif item.state == "today" %}Due today{% elif item.days == 1 %}Due tomorrow{% else %}Due {{ item.assignment.due_on|date:"l j F" }}{% endif %}{% if item.assignment.note %} · {{ item.assignment.note }}{% endif %}</small></b>
+          <span class="kh-assign__go" aria-hidden="true">{% include "includes/icon.html" with name="play" size=18 %}</span>
+        </a></li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
     <div class="kh-lesson">
       {# The youngest get a pointer to the one place to start. #}
-      {% if band.key == "little" %}<span class="kh-start" aria-hidden="true">Start here <span class="kh-start__hand">👇</span></span>{% endif %}
+      {% if band.key == "little" and not assignments %}<span class="kh-start" aria-hidden="true">Start here <span class="kh-start__hand">👇</span></span>{% endif %}
       {% include "accounts/_todays_lesson.html" %}
     </div>
 

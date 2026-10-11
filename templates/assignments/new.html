@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Set an assignment — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/assignments.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  Setting an assignment (apps/assignments/views.new, forms.AssignmentForm):
+  the work list only offers what the classes' grades can do.
+{% endcomment %}
+<div class="px-page as">
+  <section class="px-phead">
+    <h1>Set an assignment</h1>
+    <p>Your pupils see it on their home and in their bell straight away.</p>
+  </section>
+  <div class="px-wrap as-body">
+    <form method="post" class="px-card as-form" novalidate data-submit-once>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<ul class="field-errors">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      <div class="field as-classes">
+        <label>{{ form.classes.label }}</label>
+        {{ form.classes }}
+        {% for e in form.classes.errors %}<p class="field-errors">{{ e }}</p>{% endfor %}
+      </div>
+      {% include "includes/form_fields.html" with fields=form.visible_fields|slice:"1:" %}
+      <div class="as-actions">
+        <button type="submit" class="as-btn as-btn--gold">Set the assignment</button>
+        <a href="{% url 'assignments:list' %}" class="as-btn as-btn--ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

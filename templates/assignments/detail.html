@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ assignment.title }} — Assignments — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/assignments.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  One assignment (apps/assignments/views.detail): who has done it, class by
+  class, worked out from their work (progress.py); change it or delete it.
+{% endcomment %}
+<div class="px-page as">
+  <section class="px-phead">
+    <h1>{{ assignment.title }}</h1>
+    <p>{{ assignment.get_kind_display }}{% if assignment.note %} · “{{ assignment.note }}”{% endif %}</p>
+  </section>
+  <div class="px-wrap as-body">
+    <p class="as-back"><a href="{% url 'assignments:list' %}">&larr; All assignments</a> · <a href="{{ assignment.url }}">See the work</a></p>
+
+    <div class="as-stats" role="list">
+      <div class="px-card as-stat" role="listitem"><b>{{ summary.done }}</b><span>of {{ summary.pupils }} done</span></div>
+      <div class="px-card as-stat" role="listitem"><b>{{ summary.left }}</b><span>still to do</span></div>
+      <div class="px-card as-stat{% if summary.overdue %} is-late{% endif %}" role="listitem"><b>{{ summary.overdue }}</b><span>late</span></div>
+      <div class="px-card as-stat" role="listitem">{% include "assignments/_due.html" with due=assignment.due_on %}<span>{{ assignment.due_on|date:"l j F" }}</span></div>
+    </div>
+
+    {% for school_class, rows in by_class %}
+    <div class="px-sec"><h2>{{ school_class.display_name }}</h2></div>
+    <ul class="px-list as-pupils">
+      {% for row in rows %}
+      <li class="px-item">
+        <span class="px-item__it"><b>{{ row.pupil.get_full_name|default:row.pupil.login_name }}</b></span>
+        {% if row.done %}<span class="as-state as-state--done">✓ Done</span>{% elif row.overdue %}<span class="as-state as-state--late">Late</span>{% else %}<span class="as-state">Not yet</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% empty %}
+    <div class="px-card px-empty">🌱 No pupils in these classes yet.</div>
+    {% endfor %}
+
+    <div class="px-sec"><h2>Change it</h2></div>
+    <form method="post" class="px-card as-form" novalidate>
+      {% csrf_token %}
+      {% include "includes/form_fields.html" %}
+      <div class="as-actions"><button type="submit" class="as-btn as-btn--gold">Save</button></div>
+    </form>
+    <form method="post" class="as-delete" onsubmit="return confirm('Delete this assignment? Pupils will no longer see it.');">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <button type="submit" class="as-btn as-btn--ghost as-btn--danger">Delete this assignment</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

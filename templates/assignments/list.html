@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Assignments — Diction Masters{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/assignments.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+  Assignments (apps/assignments/views.assignments): due soonest first, each
+  with how many pupils have done it. Done is worked out, never ticked.
+{% endcomment %}
+<div class="px-page as">
+  <section class="px-phead">
+    <img class="px-phead__img" src="{% static 'img/app/teacher.jpg' %}" alt="">
+    <h1>Assignments</h1>
+    <p>Set your classes work with a due date. It's ticked off by itself when each pupil finishes it.</p>
+  </section>
+  <div class="px-wrap as-body">
+    {% if can_set %}<a href="{% url 'assignments:new' %}" class="as-btn as-btn--gold">+ Set an assignment</a>{% endif %}
+
+    <div class="px-sec"><h2>To do</h2></div>
+    {% for row in current %}{% include "assignments/_row.html" %}{% empty %}
+    <div class="px-card px-empty">🌱 No assignments due. Set one for your class.</div>
+    {% endfor %}
+
+    {% if past %}
+    <div class="px-sec"><h2>Past</h2></div>
+    {% for row in past %}{% include "assignments/_row.html" %}{% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

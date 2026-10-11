@@ -33,6 +33,7 @@
     </a>
 
     <nav class="lh-more lh-more--four th-tools" aria-label="Teaching tools">
+      <a href="{% url 'assignments:list' %}" class="lh-more__link"><span class="px-item__ii t-sky" aria-hidden="true">{% include "includes/icon.html" with name="task" size=24 %}</span><b>Assignments</b></a>
       <a href="{% url 'scheme:reports' %}" class="lh-more__link"><span class="px-item__ii t-butter" aria-hidden="true">{% include "includes/icon.html" with name="cert" size=24 %}</span><b>Report cards</b></a>
       <a href="{% url 'assessments:marking_queue' %}" class="lh-more__link"><span class="px-item__ii t-lilac" aria-hidden="true">{% include "includes/icon.html" with name="task" size=24 %}</span><b>Marking{% if my_class.to_mark %} ({{ my_class.to_mark }}){% endif %}</b></a>
       <a href="{% url 'lesson_audio:hub' %}" class="lh-more__link"><span class="px-item__ii t-mint" aria-hidden="true">{% include "includes/icon.html" with name="note-audio" size=24 %}</span><b>Lesson Notes to Audio</b></a>
