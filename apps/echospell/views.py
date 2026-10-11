@@ -13,7 +13,6 @@ import json
 import random
 import re
 
-from apps.accounts.access import limit_to_levels, require_level
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -25,6 +24,7 @@ from django.utils.http import content_disposition_header, urlencode
 from django.views.decorators.http import require_POST
 
 from . import lesson_path as path_of
+from .levels import limit_to_levels, require_level
 from . import qr
 from .activity_kinds import MODE_CHOICE, MODE_ORDER, MODE_RECORD
 from .marking import feedback_for, given_answer, grade_sentence_use, mark_response

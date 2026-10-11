@@ -17,11 +17,12 @@ from django.utils import timezone
 from apps.assessments.models import Attempt as AssessmentAttempt
 from apps.book.models import ACADEMY, TRICKS, Sound
 from apps.clash.models import Match
+from apps.echospell import levels as echospell_levels
 from apps.echospell.models import ActivityAttempt, CardPosition, Group, GroupProgress
 from apps.learning_modules.models import Day, DayProgress
 from apps.quick_words.models import QuickWord
 
-from .access import age_band, limit_to_level_list, limit_to_levels
+from .access import age_band, limit_to_level_list
 
 FEED_SIZE = 6
 WEEK = 7
@@ -130,7 +131,7 @@ def _echospell_resume(user):
     group, category, lesson = position.group, position.category, position.lesson
     still_open = (
         group.level.is_published
-        and limit_to_levels(Group.objects.filter(pk=group.pk), user, field="level__name", allow_blank=False).exists()
+        and echospell_levels.limit_to_levels(Group.objects.filter(pk=group.pk), user, field="level__name", allow_blank=False).exists()
         and group.level.categories.filter(pk=category.pk).exists()
     )
     if not still_open:
@@ -143,7 +144,7 @@ def _echospell_resume(user):
 
 def _next_echospell(user):
     done = set(GroupProgress.objects.filter(user=user).values_list("group_id", flat=True))
-    groups = limit_to_levels(
+    groups = echospell_levels.limit_to_levels(
         Group.objects.filter(level__is_published=True), user, field="level__name", allow_blank=False
     ).select_related("level").order_by("level__order", "level__name", "number")
     total = 0

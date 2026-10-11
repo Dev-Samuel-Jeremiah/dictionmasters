@@ -112,14 +112,15 @@ def _search_items(request, query, per_type=MAX_RESULTS_PER_TYPE):
         assessments = limit_to_levels(Assessment.objects.filter(is_published=True).filter(Q(title__icontains=needle) | Q(summary__icontains=needle) | Q(instructions__icontains=needle)), request.user)
         add(assessments, lambda x: x.title, "Assessment", lambda x: x.summary or x.get_kind_display(), lambda x: reverse("assessments:detail", args=[x.slug]))
 
+        from apps.echospell import levels as echospell_levels
         from apps.echospell.models import CardLesson, Level
         lessons = CardLesson.objects.filter(is_published=True).filter(
             Q(title__icontains=needle) | Q(word__icontains=needle) | Q(definition__icontains=needle) | Q(example_sentence__icontains=needle) | Q(category__name__icontains=needle)
         ).select_related("group__level", "category")
-        lessons = limit_to_levels(lessons, request.user, field="group__level__name", allow_blank=False)
+        lessons = echospell_levels.limit_to_levels(lessons, request.user, field="group__level__name", allow_blank=False)
         add(lessons, lambda x: x.title or (x.word_list[0] if x.word_list else x.category.name), "EchoSpell lesson", lambda x: f"{x.group.level.name} · {x.category.name}", lambda x: reverse("echospell:card_detail", args=[x.group.level.slug, x.group.slug, x.category.slug]))
         levels = Level.objects.filter(is_published=True).filter(Q(name__icontains=needle) | Q(description__icontains=needle))
-        levels = limit_to_levels(levels, request.user, field="name", allow_blank=False)
+        levels = echospell_levels.limit_to_levels(levels, request.user, field="name", allow_blank=False)
         add(levels, lambda x: x.name, "EchoSpell level", lambda x: x.description, lambda x: reverse("echospell:level_detail", args=[x.slug]))
 
     return items

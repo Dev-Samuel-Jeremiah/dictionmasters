@@ -13,6 +13,7 @@ from django import forms
 from django.utils import timezone
 
 from apps.accounts.access import tool_levels, unpack_levels
+from apps.echospell.levels import echospell_level
 from apps.schools.grades import label_for_level
 
 from .models import Assignment
@@ -36,7 +37,8 @@ def work_choices(levels):
     levels = sorted(set(levels))
     kept = tool_levels()
     out = []
-    groups = (Group.objects.filter(level__name__in=levels, level__is_published=True)
+    # A grade with no EchoSpell of its own yet uses the level below's (apps/echospell/levels.py).
+    groups = (Group.objects.filter(level__name__in={echospell_level(one) for one in levels}, level__is_published=True)
               .select_related("level").order_by("level__order", "level__name", "number"))
     out.append(("EchoSpell", [
         (f"{K.GROUP}:{g.pk}", f"{label_for_level(g.level.name)} · Group {g.number}"
@@ -62,7 +64,7 @@ def work_choices(levels):
 def _fits(kind, work, level, kept):
     """Can a class on `level` be set this work? (True, "") or (False, why)."""
     if kind == K.GROUP:
-        return work.level.name == level, f"it's {label_for_level(work.level.name)} work"
+        return work.level.name == echospell_level(level), f"it's {label_for_level(work.level.name)} work"
     if kind == K.MODULE_DAY:
         wanted = unpack_levels(work.week.term.module.levels)
         return (not wanted or level in wanted), "that module isn't for their grade"
