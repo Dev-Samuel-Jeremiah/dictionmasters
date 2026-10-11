@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Notifications — Diction Masters{% endblock %}
+
+{% block content %}
+{% comment %}
+  Everything in the bell (apps/notifications/views.page): things still to do,
+  then the latest updates. Opening this page marks the updates read.
+{% endcomment %}
+<div class="px-page nb-page">
+  <section class="px-phead">
+    <h1>Notifications</h1>
+    <p>{% if todo %}{{ todo|length }} thing{{ todo|length|pluralize }} to do.{% else %}Nothing to do right now.{% endif %}</p>
+  </section>
+  <div class="px-wrap nb-page__body">
+    {% if updates %}
+    <form method="post" action="{% url 'notifications:read_all' %}" class="nb-page__actions">
+      {% csrf_token %}
+      <button type="submit" class="nb-page__read">Mark all as read</button>
+    </form>
+    {% endif %}
+    <div class="px-card nb-page__card">{% include "notifications/_items.html" %}</div>
+  </div>
+</div>
+{% endblock %}

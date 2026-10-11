@@ -67,6 +67,19 @@
           {% include "includes/icon.html" with name="words" size=21 stroke="1.9" %}
         </a>
         {% comment %}
+          The bell (apps/notifications): things to do and new updates. A link
+          to the Notifications page without JavaScript; with it, a dropdown
+          (static/js/notifications.js) and a badge that refreshes every minute.
+        {% endcomment %}
+        <div class="nb" data-bell data-panel-url="{% url 'notifications:panel' %}" data-count-url="{% url 'notifications:count' %}">
+          <a href="{% url 'notifications:page' %}" class="px-iconbtn nb__btn" data-bell-button aria-haspopup="dialog" aria-expanded="false"
+             aria-label="Notifications{% if bell_count %}: {{ bell_count }} to see{% endif %}"{% if request.path == '/notifications/' %} aria-current="page"{% endif %}>
+            {% include "includes/icon.html" with name="bell" size=22 stroke="1.9" %}
+            <span class="nb__badge" data-bell-count{% if not bell_count %} hidden{% endif %}>{% if bell_count > 9 %}9+{% else %}{{ bell_count }}{% endif %}</span>
+          </a>
+          <div class="nb__panel" role="dialog" aria-label="Notifications" data-bell-panel hidden></div>
+        </div>
+        {% comment %}
           Your account: the dashboard, the learning tools and signing out, in
           one menu. It is a <details>, so it opens without JavaScript too;
           account_menu.js only closes it when you click elsewhere or press Escape.

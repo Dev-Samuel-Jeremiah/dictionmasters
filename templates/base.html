@@ -31,7 +31,7 @@
   {% block extra_css %}{% endblock %}
   {# The app look (blue, yellow and white, from the prototype): loaded last so it sits over every page's own styles. #}
   <link rel="stylesheet" href="{% static 'css/theme.css' %}">
-  {% if user.is_authenticated %}<link rel="stylesheet" href="{% static 'css/ipa_keyboard.css' %}">{% endif %}
+  {% if user.is_authenticated %}<link rel="stylesheet" href="{% static 'css/ipa_keyboard.css' %}"><link rel="stylesheet" href="{% static 'css/notifications.css' %}">{% endif %}
   {# Inside the Android/iPhone app (apps/landing/native_app.py). #}
   {% if native_app %}<link rel="stylesheet" href="{% static 'css/native_app.css' %}">{% endif %}
   {% block extra_head %}{% endblock %}
@@ -83,6 +83,7 @@
   {% if user.is_authenticated %}<script src="{% static 'js/ipa_keyboard.js' %}" defer></script>{% endif %}
   {% if user.is_authenticated %}<script src="{% static 'js/quick_tools.js' %}" defer></script>
   <script src="{% static 'js/account_menu.js' %}" defer></script>
+  <script src="{% static 'js/notifications.js' %}" defer></script>
   <script src="{% static 'js/offline_sync.js' %}" defer></script>{% endif %}
   {% if native_app %}<script src="{% static 'js/native_app.js' %}" defer></script>{% endif %}
   <script src="{% static 'js/pwa.js' %}" defer></script>

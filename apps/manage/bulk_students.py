@@ -387,24 +387,27 @@ def create(school, clean, kind="student"):
 
     from apps.schools.classes import class_of_grade, school_year
 
+    from apps.notifications.notify import quiet
+
     made, classes, session = [], {}, school_year(school)
-    for r in clean:
-        username = unique_username(r["first"], r["last"])
-        password = new_password()
-        extra = {}
-        if kind == "student":
-            # Their grade's class, or the named one ("Gold"): made once per file.
-            key = (r["grade"], r.get("class_name", ""))
-            if key not in classes:
-                classes[key] = class_of_grade(school, key[0], name=key[1], session=session)
-            extra["school_class"] = classes[key]
-        User.objects.create_user(
-            email=r["email"] or internal_email(username), username=username, password=password,
-            first_name=r["first"], last_name=r["last"], role=KINDS[kind]["role"], school=school, level=r["level"],
-            **extra,
-        )
-        made.append({"first": r["first"], "last": r["last"], "level": r["level"], "username": username,
-                     "email": r["email"], "password": password})
+    with quiet():                         # one "joined" update per row would bury the admin's others
+        for r in clean:
+            username = unique_username(r["first"], r["last"])
+            password = new_password()
+            extra = {}
+            if kind == "student":
+                # Their grade's class, or the named one ("Gold"): made once per file.
+                key = (r["grade"], r.get("class_name", ""))
+                if key not in classes:
+                    classes[key] = class_of_grade(school, key[0], name=key[1], session=session)
+                extra["school_class"] = classes[key]
+            User.objects.create_user(
+                email=r["email"] or internal_email(username), username=username, password=password,
+                first_name=r["first"], last_name=r["last"], role=KINDS[kind]["role"], school=school, level=r["level"],
+                **extra,
+            )
+            made.append({"first": r["first"], "last": r["last"], "level": r["level"], "username": username,
+                         "email": r["email"], "password": password})
     return made
 
 

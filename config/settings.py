@@ -134,6 +134,7 @@ LOCAL_APPS = [
     "apps.landing",
     "apps.accounts",
     "apps.schools",
+    "apps.notifications",
     "apps.learning_tools",
     "apps.lesson_audio",
     "apps.platform_search",
@@ -208,6 +209,7 @@ TEMPLATES = [
                 "apps.accounts.master_login.context",
                 "apps.billing.context_processors.billing",
                 "apps.learning_tools.context_processors.hidden_tools",
+                "apps.notifications.context_processors.bell",
                 "apps.landing.native_app.context",
             ],
             # {{ colour|palette }} everywhere, for colours stored in the database.

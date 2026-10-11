@@ -1,0 +1,6 @@
+{# The bell's dropdown (apps/notifications/views.panel), loaded when the bell is opened. #}
+<div class="nb-panel__head">
+  <h2>Notifications</h2>
+  <a href="{% url 'notifications:page' %}">See all</a>
+</div>
+<div class="nb-panel__body">{% include "notifications/_items.html" %}</div>

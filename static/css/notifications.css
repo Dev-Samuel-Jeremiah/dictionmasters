@@ -1,0 +1,88 @@
+/* =========================================================
+   The bell (templates/includes/header.html, notifications/*.html,
+   static/js/notifications.js): a badge on the top bar, a dropdown
+   (a sheet from the top on phones), and the Notifications page.
+   Colours from theme.css. Motion stops under reduced motion.
+   ========================================================= */
+.nb { position: relative; display: inline-flex; }
+.nb__btn { position: relative; }
+.nb__btn.has-news .px-ic { transform-origin: 50% 10%; animation: nb-ring 2.8s ease-in-out 1s infinite; }
+@keyframes nb-ring {
+  0%, 70%, 100% { rotate: 0deg; }
+  74% { rotate: 14deg; } 78% { rotate: -12deg; } 82% { rotate: 9deg; } 86% { rotate: -6deg; } 90% { rotate: 3deg; }
+}
+.nb__badge {
+  position: absolute; top: -4px; right: -5px;
+  min-width: 19px; height: 19px; padding: 0 5px;
+  display: grid; place-items: center;
+  border-radius: 999px; background: #E5304B; color: #fff;
+  font: 800 11px/1 "Plus Jakarta Sans", system-ui, sans-serif;
+  box-shadow: 0 0 0 2px var(--blue, #1846E0);
+  animation: nb-pop .35s cubic-bezier(.2, .9, .3, 1.4);
+}
+.nb__badge[hidden] { display: none; }
+@keyframes nb-pop { from { scale: .2; } }
+
+.nb__panel {
+  position: absolute; top: calc(100% + 10px); right: -8px; z-index: 120;
+  width: min(380px, calc(100vw - 24px)); max-height: min(70vh, 560px);
+  display: flex; flex-direction: column;
+  border-radius: 20px; background: var(--card, #fff); color: var(--text, #0B1A4A);
+  box-shadow: 0 24px 60px rgba(11, 26, 74, .28), 0 0 0 1px rgba(11, 26, 74, .06);
+  overflow: hidden; transform-origin: top right;
+  animation: nb-open .18s ease-out;
+}
+.nb__panel[hidden] { display: none; }
+@keyframes nb-open { from { opacity: 0; scale: .96; translate: 0 -6px; } }
+.nb__panel::before {                      /* the little arrow pointing at the bell */
+  content: ""; position: absolute; top: -6px; right: 22px; width: 12px; height: 12px;
+  background: var(--card, #fff); rotate: 45deg; box-shadow: -1px -1px 0 rgba(11, 26, 74, .06);
+}
+.nb-panel__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px 10px; border-bottom: 1px solid var(--line, #E3E8F4); }
+.nb-panel__head h2 { margin: 0; font-size: 18px; }
+.nb-panel__head a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 999px; background: var(--sky, #E7EFFF); color: var(--blue, #1846E0); font-size: 14px; font-weight: 800; text-decoration: none; }
+.nb-panel__body { overflow-y: auto; padding: 6px 8px 10px; overscroll-behavior: contain; }
+.nb-loading { padding: 28px; text-align: center; color: var(--muted, #55607E); }
+
+.nb-label { margin: 12px 10px 6px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #55607E); }
+.nb-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.nb-item {
+  position: relative; display: flex; align-items: flex-start; gap: 12px;
+  min-height: 56px; padding: 10px; border-radius: 14px;
+  color: inherit; text-decoration: none; transition: background .15s ease;
+}
+.nb-item:hover, .nb-item:focus-visible { background: var(--bg, #F2F5FC); }
+.nb-item:focus-visible { outline: 3px solid var(--yellow, #FFC72C); outline-offset: -3px; }
+.nb-item__icon {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px;
+  background: var(--sky, #E7EFFF); color: var(--blue, #1846E0);
+}
+.nb-item--todo .nb-item__icon { background: var(--butter, #FFF5D6); color: #A86F00; }
+.nb-item--streak .nb-item__icon { background: #FFE7D6; color: #E2611B; }
+.nb-item--result .nb-item__icon { background: #E3F7EE; color: #128A5C; }
+.nb-item--report .nb-item__icon { background: #EFE8FF; color: #6B45E6; }
+.nb-item__text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.nb-item__text b { font-size: 15px; line-height: 1.3; }
+.nb-item__text small { font-size: 13px; line-height: 1.4; color: var(--muted, #55607E); }
+.nb-item__text time { font-size: 12px; color: var(--ink-40, #8A93AE); }
+.nb-item.is-unread { background: #F5F8FF; }
+.nb-item__dot { flex: none; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: var(--blue, #1846E0); }
+.nb-empty { display: grid; justify-items: center; gap: 4px; padding: 28px 16px; text-align: center; }
+.nb-empty span { font-size: 34px; }
+.nb-empty small { color: var(--muted, #55607E); }
+
+/* the Notifications page */
+.nb-page__body { max-width: 720px; }
+.nb-page__actions { display: flex; justify-content: flex-end; margin: 16px 0 8px; }
+.nb-page__read { min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--sky, #E7EFFF); color: var(--blue, #1846E0); font: inherit; font-weight: 800; cursor: pointer; }
+.nb-page__card { padding: 8px; }
+
+/* Phones: the dropdown becomes a sheet under the top bar, the full width. */
+@media (max-width: 560px) {
+  .nb { position: static; }
+  .nb__panel { position: fixed; top: calc(var(--bar-h, 72px) + 6px); left: 10px; right: 10px; width: auto; max-height: calc(100vh - var(--bar-h, 72px) - 100px); }
+  .nb__panel::before { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb__btn.has-news .px-ic, .nb__badge, .nb__panel { animation: none !important; }
+}

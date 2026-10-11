@@ -1,0 +1,27 @@
+{# The bell's two lists (apps/notifications/views): things to do, then updates. Needs todo and updates. #}
+{% if todo %}
+<p class="nb-label">To do</p>
+<ul class="nb-list">
+  {% for item in todo %}
+  <li><a href="{{ item.url }}" class="nb-item nb-item--todo nb-item--{{ item.kind }}">
+    <span class="nb-item__icon" aria-hidden="true">{% include "includes/icon.html" with name=item.icon size=20 %}</span>
+    <span class="nb-item__text"><b>{{ item.title }}</b><small>{{ item.body }}</small></span>
+  </a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% if updates %}
+<p class="nb-label">Updates</p>
+<ul class="nb-list">
+  {% for note in updates %}
+  <li><a href="{% url 'notifications:open' note.pk %}" class="nb-item nb-item--{{ note.kind }}{% if note.is_unread %} is-unread{% endif %}">
+    <span class="nb-item__icon" aria-hidden="true">{% if note.kind == "result" %}{% include "includes/icon.html" with name="check" size=20 %}{% elif note.kind == "test" %}{% include "includes/icon.html" with name="task" size=20 %}{% elif note.kind == "report" %}{% include "includes/icon.html" with name="cert" size=20 %}{% elif note.kind == "to_mark" %}{% include "includes/icon.html" with name="task" size=20 %}{% elif note.kind == "joined" %}{% include "includes/icon.html" with name="user" size=20 %}{% elif note.kind == "help" %}{% include "includes/icon.html" with name="lock" size=20 %}{% else %}{% include "includes/icon.html" with name="bell" size=20 %}{% endif %}</span>
+    <span class="nb-item__text"><b>{{ note.title }}</b>{% if note.body %}<small>{{ note.body }}</small>{% endif %}<time datetime="{{ note.created_at|date:'c' }}">{% with ago=note.created_at|timesince %}{% if ago == "0 minutes" %}Just now{% else %}{{ ago }} ago{% endif %}{% endwith %}</time></span>
+    {% if note.is_unread %}<span class="nb-item__dot" aria-label="New"></span>{% endif %}
+  </a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% if not todo and not updates %}
+<div class="nb-empty"><span aria-hidden="true">🎉</span><b>You're all caught up!</b><small>New results, tests and reminders will show here.</small></div>
+{% endif %}
