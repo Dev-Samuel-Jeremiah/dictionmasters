@@ -28,9 +28,10 @@ to open any tool to teach it.
 Students also fall into an age band (age_band) — Little ones, Middle,
 Older — which decides how much their home and Learn page show.
 
-A teacher's class is the same rule turned round: the active students at
-their school in a level they teach (pupils_of, teaches). A teacher with
-no level yet teaches the whole school's students.
+A teacher's pupils are the active students in the classes they teach this
+school year (pupils_of, teaches; apps/schools/classes.py). A teacher with
+no class yet has no pupils. Their levels follow their classes, so what they
+can open matches what they teach.
 
 Everything routes through here, so the rule is written once and the same
 answer is given on every page.
@@ -113,15 +114,15 @@ def in_level(queryset, level_name):
 
 
 def pupils_of(teacher):
-    """The students a teacher teaches: active students at their school in
-    one of their levels. Nobody, for anyone who isn't a school teacher."""
+    """The students a teacher teaches: the active students in the classes
+    they teach this school year (apps/schools/classes.py). Nobody, for
+    anyone who isn't a school teacher, or a teacher with no class yet."""
     from apps.accounts.models import User
+    from apps.schools.classes import pupils_of_teacher
 
     if not (getattr(teacher, "is_authenticated", False) and teacher.is_teacher and teacher.school_id):
         return User.objects.none()
-    pupils = User.objects.filter(school_id=teacher.school_id, role=User.Role.STUDENT, is_active=True)
-    levels = accessible_levels(teacher)
-    return pupils if levels is None else pupils.filter(level__in=levels)
+    return pupils_of_teacher(teacher)
 
 
 def teaches(teacher, pupil):
@@ -129,16 +130,20 @@ def teaches(teacher, pupil):
     return pupils_of(teacher).filter(pk=pupil.pk).exists()
 
 
-def is_pupil_of(teacher, pupil):
-    """pupils_of's rule for two accounts already in hand, with no query —
-    for matching many teachers to many pupils at once (the weekly
-    "Needs help" email). Keep the two in step."""
+def is_pupil_of(teacher, pupil, class_ids=None):
+    """pupils_of's rule for two accounts already in hand. Pass the teacher's
+    class ids (apps/schools/classes.class_ids_for, fetched once for many
+    teachers) to match many teachers to many pupils with no query — the
+    weekly "Needs help" email. Keep the two in step."""
     if not (teacher.is_teacher and teacher.school_id and pupil.is_student and pupil.is_active):
         return False
     if pupil.school_id != teacher.school_id:
         return False
-    levels = accessible_levels(teacher)
-    return levels is None or pupil.level in levels
+    if class_ids is None:
+        from apps.schools.classes import class_ids_for
+
+        class_ids = class_ids_for([teacher])[teacher.pk]
+    return pupil.school_class_id in class_ids
 
 
 # ---------------------------------------------------------------------------

@@ -11,6 +11,7 @@ from apps.accounts.weekly import help_reason
 from apps.accounts.decorators import role_required
 from apps.accounts.models import User
 
+from . import classes as school_classes
 from . import levels as level_moves
 from apps.scheme.timetable import class_week
 
@@ -335,8 +336,9 @@ def dismiss_help(request, pk):
 
 @role_required(User.Role.TEACHER)
 def class_dashboard(request):
-    """My class: every pupil in the teacher's levels, with what they've done
-    lately. A teacher of several levels can look at one at a time."""
+    """My class: the pupils in the classes the teacher teaches, with what
+    they've done lately. A teacher of several classes can look at one at a
+    time (?class=)."""
     found = grown_up_settings(request.user)
     if request.method == "POST":
         # The one setting here: the weekly "Needs help" email.
@@ -344,23 +346,26 @@ def class_dashboard(request):
         found.save(update_fields=["weekly_email"])
         messages.success(request, "The weekly email is on." if found.weekly_email else "The weekly email is off.")
         return redirect("schools:class_dashboard")
-    pupils = pupils_of(request.user)
-    levels = request.user.all_levels
-    level = request.GET.get("level", "")
-    if level and level in levels:
-        pupils = pupils.filter(level=level)
-    else:
-        level = ""
+    taught = school_classes.this_year_of(request.user)
+    chosen = next((c for c in taught if str(c.pk) == request.GET.get("class")), None)
+    pupils = pupils_of(request.user).select_related("school_class")
+    if chosen:
+        pupils = pupils.filter(school_class=chosen)
+    elif len(taught) == 1:
+        chosen = taught[0]
     progress = class_progress(pupils)
-    # This week of the scheme of work, and each pupil's share of it done.
-    scheme = class_week(request.user, level or request.user.level, [row["pupil"] for row in progress["rows"]])
+    # This week of the scheme of work for the class's level, and each pupil's share of it done.
+    level = chosen.level if chosen else request.user.level
+    scheme = class_week(request.user, level, [row["pupil"] for row in progress["rows"]])
     for row in progress["rows"]:
         row["scheme_done"] = scheme["done"].get(row["pupil"].pk, 0)
     return render(request, "schools/class_dashboard.html", {
         **progress,
         "needs_help": [{**row, "reason": help_reason(row)} for row in progress["rows"] if row["needs_help"]],
-        "levels": levels if len(levels) > 1 else [],
-        "level": level,
+        "classes": taught if len(taught) > 1 else [],
+        "chosen": chosen,
+        "taught": taught,
+        "level": chosen.level if chosen else "",
         "weekly_email": found.weekly_email,
         "scheme": scheme,
     })

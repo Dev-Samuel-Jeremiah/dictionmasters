@@ -107,7 +107,7 @@ class PlacementTests(TestCase):
                  level="Level 3" if n % 2 else "Level 4")
             for n in range(20)
         ])
-        with self.assertNumQueries(6):          # the year, two classes found or made (2 each), the update
+        with self.assertNumQueries(7):          # the school's year (2), two classes found or made (2 each), the update
             place_many(made)
         self.assertEqual(set(User.objects.filter(role="student").values_list("school_class__grade", flat=True)),
                          {"primary_3", "primary_4"})

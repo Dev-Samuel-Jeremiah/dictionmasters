@@ -65,6 +65,7 @@
 
 /* ---------- promotion ---------- */
 .sw-promote__list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }
+.sw-promote__class { margin: 26px 0 0; font-size: 1.05rem; color: var(--navy); }
 .sw-promote .sw-promote__row { display: flex; align-items: center; gap: 14px; min-height: 64px; cursor: pointer; }
 .sw-promote__row input { width: 26px; height: 26px; accent-color: var(--blue); flex: none; }
 .sw-promote__who { flex: 1; min-width: 0; display: flex; flex-direction: column; }

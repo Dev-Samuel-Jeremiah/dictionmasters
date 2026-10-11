@@ -9,7 +9,7 @@ from django.db.models.functions import Lower
 from django.utils.text import slugify
 
 from apps.accounts.models import INTERNAL_EMAIL_DOMAIN, User
-from apps.schools.classes import place_many
+from apps.schools.classes import join_level_classes, place_many
 
 MAX_TEAM_MEMBERS = 250
 
@@ -138,6 +138,9 @@ def create_school_team(school_data, admin_data, teachers, students, site_url, pl
                 ))
             created = User.objects.bulk_create(users, batch_size=100)
             place_many(created)                  # every student into a class of their grade
+            for teacher in created:              # and each teacher into their level's classes
+                if teacher.role == User.Role.TEACHER:
+                    join_level_classes(teacher)
             accounts = [
                 {"user": user, "password": row["password"], "password_available": True}
                 for user, row in zip(created, roster)

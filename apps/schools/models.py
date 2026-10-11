@@ -207,7 +207,7 @@ class LevelChange(models.Model):
     Changes made together share a `batch`, so a whole promotion can be
     undone in one go; the levels before and after are kept exactly."""
 
-    KIND_CHOICES = [("promote", "Promoted"), ("move", "Moved")]
+    KIND_CHOICES = [("promote", "Promoted"), ("move", "Moved"), ("graduate", "Graduated")]
 
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="level_changes")
     member = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="level_changes")
@@ -218,6 +218,10 @@ class LevelChange(models.Model):
     old_additional = models.CharField(max_length=255, blank=True)
     new_level = models.CharField(max_length=100, blank=True)
     new_additional = models.CharField(max_length=255, blank=True)
+    # The classes before and after, when the change moved a student between
+    # classes (apps/schools/classes.py), so undo puts them back exactly.
+    old_class = models.ForeignKey("SchoolClass", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    new_class = models.ForeignKey("SchoolClass", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
     undone_at = models.DateTimeField(null=True, blank=True)
 
@@ -277,4 +281,7 @@ class SchoolClass(models.Model):
         old = type(self).objects.filter(pk=self.pk).values_list("grade", flat=True).first() if self.pk else None
         super().save(*args, **kwargs)
         if old and old != self.grade:
+            from .classes import sync_teachers
+
             self.students.update(level=self.level)
+            sync_teachers(self.teachers.values_list("pk", flat=True))   # and its teachers' levels

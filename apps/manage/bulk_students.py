@@ -381,9 +381,9 @@ def create(school, clean, kind="student"):
     Returns [{first, last, level, username, email, password}]."""
     from apps.accounts.forms import internal_email, unique_username
 
-    from apps.schools.classes import class_of_grade, current_session
+    from apps.schools.classes import class_of_grade, school_year
 
-    made, classes, session = [], {}, current_session()
+    made, classes, session = [], {}, school_year(school)
     for r in clean:
         username = unique_username(r["first"], r["last"])
         password = new_password()

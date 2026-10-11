@@ -157,11 +157,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def save(self, *args, **kwargs):
         # A school student's class follows their level (apps/schools/classes.py).
-        from apps.schools.classes import place
+        from apps.schools.classes import join_level_classes, place
 
+        new = self._state.adding
         if place(self) and kwargs.get("update_fields") is not None:
             kwargs["update_fields"] = {*kwargs["update_fields"], "school_class"}
         super().save(*args, **kwargs)
+        if new and self.role == self.Role.TEACHER:
+            join_level_classes(self)              # a new teacher starts in their level's classes
 
     def set_password(self, raw_password):
         super().set_password(raw_password)

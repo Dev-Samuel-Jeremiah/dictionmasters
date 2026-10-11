@@ -7,22 +7,22 @@
 {% block content %}
 {% comment %}
   My class (apps/schools/views.class_dashboard): every pupil in the
-  teacher's levels and what they've done lately. The numbers come from
+  teacher's classes and what they've done lately. The numbers come from
   apps/schools/class_progress.py, gathered for the whole class at once.
 {% endcomment %}
 <div class="px-page cd">
   <section class="px-phead">
     <img class="px-phead__img" src="{% static 'img/app/teacher.jpg' %}" alt="">
     <h1>My class</h1>
-    <p>{% if level %}{{ level }}{% elif user.level_display %}{{ user.level_display }}{% else %}Every student at {{ user.school.name }}{% endif %}</p>
+    <p>{% if chosen %}{{ chosen.display_name }}{% elif taught %}All my classes{% else %}No class yet{% endif %}</p>
   </section>
 
   <div class="px-wrap">
-    {% if levels %}
-    <nav class="px-chips cd-levels" aria-label="Level">
-      <a href="{% url 'schools:class_dashboard' %}" class="px-chip{% if not level %} is-on{% endif %}"{% if not level %} aria-current="page"{% endif %}>All my levels</a>
-      {% for one in levels %}
-      <a href="?level={{ one|urlencode }}" class="px-chip{% if one == level %} is-on{% endif %}"{% if one == level %} aria-current="page"{% endif %}>{{ one }}</a>
+    {% if classes %}
+    <nav class="px-chips cd-levels" aria-label="Class">
+      <a href="{% url 'schools:class_dashboard' %}" class="px-chip{% if not chosen %} is-on{% endif %}"{% if not chosen %} aria-current="page"{% endif %}>All my classes</a>
+      {% for one in classes %}
+      <a href="?class={{ one.pk }}" class="px-chip{% if one == chosen %} is-on{% endif %}"{% if one == chosen %} aria-current="page"{% endif %}>{{ one.display_name }}</a>
       {% endfor %}
     </nav>
     {% endif %}
@@ -93,7 +93,7 @@
         <a href="{% url 'schools:pupil_detail' row.pupil.pk %}" class="px-item cd-pupil is-{{ row.state }}">
           <span class="px-item__ii t-sky" aria-hidden="true">{{ row.pupil.first_name|first|upper }}{{ row.pupil.last_name|first|upper }}</span>
           <span class="px-item__it">
-            <b>{{ row.pupil.get_full_name|default:row.pupil.login_name }}{% if levels and not level %} <small>{{ row.pupil.level }}</small>{% endif %}</b>
+            <b>{{ row.pupil.get_full_name|default:row.pupil.login_name }}{% if classes and not chosen %} <small>{{ row.pupil.school_class.display_name }}</small>{% endif %}</b>
             <span>
               {% if row.state == "new" %}Not started yet{% else %}Last active {% if row.just_now %}just now{% else %}{{ row.last_active|timesince }} ago{% endif %}{% if row.sessions_week %} · {{ row.sessions_week }} this week{% endif %}{% endif %}
             </span>
@@ -121,7 +121,7 @@
       {% endfor %}
     </ol>
     {% else %}
-    <div class="px-card px-empty">No pupils here yet. Students appear once they join {{ user.school.name }} in {% if level %}{{ level }}{% else %}your level{% endif %}. Your school admin can check levels on the school dashboard.</div>
+    <div class="px-card px-empty">{% if taught %}No pupils here yet. Students appear once they join {% if chosen %}{{ chosen.display_name }}{% else %}your classes{% endif %}.{% else %}You don't have a class yet. Your school admin gives you your classes on their Classes page.{% endif %}</div>
     {% endif %}
 
     {% if user.has_real_email %}

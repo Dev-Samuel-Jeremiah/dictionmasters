@@ -221,11 +221,11 @@ class PromotionTests(YearTestCase):
         self.client.force_login(self.admin)
         with self.on(date(2027, 4, 10)):
             page = self.client.get("/scheme/promote/")
-            rows = {r["student"].pk: r for r in page.context["rows"]}
+            rows = {r["student"].pk: r for g in page.context["groups"] for r in g["rows"]}
             self.assertEqual((rows[self.ada.pk]["average"], rows[self.ada.pk]["suggested"]), (68, True))
             self.assertEqual((rows[self.ben.pk]["average"], rows[self.ben.pk]["suggested"]), (40, False))
             response = self.client.post("/scheme/promote/", {"students": [self.ada.pk]}, follow=True)
-        self.assertContains(response, "1 student promoted")
+        self.assertContains(response, "1 student moved up a grade")
         self.ada.refresh_from_db()
         self.ben.refresh_from_db()
         self.assertEqual((self.ada.level, self.ben.level), ("Level 3", "Level 2"))

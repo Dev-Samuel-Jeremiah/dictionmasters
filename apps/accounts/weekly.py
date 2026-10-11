@@ -176,8 +176,11 @@ def send_weekly(now=None, dry_run=False, out=None):
         for batch in _batches(students):
             stuck += [row for row in class_progress(batch, now=now)["rows"] if row["needs_help"]]
         messages, told = [], []
+        from apps.schools.classes import class_ids_for
+
+        taught = class_ids_for(teachers)                  # every teacher's classes, in a couple of queries
         for teacher in teachers:
-            theirs = [row for row in stuck if is_pupil_of(teacher, row["pupil"])]
+            theirs = [row for row in stuck if is_pupil_of(teacher, row["pupil"], taught[teacher.pk])]
             if theirs:
                 messages.append(teacher_email(teacher, theirs))
                 told.append(teacher.pk)

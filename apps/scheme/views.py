@@ -127,12 +127,21 @@ def card(request, term_pk, student_pk):
 
 @role_required(User.Role.SCHOOL_ADMIN)
 def promote(request):
-    """Suggest promotion from the session's published report cards."""
+    """The end of the year: move the school's classes up a grade
+    (apps/schools/classes.promote). Students whose session average reaches
+    the promotion mark are ticked; the rest stay in their grade. Into the
+    next school year when the calendar has it."""
+    from apps.schools import classes as school_classes, grades
+
     admin = request.user
+    school = admin.school
     dated = last_term(admin)
     session = dated.term.session if dated else None
     grading = Grading.load()
-    students = list(_school_students(admin.school).order_by("level", "first_name", "last_name"))
+    taught = school_classes.this_year(school)
+    order = {c.pk: i for i, c in enumerate(taught)}
+    students = sorted(_school_students(school).filter(school_class__in=taught).select_related("school_class"),
+                      key=lambda s: (order[s.school_class_id], s.first_name.lower(), s.last_name.lower()))
     averages = {}
     if session:
         averages = {
@@ -140,34 +149,39 @@ def promote(request):
             ReportCard.objects.filter(student__in=students, term__session=session).exclude(published_at=None)
             .values("student").annotate(average=Avg("total"), terms=Count("pk"))
         }
+    later = school_classes.next_year(school)
 
     if request.method == "POST":
         chosen = set(request.POST.getlist("students"))
-        picked = [s for s in students if str(s.pk) in chosen]
-        outcome = level_moves.promote(admin, picked)
-        moved = len(outcome.changed)
-        notes = []
-        if outcome.at_top:
-            notes.append(f"{len(outcome.at_top)} already in {level_moves.TOP} stayed there")
-        if outcome.no_level:
-            notes.append(f"{len(outcome.no_level)} with no level yet were left as they are")
-        messages.success(request, f"{moved} student{'' if moved == 1 else 's'} promoted."
-                                  + (" " + "; ".join(notes).capitalize() + "." if notes else "")
-                                  + (" You can undo this under Level changes." if moved else ""))
+        outcome = school_classes.promote(admin, school, [s for s in students if str(s.pk) in chosen])
+        said = [f"{len(outcome.promoted)} student{'' if len(outcome.promoted) == 1 else 's'} moved up a grade"]
+        if outcome.graduated:
+            said.append(f"{len(outcome.graduated)} graduated")
+        if outcome.stayed:
+            said.append(f"{len(outcome.stayed)} stayed in their grade")
+        messages.success(request, "; ".join(said).capitalize() + "."
+                                  + (f" Your classes are now in {outcome.year}." if outcome.year else "")
+                                  + " You can undo this under Level changes.")
         return redirect(f"{reverse('schools:dashboard')}#level-changes")
 
-    rows = []
-    for student in students:
-        found = averages.get(student.pk)
-        average = round(found["average"]) if found and found["average"] is not None else None
-        rows.append({
-            "student": student, "average": average, "terms": found["terms"] if found else 0,
-            "suggested": average is not None and average >= grading.pass_mark,
-            "next_level": level_moves.next_level(student.level),
-        })
+    groups = []
+    for found in taught:
+        rows = []
+        for student in (s for s in students if s.school_class_id == found.pk):
+            got = averages.get(student.pk)
+            average = round(got["average"]) if got and got["average"] is not None else None
+            up = grades.next_grade(found.grade)
+            rows.append({
+                "student": student, "average": average, "terms": got["terms"] if got else 0,
+                "suggested": average is not None and average >= grading.pass_mark,
+                "goes_to": f"{grades.label_for(up)} {found.name}".strip() if up else "Graduates",
+            })
+        if rows:
+            groups.append({"class": found, "rows": rows})
     return render(request, "scheme/promote.html", {
-        "rows": rows, "session": session, "grading": grading,
-        "suggested": sum(1 for r in rows if r["suggested"]),
+        "groups": groups, "session": session, "grading": grading, "next_year": later,
+        "suggested": sum(1 for g in groups for r in g["rows"] if r["suggested"]),
+        "unplaced": _school_students(school).filter(school_class__isnull=True).count(),
     })
 
 

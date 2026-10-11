@@ -9,7 +9,7 @@ view source on until that question has been answered and locked.
 
 import json
 
-from apps.accounts.access import accessible_levels, can_see_level, limit_to_levels, require_level
+from apps.accounts.access import can_see_level, is_pupil_of, limit_to_levels, pupils_of, require_level
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -86,17 +86,8 @@ def can_mark(user, attempt):
     goes to staff."""
     if user.is_staff:
         return True
-    return bool(
-        user.is_teacher and user.school_id
-        and attempt.user.school_id == user.school_id
-        and attempt.user.is_student
-        and _teaches_level(user, attempt.user.level)
-    )
-
-
-def _teaches_level(teacher, level_name):
-    levels = accessible_levels(teacher)
-    return levels is None or level_name in levels
+    # A teacher marks the students in the classes they teach (access.is_pupil_of).
+    return bool(user.is_teacher and user.school_id and is_pupil_of(user, attempt.user))
 
 
 def markable(user):
@@ -104,9 +95,7 @@ def markable(user):
     if user.is_staff:
         return waiting
     if user.is_teacher and user.school_id:
-        waiting = waiting.filter(user__school=user.school, user__role="student")
-        levels = accessible_levels(user)
-        return waiting if levels is None else waiting.filter(user__level__in=levels)
+        return waiting.filter(user__in=pupils_of(user).values("pk"))
     return waiting.none()
 
 

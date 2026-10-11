@@ -47,9 +47,9 @@ class ClassTests(TestCase):
         self.assertFalse(teaches(self.teacher, self.cara))
         self.assertFalse(teaches(self.teacher, self.dan))
 
-    def test_a_teacher_with_no_level_yet_has_the_whole_school(self):
-        new = self.person("new", role="teacher")
-        self.assertEqual(set(pupils_of(new)), {self.ada, self.ben, self.cara})
+    def test_a_teacher_with_no_class_yet_has_no_pupils(self):
+        new = self.person("new", role="teacher")              # no level, so no class to join
+        self.assertEqual(set(pupils_of(new)), set())
 
     def test_nobody_else_has_a_class(self):
         for who in (self.ada, self.person("head", role="school_admin"),
@@ -114,15 +114,15 @@ class ClassTests(TestCase):
         self.assertContains(page, "Ben")
         self.assertNotContains(page, "Cara")
         self.assertNotContains(page, "Dan")
-        self.assertContains(page, "All my levels")
-        only_three = self.client.get("/school/class/?level=Level 3")
+        self.assertContains(page, "All my classes")
+        only_three = self.client.get(f"/school/class/?class={self.ben.school_class_id}")
         self.assertNotContains(only_three, f'href="/school/class/{self.ada.pk}/"')
         self.assertContains(only_three, f'href="/school/class/{self.ben.pk}/"')
         self.assertContains(self.client.get(f"/school/class/{self.ada.pk}/"), "Ada")
 
-    def test_a_level_the_teacher_does_not_teach_shows_their_whole_class(self):
+    def test_a_class_the_teacher_does_not_teach_shows_their_whole_class(self):
         self.client.force_login(self.teacher)
-        page = self.client.get("/school/class/?level=Level 5")
+        page = self.client.get(f"/school/class/?class={self.cara.school_class_id}")    # not one of theirs
         self.assertNotContains(page, "Cara")
         self.assertContains(page, "Ada")
 

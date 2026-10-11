@@ -22,6 +22,7 @@ import uuid
 from dataclasses import dataclass, field
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -120,7 +121,8 @@ def promote(admin, students):
 
 def batches(school, limit=8):
     """The latest changes, grouped: [{batch, kind, when, by, rows, can_undo, undone}]."""
-    recent = list(LevelChange.objects.filter(school=school).select_related("member", "changed_by")[:400])
+    recent = list(LevelChange.objects.filter(school=school)
+                  .select_related("member", "changed_by", "old_class", "new_class")[:400])
     groups = {}
     for change in recent:
         group = groups.setdefault(change.batch, {"batch": change.batch, "kind": change.get_kind_display(),
@@ -132,7 +134,11 @@ def batches(school, limit=8):
         group["count"] = len(group["rows"])
         moves = {}
         for change in group["rows"]:
-            key = (change.old_level or "No level", change.new_level or "No level")
+            # Classes when the change was between classes ("Primary 3 → Primary 4").
+            before = change.old_class.display_name if change.old_class else (change.old_level or "No level")
+            after = ("Graduated" if change.kind == "graduate" else
+                     change.new_class.display_name if change.new_class else (change.new_level or "No level"))
+            key = (before, after)
             moves[key] = moves.get(key, 0) + 1
         group["moves"] = sorted(moves.items(), key=lambda item: -item[1])
         group["can_undo"] = not group["undone"]
@@ -141,7 +147,14 @@ def batches(school, limit=8):
 
 @transaction.atomic
 def undo(admin, batch):
-    """(put back, skipped): skipped are people changed again since."""
+    """(put back, skipped): skipped are people changed again since. A batch
+    that moved students between classes (or graduated them) is put back by
+    apps/schools/classes.undo, class and all."""
+    if LevelChange.objects.filter(school=admin.school, batch=batch).filter(
+            Q(old_class__isnull=False) | Q(new_class__isnull=False) | Q(kind="graduate")).exists():
+        from .classes import undo as undo_classes
+
+        return undo_classes(admin, batch)
     changes = list(LevelChange.objects.select_for_update().filter(school=admin.school, batch=batch, undone_at__isnull=True)
                    .select_related("member"))
     restored, skipped = [], []

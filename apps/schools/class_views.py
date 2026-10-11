@@ -54,7 +54,7 @@ class ClassForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         grade, name = cleaned.get("grade"), cleaned.get("name", "")
-        session = self.instance.session if self.instance.pk else school_classes.current_session()
+        session = self.instance.session if self.instance.pk else school_classes.school_year(self.school)
         clash = SchoolClass.objects.filter(school=self.school, session=session, grade=grade, name__iexact=name)
         if grade and clash.exclude(pk=self.instance.pk).exists():
             self.add_error("name", f"There's already a {grades.label_for(grade)} {name}".strip()
@@ -64,7 +64,7 @@ class ClassForm(forms.ModelForm):
     def save(self, commit=True):
         found = super().save(commit=False)
         if not found.pk:
-            found.school, found.session = self.school, school_classes.current_session()
+            found.school, found.session = self.school, school_classes.school_year(self.school)
         found.save()
         self.save_m2m()
         if found.class_teacher_id:
@@ -101,7 +101,7 @@ def classes(request):
     unplaced = User.objects.filter(school=school, role=User.Role.STUDENT, is_active=True, school_class__isnull=True)
     return render(request, "schools/classes.html", {
         "school": school, "stages": stages, "form": form, "total": len(found),
-        "session": school_classes.current_session(), "unplaced": unplaced.count(),
+        "session": school_classes.school_year(school), "unplaced": unplaced.count(),
     })
 
 
