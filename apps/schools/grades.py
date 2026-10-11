@@ -4,7 +4,7 @@ A school's stages and grades, and the content level each grade follows.
 Schools are organised the Nigerian way: Pre-School, Primary, Junior
 Secondary and Senior Secondary, each with its grades. The site's content
 is organised by level (Pre-Level, Level 1 … Level 12: the EchoSpell book,
-the scheme of work, age bands, billing), so every grade follows one level.
+age bands, billing), so every grade follows one level.
 By default:
 
     Pre-School          Creche, Nursery 1, Nursery 2, Kindergarten   Pre-Level

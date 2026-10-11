@@ -13,7 +13,6 @@ from apps.accounts.models import User
 
 from . import classes as school_classes
 from . import levels as level_moves
-from apps.scheme.timetable import class_week
 
 from .class_progress import class_progress
 from . import logins
@@ -354,11 +353,6 @@ def class_dashboard(request):
     elif len(taught) == 1:
         chosen = taught[0]
     progress = class_progress(pupils)
-    # This week of the scheme of work for the class's level, and each pupil's share of it done.
-    level = chosen.level if chosen else request.user.level
-    scheme = class_week(request.user, level, [row["pupil"] for row in progress["rows"]])
-    for row in progress["rows"]:
-        row["scheme_done"] = scheme["done"].get(row["pupil"].pk, 0)
     return render(request, "schools/class_dashboard.html", {
         **progress,
         "needs_help": [{**row, "reason": help_reason(row)} for row in progress["rows"] if row["needs_help"]],
@@ -367,7 +361,6 @@ def class_dashboard(request):
         "taught": taught,
         "level": chosen.level if chosen else "",
         "weekly_email": found.weekly_email,
-        "scheme": scheme,
     })
 
 

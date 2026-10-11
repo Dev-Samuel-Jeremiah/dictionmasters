@@ -75,17 +75,17 @@ class QualificationTests(TestCase):
     def test_asked_once_on_the_home_of_someone_who_signed_up_before(self):
         solo = person("solo@example.com", role="individual")
         self.client.force_login(solo)
-        home = self.client.get("/scheme/choose/")
+        home = self.client.get("/accounts/dashboard/")
         self.assertContains(home, "data-qualification")
-        self.client.post("/accounts/qualification/", {"qualification": "phd", "next": "/scheme/choose/"})
+        self.client.post("/accounts/qualification/", {"qualification": "phd", "next": "/accounts/dashboard/"})
         solo.refresh_from_db()
         self.assertEqual(solo.qualification, "phd")
-        self.assertNotContains(self.client.get("/scheme/choose/"), "data-qualification")
+        self.assertNotContains(self.client.get("/accounts/dashboard/"), "data-qualification")
 
     def test_not_asked_of_children_or_school_students(self):
         child = person("child@example.com", role="individual", simple_home=True)
         self.client.force_login(child)
-        self.assertNotContains(self.client.get("/scheme/choose/", follow=True), "data-qualification")   # their simple home
+        self.assertNotContains(self.client.get("/accounts/dashboard/", follow=True), "data-qualification")   # their simple home
         school = School.objects.create(name="Unity", email="u@example.com")
         pupil = person("pupil@example.com", role="student", school=school, level="Level 2")
         self.client.post("/accounts/qualification/", {"qualification": "phd"})

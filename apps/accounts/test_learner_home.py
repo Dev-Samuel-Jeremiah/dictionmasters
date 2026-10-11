@@ -98,12 +98,10 @@ class HomeTests(TestCase):
         self.assertNotContains(page, "Your courses")
 
     def test_staff_get_a_short_home_with_the_control_room(self):
-        # An individual learner follows a scheme they choose
-        # (apps/scheme/test_path.py); staff get their own short home.
+        # Staff get their own short home.
         page = self.home(make("adult@example.com", is_staff=True))
         self.assertTemplateUsed(page, "accounts/staff_home.html")
         self.assertContains(page, "data-control-room")
-        self.assertContains(page, 'href="/manage/scheme-of-work/"')
         self.assertNotContains(page, "Quick tools")
 
     def test_an_individual_with_the_simple_home_switched_on(self):
@@ -115,7 +113,7 @@ class HomeTests(TestCase):
         self.assertTemplateUsed(page, "accounts/teacher_home.html")
         self.assertNotContains(page, "data-todays-lesson")
         self.assertContains(page, "data-my-class")
-        for url in ("/scheme/teach/", "/scheme/reports/", "/assessments/marking/", "/lesson-audio/"):
+        for url in ("/scheme/reports/", "/assessments/marking/", "/lesson-audio/"):
             self.assertContains(page, f'href="{url}" class="lh-more__link"', msg_prefix=url)
         # The learner dashboard's parts are gone from it.
         self.assertNotContains(page, "Quick tools")
@@ -163,8 +161,8 @@ class GrownUpsTests(TestCase):
         self.client.post(self.url, {})
         adult.refresh_from_db()
         self.assertFalse(adult.simple_home)
-        # Off again: their own scheme (to choose, the first time).
-        self.assertTemplateUsed(self.client.get("/accounts/dashboard/"), "scheme/choose.html")
+        # Off again: the same learner home (the scheme they used to choose is gone).
+        self.assertTemplateUsed(self.client.get("/accounts/dashboard/"), "accounts/learner_home.html")
 
     def test_students_and_teachers_have_no_switch(self):
         for user in (make("pupil@example.com", role="student", level="Level 1"),

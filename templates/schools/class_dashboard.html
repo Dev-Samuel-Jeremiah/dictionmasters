@@ -27,28 +27,6 @@
     </nav>
     {% endif %}
 
-    {# This week of the scheme of work (apps/scheme/timetable.class_week). #}
-    {% if scheme.label %}
-    <section class="px-card sw-week" data-scheme-week>
-      <p class="sw-week__label">{{ scheme.label }}</p>
-      {% if scheme.rows %}
-      <h2>This week's scheme</h2>
-      <ul class="sw-tt">
-        {% for row in scheme.rows %}
-        <li class="{% if row.is_today %}is-today{% endif %}"><span class="sw-tt__day">{{ row.day_label }}</span><a href="{{ row.url }}">{{ row.title }}</a></li>
-        {% endfor %}
-      </ul>
-      {% elif "break" not in scheme.label %}
-      <p class="sw-week__notes">Nothing on the scheme of work for this week.</p>
-      {% endif %}
-    </section>
-    {% endif %}
-
-    <a href="{% url 'scheme:teaching_plan' %}{% if level %}?level={{ level|urlencode }}{% endif %}" class="px-item cd-mark" data-teaching-plan>
-      <span class="px-item__ii t-sky">{% include "includes/icon.html" with name="calendar" size=22 %}</span>
-      <span class="px-item__it"><b>Teaching plan</b><span>The whole term, week by week, and what to prepare for the next school day</span></span>
-      <span class="px-chev">{% include "includes/icon.html" with name="chev" size=20 %}</span>
-    </a>
     <a href="{% url 'scheme:reports' %}" class="px-item cd-mark">
       <span class="px-item__ii t-butter">{% include "includes/icon.html" with name="cert" size=22 %}</span>
       <span class="px-item__it"><b>Report cards</b><span>This term's scores, and your comment for each pupil</span></span>
@@ -101,7 +79,6 @@
             <span class="cd-pupil__echo">EchoSpell {{ row.echospell_done }} of {{ row.echospell_total }} groups</span>
             <span class="px-meter" aria-hidden="true"><i style="width: {{ row.echospell_percent }}%"></i></span>
             {% endif %}
-            {% if scheme.total %}<span class="cd-pupil__echo">This week: {{ row.scheme_done }} of {{ scheme.total }} done</span>{% endif %}
             <span class="cd-pupil__nums">
               {% if row.activity_avg is not None %}<span>Activities {{ row.activity_avg }}%</span>{% endif %}
               {% if row.assessment_avg is not None %}<span>Assessments {{ row.assessment_avg }}%</span>{% endif %}

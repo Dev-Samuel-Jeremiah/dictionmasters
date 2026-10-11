@@ -25,9 +25,9 @@
       {% for error in field.errors %}<p class="cr-error">{{ error }}</p>{% endfor %}
     </div>
     {% endfor %}
-    <p class="cr-help">The name shows everywhere school people see this grade: classes, sign-up, dashboards and reports. The content level decides which lessons and scheme of work its students follow.</p>
+    <p class="cr-help">The name shows everywhere school people see this grade: classes, sign-up, dashboards and reports. The content level decides which lessons its students see.</p>
     {% if students %}
-    <p class="cr-help"><b>Changing the content level moves {{ students }} student{{ students|pluralize }} in {{ classes }} class{{ classes|pluralize:"es" }}</b> to the new level's lessons and scheme of work straight away.</p>
+    <p class="cr-help"><b>Changing the content level moves {{ students }} student{{ students|pluralize }} in {{ classes }} class{{ classes|pluralize:"es" }}</b> to the new level's lessons straight away.</p>
     {% endif %}
     <div class="cr-actions">
       <button type="submit" class="cr-btn cr-btn--gold">Save</button>

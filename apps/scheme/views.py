@@ -7,18 +7,14 @@ The school-year pages.
                   school admin, and once published for their grown-ups
                   behind the For grown-ups PIN
     promote       end of the year: students suggested for promotion from
-                  their session average, moved up with the school's usual
-                  level tools (apps/schools/levels.py, with undo)
+                  their session average, moved up a grade by class
+                  (apps/schools/classes.promote, with undo)
     term_dates    a school's own term dates, when it doesn't keep the
                   platform's
 
-And for a student following the scheme (timetable.py):
-
-    home          their dashboard: this week, today first (accounts.views
-                  .dashboard hands over to it)
-    weeks         My weeks: every week they've reached, to go back to
-    week          one of those weeks
-    go            open an entry from the scheme, noting that it was opened
+The scheme of work (week-by-week lessons) is retired: students open every
+tool their grade allows from Learn (apps/accounts/access.can_use_tool).
+Its tables are kept, unused, so nothing published or done is lost.
 """
 
 from django.contrib import messages
@@ -36,11 +32,8 @@ from apps.accounts.decorators import role_required
 from apps.accounts.models import User
 from apps.schools import levels as level_moves
 
-from .calendar import break_after_week, dates_from_weeks, last_term, terms_for, week_starts, weeks_in
-from .models import TERM_CHOICES as TERM_LABELS
-from . import path as own
-from . import timetable as tt
-from .models import Grading, ReportCard, SchemeEntry, SchemeOpened, SchoolTermDates
+from .calendar import break_after_week, dates_from_weeks, last_term, terms_for, weeks_in
+from .models import Grading, ReportCard, SchoolTermDates
 from .results import publish, save_comments, term_results
 
 
@@ -235,206 +228,4 @@ def term_dates(request):
     return render(request, "scheme/term_dates.html", {
         "terms": [{"dated": t, "own": t.term.pk in own, "error": errors.get(t.term.pk, ""),
                    "weeks": weeks_in(t), "break_after": break_after_week(t)} for t in terms],
-    })
-
-
-@role_required(User.Role.SCHOOL_ADMIN)
-def school_scheme(request):
-    """The scheme of work for the school's levels, read-only, with the
-    school's own week dates. The scheme itself is set by Diction Masters
-    (control room); a school sets its term dates."""
-    from .models import DAY_CHOICES, DAY_ORDER, SchemeEntry
-    from .timetable import content_url
-
-    school = request.user.school
-    levels = sorted(set(_school_students(school).exclude(level="").values_list("level", flat=True)),
-                    key=lambda v: level_moves.LEVELS.index(v) if v in level_moves.LEVELS else 99) or level_moves.LEVELS[1:2]
-    level = request.GET.get("level") if request.GET.get("level") in level_moves.LEVELS else levels[0]
-    raw = request.GET.get("term", "")
-    number = int(raw) if raw in {"1", "2", "3"} else (last_term(request.user).number if last_term(request.user) else 1)
-    terms = terms_for(school)
-    newest = terms[-1].term.session_id if terms else None
-    dated = next((t for t in terms if t.term.session_id == newest and t.number == number), None)
-    firsts = dict(week_starts(dated)) if dated else {}
-    labels = dict(DAY_CHOICES)
-    by_week = {}
-    for entry in (SchemeEntry.objects.filter(level=level, term=number, is_draft=False)
-                  .select_related("group__level", "category", "activity__group__level",
-                                  "module_day__week__term__module", "dialogue__level", "sound",
-                                  "chapter__term__book", "recital__section", "library_item", "assessment")
-                  .order_by("week", "order")):
-        by_week.setdefault(entry.week, []).append(
-            {"day": labels.get(entry.day) or "Any day", "title": entry.title, "kind": entry.get_kind_display(),
-             "url": content_url(entry)})
-    # Monday to Friday, "any day" first — not the days' names in A–Z order.
-    rank = {label: DAY_ORDER.index(key) for key, label in DAY_CHOICES}
-    rank["Any day"] = 0
-    for rows in by_week.values():
-        rows.sort(key=lambda row: rank.get(row["day"], 0))
-    weeks = [{"number": n, "first": firsts.get(n), "rows": by_week.get(n, [])}
-             for n in range(1, (weeks_in(dated) if dated else max(by_week or [12])) + 1)]
-    return render(request, "scheme/school_scheme.html", {
-        "levels": levels, "level": level, "terms": TERM_LABELS, "number": number, "dated": dated,
-        "weeks": weeks, "total": sum(len(w["rows"]) for w in weeks),
-    })
-
-
-# ---------------------------------------------------------------------------
-# The student's side
-# ---------------------------------------------------------------------------
-
-def home(request):
-    """A scheme student's dashboard. Called from accounts.views.dashboard."""
-    from apps.accounts import switcher
-    from apps.accounts.dashboard_data import _greeting
-
-    return render(request, "scheme/home.html", {
-        **tt.timetable(request.user),
-        "greeting": _greeting(timezone.now()),
-        "today": _today(),
-        "switcher": switcher.context(request),
-    })
-
-
-def _scheme_student(view):
-    """Only a student following the scheme, or an individual learner who
-    has chosen one (path.py); anyone else goes home."""
-    @login_required(login_url="accounts:login")
-    def guard(request, *args, **kwargs):
-        user = request.user
-        if not (tt.on_scheme(user) or (own.follows_path(user) and own.choice_for(user))):
-            return redirect("accounts:dashboard")
-        return view(request, *args, **kwargs)
-
-    guard.__name__ = view.__name__
-    guard.__doc__ = view.__doc__
-    return guard
-
-
-@_scheme_student
-def practise(request):
-    """The practice tools a scheme student can always open."""
-    return render(request, "scheme/practise.html")
-
-
-@_scheme_student
-def weeks(request):
-    """My weeks: the weeks they've reached, newest first."""
-    if not tt.on_scheme(request.user):
-        return redirect("scheme:lessons")          # individuals: the whole scheme, term by term
-    return render(request, "scheme/weeks.html", {"weeks": tt.past_weeks(request.user)})
-
-
-@_scheme_student
-def lessons(request):
-    """An individual learner's Lessons: their scheme term by term, week by
-    week, day by day — all open, to move around until it's all done."""
-    if tt.on_scheme(request.user):
-        return redirect("scheme:weeks")
-    choice = own.choice_for(request.user)
-    found = own.lessons(request.user, choice.level)
-    raw = request.GET.get("term", "")
-    numbers = [t["number"] for t in found["terms"]]
-    if raw.isdigit() and int(raw) in numbers:
-        shown = int(raw)
-    else:
-        shown = found["current"]["term"] if found["current"] else (numbers[0] if numbers else None)
-    return render(request, "scheme/lessons.html", {
-        **found, "choice": choice, "shown": shown,
-        "term": next((t for t in found["terms"] if t["number"] == shown), None),
-    })
-
-
-@_scheme_student
-def week(request, term, number):
-    if tt.on_scheme(request.user):
-        rows = tt.week_rows(request.user, term, number)
-    else:
-        level = own.choice_for(request.user).level
-        rows = None
-        if (term, number) in own.open_weeks(request.user, level):
-            entries = tt._sorted(tt._entries(level=level, term=term, week=number))
-            done = tt.done_for([request.user], entries)[request.user.pk]
-            rows = [tt._row(e, done) for e in entries]
-    if rows is None:
-        raise Http404
-    return render(request, "scheme/week.html", {
-        "rows": rows, "term_label": dict(TERM_LABELS).get(term, ""), "number": number,
-        "done": sum(1 for r in rows if r["done"]), "total": len(rows),
-    })
-
-
-@_scheme_student
-def go(request, pk):
-    """Open an entry from the scheme: noted, then on to its content. Only
-    entries for their level in a week they've reached."""
-    user = request.user
-    if tt.on_scheme(user):
-        entry = get_object_or_404(SchemeEntry, pk=pk, level=user.level, is_draft=False)
-        if tt.content_key(entry) not in tt.open_keys(user):
-            raise Http404
-    else:
-        level = own.choice_for(user).level
-        entry = get_object_or_404(SchemeEntry, pk=pk, level=level, is_draft=False)
-        if (entry.term, entry.week) not in own.open_weeks(user, level):
-            raise Http404
-    SchemeOpened.objects.get_or_create(user=user, entry=entry)
-    return redirect(tt.content_url(entry))
-
-
-def path_home(request):
-    """An individual learner's dashboard: their chosen scheme, the next
-    lesson and My weeks — or, with none chosen yet, the choice. Called from
-    accounts.views.dashboard."""
-    from apps.accounts import switcher
-    from apps.accounts.dashboard_data import _greeting
-
-    choice = own.choice_for(request.user)
-    if choice is None:
-        return choose(request)
-    return render(request, "scheme/path_home.html", {
-        **own.path(request.user, choice.level),
-        "choice": choice,
-        "greeting": _greeting(timezone.now()),
-        "today": _today(),
-        "switcher": switcher.context(request),
-    })
-
-
-@login_required(login_url="accounts:login")
-def choose(request):
-    """Choose (or change) the scheme to follow. Individual learners only."""
-    from .models import SchemeChoice
-
-    if not own.follows_path(request.user):
-        return redirect("accounts:dashboard")
-    offer = own.schemes_on_offer()
-    if request.method == "POST":
-        level = request.POST.get("level", "")
-        if level in {o["level"] for o in offer}:
-            SchemeChoice.objects.update_or_create(user=request.user, defaults={"level": level})
-            messages.success(request, f"You're following the {level} scheme. Your first lesson is ready.")
-            return redirect("accounts:dashboard")
-        messages.error(request, "Choose one of the schemes below.")
-    choice = own.choice_for(request.user)
-    return render(request, "scheme/choose.html", {
-        "offer": offer, "choice": choice, "suggested": own.suggested_level(request.user),
-    })
-
-
-@role_required(User.Role.TEACHER)
-def teaching_plan(request):
-    """A teacher's plan for the term: every week of the scheme for their
-    level, laid out Monday to Friday with the dates, what to prepare for
-    the next school day, and how the class is getting on. Printable."""
-    teacher = request.user
-    levels = teacher.all_levels or level_moves.LEVELS[1:2]
-    level = request.GET.get("level") if request.GET.get("level") in levels else levels[0]
-    current = last_term(teacher)
-    raw = request.GET.get("term", "")
-    number = int(raw) if raw in {"1", "2", "3"} else (current.number if current else 1)
-    pupils = list(pupils_of(teacher).filter(level=level))
-    return render(request, "scheme/teaching_plan.html", {
-        **tt.term_plan(teacher, level, number, pupils),
-        "levels": levels, "level": level, "number": number, "terms": TERM_LABELS, "today": _today(),
     })

@@ -193,9 +193,6 @@ def todays_lesson(user, echospell=None, modules=None):
     home. Pass in what learner_dashboard already worked out to save
     looking it up twice.
 
-    A student at a school doesn't come here: their dashboard is their
-    scheme of work's week (apps/scheme/timetable.py).
-
     EchoSpell comes first: every group belongs to one level, while a
     module with no levels ticked is open to every level, so putting
     modules first could still send a Level 9 pupil to a nursery day. The 44 Academy keeps no per-learner "next sound",

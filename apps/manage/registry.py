@@ -279,16 +279,13 @@ SECTIONS = [
         ],
     },
     {
-        "slug": "scheme", "name": "Scheme of work", "icon": "🗓️", "tone": "#1846E0",
-        "blurb": "The school year: term dates, how report cards are graded, and every entry on the scheme of work (edit it as a timetable under Scheme of work).",
+        "slug": "scheme", "name": "School year", "icon": "🗓️", "tone": "#1846E0",
+        "blurb": "The school year: term dates, and how report cards are graded.",
         "screens": [
             {"key": "school-years", "model": "scheme.Session", "name": "School years", "singular": "school year",
              "columns": ["name"], "search": ["name"], "children": ["terms"]},
             {"key": "terms", "model": "scheme.Term", "columns": ["__str__", "starts", "ends", "break_starts", "break_ends"],
              "search": ["session__name"], "order": ["starts"], "parent": ("session", "school-years")},
-            {"key": "scheme-entries", "model": "scheme.SchemeEntry", "name": "Scheme of work entries",
-             "singular": "entry", "columns": ["level", "term", "week", "day", "kind", "__str__"],
-             "search": ["level"], "order": ["level", "term", "week", "day", "order"]},
             {"key": "grading", "model": "scheme.Grading", "name": "Grading", "singular": "grading",
              "columns": ["__str__", "ca1_weight", "ca2_weight", "exam_weight", "pass_mark"], "search": [],
              "no_add": True, "no_delete": True, "singleton": True},

@@ -26,18 +26,8 @@ def visible_items(user):
 
 
 def openable_items(user):
-    """What someone may open: what they see, and for a student on the
-    scheme of work also any library book on their scheme in a week they've
-    reached — it isn't listed in their library, but its lesson opens."""
-    items = visible_items(user)
-    if user.school_id and user.is_student:
-        from apps.scheme.timetable import on_scheme, open_keys
-
-        if on_scheme(user):
-            slugs = [key[1] for key in open_keys(user) if key[0] == "library"]
-            if slugs:
-                items = items | LibraryItem.objects.filter(is_published=True, slug__in=slugs)
-    return items
+    """What someone may open: what they see."""
+    return visible_items(user)
 
 
 @login_required

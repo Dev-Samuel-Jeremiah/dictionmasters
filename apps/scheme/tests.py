@@ -45,11 +45,11 @@ class YearTestCase(TestCase):
         self.ben = make("ben@example.com", role="student", school=self.school, level="Level 2")
 
     def on(self, day):
-        """Pretend today is `day` for the calendar and the timetable."""
+        """Pretend today is `day` for the calendar."""
         from contextlib import ExitStack
 
         stack = ExitStack()
-        for where in ("apps.scheme.calendar.timezone.localdate", "apps.scheme.timetable.timezone.localdate"):
+        for where in ("apps.scheme.calendar.timezone.localdate",):
             stack.enter_context(mock.patch(where, return_value=day))
         return stack
 
@@ -112,8 +112,6 @@ class SchoolTestTests(YearTestCase):
         test = Assessment.objects.create(title="Exam", kind=Assessment.Kind.EXAM, level="Level 2", term=1,
                                          opens_at=now + timedelta(days=1), closes_at=now + timedelta(days=2))
         Question.objects.create(assessment=test, prompt="Pick", options="a\nb", answer="a")
-        # A student with no school: a school's students reach tests through
-        # their scheme of work (test_timetable.py), which isn't what's tested here.
         pupil = make("loose@example.com", role="student", level="Level 2")
         self.client.force_login(pupil)
         page = self.client.post(f"/assessments/{test.slug}/start/", follow=True)

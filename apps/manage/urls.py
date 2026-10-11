@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import calendar_editor, classes_page, scheme_editor, views
+from . import calendar_editor, classes_page, views
 
 app_name = "manage"
 
@@ -29,7 +29,6 @@ urlpatterns = [
     path("words/upload-zip/", views.quick_words_audio_upload, name="quick_words_audio_upload"),
     path("words/upload-zip/<uuid:job_id>/", views.quick_words_audio_import, name="quick_words_audio_import"),
     path("lesson-items/<int:pk>/slides/", views.lesson_slides, name="lesson_slides"),
-    path("scheme-of-work/", scheme_editor.scheme_editor, name="scheme_editor"),
     path("calendar/", calendar_editor.calendar_editor, name="calendar"),
     path("classes-grades/", classes_page.classes_overview, name="classes_overview"),
     path("classes-grades/grade/<slug:key>/", classes_page.grade_edit, name="grade_edit"),

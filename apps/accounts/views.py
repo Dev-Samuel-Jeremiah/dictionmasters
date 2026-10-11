@@ -479,44 +479,32 @@ def delete_account(request):
 
 
 def _uses_simple_home(user):
-    """Students always get the one-button home; an individual learner
-    gets it when a grown-up has switched it on for them."""
-    return user.is_student or (user.is_individual and user.simple_home)
+    """Every learner gets the learner home: students and individual
+    learners alike (a grown-up's simple_home choice now changes nothing
+    here; the home is the same one)."""
+    return (user.is_student or user.is_individual) and not user.is_staff
 
 
 @login_required(login_url="accounts:login")
 def dashboard(request):
-    """Everyone's home, each kept simple: a school student's scheme week,
-    an individual's own scheme (or the child's one-button home), a
-    teacher's teaching home, and staff's short list. School admins have
-    their school dashboard."""
+    """Everyone's home, each kept simple: a learner's home (students and
+    individual learners: today's lesson and their tiles, with every tool
+    their grade allows under Learn), a teacher's teaching home, and staff's
+    short list. School admins have their school dashboard."""
     if request.user.role == User.Role.SCHOOL_ADMIN:
         return redirect("schools:dashboard")
-    # A student at a school follows the scheme of work: it alone decides
-    # what their dashboard shows (apps/scheme).
-    from apps.scheme import timetable, views as scheme_views
-
-    if timetable.on_scheme(request.user):
-        return scheme_views.home(request)
     if _uses_simple_home(request.user):
         home = learner_home(request.user)
         home["switcher"] = switcher.context(request)
         return render(request, "accounts/learner_home.html", home)
-    # An individual learner follows a scheme they choose, at their own pace.
-    from apps.scheme import path as own_scheme
-
-    if own_scheme.follows_path(request.user):
-        return scheme_views.path_home(request)
     if request.user.is_teacher:
         return _teacher_home(request)
     return _staff_home(request)
 
 
 def _teacher_home(request):
-    """A teacher's home, for teaching: what to prepare for the next school
-    day, their class at a glance, and their four main tools. Everything a
-    learner has is still under Learn."""
-    from apps.scheme.timetable import prepare_for
+    """A teacher's home, for teaching: their class at a glance and their
+    main tools. Everything a learner has is still under Learn."""
     from apps.schools.class_progress import class_progress
 
     teacher = request.user
@@ -524,7 +512,6 @@ def _teacher_home(request):
         "greeting": _greeting(timezone.now()),
         "today": timezone.localdate(),
         "my_class": class_progress(pupils_of(teacher))["summary"],
-        "prepare": prepare_for(teacher, teacher.level),
         "switcher": switcher.context(request),
     })
 

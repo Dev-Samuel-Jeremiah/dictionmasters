@@ -101,6 +101,8 @@ DAY_CHOICES = [
 DAY_ORDER = [key for key, _label in DAY_CHOICES]
 
 
+# Retired with the scheme of work: nothing reads or writes it now. The table is
+# kept so what was published and done isn't lost; drop it with a migration later.
 class SchemeEntry(models.Model):
     """One piece of content on the scheme of work: this level does it in
     this week of this term, on this day (or any day that week). Built from
@@ -202,6 +204,8 @@ class SchemeEntry(models.Model):
             raise ValidationError("A card needs its group and its card type, and only a card has a card type.")
 
 
+# Retired with the scheme of work: nothing reads or writes it now. The table is
+# kept so what was published and done isn't lost; drop it with a migration later.
 class SchemeOpened(models.Model):
     """A student opened a scheme entry from their scheme. For content whose
     tool keeps no record of being done (a recital, a library item, Daily
@@ -287,6 +291,8 @@ class ReportCard(models.Model):
         return f"{self.student} — {self.term}"
 
 
+# Retired with the scheme of work: nothing reads or writes it now. The table is
+# kept so what was published and done isn't lost; drop it with a migration later.
 class SchemeChoice(models.Model):
     """The scheme an individual learner chose to follow, at their own pace
     (apps/scheme/path.py). Changing it keeps everything they've done."""

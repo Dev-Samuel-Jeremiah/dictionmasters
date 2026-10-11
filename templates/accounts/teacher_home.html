@@ -2,13 +2,13 @@
 {% load static %}
 
 {% block title %}Home — Diction Masters{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}"><link rel="stylesheet" href="{% static 'css/learner_home.css' %}"><link rel="stylesheet" href="{% static 'css/scheme.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/switcher.css' %}"><link rel="stylesheet" href="{% static 'css/learner_home.css' %}">{% endblock %}
 {% block extra_js %}<script src="{% static 'js/switcher.js' %}" defer></script>{% endblock %}
 
 {% block content %}
 {% comment %}
-  A teacher's home (apps/accounts/views._teacher_home): what to prepare for
-  the next school day, the class at a glance, and the four main tools. A
+  A teacher's home (apps/accounts/views._teacher_home): the class at a
+  glance and the main tools. A
   learner's courses and tools are all under Learn.
 {% endcomment %}
 <div class="px-page px-home lh th">
@@ -22,16 +22,6 @@
   </section>
 
   <div class="px-wrap px-lift lh-body">
-    {% if prepare %}
-    <section class="px-card tp-next" data-prepare>
-      <p class="tp-next__label">Prepare for {{ prepare.date|date:"l j F" }}</p>
-      <h2>{{ prepare.term.term.get_number_display }}, Week {{ prepare.week }}</h2>
-      {% if prepare.rows %}
-      <ul class="tp-lessons">{% for row in prepare.rows %}<li><a href="{{ row.url }}" class="tp-lesson"><b>{{ row.title }}</b><small>{{ row.kind }}{% if row.any_day %} · any day this week{% endif %}</small></a></li>{% endfor %}</ul>
-      {% else %}<p class="tp-muted">Nothing on the scheme that day.</p>{% endif %}
-    </section>
-    {% endif %}
-
     <a href="{% url 'schools:class_dashboard' %}" class="px-card th-class" data-my-class>
       <span class="th-class__head"><b>My class</b><span class="px-chev" aria-hidden="true">{% include "includes/icon.html" with name="chev" size=22 %}</span></span>
       <span class="th-class__stats">
@@ -43,7 +33,6 @@
     </a>
 
     <nav class="lh-more lh-more--four th-tools" aria-label="Teaching tools">
-      <a href="{% url 'scheme:teaching_plan' %}" class="lh-more__link" data-teaching-plan><span class="px-item__ii t-sky" aria-hidden="true">{% include "includes/icon.html" with name="calendar" size=24 %}</span><b>Teaching plan</b></a>
       <a href="{% url 'scheme:reports' %}" class="lh-more__link"><span class="px-item__ii t-butter" aria-hidden="true">{% include "includes/icon.html" with name="cert" size=24 %}</span><b>Report cards</b></a>
       <a href="{% url 'assessments:marking_queue' %}" class="lh-more__link"><span class="px-item__ii t-lilac" aria-hidden="true">{% include "includes/icon.html" with name="task" size=24 %}</span><b>Marking{% if my_class.to_mark %} ({{ my_class.to_mark }}){% endif %}</b></a>
       <a href="{% url 'lesson_audio:hub' %}" class="lh-more__link"><span class="px-item__ii t-mint" aria-hidden="true">{% include "includes/icon.html" with name="note-audio" size=24 %}</span><b>Lesson Notes to Audio</b></a>

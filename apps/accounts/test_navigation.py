@@ -87,7 +87,7 @@ class TidyMenuTests(TestCase):
     def test_a_teacher_gets_a_teaching_group(self):
         teacher = User.objects.create_user("t@example.com", "mango7", first_name="T", role="teacher", level="Level 1")
         side = self.sidebar(teacher)
-        for url in ("/school/class/", "/scheme/teach/", "/scheme/reports/", "/assessments/marking/"):
+        for url in ("/school/class/", "/scheme/reports/", "/assessments/marking/"):
             self.assertEqual(side.count(f'href="{url}"'), 1, url)
 
     def test_a_school_admin_gets_the_school_group(self):
@@ -96,7 +96,7 @@ class TidyMenuTests(TestCase):
         admin = User.objects.create_user("h@example.com", "mango7", first_name="H", role="school_admin",
                                          school=School.objects.create(name="Unity", email="u@example.com"))
         side = self.sidebar(admin)
-        for url in ("/scheme/school/", "/scheme/term-dates/", "/scheme/reports/", "/scheme/promote/"):
+        for url in ("/school/classes/", "/scheme/term-dates/", "/scheme/reports/", "/scheme/promote/"):
             self.assertEqual(side.count(f'href="{url}"'), 1, url)
         self.assertNotIn("data-side-fold", side)
 
