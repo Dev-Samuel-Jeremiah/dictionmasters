@@ -3,6 +3,7 @@
 
 {% block title %}{% if school %}{{ school.name }}{% else %}Individual learners{% endif %} — Schools &amp; people — Control room{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/school_directory.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/trial_modal.js' %}" defer></script>{% endblock %}
 
 {% block content %}
 <div class="sd2">
@@ -10,7 +11,7 @@
     <div>
       <p class="cr-pagehead__eyebrow">&#127979; <a href="{% url 'manage:schools_directory' %}">Schools &amp; people</a></p>
       <h1 class="cr-pagehead__title">{% if school %}{{ school.name }}{% else %}Individual learners{% endif %}</h1>
-      {% if school %}<p class="cr-pagehead__note"><span class="sd2-plan sd2-plan--{{ tone }}">{{ plan }}</span></p>{% endif %}
+      {% if school %}<p class="cr-pagehead__note"><span class="sd2-plan sd2-plan--{{ tone }}" data-trial-chip role="button" tabindex="0" title="Add more free trial" {% include "manage/_trial_attrs.html" with trial=school_trial open="" %}>{{ plan }}<span class="sd2-plan__add" aria-hidden="true">+ trial</span></span></p>{% endif %}
     </div>
     <div class="cr-pagehead__actions">
       <a href="?{% if role %}role={{ role }}&amp;{% endif %}{% if level %}level={{ level }}&amp;{% endif %}{% if query %}q={{ query|urlencode }}&amp;{% endif %}csv=1" class="cr-btn cr-btn--ghost">&#11015; Download list (CSV)</a>
@@ -97,13 +98,14 @@
     {% if page.object_list %}
     <div class="cr-tablewrap">
       <table class="cr-table cr-table--rows sd2-table">
-        <thead><tr><th>Name</th><th>Role</th><th>Level</th><th>Signs in with</th><th>Email</th><th>Joined</th><th>Last signed in</th><th class="cr-table__end"></th></tr></thead>
+        <thead><tr><th>Name</th><th>Role</th><th>Level</th>{% if not school %}<th>Plan</th>{% endif %}<th>Signs in with</th><th>Email</th><th>Joined</th><th>Last signed in</th><th class="cr-table__end"></th></tr></thead>
         <tbody>
           {% for m in page.object_list %}
           <tr class="{% if not m.is_active %}is-off{% endif %}">
             <td><span class="sd2-person"><span class="sd2-avatar sd2-avatar--{{ m.role }}" aria-hidden="true">{{ m.first_name|first|upper }}{{ m.last_name|first|upper }}</span><strong>{{ m.get_full_name|default:"—" }}</strong></span></td>
             <td><span class="sd2-role sd2-role--{{ m.role }}">{{ m.get_role_display }}</span>{% if not m.is_active %} <span class="sd2-role sd2-role--off">Removed</span>{% endif %}</td>
             <td>{{ m.level_display|default:"—" }}</td>
+            {% if not school %}<td><span class="sd2-plan sd2-plan--{{ m.plan_tone }}" data-trial-chip role="button" tabindex="0" title="Add more free trial" {% include "manage/_trial_attrs.html" with trial=m.trial open="" %}>{{ m.plan_label }}<span class="sd2-plan__add" aria-hidden="true">+ trial</span></span></td>{% endif %}
             <td><code class="cr-code">{{ m.login_name }}</code></td>
             <td>{% if m.has_real_email %}{{ m.email }}{% else %}<span class="cr-blank">—</span>{% endif %}</td>
             <td>{{ m.date_joined|date:"j M Y" }}</td>
@@ -129,4 +131,5 @@
     {% endif %}
   </section>
 </div>
+{% include "manage/_trial_modal.html" %}
 {% endblock %}

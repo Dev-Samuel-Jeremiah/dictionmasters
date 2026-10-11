@@ -931,6 +931,47 @@ def _trial_holder(target):
 
 
 @staff_only
+@require_POST
+def extend_trial(request):
+    """The trial modal (manage/_trial_modal.html, on Schools & people): add
+    days, weeks or months to a school's or a learner's free trial, from
+    today if it has already ended, else from its end. Same as Billing
+    settings' "extend" (_TrialHolder.extend), and recorded the same way."""
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    from apps.accounts.models import User
+    from apps.billing.access import TRIAL_UNITS, trial_label
+    from apps.billing.models import Subscription
+
+    back = request.POST.get("next", "")
+    if not url_has_allowed_host_and_scheme(back, allowed_hosts={request.get_host()}):
+        back = reverse("manage:schools_directory")
+    target = request.POST.get("target", "")
+    if target.startswith("user:"):
+        # A learner's own trial lives on their subscription, made if they've never had one.
+        user = User.objects.filter(pk=target[5:] if target[5:].isdigit() else 0, school__isnull=True).first()
+        holder = _TrialHolder(subscription=Subscription.objects.get_or_create(user=user)[0]) if user else None
+    else:
+        holder = _trial_holder(target)
+    try:
+        length = int(request.POST.get("length", ""))
+    except ValueError:
+        length = 0
+    unit = request.POST.get("unit", "days")
+    reason = request.POST.get("reason", "").strip()[:120]
+    if holder is None or not 1 <= length <= 365 or unit not in dict(TRIAL_UNITS):
+        messages.error(request, "Choose how much trial to add: 1 to 365 days, weeks or months.")
+        return redirect(back)
+    # No reason typed: the one it already has stays.
+    kept = holder.school.trial_reason if holder.school is not None else holder.sub.custom_trial_reason
+    holder.extend(length, unit, reason or kept)
+    note = trial_label(length, unit)
+    _record(request, holder.log_obj, CHANGE, f"Free trial extended by {note}" + (f" ({reason})" if reason else ""))
+    messages.success(request, f"{holder.name}: {note} more free trial. It now ends {holder.ends()}.{holder.paid_note()}")
+    return redirect(back)
+
+
+@staff_only
 def billing_settings(request):
     from apps.billing.access import subscription_for, trial_label
     from apps.billing.models import Subscription

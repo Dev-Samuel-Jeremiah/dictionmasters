@@ -33,7 +33,13 @@ ROLES = [
 
 def _plan_state(school):
     """(label, tone) for the school's plan: paid, on trial, or ended."""
-    subscription = getattr(school, "subscription", None)
+    return _sub_state(getattr(school, "subscription", None))
+
+
+def _sub_state(subscription):
+    """(label, tone) for a school's or a learner's plan: paid, on trial, or
+    ended ("bad"), which the trial modal (manage/_trial_modal.html) offers
+    to extend."""
     if subscription is None:
         return "No plan yet", "muted"
     now = timezone.now()
@@ -70,7 +76,10 @@ def directory(request):
     rows = []
     for school in schools:
         label, tone = _plan_state(school)
-        rows.append({"school": school, "plan": label, "tone": tone, "teacher_limit": school.teacher_limit})
+        subscription = getattr(school, "subscription", None)
+        rows.append({"school": school, "plan": label, "tone": tone, "teacher_limit": school.teacher_limit,
+                     "trial": {"target": f"school:{school.pk}", "name": school.name, "expired": tone == "bad",
+                               "ends": subscription.trial_ends_at if subscription else None}})
     individuals = User.objects.filter(school__isnull=True, role=User.Role.INDIVIDUAL, is_staff=False)
     totals = {
         "schools": School.objects.count(),
@@ -135,6 +144,17 @@ def people(request, pk):
         l["width"] = round(l["students"] * 100 / top)
     week_ago = timezone.now() - timedelta(days=7)
     page = Paginator(shown, PER_PAGE).get_page(request.GET.get("page"))
+    if school is None:
+        # Individual learners pay for themselves: each row shows their plan,
+        # one query for the page, and an ended one opens the trial modal.
+        from apps.billing.models import Subscription
+
+        subs = {s.user_id: s for s in Subscription.objects.filter(user__in=list(page.object_list)).select_related("plan")}
+        for member in page.object_list:
+            found = subs.get(member.pk)
+            member.plan_label, member.plan_tone = _sub_state(found)
+            member.trial = {"target": f"user:{member.pk}", "name": member.get_full_name() or member.email,
+                            "expired": member.plan_tone == "bad", "ends": found.trial_ends_at if found else None}
     context = {
         "school": school,
         "page": page,
@@ -150,7 +170,10 @@ def people(request, pk):
     }
     if school:
         label, tone = _plan_state(school)
-        context.update(plan=label, tone=tone, teacher_limit=school.teacher_limit)
+        subscription = getattr(school, "subscription", None)
+        context.update(plan=label, tone=tone, teacher_limit=school.teacher_limit,
+                       school_trial={"target": f"school:{school.pk}", "name": school.name, "expired": tone == "bad",
+                                     "ends": subscription.trial_ends_at if subscription else None})
     return context
 
 

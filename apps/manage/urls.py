@@ -12,6 +12,7 @@ urlpatterns = [
     path("jobs/<str:job>/", views.run_job, name="job"),
     path("branding/", views.branding, name="branding"),
     path("billing-settings/", views.billing_settings, name="billing_settings"),
+    path("trial/extend/", views.extend_trial, name="extend_trial"),
     path("analytics/", views.analytics_view, name="analytics"),
     path("schools-directory/", views.schools_directory, name="schools_directory"),
     path("schools-directory/bulk-register/", views.bulk_schools, name="bulk_schools"),

@@ -3,6 +3,7 @@
 
 {% block title %}Schools &amp; people — Control room{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'css/school_directory.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/trial_modal.js' %}" defer></script>{% endblock %}
 
 {% block content %}
 <div class="sd2">
@@ -33,7 +34,9 @@
   <div class="sd2-grid">
     {% for row in rows %}
     {% with s=row.school %}
-    <a href="{% url 'manage:school_people' s.pk %}" class="sd2-card">
+    {% url 'manage:school_people' s.pk as school_url %}
+    {# Access ended: a click opens the trial modal (static/js/trial_modal.js) instead of the school. #}
+    <a href="{{ school_url }}" class="sd2-card"{% if row.trial.expired %} data-trial-expired {% include "manage/_trial_attrs.html" with trial=row.trial open=school_url %}{% endif %}>
       <span class="sd2-card__top">
         <span class="sd2-card__badge" aria-hidden="true">{{ s.name|first|upper }}</span>
         <span class="sd2-card__who">
@@ -44,7 +47,7 @@
       {% if s.address %}<span class="sd2-card__note">{{ s.address }}</span>{% endif %}
       {% if s.contact_person %}<span class="sd2-card__note">Contact: {{ s.contact_person }}</span>{% endif %}
       {% if s.relationship_status %}<span class="sd2-plan sd2-plan--muted">{{ s.relationship_status|title }}</span>{% endif %}
-      <span class="sd2-plan sd2-plan--{{ row.tone }}">{{ row.plan }}</span>
+      <span class="sd2-plan sd2-plan--{{ row.tone }}" data-trial-chip role="button" tabindex="0" title="Add more free trial" {% include "manage/_trial_attrs.html" with trial=row.trial open=school_url %}>{{ row.plan }}<span class="sd2-plan__add" aria-hidden="true">+ trial</span></span>
       <span class="sd2-counts">
         <span><strong>{{ s.teacher_n }}</strong>{% if row.teacher_limit is not None %}<em>/ {{ row.teacher_limit }}</em>{% endif %}<small>teachers</small></span>
         <span><strong>{{ s.student_n }}</strong>{% if s.max_students is not None %}<em>/ {{ s.max_students }}</em>{% endif %}<small>students</small></span>
@@ -76,4 +79,5 @@
     {% endif %}
   </div>
 </div>
+{% include "manage/_trial_modal.html" %}
 {% endblock %}

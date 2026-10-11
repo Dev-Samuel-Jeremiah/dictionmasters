@@ -1,0 +1,39 @@
+{% comment %}
+  The trial modal (Schools & people): add days, weeks or months to a school's
+  or a learner's free trial (apps/manage/views.extend_trial). Opened by
+  static/js/trial_modal.js from anything with data-trial-target: a school
+  card whose access has ended opens it on a click; every plan chip does.
+  Needs a list of names to fill in; nothing to show without JavaScript.
+{% endcomment %}
+<dialog class="tm" data-trial-modal aria-labelledby="tm-title">
+  <form method="post" action="{% url 'manage:extend_trial' %}" class="tm__form">
+    {% csrf_token %}
+    <input type="hidden" name="target" data-trial-field="target">
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="tm__head">
+      <div>
+        <p class="tm__eyebrow">Free trial</p>
+        <h2 id="tm-title" data-trial-field="name">Add more trial</h2>
+        <p class="tm__state" data-trial-field="state"></p>
+      </div>
+      <button type="button" class="tm__close" data-trial-close aria-label="Close">&times;</button>
+    </div>
+    <p class="tm__label">Quick add</p>
+    <div class="tm__quick">
+      <button type="button" data-trial-quick="7 days">+7 days</button>
+      <button type="button" data-trial-quick="14 days">+14 days</button>
+      <button type="button" data-trial-quick="1 months">+1 month</button>
+      <button type="button" data-trial-quick="3 months">+3 months</button>
+    </div>
+    <div class="tm__row">
+      <label class="tm__field">How much<input type="number" name="length" min="1" max="365" value="14" required class="cr-input" data-trial-length></label>
+      <label class="tm__field">Of<select name="unit" class="cr-input cr-select" data-trial-unit><option value="days" selected>Days</option><option value="weeks">Weeks</option><option value="months">Months</option></select></label>
+    </div>
+    <label class="tm__field">Reason (optional, shown to them beside their trial)<input type="text" name="reason" maxlength="120" class="cr-input" placeholder="e.g. Extra time to try it with their classes"></label>
+    <p class="tm__note">It's added from today if their trial has ended, or to its end if it's still running. It's recorded in the history.</p>
+    <div class="tm__actions">
+      <button type="submit" class="cr-btn cr-btn--gold">Add trial</button>
+      <a href="#" class="cr-btn cr-btn--ghost" data-trial-field="open" hidden>Open their page instead</a>
+    </div>
+  </form>
+</dialog>
