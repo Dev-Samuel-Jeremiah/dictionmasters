@@ -99,6 +99,28 @@ class User(AbstractBaseUser, PermissionsMixin):
         on_delete=models.CASCADE,
         related_name="members",
     )
+    # The class a school student is in (Primary 3 Gold …). Every school
+    # student has one; their level comes from it and the two are kept in
+    # step by save() below (apps/schools/classes.py). A class with students
+    # in it can't be deleted; deleting the whole school still works.
+    school_class = models.ForeignKey(
+        "schools.SchoolClass",
+        null=True,
+        blank=True,
+        on_delete=models.RESTRICT,
+        related_name="students",
+        verbose_name="class",
+    )
+
+    # What an individual learner has studied to. Profile information only:
+    # it doesn't change what they see or pay.
+    class Qualification(models.TextChoices):
+        UNDERGRADUATE = "undergraduate", "Undergraduate"
+        GRADUATE = "graduate", "Graduate"
+        MASTERS = "masters", "Master's degree"
+        PHD = "phd", "PhD"
+
+    qualification = models.CharField(max_length=20, choices=Qualification.choices, blank=True)
 
     # Passwords remain Django-hashed for authentication. This separate field
     # keeps an encrypted copy only so school staff can re-download login
@@ -132,6 +154,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.get_full_name()} <{self.email}>"
+
+    def save(self, *args, **kwargs):
+        # A school student's class follows their level (apps/schools/classes.py).
+        from apps.schools.classes import place
+
+        if place(self) and kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = {*kwargs["update_fields"], "school_class"}
+        super().save(*args, **kwargs)
 
     def set_password(self, raw_password):
         super().set_password(raw_password)

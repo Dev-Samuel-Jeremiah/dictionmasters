@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AccessCode, School
+from .models import AccessCode, School, SchoolClass
 
 
 class AccessCodeInline(admin.TabularInline):
@@ -24,3 +24,11 @@ class AccessCodeAdmin(admin.ModelAdmin):
     list_filter = ["role", "level", "school"]
     search_fields = ["code", "label", "school__name"]
     readonly_fields = ["code", "used_by", "used_at", "created_at"]
+
+
+@admin.register(SchoolClass)
+class SchoolClassAdmin(admin.ModelAdmin):
+    list_display = ["display_name", "school", "session", "grade", "class_teacher"]
+    list_filter = ["grade", "session"]
+    search_fields = ["name", "school__name"]
+    filter_horizontal = ["teachers"]

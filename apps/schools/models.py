@@ -13,6 +13,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from . import grades
+from .grades import GRADE_CHOICES
 from .utils import generate_access_code, generate_school_code
 
 
@@ -224,3 +226,55 @@ class LevelChange(models.Model):
 
     def __str__(self):
         return f"{self.member}: {self.old_level or '—'} → {self.new_level or '—'}"
+
+
+class SchoolClass(models.Model):
+    """A class at a school for one school year: a grade (Primary 3, JSS 1 …,
+    apps/schools/grades.py) and the school's own name for it ("Gold"), so a
+    school can have Primary 3 Gold and Primary 3 Blue. Its students follow
+    the grade's content level; each school student is in exactly one class
+    (User.school_class), placed by apps/schools/classes.py."""
+
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="classes")
+    session = models.ForeignKey(
+        "scheme.Session", on_delete=models.SET_NULL, null=True, blank=True, related_name="classes",
+        verbose_name="school year",
+    )
+    grade = models.CharField(max_length=20, choices=GRADE_CHOICES)
+    name = models.CharField(max_length=60, blank=True, help_text='Optional, e.g. "Gold" or "A".')
+    class_teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="classes_led",
+    )
+    teachers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name="teaching_classes",
+        help_text="Everyone who teaches this class, the class teacher included.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "class"
+        verbose_name_plural = "classes"
+        constraints = [
+            models.UniqueConstraint(fields=["school", "session", "grade", "name"], name="one_class_name_per_grade_and_year"),
+        ]
+
+    def __str__(self):
+        return self.display_name
+
+    @property
+    def display_name(self):
+        """"Primary 3 Gold", or just "Primary 3"."""
+        return f"{grades.label_for(self.grade)} {self.name}".strip()
+
+    @property
+    def level(self):
+        """The content level its students follow."""
+        return grades.level_for(self.grade)
+
+    def save(self, *args, **kwargs):
+        # A class moved to another grade takes its students to that grade's
+        # level, in one query.
+        old = type(self).objects.filter(pk=self.pk).values_list("grade", flat=True).first() if self.pk else None
+        super().save(*args, **kwargs)
+        if old and old != self.grade:
+            self.students.update(level=self.level)
