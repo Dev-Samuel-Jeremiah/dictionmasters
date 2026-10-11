@@ -20,14 +20,14 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
-from django.utils.http import content_disposition_header
+from django.urls import Resolver404, resolve, reverse
+from django.utils.http import content_disposition_header, urlencode
 from django.views.decorators.http import require_POST
 
 from . import lesson_path as path_of
 from . import qr
 from .activity_kinds import MODE_CHOICE, MODE_ORDER, MODE_RECORD
-from .marking import feedback_for, grade_sentence_use, mark_response
+from .marking import feedback_for, given_answer, grade_sentence_use, mark_response
 from .models import (
     Activity,
     ActivityAttempt,
@@ -252,6 +252,13 @@ def card_detail(request, level_slug, group_slug, category_slug):
     context["card_url"] = _card_link(level, group, category)
     context["qr_filename"] = _qr_filename(level, group, category)
     context["show_qr"] = _makes_materials(request.user)
+    if context["show_qr"]:
+        context["qr"] = {
+            "url": context["card_url"], "name": f"{level.name} - Group {group.number} - {category.name}",
+            "note": "Scan to open this card", "filename": context["qr_filename"],
+            "png": reverse("echospell:card_qr_png", args=[level.slug, group.slug, category.slug]),
+            "sheet": reverse("echospell:group_qr_sheet", args=[level.slug, group.slug]),
+        }
 
     return render(request, "echospell/card_detail.html", context)
 
@@ -286,8 +293,25 @@ def _card_link(level, group, category):
 def _qr_filename(level, group, category):
     """ "Level 1 - Group 1 - Spelling - QR code.png": says which card it is
     once it's sitting in a folder of book artwork."""
-    name = f"{level.name} - Group {group.number} - {category.name} - QR code.png"
-    return re.sub(r'[\\/:*?"<>|]+', "", name).strip()
+    return _png_name(f"{level.name} - Group {group.number} - {category.name}")
+
+
+def _png_name(name):
+    return re.sub(r'[\\/:*?"<>|]+', "", f"{name} - QR code.png").strip()
+
+
+def qr_box(user, path, name, note, png=None, sheet=None):
+    """What templates/echospell/_qr_box.html needs to show a page's own QR
+    code: for the people who make the books only, so None for anyone else.
+    `path` is the page's address on the site; `name` is printed under the
+    code when it's copied, and names the PNG."""
+    if not _makes_materials(user):
+        return None
+    return {
+        "url": qr.public_url(path), "name": name, "note": note, "sheet": sheet,
+        "png": png or reverse("echospell:qr_png") + "?" + urlencode({"path": path, "name": name}),
+        "filename": _png_name(name),
+    }
 
 
 def _makes_materials(user):
@@ -322,6 +346,27 @@ def card_qr_png(request, level_slug, group_slug, category_slug):
 
 
 @login_required
+def qr_png(request):
+    """Any page's QR code as a PNG (?path=/the/page/&name=...), to drop into a
+    book layout: how an activity's code is downloaded. Only for pages on
+    this site, and only for the people who make the books."""
+    if not _makes_materials(request.user):
+        raise Http404("No such page.")
+    path = request.GET.get("path", "")
+    if not path.startswith("/") or path.startswith("//"):
+        raise Http404("No such page.")
+    try:
+        resolve(path.split("?")[0])
+    except Resolver404:
+        raise Http404("No such page.")
+    response = HttpResponse(qr.png(qr.public_url(path)), content_type="image/png")
+    response["Content-Disposition"] = content_disposition_header(
+        True, _png_name(request.GET.get("name", "")[:200].strip() or "Diction Masters"))
+    response["Cache-Control"] = "private, max-age=86400"
+    return response
+
+
+@login_required
 def group_qr_sheet(request, level_slug, group_slug):
     """Every card in one group, with its code, laid out to print and cut up."""
     level = get_object_or_404(Level, slug=level_slug, is_published=True)
@@ -333,6 +378,10 @@ def group_qr_sheet(request, level_slug, group_slug):
         "level": level,
         "group": group,
         "cards": [{"category": category, "url": address} for category, address in _card_urls(request, level, group)],
+        "activities": [
+            {"activity": a, "url": qr.public_url(reverse("echospell:activity_detail", args=[level.slug, group.slug, a.slug]))}
+            for a in activities_for(group)
+        ],
     })
 
 
@@ -445,7 +494,7 @@ def activity_detail(request, level_slug, group_slug, activity_slug):
         attempt = ActivityAttempt.objects.create(user=request.user, activity=activity)
         is_recording = activity.mode == MODE_RECORD
         for item in items:
-            given = request.POST.get(f"item-{item.id}", "").strip()[:1000]
+            given = given_answer(request.POST, item.id)
             recording = request.FILES.get(f"recording-{item.id}")
             ActivityResponse.objects.create(
                 attempt=attempt,
@@ -471,6 +520,9 @@ def activity_detail(request, level_slug, group_slug, activity_slug):
         "buckets": activity.bucket_list,
         "previous": _best_attempts(request.user, [activity]).get(activity.id),
         "lesson": path_of.at_step(path_of.lesson_path(request.user, level, group), f"activity-{activity.pk}"),
+        "qr": qr_box(request.user, reverse("echospell:activity_detail", args=[level.slug, group.slug, activity.slug]),
+                     f"{level.name} - Group {group.number} - {activity.title}", "Scan to open this activity",
+                     sheet=reverse("echospell:group_qr_sheet", args=[level.slug, group.slug])),
     })
 
 

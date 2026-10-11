@@ -40,6 +40,7 @@
           </div>
         </div>
       </div>
+      {% if qr %}{% include "echospell/_qr_box.html" %}{% endif %}
     </div>
   </div>
 </section>
@@ -97,6 +98,22 @@
           {% if activity.mode == "typed" %}
           <input type="text" name="item-{{ row.item.id }}" class="activity-input"
                  placeholder="{{ activity.kind_spec.placeholder }}" autocomplete="off" autocapitalize="off" spellcheck="false">
+
+          {% elif activity.kind == "listen-and-circle" %}
+          {# ---- tap every word heard; each circled word is sent ---- #}
+          <div class="circle-row" role="group" aria-label="Circle every word you hear">
+            {% for option in row.options %}
+            <label class="circle-pick">
+              <input type="checkbox" name="item-{{ row.item.id }}" value="{{ option }}">
+              <span class="circle-pick__word">
+                <svg class="circle-pick__ring" viewBox="0 0 100 50" preserveAspectRatio="none" aria-hidden="true">
+                  <path d="M8,27 C5,11 28,3 50,4 C75,5 97,12 94,27 C91,45 64,48 47,47 C24,46 3,38 9,23" />
+                </svg>
+                <span class="circle-pick__text">{{ option }}</span>
+              </span>
+            </label>
+            {% endfor %}
+          </div>
 
           {% elif activity.mode == "choice" %}
           <div class="option-grid">
@@ -165,5 +182,6 @@
 {% if activity.mode == "sort" or activity.mode == "order" or activity.mode == "record" %}
 {% block extra_js %}
 <script src="{% static 'js/echospell_activity.js' %}"></script>
+{% if qr %}<script src="{% static 'js/qr_box.js' %}" defer></script>{% endif %}
 {% endblock %}
 {% endif %}

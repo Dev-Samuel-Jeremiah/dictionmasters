@@ -41,6 +41,13 @@ class TrickUnlockTests(TestCase):
 
         return next(s for s in journey(self.learner, TRICKS) if s["lesson"] == lesson)["state"]
 
+    def test_staff_see_the_assessments_qr_code(self):
+        User.objects.filter(pk=self.learner.pk).update(is_staff=True)
+        self.open_every_tab(self.one)
+        page = self.client.get(f"/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/")
+        self.assertContains(page, "Scan to open this assessment")
+        self.assertContains(page, f"/tricks/lessons/{self.one.slug}/assessment/{self.test.slug}/")
+
     def take_test(self, answer, activity=None, question=None):
         activity, question = activity or self.test, question or self.question
         self.client.post(f"/tricks/lessons/{activity.lesson.slug}/assessment/{activity.slug}/",

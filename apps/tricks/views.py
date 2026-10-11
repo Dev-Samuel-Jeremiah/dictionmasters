@@ -20,8 +20,8 @@ from apps.book import views as book
 from apps.book.models import TRICKS, Sound
 from apps.book.programmes import programme_for
 from apps.echospell.activity_kinds import MODE_RECORD
-from apps.echospell.marking import feedback_for, mark_response
-from apps.echospell.views import _item_rows
+from apps.echospell.marking import feedback_for, given_answer, mark_response
+from apps.echospell.views import _item_rows, qr_box
 
 from . import progress
 from .models import LessonActivity, LessonActivityAttempt, LessonActivityResponse
@@ -102,7 +102,7 @@ def take_activity(request, programme, slug, activity_slug):
         attempt = LessonActivityAttempt.objects.create(user=request.user, activity=activity)
         is_recording = activity.mode == MODE_RECORD
         for item in items:
-            given = request.POST.get(f"item-{item.id}", "").strip()[:1000]
+            given = given_answer(request.POST, item.id)
             LessonActivityResponse.objects.create(
                 attempt=attempt, item=item, given=given,
                 is_correct=None if is_recording else mark_response(activity.kind_spec, item, given),
@@ -120,6 +120,9 @@ def take_activity(request, programme, slug, activity_slug):
         "item_rows": _item_rows(activity, items),
         "buckets": activity.bucket_list,
         "previous": best,
+        "qr": qr_box(request.user, reverse(programme_for(programme)["activity"], args=[lesson.slug, activity.slug]),
+                     f"{programme_for(programme)['name']} - {lesson.name} - {activity.title}",
+                     "Scan to open this assessment"),
         **_page(programme, lesson, standing.step(lesson)["number"]),
     })
 

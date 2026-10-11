@@ -10,7 +10,7 @@ rather than a new model, view and template.
 
 Modes:
   typed   free text, marked against the answer (alternatives with "|")
-  choice  one option from a list
+  choice  one option from a list (Listen and circle: every option heard)
   sort    drag each prompt into the bucket it belongs to
   order   drag shuffled words into the right sequence
   record  read/say it aloud and record — marked by a teacher, not code
@@ -184,6 +184,20 @@ KINDS = [
         prompt_help="Leave blank — the audio is the question",
         answer_help="The word that was said (must match one option)",
         options_help="The words to choose from — one per line",
+        needs_audio=True,
+        uses_prompt=False,
+        tags=("listening",),
+    ),
+    ActivityKind(
+        slug="listen-and-circle",
+        label="Listen and circle",
+        mode=MODE_CHOICE,
+        icon="⭕",
+        summary="Hear a word or a few, circle every one you heard.",
+        instructions="Listen to each clip, then tap to circle every word you hear. Tap a word again to rub its circle out.",
+        prompt_help="Leave blank — the audio is the question",
+        answer_help="The word or words that are said, one per line (each must be one of the options)",
+        options_help="Every word in the row, one per line: the ones that are said and some that aren't",
         needs_audio=True,
         uses_prompt=False,
         tags=("listening",),

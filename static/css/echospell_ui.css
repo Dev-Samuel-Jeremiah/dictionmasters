@@ -747,6 +747,7 @@
 .es .es-sheet__code svg { display: block; width: 92px; height: 92px; }
 .es .es-sheet__name { margin: 0; font-weight: 700; color: var(--ink); }
 .es .es-sheet__where { margin: 2px 0 0; font-size: .82rem; color: var(--ink-40); }
+.es .es-sheet__section { margin: 30px 0 12px; font-family: var(--font-serif); font-size: 1.3rem; color: var(--ink); break-after: avoid; }
 
 @media print {
   .site-header, .site-footer, .no-print, .bl-banner, .messages { display: none !important; }

@@ -147,6 +147,61 @@
 }
 .option input:focus-visible ~ .option__box { outline: 2px solid var(--gold-deep); outline-offset: 2px; }
 
+/* ---------- listen and circle ---------- */
+/* Every word heard gets a hand-drawn circle, as on the Listen and Circle
+   cards; tapping it again rubs the circle out. Big enough for small fingers. */
+
+.circle-row { margin-top: 14px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 16px; }
+.circle-pick { position: relative; cursor: pointer; }
+.circle-pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.circle-pick__word {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  min-height: 56px;
+  padding: 8px 22px;
+  border: 1.5px solid var(--rule);
+  border-radius: 28px;
+  background: var(--paper-white);
+  font-size: 1.05rem;
+  color: var(--ink-70);
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.circle-pick:hover .circle-pick__word { border-color: var(--gold); }
+.circle-pick:active .circle-pick__word { transform: scale(0.97); }
+.circle-pick input:focus-visible ~ .circle-pick__word { outline: 2px solid var(--gold-deep); outline-offset: 4px; }
+.circle-pick input:checked ~ .circle-pick__word { border-color: transparent; color: var(--maroon-deep); font-weight: 700; }
+.circle-pick__text { position: relative; }
+.circle-pick__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  transform: scale(1.12, 1.22);
+}
+.circle-pick__ring path {
+  fill: none;
+  stroke: var(--maroon);
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 340;
+  stroke-dashoffset: 340;
+  transition: stroke-dashoffset 0.15s ease;
+}
+.circle-pick input:checked ~ .circle-pick__word .circle-pick__ring path {
+  animation: circle-pick-draw 0.45s ease-out forwards;
+}
+@keyframes circle-pick-draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .circle-pick input:checked ~ .circle-pick__word .circle-pick__ring path { animation-duration: 0.01s; }
+}
+
 /* ---------- dragging ---------- */
 
 .chip {

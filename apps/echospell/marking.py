@@ -111,6 +111,19 @@ def shuffled_tokens(sentence, seed):
     return words
 
 
+def given_answer(post, item_id):
+    """What the learner sent for one question. A Listen and circle question
+    sends one value per circled word; they're kept together as
+    "sheep, ship". Everything else sends one value, kept as it is."""
+    values = [value.strip() for value in post.getlist(f"item-{item_id}") if value.strip()]
+    return ", ".join(values)[:1000]
+
+
+def circled_words(given):
+    """The words a Listen and circle answer circled, as a set to compare."""
+    return {normalise(word) for word in str(given or "").split(",") if normalise(word)}
+
+
 def mark_response(kind, item, given):
     """True, False, or None when only a teacher can mark it."""
     if kind is None or kind.mode == MODE_RECORD:
@@ -135,6 +148,14 @@ def mark_response(kind, item, given):
         given_n = normalise(given)
         return any(given_n == normalise(" ".join(_parse_lines(option))) for option in alternatives(item.answer))
 
+    if kind.slug == "listen-and-circle":
+        # Right when exactly the words said are circled: none missed, no extras.
+        from .models import _parse_lines
+
+        circled = circled_words(given)
+        return any(circled == {normalise(word) for word in _parse_lines(option)}
+                   for option in alternatives(item.answer))
+
     if kind.mode in (MODE_TYPED, MODE_CHOICE, MODE_SORT, MODE_ORDER):
         return answers_match(given, item.answer)
 
@@ -155,4 +176,9 @@ def feedback_for(kind, item, given, is_correct):
         from .models import _parse_lines
 
         return "The order was " + ", ".join(_parse_lines(item.first_answer))
+    if kind is not None and kind.slug == "listen-and-circle":
+        from .models import _parse_lines
+
+        words = _parse_lines(item.first_answer)
+        return ("The words to circle were " if len(words) > 1 else "The word to circle was ") + ", ".join(words)
     return f"The answer is {item.first_answer}"

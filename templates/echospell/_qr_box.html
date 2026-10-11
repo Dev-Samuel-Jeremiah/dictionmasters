@@ -1,0 +1,14 @@
+{% load echospell_qr %}
+{# A page's own QR code in the hero, for printing beside it in the book.  #}
+{# qr: {"url", "name", "png", "filename", "note", "sheet"}; static/js/qr_box.js runs the buttons. #}
+<div class="es-hero__qr" data-qr data-qr-url="{{ qr.url }}" data-qr-name="{{ qr.name }}" data-qr-png="{{ qr.png }}">
+  <div class="es-hero__qr-code">{% qr_svg qr.url 108 %}</div>
+  <p class="es-hero__qr-note">{{ qr.note }}</p>
+  <div class="es-hero__qr-actions">
+    <button type="button" data-qr-copy-link>Copy link</button>
+    <button type="button" data-qr-copy-image>Copy image</button>
+    <a href="{{ qr.png }}" download="{{ qr.filename }}">PNG</a>
+    {% if qr.sheet %}<a href="{{ qr.sheet }}">All codes</a>{% endif %}
+  </div>
+  <p class="es-hero__qr-said" data-qr-said role="status"></p>
+</div>

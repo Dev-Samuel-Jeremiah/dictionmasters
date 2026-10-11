@@ -15,7 +15,7 @@
       <div>
         <p class="es-sheet__eyebrow no-print"><a href="{% url 'echospell:group_detail' level.slug group.slug %}">&larr; Group {{ group.number }}</a></p>
         <h1 class="es-sheet__title">{{ level.name }} &middot; Group {{ group.number }}</h1>
-        <p class="es-sheet__lede">One code per card. Print this page, cut them out, and put each code beside its card in the book. Scanning a code opens that card on the site.</p>
+        <p class="es-sheet__lede">One code per card{% if activities %} and per activity{% endif %}. Print this page, cut them out, and put each code beside its card or activity in the book. Scanning a code opens it on the site.</p>
       </div>
       <button type="button" class="es-btn es-btn--gold no-print" onclick="window.print()">&#128424; Print these codes</button>
     </header>
@@ -34,6 +34,21 @@
     </div>
     {% else %}
     <p class="es-empty">This level has no cards yet.</p>
+    {% endif %}
+
+    {% if activities %}
+    <h2 class="es-sheet__section">Activities</h2>
+    <div class="es-sheet">
+      {% for one in activities %}
+      <figure class="es-sheet__card">
+        <div class="es-sheet__code">{% qr_svg one.url 150 %}</div>
+        <figcaption>
+          <p class="es-sheet__name"><span aria-hidden="true">{{ one.activity.icon }}</span> {{ one.activity.title }}</p>
+          <p class="es-sheet__where">{{ level.name }} &middot; Group {{ group.number }} &middot; {{ one.activity.kind_label }}</p>
+        </figcaption>
+      </figure>
+      {% endfor %}
+    </div>
     {% endif %}
   </div>
 </div>
