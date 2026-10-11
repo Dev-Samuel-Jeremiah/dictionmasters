@@ -44,7 +44,7 @@ class ClassForm(forms.ModelForm):
         self.fields["teachers"].queryset = teachers
         self.fields["teachers"].label_from_instance = lambda u: u.get_full_name() or u.login_name
         self.fields["teachers"].required = False
-        self.fields["grade"].choices = grades.GRADE_CHOICES
+        self.fields["grade"].choices = grades.grade_choices()
         for name in ("grade", "name", "class_teacher"):
             self.fields[name].widget.attrs["class"] = "field-input"
 
@@ -95,7 +95,7 @@ def classes(request):
     for stage, label in grades.STAGES:
         rows = [{"class": c, "students": counts.get(c.pk, 0), "teachers": teachers.get(c.pk, []),
                  "link": _join_link(request, c)}
-                for c in found if grades.BY_KEY[c.grade].stage == stage]
+                for c in found if grades.DEFAULTS[c.grade].stage == stage]
         if rows:
             stages.append({"label": label, "rows": rows})
     unplaced = User.objects.filter(school=school, role=User.Role.STUDENT, is_active=True, school_class__isnull=True)

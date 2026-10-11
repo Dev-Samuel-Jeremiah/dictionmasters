@@ -24,10 +24,10 @@ def person(email, **extra):
 
 class GradeTests(TestCase):
     def test_every_grade_follows_a_level(self):
-        self.assertEqual(len(grades.GRADES), 16)
-        self.assertEqual([g.label for g in grades.GRADES if g.stage == "pre_school"],
+        self.assertEqual(len(grades.DEFAULT_GRADES), 16)
+        self.assertEqual([g.label for g in grades.DEFAULT_GRADES if g.stage == "pre_school"],
                          ["Creche", "Nursery 1", "Nursery 2", "Kindergarten"])
-        self.assertEqual({grades.level_for(g.key) for g in grades.GRADES if g.stage == "pre_school"}, {"Pre-Level"})
+        self.assertEqual({grades.level_for(g.key) for g in grades.DEFAULT_GRADES if g.stage == "pre_school"}, {"Pre-Level"})
         self.assertEqual(grades.level_for("primary_3"), "Level 3")
         self.assertEqual(grades.level_for("jss_1"), "Level 7")
         self.assertEqual(grades.level_for("sss_3"), "Level 12")

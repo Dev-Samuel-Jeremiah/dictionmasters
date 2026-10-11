@@ -23,20 +23,21 @@
   <h2 class="cr-card__title">Grades and the content they follow</h2>
   <div class="cr-tablewrap">
     <table class="cr-table cr-table--rows">
-      <thead><tr><th>Stage</th><th>Grade</th><th>Content level</th><th>Classes</th></tr></thead>
+      <thead><tr><th>Stage</th><th>Grade</th><th>Content level</th><th>Classes</th><th class="cr-table__end"></th></tr></thead>
       <tbody>
         {% for stage in stages %}{% for row in stage.grades %}
         <tr>
           <td>{% if forloop.first %}<b>{{ stage.label }}</b>{% endif %}</td>
-          <td>{{ row.grade.label }}</td>
+          <td>{{ row.grade.label }}{% if row.changed %} <small class="cr-help">(changed)</small>{% endif %}</td>
           <td>{{ row.grade.level }}</td>
           <td>{{ row.classes }}</td>
+          <td class="cr-table__end"><a href="{% url 'manage:grade_edit' row.grade.key %}" class="cr-btn cr-btn--ghost" aria-label="Edit {{ row.grade.label }}">Edit</a></td>
         </tr>
         {% endfor %}{% endfor %}
       </tbody>
     </table>
   </div>
-  <p class="cr-help">Individual learners don't have grades: they choose a level (Level 1, 2, 3 …) for themselves.</p>
+  <p class="cr-help">Edit a grade to rename it or change the content level it follows. Individual learners don't have grades: they choose a level (Level 1, 2, 3 …) for themselves.</p>
 </section>
 
 <section class="cr-card">

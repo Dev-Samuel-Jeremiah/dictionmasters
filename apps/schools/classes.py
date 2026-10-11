@@ -63,6 +63,10 @@ def _wants_class(user):
     return user.role == "student" and user.school_id and grades.grade_for_level(user.level)
 
 
+def _school_student(user):
+    return user.role == "student" and user.school_id
+
+
 def _fits(found, user):
     """Is this class (school_id, grade) right for the user's school and level?"""
     school_id, grade = found
@@ -76,7 +80,7 @@ def _class_for(school_id, level, session, made):
 
     key = (school_id, level)
     if key not in made:
-        keys = [g.key for g in grades.GRADES if g.level == level]
+        keys = grades.grades_on(level)
         found = (SchoolClass.objects.filter(school_id=school_id, session=session, grade__in=keys)
                  .order_by("grade", "name", "pk").first())
         made[key] = found or SchoolClass.objects.create(
@@ -88,11 +92,13 @@ def place(user):
     """Point user.school_class at the right class (or at none, for anyone
     who isn't a school student with a level). Doesn't save. True when it
     changed."""
-    if not _wants_class(user):
+    if not _school_student(user):
         if user.school_class_id is None:
             return False
         user.school_class = None
         return True
+    if not grades.grade_for_level(user.level):
+        return False                 # a level no grade follows (any more): they keep their class
     if user.school_class_id:
         cached = user._state.fields_cache.get("school_class")
         if cached is not None:
@@ -127,7 +133,7 @@ def place_many(users):
 # A school's classes this year, for its pages and its sign-up form
 # ---------------------------------------------------------------------------
 
-GRADE_ORDER = {grade.key: i for i, grade in enumerate(grades.GRADES)}
+GRADE_ORDER = {key: i for i, key in enumerate(grades.KEYS)}
 
 
 def _sorted(found):
@@ -163,7 +169,7 @@ def join_choices(school):
     groups = []
     for stage, label in grades.STAGES:
         options = []
-        for grade in (g for g in grades.GRADES if g.stage == stage):
+        for grade in (g for g in grades.current() if g.stage == stage):
             if grade.key in has_class:
                 options += [(f"class:{c.pk}", c.display_name) for c in classes if c.grade == grade.key]
             else:
@@ -181,7 +187,7 @@ def chosen_class(school, value):
     kind, _sep, ref = str(value or "").partition(":")
     if kind == "class" and ref.isdigit():
         return SchoolClass.objects.filter(school=school, pk=int(ref)).first()
-    if kind == "grade" and ref in grades.BY_KEY:
+    if kind == "grade" and ref in grades.DEFAULTS:
         return class_of_grade(school, ref)
     return None
 
@@ -381,7 +387,7 @@ def join_level_classes(teacher):
     for level in teacher.all_levels:
         if not grades.grade_for_level(level):
             continue
-        keys = [g.key for g in grades.GRADES if g.level == level]
+        keys = grades.grades_on(level)
         found = list(SchoolClass.objects.filter(school_id=teacher.school_id, session=session, grade__in=keys))
         if not found:
             found = [SchoolClass.objects.create(school_id=teacher.school_id, session=session,
@@ -405,7 +411,7 @@ def sync_teachers(teacher_ids):
     changed = []
     for teacher in teachers:
         levels = sorted({grades.level_for(grade_of[c]) for c in taught[teacher.pk]},
-                        key=lambda lvl: [g.level for g in grades.GRADES].index(lvl))
+                        key=lambda lvl: grades.KEYS.index(grades.grades_on(lvl)[0]))
         if not levels:
             continue
         extra = f",{','.join(levels[1:])}," if levels[1:] else ""
@@ -413,3 +419,31 @@ def sync_teachers(teacher_ids):
             teacher.level, teacher.additional_levels = levels[0], extra
             changed.append(teacher)
     User.objects.bulk_update(changed, ["level", "additional_levels"])
+
+
+# ---------------------------------------------------------------------------
+# Changing a grade (the control room's Classes & grades)
+# ---------------------------------------------------------------------------
+
+@transaction.atomic
+def change_grade(key, label, level):
+    """Rename grade `key` and set the content level it follows. Back to the
+    code's own name and level, the change is simply removed. When the level
+    changes, every student in a class of the grade moves to it at once (and
+    their teachers' levels follow). The number of students moved."""
+    from apps.accounts.models import User
+
+    from .models import GradeSetting, SchoolClass
+
+    before = grades.level_for(key)
+    default = grades.DEFAULTS[key]
+    if (label, level) == (default.label, default.level):
+        GradeSetting.objects.filter(grade=key).delete()
+    else:
+        GradeSetting.objects.update_or_create(grade=key, defaults={"label": label, "level": level})
+    grades.forget()
+    if level == before:
+        return 0
+    moved = User.objects.filter(role=User.Role.STUDENT, school_class__grade=key).update(level=level)
+    sync_teachers(SchoolClass.teachers.through.objects.filter(schoolclass__grade=key).values_list("user_id", flat=True))
+    return moved

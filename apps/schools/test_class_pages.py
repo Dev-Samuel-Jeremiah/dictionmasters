@@ -183,3 +183,55 @@ class ControlRoomTests(ClassCase):
         self.assertContains(self.client.get("/manage/"), 'href="/manage/classes/new/"')   # Add something new
         self.assertContains(self.client.get(f"/manage/schools-directory/{self.school.pk}/"),
                             f'href="/manage/classes-grades/?school={self.school.pk}"')
+
+
+class GradeEditTests(ClassCase):
+    """Staff renaming a grade, or changing the level it follows."""
+
+    def setUp(self):
+        super().setUp()
+        from . import grades
+
+        self.addCleanup(grades.forget)              # the grade cache outlives a test's database
+        self.client.force_login(person("staff@example.com", is_staff=True))
+        self.p3.teachers.add(self.teacher)
+
+    def test_every_grade_has_an_edit_button(self):
+        page = self.client.get("/manage/classes-grades/")
+        self.assertContains(page, 'href="/manage/classes-grades/grade/primary_3/"')
+        self.assertContains(page, 'href="/manage/classes-grades/grade/creche/"')
+
+    def test_renaming_a_grade_shows_everywhere(self):
+        self.client.post("/manage/classes-grades/grade/primary_3/", {"label": "Basic 3", "level": "Level 3"})
+        self.p3.refresh_from_db()
+        self.assertEqual(self.p3.display_name, "Basic 3")
+        self.assertEqual(User.objects.get(pk=self.ada.pk).level_display, "Basic 3")
+        self.assertContains(self.client.get("/manage/classes-grades/"), "(changed)")
+        self.ada.refresh_from_db()
+        self.assertEqual(self.ada.level, "Level 3")                         # the lessons don't change
+
+    def test_changing_its_level_moves_its_students_and_teachers(self):
+        self.client.post("/manage/classes-grades/grade/primary_3/", {"label": "Primary 3", "level": "Level 4"})
+        self.ada.refresh_from_db(), self.teacher.refresh_from_db()
+        self.assertEqual((self.ada.level, self.ada.school_class), ("Level 4", self.p3))
+        self.assertEqual(self.teacher.level, "Level 4")
+        # Back to the default: they go back too, and nothing is stored.
+        self.client.post("/manage/classes-grades/grade/primary_3/", {"action": "reset"})
+        self.ada.refresh_from_db()
+        self.assertEqual(self.ada.level, "Level 3")
+        from .models import GradeSetting
+
+        self.assertFalse(GradeSetting.objects.exists())
+
+    def test_two_grades_cant_share_a_name(self):
+        page = self.client.post("/manage/classes-grades/grade/primary_3/", {"label": "jss 1", "level": "Level 3"})
+        self.assertContains(page, "Another grade is already called")
+
+    def test_a_student_on_a_level_no_grade_follows_keeps_their_class(self):
+        self.client.post("/manage/classes-grades/grade/primary_2/", {"label": "Primary 2", "level": "Level 3"})
+        bo = person("bo@example.com", role="student", school=self.school, level="Level 2")   # Level 2 has no grade now
+        self.assertIsNone(bo.school_class)
+        self.ada.level = "Level 2"
+        self.ada.save()
+        self.ada.refresh_from_db()
+        self.assertEqual(self.ada.school_class, self.p3)

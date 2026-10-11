@@ -32,6 +32,7 @@ urlpatterns = [
     path("scheme-of-work/", scheme_editor.scheme_editor, name="scheme_editor"),
     path("calendar/", calendar_editor.calendar_editor, name="calendar"),
     path("classes-grades/", classes_page.classes_overview, name="classes_overview"),
+    path("classes-grades/grade/<slug:key>/", classes_page.grade_edit, name="grade_edit"),
     path("<slug:key>/", views.record_list, name="list"),
     path("<slug:key>/new/", views.record_form, name="add"),
     path("<slug:key>/bulk/", views.bulk_questions, name="bulk_questions"),

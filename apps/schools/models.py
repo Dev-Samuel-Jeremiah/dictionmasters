@@ -285,3 +285,27 @@ class SchoolClass(models.Model):
 
             self.students.update(level=self.level)
             sync_teachers(self.teachers.values_list("pk", flat=True))   # and its teachers' levels
+
+
+class GradeSetting(models.Model):
+    """Staff's change to one grade (apps/schools/grades.py): its name, and the
+    content level it follows. A grade with no row is as the code ships it.
+    Saved through apps/schools/classes.change_grade, which also moves the
+    grade's students to a new level."""
+
+    grade = models.CharField(max_length=20, unique=True, choices=GRADE_CHOICES)
+    label = models.CharField("name", max_length=40)
+    level = models.CharField("content level", max_length=100)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.label} ({self.level})"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        grades.forget()
+
+    def delete(self, *args, **kwargs):
+        result = super().delete(*args, **kwargs)
+        grades.forget()
+        return result

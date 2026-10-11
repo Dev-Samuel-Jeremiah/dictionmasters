@@ -1,0 +1,45 @@
+{% extends "manage/base.html" %}
+
+{% block title %}{{ grade.label }} — Classes &amp; grades — Control room{% endblock %}
+
+{% block content %}
+{% comment %}
+  Rename one grade, or change the content level it follows
+  (apps/manage/classes_page.grade_edit, apps/schools/classes.change_grade).
+{% endcomment %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#128203; <a href="{% url 'manage:classes_overview' %}">Classes &amp; grades</a> · {{ stage }}</p>
+    <h1 class="cr-pagehead__title">Edit {{ grade.label }}</h1>
+    <p class="cr-pagehead__note">{% if changed %}Changed from the default: {{ default.label }}, following {{ default.level }}.{% else %}As it comes: {{ default.label }}, following {{ default.level }}.{% endif %}</p>
+  </div>
+</header>
+
+<section class="cr-card">
+  <form method="post" class="cr-form" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="cr-field">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% for error in field.errors %}<p class="cr-error">{{ error }}</p>{% endfor %}
+    </div>
+    {% endfor %}
+    <p class="cr-help">The name shows everywhere school people see this grade: classes, sign-up, dashboards and reports. The content level decides which lessons and scheme of work its students follow.</p>
+    {% if students %}
+    <p class="cr-help"><b>Changing the content level moves {{ students }} student{{ students|pluralize }} in {{ classes }} class{{ classes|pluralize:"es" }}</b> to the new level's lessons and scheme of work straight away.</p>
+    {% endif %}
+    <div class="cr-actions">
+      <button type="submit" class="cr-btn cr-btn--gold">Save</button>
+      <a href="{% url 'manage:classes_overview' %}" class="cr-btn cr-btn--ghost">Cancel</a>
+    </div>
+  </form>
+  {% if changed %}
+  <form method="post" class="cr-actions" onsubmit="return confirm('Put {{ grade.label|escapejs }} back to {{ default.label|escapejs }}, following {{ default.level|escapejs }}?');">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="reset">
+    <button type="submit" class="cr-btn cr-btn--ghost">Reset to default ({{ default.label }}, {{ default.level }})</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

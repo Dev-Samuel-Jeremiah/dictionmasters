@@ -39,7 +39,7 @@ KINDS = {
     "student": {
         "role": User.Role.STUDENT, "one": "student", "many": "students", "One": "Student", "Many": "Students",
         "level_head": "Class (grade) *", "level_help": "Each student learns their grade's lessons, e.g. Primary 3 learns Level 3.",
-        "choices": [grade.label for grade in grades.GRADES], "class_name": True,
+        "choices": "grades", "class_name": True,             # the grades' names now (grades.current)
         "email_help": "The student's or a parent's email. Leave it blank and they sign in with their username.",
         "examples": [("1", "Ada", "Okafor · Primary 1 · (no email)"), ("2", "Tunde", "Bello · JSS 2 · Gold · tunde.parent@example.com")],
     },
@@ -184,7 +184,7 @@ def template_file(school, kind="student"):
     ws["E4"].alignment = Alignment(horizontal="right", vertical="center")
     ws.row_dimensions[4].height = 18
 
-    choices = k["choices"]
+    choices = [grade.label for grade in grades.current()] if k["choices"] == "grades" else k["choices"]
     levels = wb.create_sheet("Levels")
     for choice in choices:
         levels.append([choice])
@@ -219,7 +219,7 @@ def template_file(school, kind="student"):
         ("1", f"One row per {k['one']}", f"On the {k['Many']} sheet, fill in one row for each {k['one']}, starting on row 1."),
         ("2", "First name *", "Required."),
         ("3", "Last name", f"Optional, but it helps the school tell {k['many']} apart."),
-        ("4", k["level_head"], f"Required. Pick from the dropdown: {k['choices'][0]} to {k['choices'][-1]}. {k['level_help']}"),
+        ("4", k["level_head"], f"Required. Pick from the dropdown: {choices[0]} to {choices[-1]}. {k['level_help']}"),
         ("5", "Email (optional)", k["email_help"]),
         *([("5b", "Class name (optional)", 'Only if the grade has more than one class, e.g. "Gold" puts them in Primary 3 Gold. '
                                             "Leave it blank and they go in the grade's class.")] if k["class_name"] else []),
@@ -265,7 +265,7 @@ def _level(raw):
 def _grade(raw):
     """A grade written in the level column ("Primary 3", "JSS1", "nursery 2"), or None."""
     wanted = re.sub(r"[^a-z0-9]", "", _norm(raw).lower())
-    return next((g.key for g in grades.GRADES if re.sub(r"[^a-z0-9]", "", g.label.lower()) == wanted), None)
+    return next((g.key for g in grades.current() if re.sub(r"[^a-z0-9]", "", g.label.lower()) == wanted), None)
 
 
 def read_rows(upload, kind="student"):

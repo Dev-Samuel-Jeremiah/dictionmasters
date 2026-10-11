@@ -272,12 +272,12 @@ class SchoolTeamMemberForm(StyledFormMixin, forms.Form):
     email = forms.EmailField(label="Email (optional)", max_length=254, required=False)
 
     def __init__(self, *args, kind="student", **kwargs):
-        from apps.schools.grades import LEVEL_AS_GRADE_CHOICES
+        from apps.schools.grades import level_as_grade_choices
 
         super().__init__(*args, **kwargs)
         self.kind = kind
         # Worded as grades (Primary 3, JSS 1); the value is still the level.
-        self.fields["level"].choices = [("", "Choose a grade")] + LEVEL_AS_GRADE_CHOICES
+        self.fields["level"].choices = [("", "Choose a grade")] + level_as_grade_choices()
         self.fields["level"].label = "Grade taught" if kind == "teacher" else "Student's grade"
         self.fields["first_name"].widget.attrs["placeholder"] = "First name"
         self.fields["first_name"].widget.attrs["aria-label"] = "First name"
