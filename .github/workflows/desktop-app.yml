@@ -93,7 +93,16 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npx electron-builder --config electron-builder.config.js --publish never ${{ matrix.target }}
+        run: |
+          set +e
+          npx electron-builder --config electron-builder.config.js --publish never ${{ matrix.target }} 2>&1 | tee "$RUNNER_TEMP/build.log"
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # The end of the output as one error note on the run, readable
+            # on the run's page without opening the full log.
+            echo "::error title=${{ matrix.name }} build failed::$(tail -n 40 "$RUNNER_TEMP/build.log" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+          fi
+          exit "$status"
 
       - name: Collect the files
         run: |
