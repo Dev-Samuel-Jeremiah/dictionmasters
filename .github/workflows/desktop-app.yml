@@ -72,12 +72,14 @@ jobs:
         shell: bash
     env:
       DM_LEGACY: ${{ matrix.legacy }}
-      # Signing, when the secrets are set (empty = unsigned, still works).
-      CSC_LINK: ${{ startsWith(matrix.os, 'macos') && secrets.MAC_CSC_LINK || startsWith(matrix.os, 'windows') && secrets.WIN_CSC_LINK || '' }}
-      CSC_KEY_PASSWORD: ${{ startsWith(matrix.os, 'macos') && secrets.MAC_CSC_KEY_PASSWORD || startsWith(matrix.os, 'windows') && secrets.WIN_CSC_KEY_PASSWORD || '' }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      # Signing, when the secrets are set. They're passed to electron-builder
+      # only if they hold something (the Build step): an EMPTY CSC_LINK is
+      # read as a file path on a Mac and stops the build.
+      SIGN_LINK: ${{ startsWith(matrix.os, 'macos') && secrets.MAC_CSC_LINK || startsWith(matrix.os, 'windows') && secrets.WIN_CSC_LINK || '' }}
+      SIGN_PASSWORD: ${{ startsWith(matrix.os, 'macos') && secrets.MAC_CSC_KEY_PASSWORD || startsWith(matrix.os, 'windows') && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+      NOTARY_ID: ${{ secrets.APPLE_ID }}
+      NOTARY_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      NOTARY_TEAM: ${{ secrets.APPLE_TEAM_ID }}
       # With no certificate, don't go looking for one in the build machine's keychain.
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
@@ -94,6 +96,10 @@ jobs:
 
       - name: Build
         run: |
+          if [ -n "$SIGN_LINK" ]; then export CSC_LINK="$SIGN_LINK" CSC_KEY_PASSWORD="$SIGN_PASSWORD"; fi
+          if [ -n "$NOTARY_ID" ]; then
+            export APPLE_ID="$NOTARY_ID" APPLE_APP_SPECIFIC_PASSWORD="$NOTARY_PASSWORD" APPLE_TEAM_ID="$NOTARY_TEAM"
+          fi
           set +e
           npx electron-builder --config electron-builder.config.js --publish never ${{ matrix.target }} 2>&1 | tee "$RUNNER_TEMP/build.log"
           status=${PIPESTATUS[0]}
