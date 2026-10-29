@@ -1492,3 +1492,12 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .ui-card__desc, .lm-module__desc, .section-lede, .search-page__lede, .clash-pick__blurb {
   display: none !important;
 }
+
+/* The name watermark over every signed-in page (apps/accounts/templatetags/
+   watermark.py): faint, never in the way of a click, printed too. */
+.dm-watermark {
+  position: fixed; inset: 0; z-index: 2147483000;
+  pointer-events: none; user-select: none;
+  background-repeat: repeat; background-position: 0 0;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}

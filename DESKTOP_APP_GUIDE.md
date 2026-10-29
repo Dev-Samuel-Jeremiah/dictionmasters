@@ -291,3 +291,24 @@ NATIVE_APP_HIDE_PAYMENTS=ios,android,desktop
 | A page looks broken only in the app | Help → Troubleshooting: clear saved pages and reload. |
 | The app doesn't update | Check you raised `"version"` (§7), the workflow finished, and the release files are public. Then Help → Check for updates. Look in `updates.log` (§9). |
 | GitHub build fails on "devUrl" | Set `"devUrl": ""` in `desktop/app.settings.json`. |
+
+---
+
+## Screenshots and screen recording are blocked
+
+`"blockScreenCapture": true` in `app.settings.json` (the default) makes
+screenshots, screen recordings and screen sharing (Zoom, Teams, Meet) show
+the app's window as black:
+
+| | |
+|---|---|
+| Windows 10 (2004+) and 11 | Blocked |
+| Windows 7 and 8 | Blocked in most tools |
+| Mac | Blocked in screenshots and most recorders; some tools on macOS 15+ ignore it |
+| Linux | Not possible (the system has no such setting) |
+
+This also stops teachers showing the app on Zoom/Teams or a shared classroom
+screen. To allow capture again, set it to `false`, raise `"version"` and push
+(§7). On the website (any browser, where blocking is impossible), every
+signed-in page carries a faint watermark with the person's name, username and
+the date instead (`apps/accounts/templatetags/watermark.py`).

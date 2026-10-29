@@ -103,5 +103,6 @@
   <script src="{% static 'js/boot.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
   <script src="{% static 'js/submit_once.js' %}" defer></script>
+{% if user.is_authenticated %}{% load watermark %}{% watermark user %}{% endif %}
 </body>
 </html>

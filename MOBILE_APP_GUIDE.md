@@ -564,3 +564,15 @@ account, progress and downloaded lessons stay. **Later** hides it for a day.
 A page that was never saved shows the "saved lessons" list instead of an error.
 The "Connect once to get started" screen only appears on a brand-new install
 that has never been online.
+
+---
+
+## Screenshots and screen recording are blocked (Android)
+
+`"blockScreenCapture": true` in `app.settings.json` (the default) turns on
+Android's FLAG_SECURE (`scripts/configure-native.mjs` adds it to
+`MainActivity.java` on every build): screenshots fail, and screen recordings,
+screen sharing and the recent-apps preview show black. Set it to `false` and
+build again to allow them. iPhone doesn't let apps block screenshots. On the
+website, every signed-in page carries a faint watermark with the person's
+name instead (`apps/accounts/templatetags/watermark.py`).

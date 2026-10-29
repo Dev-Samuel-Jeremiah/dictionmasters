@@ -9,6 +9,7 @@
  *   www/app-settings.js                      the site address for the offline screen
  *   android/app/src/main/AndroidManifest.xml microphone, camera, network, deep links
  *   android/app/src/main/res/values/strings.xml  the app's name
+ *   android/.../MainActivity.java            screenshots and screen recording blocked
  *   ios/App/App/Info.plist                   permission sentences, name, background audio
  *   ios/App/App/App.entitlements             iPhone deep links (Associated Domains)
  */
@@ -38,6 +39,19 @@ function write(p, text, label) {
   if (fs.existsSync(p) && read(p) === text) return;
   fs.writeFileSync(p, text);
   done.push(label || path.relative(root, p));
+}
+function findFile(dir, name) {
+  if (!fs.existsSync(dir)) return null;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      const found = findFile(full, name);
+      if (found) return found;
+    } else if (entry.name === name) {
+      return full;
+    }
+  }
+  return null;
 }
 const xmlEscape = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -141,6 +155,32 @@ android {
 `;
     }
     write(gradlePath, g);
+  }
+
+  // Screenshots and screen recording blocked ("blockScreenCapture"):
+  // Android's FLAG_SECURE on the app's one screen. Screenshots fail, and
+  // recordings, screen sharing and the recent-apps preview show black.
+  const activityPath = findFile(path.join(androidMain, "java"), "MainActivity.java");
+  if (activityPath) {
+    const START = "    // dm:secure:start", END = "    // dm:secure:end";
+    let java = read(activityPath);
+    java = java.replace(new RegExp(`\\n?${START}[\\s\\S]*?${END}\\n?`), "\n");
+    java = java.replace(/import android\.os\.Bundle;\nimport android\.view\.WindowManager;\n/, "");
+    if (settings.blockScreenCapture !== false) {
+      java = java.replace(/(package [^;]+;\n\n?)/, "$1import android.os.Bundle;\nimport android.view.WindowManager;\n");
+      const block = `${START} — added by scripts/configure-native.mjs (blockScreenCapture)
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+    }
+${END}`;
+      java = java.replace(/extends BridgeActivity\s*\{\s*\}/, "extends BridgeActivity {\n}");
+      java = java.replace(/(extends BridgeActivity\s*\{\n?)/, `$1${block}\n`);
+    } else {
+      java = java.replace(/extends BridgeActivity \{\n\n\}/, "extends BridgeActivity {}");
+    }
+    write(activityPath, java);
   }
 } else {
   console.log("• No android/ folder yet — run `npm run setup:android` first (skipped Android).");

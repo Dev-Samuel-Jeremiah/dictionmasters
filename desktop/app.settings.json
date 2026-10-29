@@ -5,7 +5,7 @@
   "appId": "app.dictionmasters.desktop",
 
   "_version_readme": "Raise 'version' (e.g. 1.0.0 -> 1.0.1) every time you publish a new computer app. Installed apps update themselves to it. Website changes do NOT need a new version.",
-  "version": "1.0.0",
+  "version": "1.0.1",
 
   "siteUrl": "https://www.dictionmasters.app",
 
@@ -25,6 +25,9 @@
 
   "_window_readme": "The window's size the first time it opens. After that it remembers where the user left it.",
   "window": { "width": 1280, "height": 820, "minWidth": 380, "minHeight": 560 },
+
+  "_capture_readme": "true = screenshots, screen recording and screen sharing show the app as black (Windows and Mac; Linux can't). false = allow them, e.g. for a teacher sharing the screen in class.",
+  "blockScreenCapture": true,
 
   "_updates_readme": "How often a running app checks for a new version of itself, in hours.",
   "updateCheckHours": 4,

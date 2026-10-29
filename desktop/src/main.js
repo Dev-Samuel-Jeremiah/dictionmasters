@@ -18,6 +18,7 @@
  *     for the Diction Masters site only
  *   - downloads go through the normal "Save as" box
  *   - a "You're offline" screen, and saved lessons offline
+ *   - screenshots and screen recording blocked (blockScreenCapture)
  *   - menus and keyboard shortcuts (back, reload, zoom, full screen)
  *   - the app updates ITSELF when you publish a new version (updater.js)
  *
@@ -148,8 +149,23 @@ function webPreferences() {
   };
 }
 
+// ------------------------------------------------- screen capture blocked
+// "blockScreenCapture" in app.settings.json: screenshots, screen recordings
+// and screen sharing (Zoom, Teams, Meet) show this window as black.
+//   Windows 10 (2004) and 11   blocked: the window is left out of every capture
+//   Windows 7 and 8            blocked in most tools (shown black)
+//   Mac                        blocked in screenshots and most recorders; some
+//                              tools on macOS 15+ (ScreenCaptureKit) ignore it
+//   Linux                      not possible: the system has no such setting
+// The website adds a name watermark too (templates/includes/watermark.html).
+function protectFromCapture(win) {
+  if (settings.blockScreenCapture === false) return;
+  try { win.setContentProtection(true); } catch (error) { /* not supported here */ }
+}
+
 function attachHandlers(win) {
   const wc = win.webContents;
+  protectFromCapture(win);
 
   // Links that open a new window.
   wc.setWindowOpenHandler(({ url }) => {

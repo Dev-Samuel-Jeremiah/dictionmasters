@@ -5,11 +5,14 @@
   "appId": "app.dictionmasters.mobile",
 
   "_version_readme": "Raise 'build' by 1 every time you upload a new app to Google Play / App Store. 'version' is what people see. Website changes do NOT need a new version.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "build": 1,
 
   "_releaseNotes_readme": "One short sentence shown in the app's 'Update available' message. Change it with each app release.",
-  "releaseNotes": "Works offline: your lessons open without internet, and an Update message tells you about new versions.",
+  "releaseNotes": "Your lessons are now protected: screenshots and screen recording are blocked in the app.",
+
+  "_capture_readme": "true = screenshots and screen recording are blocked in the Android app (they show black). iPhone doesn't allow apps to block screenshots.",
+  "blockScreenCapture": true,
 
   "siteUrl": "https://www.dictionmasters.app",
 
