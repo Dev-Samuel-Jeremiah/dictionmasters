@@ -213,6 +213,38 @@ class DesktopAppTests(TestCase):
         self.assertContains(page, DESKTOP_RELEASES + "/DictionMasters-mac-arm64.dmg")
         self.assertContains(page, DESKTOP_RELEASES + "/DictionMasters-linux-amd64.deb")
 
+    @override_settings(NATIVE_APP_DESKTOP_DOWNLOAD_URL=DESKTOP_RELEASES)
+    def test_the_big_button_picks_the_installer_for_this_computer(self):
+        agents = {
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/142.0 Safari/537.36": "DictionMasters-Setup.exe",
+            "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 Chrome/109.0 Safari/537.36": "DictionMasters-Setup-Windows7-8.exe",
+            "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/142.0 Safari/537.36": "DictionMasters-Setup-Windows7-8.exe",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15": "DictionMasters-mac-arm64.dmg",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:115.0) Gecko/20100101 Firefox/115.0": "DictionMasters-mac-legacy-x64.dmg",
+            "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0": "DictionMasters-linux-amd64.deb",
+            "Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0": "DictionMasters-linux-x86_64.AppImage",
+        }
+        for agent, file in agents.items():
+            page = self.client.get("/app/get/", HTTP_USER_AGENT=agent)
+            self.assertEqual(page.context["desktop_choice"]["url"], f"{DESKTOP_RELEASES}/{file}", agent)
+            self.assertContains(page, "data-desktop-button")
+            self.assertContains(page, 'id="desktop-choices"')                  # for desktop_download.js
+            self.assertContains(page, "js/desktop_download.js")
+        mac = self.client.get("/app/get/", HTTP_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) Safari/605")
+        self.assertContains(mac, 'Download for <span data-desktop-os>Mac</span>', html=False)
+        self.assertContains(mac, "Get the app for Mac")                         # the footer too
+
+    @override_settings(NATIVE_APP_DESKTOP_DOWNLOAD_URL=DESKTOP_RELEASES)
+    def test_no_big_button_for_phones_and_chromebooks(self):
+        for agent in ("Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 Chrome/142.0 Safari/537.36",
+                      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/142.0 Mobile Safari/537.36"):
+            page = self.client.get("/app/get/", HTTP_USER_AGENT=agent)
+            self.assertIsNone(page.context["desktop_choice"], agent)
+            self.assertNotContains(page, "data-desktop-button")
+            self.assertNotContains(page, "Get the app for")
+        chromebook = self.client.get("/app/get/", HTTP_USER_AGENT="Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) Chrome/142.0")
+        self.assertContains(chromebook, "Install on this computer")             # it installs the website
+
     @override_settings(NATIVE_APP_DESKTOP_DOWNLOAD_URL="")
     def test_no_installers_until_published(self):
         page = self.client.get("/app/get/", HTTP_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Safari/605")

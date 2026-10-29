@@ -29,6 +29,7 @@
             <p class="ui-hero__eyebrow">Learn anywhere, even offline</p>
             <h1 class="ui-hero__title">Get the Diction Masters app</h1>
             <p class="ui-hero__lede">Your lessons, practice and progress in one tap from your home screen. Download lessons once and keep learning without the internet.</p>
+            {% if desktop_choice %}{% include "native_app/_desktop_download.html" with choice=desktop_choice %}{% endif %}
           </div>
         </div>
       </div>
@@ -155,7 +156,7 @@
         <div>
           <p class="ui-panel__lede"><strong>Scan this with your phone's camera</strong> to open this page there and get the app.</p>
           <p class="ui-note">Or open <strong>{{ page_url }}</strong> on your phone.</p>
-          {% if not downloads.desktop %}<p><button type="button" class="ui-btn ui-btn--ghost" data-install-app>Install on this computer</button></p>{% endif %}
+          {% if not desktop_choice %}<p><button type="button" class="ui-btn ui-btn--ghost" data-install-app>Install on this computer</button></p>{% endif %}
         </div>
       </div>
     </section>
@@ -163,3 +164,5 @@
   </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}{% if desktop_choice %}<script src="{% static 'js/desktop_download.js' %}" defer></script>{% endif %}{% endblock %}

@@ -35,3 +35,31 @@
 .ga-os p { margin: 0 0 8px; }
 .ga-os__alt { font-weight: 700; }
 .ga-os .ga-steps { margin-bottom: 0; font-size: .95rem; }
+
+/* The big "Download for Windows / Mac / Linux" button in the hero
+   (templates/native_app/_desktop_download.html). */
+.ga-dl { margin-top: 22px; max-width: 560px; }
+.ga-dl__btn { display: inline-flex; align-items: center; gap: 10px; min-height: 56px; font-size: 1.15rem; }
+.ga-dl__icon { font-size: 1.4rem; line-height: 1; }
+.ga-dl__detail { margin: 10px 0 0; color: rgba(238, 242, 248, 0.86); font-size: .95rem; }
+.ga-dl__others { margin: 6px 0 0; color: rgba(238, 242, 248, 0.7); font-size: .9rem; }
+.ga-dl__others a { color: #FFD86B; }
+.ga-dl__others a.is-picked { font-weight: 700; text-decoration: none; }
+.ga-dl__steps {
+  margin: 16px 0 0; padding: 14px 18px 14px 36px; border-radius: 14px;
+  background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .16);
+  color: rgba(238, 242, 248, 0.92); font-size: .95rem;
+}
+.ga-dl__steps li + li { margin-top: 6px; }
+.ga-dl__steps code { color: #FFD86B; word-break: break-all; }
+/* Narrow windows: the hero text keeps 60% of the width beside the photo
+   (theme.css); the download box sits below the photo and takes the whole
+   width, less the page's 16px sides. */
+@media (max-width: 820px) {
+  /* A negative margin, not a width, so the text column beside the photo
+     doesn't grow with it. */
+  .ga-dl { margin-right: calc(100% - (100vw - 32px)); max-width: 560px; }
+}
+@media (max-width: 420px) {
+  .ga-dl__btn { width: 100%; justify-content: center; }
+}

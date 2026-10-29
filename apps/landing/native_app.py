@@ -125,6 +125,67 @@ DESKTOP_FILES = {
 }
 
 
+# What the big download button says for each installer: (system, detail).
+DESKTOP_LABELS = {
+    "windows": ("Windows", "Windows 10 and 11 \u00b7 64-bit"),
+    "windows_legacy": ("Windows", "Windows 7, 8 and 8.1 \u00b7 32- and 64-bit"),
+    "mac_arm": ("Mac", "Mac with Apple chip (M1 or newer) \u00b7 macOS 12 or newer"),
+    "mac_intel": ("Mac", "Mac with Intel chip \u00b7 macOS 12 or newer"),
+    "mac_legacy": ("Mac", "Older Macs \u00b7 macOS 10.13 to 11"),
+    "linux_deb": ("Linux", "Ubuntu, Debian and Linux Mint \u00b7 .deb"),
+    "linux_appimage": ("Linux", "Any 64-bit Linux \u00b7 AppImage"),
+}
+
+_WINDOWS_NT = re.compile(r"Windows NT (\d+)\.(\d+)")
+_MAC_VERSION = re.compile(r"Mac OS X (\d+)[_.](\d+)")
+
+
+def desktop_installer_for(request):
+    """Which installer fits the visitor's computer, from its User-Agent: a key
+    of DESKTOP_FILES, or "" for a phone, a Chromebook or anything unknown.
+
+    The User-Agent can't tell everything (an Apple-chip Mac says "Intel", and
+    Safari says 10.15 on every newer macOS), so static/js/desktop_download.js
+    refines the choice in the browser where it can."""
+    agent = request.headers.get("User-Agent", "")
+    if device_of(request) != "desktop" or "CrOS" in agent:
+        return ""
+    if "Windows" in agent:
+        nt = _WINDOWS_NT.search(agent)
+        if nt and (int(nt.group(1)), int(nt.group(2))) < (10, 0):
+            return "windows_legacy"                 # Windows 7, 8 and 8.1
+        if not any(mark in agent for mark in ("Win64", "WOW64", "x64", "ARM64", "aarch64")):
+            return "windows_legacy"                 # 32-bit Windows 10: the 7/8 installer has a 32-bit app
+        return "windows"
+    if "Macintosh" in agent or "Mac OS X" in agent:
+        mac = _MAC_VERSION.search(agent)
+        if mac and (int(mac.group(1)), int(mac.group(2))) < (10, 15):
+            return "mac_legacy"                     # macOS 10.14 and older say so
+        return "mac_arm"                            # most Macs now; the page script checks for Intel
+    if "Linux" in agent or "X11" in agent:
+        if any(name in agent for name in ("Fedora", "Red Hat", "SUSE", "Arch", "Manjaro", "CentOS")):
+            return "linux_appimage"
+        return "linux_deb"
+    return ""
+
+
+def desktop_choice(request, downloads=None):
+    """The big download button on "Get the app": {"key", "url", "os", "detail",
+    "choices"}, or None when the installers aren't published or the visitor
+    isn't on a computer we make one for. `choices` (every installer's link and
+    detail) lets the page script switch to a better fit."""
+    downloads = desktop_downloads() if downloads is None else downloads
+    key = desktop_installer_for(request)
+    if not downloads or not key:
+        return None
+    system, detail = DESKTOP_LABELS[key]
+    return {
+        "key": key, "url": downloads[key], "os": system, "detail": detail,
+        "choices": {name: {"url": downloads[name], "os": DESKTOP_LABELS[name][0], "detail": DESKTOP_LABELS[name][1]}
+                    for name in DESKTOP_FILES},
+    }
+
+
 def desktop_downloads():
     """Download links for the computer app, or {} when it isn't published yet."""
     base = (getattr(settings, "NATIVE_APP_DESKTOP_DOWNLOAD_URL", "") or "").rstrip("/")
@@ -148,11 +209,16 @@ def context(request):
 
     `native_app`     None in a browser, otherwise
                      {"platform": "android"|"ios"|"desktop", "hide_payments": bool}
-    `app_downloads`  where the apps can be downloaded (see app_downloads)"""
+    `app_downloads`  where the apps can be downloaded (see app_downloads)
+    `desktop_os`     "Windows", "Mac" or "Linux" when the computer app is
+                     published and fits the visitor's computer, else ""
+                     (the footer's "Get the app for Windows")"""
     platform = platform_of(request)
     downloads = app_downloads()
     if not platform:
-        return {"native_app": None, "app_downloads": downloads}
+        key = desktop_installer_for(request) if downloads["desktop"] else ""
+        return {"native_app": None, "app_downloads": downloads,
+                "desktop_os": DESKTOP_LABELS[key][0] if key else ""}
     return {"native_app": {"platform": platform, "hide_payments": hides_payments(request)},
             "app_downloads": downloads}
 
@@ -174,7 +240,9 @@ def computer_of(request):
         return "windows"
     if "Macintosh" in agent or "Mac OS X" in agent:
         return "mac"
-    if "Linux" in agent or "X11" in agent or "CrOS" in agent:
+    if "CrOS" in agent:
+        return ""                                   # a Chromebook: no installer; it installs the website
+    if "Linux" in agent or "X11" in agent:
         return "linux"
     return ""
 
@@ -192,6 +260,7 @@ def get_app(request):
         "device": device_of(request),
         "computer": computer_of(request),
         "downloads": app_downloads(),
+        "desktop_choice": desktop_choice(request),
         "qr": svg(page, 180),
         "page_url": page,
     })

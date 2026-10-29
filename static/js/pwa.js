@@ -114,14 +114,16 @@
     buttons.forEach(function (button) { button.hidden = true; });
   }
 
-  // The real Android/iPhone app, when there is one to offer (the <html> tag
+  // The real Android/iPhone/computer app, when there is one to offer (the <html> tag
   // says so, from NATIVE_APP_* in config/settings.py): the install buttons
   // open the "Get the app" page instead of adding the website.
   function nativeAppOffered() {
     var root = document.documentElement;
     var which = device();
     return (which === "android" && root.hasAttribute("data-android-app")) ||
-      (which === "ios" && root.hasAttribute("data-ios-app"));
+      (which === "ios" && root.hasAttribute("data-ios-app")) ||
+      // The computer app for Windows, Mac and Linux; a Chromebook installs the website.
+      (which === "desktop" && root.hasAttribute("data-desktop-app") && !/CrOS/.test(navigator.userAgent));
   }
 
   function requestInstall() {

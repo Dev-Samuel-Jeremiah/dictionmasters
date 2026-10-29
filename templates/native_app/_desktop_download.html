@@ -1,0 +1,47 @@
+{% comment %}
+  The big "Download for Windows / Mac / Linux" button: the installer that fits
+  the visitor's computer (apps/landing/native_app.py: desktop_choice), the
+  other editions of the same system just under it, and how to install.
+  static/js/desktop_download.js refines the choice in the browser (Apple chip
+  or Intel Mac, older macOS, 32-bit Windows, Windows 7/8) and swaps the link.
+  Needs `choice` (desktop_choice).
+{% endcomment %}
+<div class="ga-dl" data-desktop-choice data-key="{{ choice.key }}">
+  {{ choice.choices|json_script:"desktop-choices" }}
+  <a href="{{ choice.url }}" class="ui-btn ui-btn--gold ui-btn--large ga-dl__btn" data-desktop-button data-desktop-download>
+    <span class="ga-dl__icon" aria-hidden="true">{% if choice.os == "Windows" %}&#129695;{% elif choice.os == "Mac" %}&#127822;{% else %}&#128039;{% endif %}</span>
+    <span>Download for <span data-desktop-os>{{ choice.os }}</span></span>
+  </a>
+  <p class="ga-dl__detail"><span data-desktop-detail>{{ choice.detail }}</span> &middot; free</p>
+
+  <p class="ga-dl__others">
+    {% if choice.os == "Windows" %}
+      <a href="{{ choice.choices.windows.url }}" data-desktop-alt="windows" data-desktop-download>Windows 10 and 11 (64-bit)</a>
+      &middot; <a href="{{ choice.choices.windows_legacy.url }}" data-desktop-alt="windows_legacy" data-desktop-download>Windows 7, 8 or 32-bit</a>
+    {% elif choice.os == "Mac" %}
+      <a href="{{ choice.choices.mac_arm.url }}" data-desktop-alt="mac_arm" data-desktop-download>Apple chip</a>
+      &middot; <a href="{{ choice.choices.mac_intel.url }}" data-desktop-alt="mac_intel" data-desktop-download>Intel chip</a>
+      &middot; <a href="{{ choice.choices.mac_legacy.url }}" data-desktop-alt="mac_legacy" data-desktop-download>macOS 10.13 to 11</a>
+    {% else %}
+      <a href="{{ choice.choices.linux_deb.url }}" data-desktop-alt="linux_deb" data-desktop-download>.deb (Ubuntu, Debian, Mint)</a>
+      &middot; <a href="{{ choice.choices.linux_appimage.url }}" data-desktop-alt="linux_appimage" data-desktop-download>AppImage (any Linux)</a>
+    {% endif %}
+    &middot; <a href="#computer">other computers</a>
+  </p>
+
+  <ol class="ga-dl__steps">
+    {% if choice.os == "Windows" %}
+      <li>When it has downloaded, open <strong data-desktop-file>{% if choice.key == "windows_legacy" %}DictionMasters-Setup-Windows7-8.exe{% else %}DictionMasters-Setup.exe{% endif %}</strong>.</li>
+      <li>If Windows says <strong>"Windows protected your PC"</strong>, click <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
+      <li>Click <strong>Install</strong>. Diction Masters opens, and stays on your desktop and Start menu.</li>
+    {% elif choice.os == "Mac" %}
+      <li>Open the downloaded file and drag <strong>Diction Masters</strong> into <strong>Applications</strong>.</li>
+      <li>Open it from Applications.</li>
+      <li>If your Mac says it can't check the app: <strong>System Settings &rarr; Privacy &amp; Security</strong>, scroll down, click <strong>Open Anyway</strong>.</li>
+    {% else %}
+      <li><strong>.deb:</strong> double-click it to install, or run <code>sudo apt install ./DictionMasters-linux-amd64.deb</code>.</li>
+      <li><strong>AppImage:</strong> right-click it &rarr; <strong>Properties</strong> &rarr; allow running it as a program, then double-click it.</li>
+      <li>Sign in once. Diction Masters keeps you signed in and updates itself.</li>
+    {% endif %}
+  </ol>
+</div>
