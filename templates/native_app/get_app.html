@@ -4,11 +4,13 @@
   /app/get/ — "Get the app" (apps/landing/native_app.py: get_app).
 
   Shows first what fits the device it is opened on (`device`: android,
-  ios or desktop), then the other options further down. Which options
+  ios or desktop; `computer`: windows, mac or linux), then the other options further down. Which options
   exist is set on the server (config/settings.py):
     NATIVE_APP_ANDROID_APK_URL    the Android app file (GitHub Releases)
     NATIVE_APP_ANDROID_STORE_URL  the Google Play page, once published
     NATIVE_APP_IOS_STORE_URL      the App Store page, once published
+    NATIVE_APP_DESKTOP_DOWNLOAD_URL  the Windows/Mac/Linux installers
+                                  (DESKTOP_APP_GUIDE.md)
   With none of them set it still works: every device gets the steps to
   add the website to its home screen.
 {% endcomment %}
@@ -105,16 +107,55 @@
       <header class="ga-card__head">
         <span class="ga-card__icon" aria-hidden="true">&#128187;</span>
         <div>
-          <h2 class="ui-section__title">On a computer?</h2>
+          <h2 class="ui-section__title">{% if downloads.desktop %}Windows, Mac and Linux computers{% else %}On a computer?{% endif %}</h2>
           {% if device == 'desktop' %}<p class="ga-card__tag">This is your device</p>{% endif %}
         </div>
       </header>
+
+      {% if downloads.desktop %}
+        {% with d=downloads.desktop %}
+        <p class="ui-panel__lede">Install Diction Masters on your computer. It opens in its own window, works offline with downloaded lessons, and updates itself.</p>
+        <div class="ga-desktop">
+          <div class="ga-os{% if computer == 'windows' %} ga-os--mine{% endif %}" style="order: {% if computer == 'windows' %}1{% else %}2{% endif %}">
+            <h3 class="ga-os__title">&#129695; Windows</h3>
+            <p><a href="{{ d.windows }}" class="ui-btn {% if computer == 'windows' %}ui-btn--gold ui-btn--large{% else %}ui-btn--ghost{% endif %}" data-desktop-download>&#11015;&#65039; Windows 10 and 11</a></p>
+            <p><a href="{{ d.windows_legacy }}" class="ga-os__alt" data-desktop-download>Windows 7, 8 and 8.1 (32- or 64-bit)</a></p>
+            <ol class="ga-steps">
+              <li>Open the downloaded file.</li>
+              <li>If Windows says <strong>"Windows protected your PC"</strong>, click <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
+              <li>Click <strong>Install</strong>. Diction Masters appears on your desktop and in the Start menu.</li>
+            </ol>
+          </div>
+          <div class="ga-os{% if computer == 'mac' %} ga-os--mine{% endif %}" style="order: {% if computer == 'mac' %}1{% else %}3{% endif %}">
+            <h3 class="ga-os__title">&#127822; Mac</h3>
+            <p><a href="{{ d.mac_arm }}" class="ui-btn {% if computer == 'mac' %}ui-btn--gold ui-btn--large{% else %}ui-btn--ghost{% endif %}" data-desktop-download>&#11015;&#65039; Mac with Apple chip (M1 or newer)</a></p>
+            <p><a href="{{ d.mac_intel }}" class="ga-os__alt" data-desktop-download>Mac with Intel chip (macOS 12 or newer)</a> &middot; <a href="{{ d.mac_legacy }}" class="ga-os__alt" data-desktop-download>older Macs (macOS 10.13–11)</a></p>
+            <p class="ui-note">Not sure? Apple menu &rarr; <strong>About This Mac</strong>: "Chip: Apple M…" or "Processor: Intel".</p>
+            <ol class="ga-steps">
+              <li>Open the downloaded file and drag <strong>Diction Masters</strong> into <strong>Applications</strong>.</li>
+              <li>Open it from Applications. If your Mac says it can't check the app, open <strong>System Settings &rarr; Privacy &amp; Security</strong>, scroll down and click <strong>Open Anyway</strong>.</li>
+            </ol>
+          </div>
+          <div class="ga-os{% if computer == 'linux' %} ga-os--mine{% endif %}" style="order: {% if computer == 'linux' %}1{% else %}4{% endif %}">
+            <h3 class="ga-os__title">&#128039; Linux</h3>
+            <p><a href="{{ d.linux_deb }}" class="ui-btn {% if computer == 'linux' %}ui-btn--gold ui-btn--large{% else %}ui-btn--ghost{% endif %}" data-desktop-download>&#11015;&#65039; Ubuntu, Debian, Mint (.deb)</a></p>
+            <p><a href="{{ d.linux_appimage }}" class="ga-os__alt" data-desktop-download>Any other Linux (AppImage)</a></p>
+            <ol class="ga-steps">
+              <li><strong>.deb:</strong> double-click it to install, or run <code>sudo apt install ./DictionMasters-linux-amd64.deb</code>.</li>
+              <li><strong>AppImage:</strong> right-click it &rarr; Properties &rarr; allow running as a program, then double-click it.</li>
+            </ol>
+          </div>
+        </div>
+        <p class="ui-note">New version out? The app updates itself. Your account and downloaded lessons stay.</p>
+        {% endwith %}
+      {% endif %}
+
       <div class="ga-qr">
         <div class="ga-qr__code">{{ qr|safe }}</div>
         <div>
           <p class="ui-panel__lede"><strong>Scan this with your phone's camera</strong> to open this page there and get the app.</p>
           <p class="ui-note">Or open <strong>{{ page_url }}</strong> on your phone.</p>
-          <p><button type="button" class="ui-btn ui-btn--ghost" data-install-app>Install on this computer</button></p>
+          {% if not downloads.desktop %}<p><button type="button" class="ui-btn ui-btn--ghost" data-install-app>Install on this computer</button></p>{% endif %}
         </div>
       </div>
     </section>

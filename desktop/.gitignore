@@ -1,0 +1,6 @@
+node_modules/
+dist/
+# Signing certificates: NEVER commit these.
+*.p12
+*.pfx
+*.cer

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src https: http:">
+  <title>Diction Masters — offline</title>
+  <!--
+    Shown by the computer app when the website can't be reached.
+    It lives INSIDE the app, so changing it needs a new app version.
+  -->
+  <style>
+    :root { --blue: #005FE1; --gold: #FFDE15; --ink: #FFFFFF; --muted: #D6E4FF; --navy: #0B1A4A; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      background: var(--blue); color: var(--ink);
+      font: 16px/1.5 "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Ubuntu, system-ui, sans-serif;
+      display: grid; place-items: center; padding: 24px; text-align: center;
+      -webkit-user-select: none; user-select: none;
+    }
+    .card { max-width: 460px; }
+    .logo { height: 120px; width: auto; margin-bottom: 22px; }
+    h1 { font-size: 26px; margin: 0 0 10px; }
+    p { color: var(--muted); margin: 0 0 28px; }
+    button {
+      appearance: none; border: 0; border-radius: 999px; cursor: pointer;
+      background: var(--gold); color: var(--navy);
+      font-family: inherit; font-weight: 700; font-size: 17px; line-height: 1; padding: 16px 34px; min-width: 220px;
+    }
+    button:hover { filter: brightness(1.05); }
+    button:active { transform: scale(.97); }
+    button.ghost { display: block; margin: 12px auto 0; background: transparent; color: var(--ink); border: 2px solid rgba(255,255,255,.6); }
+    .status { margin-top: 18px; font-size: 14px; color: var(--muted); min-height: 1.5em; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img src="logo.png" alt="" class="logo">
+    <div id="opening">
+      <h1>Opening your lessons…</h1>
+      <p>You're offline. Opening the lessons saved on this computer.</p>
+    </div>
+    <div id="first" hidden>
+      <h1>You're offline</h1>
+      <p>Diction Masters needs the internet the first time, to sign you in and save your lessons on this computer. After that, lessons you've downloaded open without the internet.</p>
+      <button type="button" id="retry">Try again</button>
+      <button type="button" id="saved" class="ghost">Open saved lessons</button>
+    </div>
+    <div class="status" id="status" role="status"></div>
+  </main>
+  <script>
+    /*
+     * Lessons saved on the computer are kept by the website's service worker
+     * (templates/pwa/sw.js), which answers even with no connection. So first
+     * we simply go back to the dashboard: that normally opens the saved copy.
+     * If that fails too (nothing saved yet), the app brings us back here with
+     * first=1 and we show "You're offline" with a Try again button.
+     */
+    (function () {
+      var q = new URLSearchParams(location.search);
+      var site = q.get("site") || "https://www.dictionmasters.app";
+      var status = document.getElementById("status");
+
+      function openSaved() { window.location.replace(site + "/accounts/dashboard/"); }
+      function showFirstRun() {
+        document.getElementById("opening").hidden = true;
+        document.getElementById("first").hidden = false;
+      }
+
+      if (q.get("first") === "1") showFirstRun();
+      else setTimeout(openSaved, 600);
+
+      var busy = false;
+      function retry() {
+        if (busy) return;
+        busy = true;
+        status.textContent = "Connecting…";
+        // A tiny request first, so we don't swap this screen for another error.
+        fetch(site + "/manifest.webmanifest", { cache: "no-store", mode: "no-cors" })
+          .then(function () {
+            var back = q.get("failed");
+            window.location.href = back && back.indexOf(site) === 0 ? back : site + "/";
+          })
+          .catch(function () {
+            busy = false;
+            status.textContent = "Still no connection. We'll carry on as soon as you're online.";
+          });
+      }
+      document.getElementById("retry").addEventListener("click", retry);
+      document.getElementById("saved").addEventListener("click", openSaved);
+      window.addEventListener("online", retry);
+      // Some networks don't fire "online": try again quietly every 20 seconds.
+      setInterval(function () { if (!document.getElementById("first").hidden) retry(); }, 20000);
+    })();
+  </script>
+</body>
+</html>

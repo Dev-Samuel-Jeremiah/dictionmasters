@@ -1,0 +1,36 @@
+{
+  "name": "diction-masters-desktop",
+  "productName": "Diction Masters",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Diction Masters for Windows, Mac and Linux: the live website in its own app window, updating itself.",
+  "author": "Techmiary Technology Concepts <sales@techmiary.cloud>",
+  "homepage": "https://www.dictionmasters.app",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env DM_DEV_URL=http://127.0.0.1:8000 electron .",
+    "dist:win": "electron-builder --config electron-builder.config.js --publish never --win",
+    "dist:win7": "cross-env DM_LEGACY=1 electron-builder --config electron-builder.config.js --publish never --win",
+    "dist:mac": "electron-builder --config electron-builder.config.js --publish never --mac",
+    "dist:mac-legacy": "cross-env DM_LEGACY=1 electron-builder --config electron-builder.config.js --publish never --mac",
+    "dist:linux": "electron-builder --config electron-builder.config.js --publish never --linux"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "desktopName": "diction-masters.desktop",
+  "dmBuild": {
+    "legacy": false,
+    "macSigned": false,
+    "updateUrl": ""
+  }
+}

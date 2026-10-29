@@ -493,6 +493,10 @@ NATIVE_APP_ANDROID_APK_URL = os.environ.get("NATIVE_APP_ANDROID_APK_URL", "")
 #   The app's Google Play and App Store pages, once they're published.
 NATIVE_APP_ANDROID_STORE_URL = os.environ.get("NATIVE_APP_ANDROID_STORE_URL", "")
 NATIVE_APP_IOS_STORE_URL = os.environ.get("NATIVE_APP_IOS_STORE_URL", "")
+#   The computer app (Windows, Mac, Linux) — DESKTOP_APP_GUIDE.md. Once the
+#   "Desktop app" GitHub workflow has published it, use:
+#   https://github.com/<owner>/<repo>/releases/download/desktop
+NATIVE_APP_DESKTOP_DOWNLOAD_URL = os.environ.get("NATIVE_APP_DESKTOP_DOWNLOAD_URL", "")
 
 # "Update available" in the Android app. The newest version is read from
 # GitHub Releases automatically; nothing to set. Optional:

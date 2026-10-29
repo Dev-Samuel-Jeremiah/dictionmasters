@@ -177,3 +177,45 @@ class StaySignedInTests(TestCase):
         self.client.force_login(user)
         self.client.get("/accounts/dashboard/", HTTP_USER_AGENT=BROWSER)
         self.assertEqual(self.client.session.get_expiry_age(), dj.SESSION_COOKIE_AGE)
+
+
+DESKTOP_APP = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+               "Chrome/142.0.0.0 Safari/537.36 DictionMastersApp/desktop")
+DESKTOP_RELEASES = "https://github.com/example/dictionmasters/releases/download/desktop"
+
+
+class DesktopAppTests(TestCase):
+    """The computer app for Windows, Mac and Linux (desktop/ project)."""
+
+    def test_the_computer_app_is_recognised(self):
+        response = self.client.get("/", HTTP_USER_AGENT=DESKTOP_APP)
+        self.assertRedirects(response, "/app/welcome/", fetch_redirect_response=False)
+        welcome = self.client.get("/app/welcome/", HTTP_USER_AGENT=DESKTOP_APP)
+        self.assertContains(welcome, 'data-native-app="desktop"')
+
+    def test_payments_stay_on_in_the_computer_app(self):
+        # Not an app store: Paystack works there as on the website.
+        response = self.client.get("/billing/plans/", HTTP_USER_AGENT=DESKTOP_APP)
+        self.assertNotContains(response, "can't be bought in the app")
+
+    @override_settings(NATIVE_APP_HIDE_PAYMENTS=["ios", "android", "desktop"])
+    def test_payments_can_be_hidden_in_the_computer_app_too(self):
+        response = self.client.get("/billing/plans/", HTTP_USER_AGENT=DESKTOP_APP)
+        self.assertContains(response, "can't be bought in the app")
+
+    @override_settings(NATIVE_APP_DESKTOP_DOWNLOAD_URL=DESKTOP_RELEASES + "/")
+    def test_get_the_app_offers_the_installers(self):
+        windows_chrome = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/142.0 Safari/537.36"
+        page = self.client.get("/app/get/", HTTP_USER_AGENT=windows_chrome)
+        self.assertEqual(page.context["computer"], "windows")
+        self.assertContains(page, DESKTOP_RELEASES + "/DictionMasters-Setup.exe")
+        self.assertContains(page, DESKTOP_RELEASES + "/DictionMasters-Setup-Windows7-8.exe")
+        self.assertContains(page, DESKTOP_RELEASES + "/DictionMasters-mac-arm64.dmg")
+        self.assertContains(page, DESKTOP_RELEASES + "/DictionMasters-linux-amd64.deb")
+
+    @override_settings(NATIVE_APP_DESKTOP_DOWNLOAD_URL="")
+    def test_no_installers_until_published(self):
+        page = self.client.get("/app/get/", HTTP_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Safari/605")
+        self.assertEqual(page.context["computer"], "mac")
+        self.assertNotContains(page, "DictionMasters-")
+        self.assertContains(page, "Install on this computer")

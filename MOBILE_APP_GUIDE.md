@@ -3,6 +3,9 @@
 This guide covers building, publishing and changing the Diction Masters
 phone apps. It's written for a learner, so it goes one step at a time.
 
+> The app for **Windows, Mac and Linux** works the same way. It has its own
+> guide: `DESKTOP_APP_GUIDE.md`.
+
 ---
 
 ## 1. How it works (and why your changes update the apps automatically)

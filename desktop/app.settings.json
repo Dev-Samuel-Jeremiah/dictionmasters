@@ -1,0 +1,34 @@
+{
+  "_readme": "THE ONE FILE TO EDIT for the computer app (Windows, Mac, Linux). See DESKTOP_APP_GUIDE.md.",
+
+  "appName": "Diction Masters",
+  "appId": "app.dictionmasters.desktop",
+
+  "_version_readme": "Raise 'version' (e.g. 1.0.0 -> 1.0.1) every time you publish a new computer app. Installed apps update themselves to it. Website changes do NOT need a new version.",
+  "version": "1.0.0",
+
+  "siteUrl": "https://www.dictionmasters.app",
+
+  "_devUrl_readme": "TESTING ONLY. Put your local Django address here (e.g. http://127.0.0.1:8000) to test against `runserver`. Leave it EMPTY (\"\") before publishing. The GitHub build refuses to run while it is set.",
+  "devUrl": "",
+
+  "_hosts_readme": "Web addresses that open INSIDE the app. Every other address opens in the computer's normal web browser.",
+  "appHosts": ["www.dictionmasters.app", "dictionmasters.app"],
+
+  "_payment_hosts_readme": "Payment pages that open inside the app (Paystack), so paying works the same as on the website.",
+  "paymentHosts": ["checkout.paystack.com", "paystack.com", "*.paystack.com"],
+
+  "colors": {
+    "brand": "#005FE1",
+    "titleBar": "#0B1A4A"
+  },
+
+  "_window_readme": "The window's size the first time it opens. After that it remembers where the user left it.",
+  "window": { "width": 1280, "height": 820, "minWidth": 380, "minHeight": 560 },
+
+  "_updates_readme": "How often a running app checks for a new version of itself, in hours.",
+  "updateCheckHours": 4,
+
+  "_download_page_readme": "Opened when an update can't install itself (Mac without an Apple certificate, Linux .deb). Path on siteUrl.",
+  "downloadPage": "/app/get/#computer"
+}

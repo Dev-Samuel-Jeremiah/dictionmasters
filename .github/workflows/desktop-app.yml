@@ -1,0 +1,158 @@
+# Builds the computer app (Windows, Mac, Linux) on GitHub's computers — no
+# Mac or Windows PC needed. See DESKTOP_APP_GUIDE.md.
+#
+# Run it: GitHub > your repo > Actions > "Desktop app" > Run workflow.
+# (It also runs by itself when anything in desktop/ changes on main.)
+#
+# Every run builds five editions, each on the system it is for:
+#   Windows 10/11            DictionMasters-Setup.exe
+#   Windows 7, 8, 8.1        DictionMasters-Setup-Windows7-8.exe   (Electron 22)
+#   Mac (Apple chip + Intel) DictionMasters-mac-arm64.dmg, DictionMasters-mac-x64.dmg
+#   Older Macs (10.13–11)    DictionMasters-mac-legacy-x64.dmg     (Electron 22)
+#   Linux                    DictionMasters-linux-amd64.deb, DictionMasters-linux-x86_64.AppImage
+# and leaves them under "Artifacts" on the run's Summary page.
+#
+# On "main" they are also published on the Releases page under the tag
+# "desktop", replacing the previous files, together with the update files
+# (latest.yml, legacy.yml, latest-mac.yml, legacy-mac.yml, latest-linux.yml)
+# that installed apps check. The file names never change, so the website's
+# links (NATIVE_APP_DESKTOP_DOWNLOAD_URL) always download the newest app:
+#   https://github.com/<owner>/<repo>/releases/download/desktop/<file>
+# The release is never marked "Latest", so the Android app's
+# .../releases/latest/download/diction-masters.apk link keeps working.
+#
+# Optional repository secrets (Settings > Secrets and variables > Actions):
+#   WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD     Windows code-signing certificate (.pfx as base64)
+#   MAC_CSC_LINK, MAC_CSC_KEY_PASSWORD     Apple "Developer ID Application" certificate (.p12 as base64)
+#   APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID   Mac notarisation
+# Without them the installers are unsigned: they work, with a one-time
+# warning (the "Get the app" page says what to click).
+# Only if this repository is private, publish to a public one instead (the
+# same settings as the Android app):
+#   variable APK_RELEASE_REPO = "<owner>/<public-repo>",  secret RELEASE_TOKEN
+name: Desktop app
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "desktop/**"
+      - ".github/workflows/desktop-app.yml"
+
+permissions:
+  contents: write # to publish the app on the Releases page
+
+concurrency:
+  group: desktop-app-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Where installed apps look for updates: the release with the tag "desktop".
+  DM_UPDATE_URL: https://github.com/${{ vars.APK_RELEASE_REPO || github.repository }}/releases/download/desktop
+  # Refuse to build while app.settings.json still points at a local Django.
+  DM_RELEASE: "1"
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Windows 10 and 11, os: windows-latest, target: --win, legacy: "" }
+          - { name: Windows 7 and 8, os: windows-latest, target: --win, legacy: "1" }
+          - { name: Mac, os: macos-latest, target: --mac, legacy: "" }
+          - { name: Older Macs, os: macos-latest, target: --mac, legacy: "1" }
+          - { name: Linux, os: ubuntu-24.04, target: --linux, legacy: "" }
+    defaults:
+      run:
+        working-directory: desktop
+        shell: bash
+    env:
+      DM_LEGACY: ${{ matrix.legacy }}
+      # Signing, when the secrets are set (empty = unsigned, still works).
+      CSC_LINK: ${{ startsWith(matrix.os, 'macos') && secrets.MAC_CSC_LINK || startsWith(matrix.os, 'windows') && secrets.WIN_CSC_LINK || '' }}
+      CSC_KEY_PASSWORD: ${{ startsWith(matrix.os, 'macos') && secrets.MAC_CSC_KEY_PASSWORD || startsWith(matrix.os, 'windows') && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      # With no certificate, don't go looking for one in the build machine's keychain.
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npx electron-builder --config electron-builder.config.js --publish never ${{ matrix.target }}
+
+      - name: Collect the files
+        run: |
+          mkdir -p "$RUNNER_TEMP/out"
+          shopt -s nullglob
+          for f in dist/*.exe dist/*.dmg dist/*.zip dist/*.AppImage dist/*.deb dist/*.yml dist/*.blockmap; do
+            case "$(basename "$f")" in builder-debug.yml|builder-effective-config.yaml) continue ;; esac
+            cp "$f" "$RUNNER_TEMP/out/"
+          done
+          ls -la "$RUNNER_TEMP/out"
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: desktop-${{ matrix.os }}-${{ matrix.legacy == '1' && 'legacy' || 'normal' }}
+          path: ${{ runner.temp }}/out/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish on the Releases page
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: desktop-*
+          path: out
+          merge-multiple: true
+
+      - name: Version
+        run: |
+          echo "APP_VERSION=$(node -p "require('./desktop/app.settings.json').version")" >> "$GITHUB_ENV"
+          ls -la out
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ vars.APK_RELEASE_REPO || github.repository }}
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+          tag_name: desktop
+          name: Diction Masters for computers ${{ env.APP_VERSION }}
+          target_commitish: ${{ github.sha }}
+          make_latest: false
+          overwrite_files: true
+          body: |
+            Diction Masters for Windows, Mac and Linux — version ${{ env.APP_VERSION }}.
+
+            **Install:** go to https://www.dictionmasters.app/app/get/ on your computer, or download the file for your computer below.
+
+            | Computer | File |
+            |---|---|
+            | Windows 10 and 11 | `DictionMasters-Setup.exe` |
+            | Windows 7, 8 and 8.1 | `DictionMasters-Setup-Windows7-8.exe` |
+            | Mac with Apple chip | `DictionMasters-mac-arm64.dmg` |
+            | Mac with Intel chip | `DictionMasters-mac-x64.dmg` |
+            | Older Macs (macOS 10.13–11) | `DictionMasters-mac-legacy-x64.dmg` |
+            | Ubuntu, Debian, Mint | `DictionMasters-linux-amd64.deb` |
+            | Other Linux | `DictionMasters-linux-x86_64.AppImage` |
+
+            Already have the app? It updates itself. Your account and downloaded lessons stay.
+          files: out/*

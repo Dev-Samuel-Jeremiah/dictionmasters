@@ -1,13 +1,15 @@
 """
-Diction Masters inside the Android and iPhone apps.
+Diction Masters inside the Android, iPhone and computer apps.
 
-The phone apps (the separate `mobile/` project) are a native shell that
-opens this website. Because every page still comes from Django, whatever
-you change or add here shows up in both apps as soon as it is deployed —
-no app-store update needed.
+The phone apps (the separate `mobile/` project) and the computer app for
+Windows, Mac and Linux (the `desktop/` project) are native shells that
+open this website. Because every page still comes from Django, whatever
+you change or add here shows up in all the apps as soon as it is
+deployed — no app-store update or new download needed.
 
-The app adds "DictionMastersApp/android" or "DictionMastersApp/ios" to its
-User-Agent, which is how Django knows a request came from the app. This
+The app adds "DictionMastersApp/android", "DictionMastersApp/ios" or
+"DictionMastersApp/desktop" to its User-Agent, which is how Django knows a
+request came from the app. This
 module uses that to:
 
   * put `native_app` in every template ({{ native_app.platform }},
@@ -28,6 +30,11 @@ Settings (config/settings.py, set from the environment):
   NATIVE_APP_ANDROID_PACKAGE    the app id, e.g. "app.dictionmasters.mobile"
   NATIVE_APP_ANDROID_SHA256     signing-key fingerprint(s) from Google Play
   NATIVE_APP_IOS_TEAM_ID        your Apple Developer team id (10 characters)
+  NATIVE_APP_DESKTOP_DOWNLOAD_URL  where the computer installers are published
+                                (DESKTOP_APP_GUIDE.md)
+
+The computer app isn't sold through an app store, so payments stay on
+there (it isn't in NATIVE_APP_HIDE_PAYMENTS unless you add "desktop").
 """
 
 import re
@@ -37,7 +44,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import cache_control
 
-_AGENT = re.compile(r"DictionMastersApp/(android|ios)\b", re.IGNORECASE)
+_AGENT = re.compile(r"DictionMastersApp/(android|ios|desktop)\b", re.IGNORECASE)
 
 # Buying pages. The account page (/billing/) itself stays open: it shows
 # the learner's access, and the template hides the plans there.
@@ -45,7 +52,7 @@ BUYING_PATHS = ("/billing/plans/", "/billing/checkout/", "/billing/promo/")
 
 
 def platform_of(request):
-    """'android', 'ios', or None when the request didn't come from the app."""
+    """'android', 'ios', 'desktop', or None when the request didn't come from an app."""
     cached = getattr(request, "_native_platform", False)
     if cached is not False:
         return cached
@@ -104,12 +111,35 @@ class NativeAppMiddleware:
         return response
 
 
+# The computer installers, by file name. The names never change between
+# versions (desktop/electron-builder.config.js), so these links always
+# download the newest one.
+DESKTOP_FILES = {
+    "windows": "DictionMasters-Setup.exe",
+    "windows_legacy": "DictionMasters-Setup-Windows7-8.exe",
+    "mac_arm": "DictionMasters-mac-arm64.dmg",
+    "mac_intel": "DictionMasters-mac-x64.dmg",
+    "mac_legacy": "DictionMasters-mac-legacy-x64.dmg",
+    "linux_appimage": "DictionMasters-linux-x86_64.AppImage",
+    "linux_deb": "DictionMasters-linux-amd64.deb",
+}
+
+
+def desktop_downloads():
+    """Download links for the computer app, or {} when it isn't published yet."""
+    base = (getattr(settings, "NATIVE_APP_DESKTOP_DOWNLOAD_URL", "") or "").rstrip("/")
+    if not base:
+        return {}
+    return {key: f"{base}/{filename}" for key, filename in DESKTOP_FILES.items()}
+
+
 def app_downloads():
     """Where people can get the apps (config/settings.py). Empty = not offered."""
     return {
         "android_apk": getattr(settings, "NATIVE_APP_ANDROID_APK_URL", ""),
         "android_store": getattr(settings, "NATIVE_APP_ANDROID_STORE_URL", ""),
         "ios_store": getattr(settings, "NATIVE_APP_IOS_STORE_URL", ""),
+        "desktop": desktop_downloads(),
     }
 
 
@@ -117,7 +147,7 @@ def context(request):
     """In every template:
 
     `native_app`     None in a browser, otherwise
-                     {"platform": "android"|"ios", "hide_payments": bool}
+                     {"platform": "android"|"ios"|"desktop", "hide_payments": bool}
     `app_downloads`  where the apps can be downloaded (see app_downloads)"""
     platform = platform_of(request)
     downloads = app_downloads()
@@ -137,10 +167,22 @@ def device_of(request):
     return "desktop"
 
 
+def computer_of(request):
+    """'windows', 'mac', 'linux' or '' — which computer installer to show first."""
+    agent = request.headers.get("User-Agent", "")
+    if "Windows" in agent:
+        return "windows"
+    if "Macintosh" in agent or "Mac OS X" in agent:
+        return "mac"
+    if "Linux" in agent or "X11" in agent or "CrOS" in agent:
+        return "linux"
+    return ""
+
+
 def get_app(request):
     """/app/get/ — the "Get the app" page: the Android app to download, the
-    App Store, or "Add to Home Screen" on iPhone, whichever fits the phone
-    it's opened on. Already inside the app, there's nothing to get."""
+    App Store, "Add to Home Screen" on iPhone, or the computer app for
+    Windows, Mac or Linux, whichever fits the device it's opened on. Already inside the app, there's nothing to get."""
     if platform_of(request):
         return redirect("accounts:dashboard")
     from apps.echospell.qr import svg
@@ -148,6 +190,7 @@ def get_app(request):
     page = request.build_absolute_uri(request.path) if settings.DEBUG else f"{settings.SITE_URL}{request.path}"
     return render(request, "native_app/get_app.html", {
         "device": device_of(request),
+        "computer": computer_of(request),
         "downloads": app_downloads(),
         "qr": svg(page, 180),
         "page_url": page,

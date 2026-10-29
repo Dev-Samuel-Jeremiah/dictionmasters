@@ -26,3 +26,12 @@
 }
 .ga-qr__code svg { width: 180px; height: 180px; }
 
+
+/* The computer app: one box per system, the visitor's own first. */
+.ga-desktop { display: flex; flex-direction: column; gap: 14px; margin: 6px 0 18px; }
+.ga-os { padding: 16px 18px; border-radius: 16px; border: 1px solid var(--line, #E3E8F4); background: var(--card, #fff); }
+.ga-os--mine { border-color: var(--yellow, #FFC72C); box-shadow: 0 0 0 2px var(--yellow, #FFC72C); }
+.ga-os__title { margin: 0 0 10px; font-size: 1.1rem; }
+.ga-os p { margin: 0 0 8px; }
+.ga-os__alt { font-weight: 700; }
+.ga-os .ga-steps { margin-bottom: 0; font-size: .95rem; }
