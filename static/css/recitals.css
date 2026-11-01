@@ -4,6 +4,25 @@
 .rc-media { display: inline-flex; gap: 4px; }
 .rc-media .ui-chip { font-size: 0.7rem; padding: 3px 8px; background: #E7EFFF; color: #1846E0; }
 
+/* the popup a card opens (templates/assembly_recitals/section.html) */
+.rc-modal { width: min(600px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 0; border: 0; border-radius: 20px;
+  background: #fff; color: #0B1A4A; box-shadow: 0 24px 60px rgba(11, 26, 74, 0.35); overflow: auto; }
+.rc-modal[open] { animation: rc-pop 0.22s cubic-bezier(.2, .8, .2, 1); }
+.rc-modal::backdrop { background: rgba(11, 26, 74, 0.6); }
+.rc-modal__body { padding: 22px clamp(16px, 4vw, 26px) 20px; }
+.rc-modal__title { margin: 0 44px 14px 0; font-size: 1.35rem; font-weight: 800; line-height: 1.2; color: #0B1A4A; }
+.rc-modal__close { position: sticky; float: right; top: 10px; z-index: 1; width: 44px; height: 44px; margin: 10px 10px 0 0; border: 0; border-radius: 50%;
+  background: #F2F5FC; color: #0B1A4A; font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.rc-modal__close:hover { background: #E7EFFF; }
+.rc-modal__close:focus-visible, .rc-modal__more a:focus-visible { outline: 3px solid #1846E0; outline-offset: 2px; }
+.rc-modal__video { margin-bottom: 14px; border-radius: 14px; overflow: hidden; }
+.rc-modal__video video { display: block; width: 100%; }
+.rc-modal__words { --rc-scale: 0.8; }
+.rc-modal__empty { margin: 8px 0 14px; color: #55607E; }
+.rc-modal__more { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid #E3E8F4; font-size: 0.9rem; color: #55607E; }
+.rc-modal__more a { color: #1846E0; font-weight: 700; }
+@keyframes rc-pop { from { opacity: 0; translate: 0 14px; } }
+
 /* the words */
 .rc-words__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .rc-size { display: inline-flex; gap: 4px; }
@@ -44,4 +63,4 @@
   .rc-present__hint { display: none; }
   .rc-verse { font-size: calc(1.25rem * var(--rc-scale)); }
 }
-@media (prefers-reduced-motion: reduce) { .rc-present__slide { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .rc-present__slide, .rc-modal[open] { animation: none; } }

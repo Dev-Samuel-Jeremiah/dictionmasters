@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
+{% load videos %}
 
 {% block title %}{{ section.name }} — Assembly Recitals{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/recitals.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/recital_modal.js' %}" defer></script>{% endblock %}
 
 {% block content %}
 <div class="ui">
@@ -30,7 +32,7 @@
     {% if recitals %}
     <div class="ui-grid">
       {% for recital in recitals %}
-      <a href="{% url 'assembly_recitals:recital' section.slug recital.slug %}" class="ui-card ui-lift" style="--i: {{ forloop.counter0 }}">
+      <a href="{% url 'assembly_recitals:recital' section.slug recital.slug %}" class="ui-card ui-lift" style="--i: {{ forloop.counter0 }}" data-recital-open="recital-{{ recital.pk }}">
         <span class="ui-card__top">
           <span class="ui-card__icon" aria-hidden="true">{{ forloop.counter }}</span>
           <span class="rc-media">{% if recital.video_source %}<span class="ui-chip">&#9654; Video</span>{% endif %}{% if recital.audio_source %}<span class="ui-chip">&#127911; Audio</span>{% endif %}</span>
@@ -38,11 +40,37 @@
         <span class="ui-card__name">{{ recital.title }}</span>
         {% if recital.summary %}<span class="ui-card__desc">{{ recital.summary }}</span>{% endif %}
         <span class="ui-card__foot">
-          <span class="ui-card__meta"><span>{{ recital.line_count }} line{{ recital.line_count|pluralize }}</span><span>Recite &rarr;</span></span>
+          <span class="ui-card__meta"><span>{{ recital.line_count }} line{{ recital.line_count|pluralize }}</span><span>{% if recital.video_source or recital.audio_source %}&#9654; Play{% else %}Recite &rarr;{% endif %}</span></span>
         </span>
       </a>
       {% endfor %}
     </div>
+
+    {# What each card opens: inert until then, so nothing loads or plays. #}
+    {% for recital in recitals %}
+    <template id="recital-{{ recital.pk }}">
+      <h2 class="rc-modal__title" id="rc-modal-title">{{ recital.title }}</h2>
+      {% if recital.video_source %}<div class="rc-modal__video">{% video_player recital offline=False %}</div>{% endif %}
+      {% if recital.audio_source %}<audio controls src="{{ recital.audio_source }}" class="rc-audio"></audio>{% endif %}
+      {% with verses=recital.verses %}
+      {% if verses %}
+      <div class="rc-verses rc-modal__words">
+        {% for verse in verses %}
+        <p class="rc-verse">{% for line in verse %}<span class="rc-line">{{ line }}</span>{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        {% endfor %}
+      </div>
+      {% elif not recital.video_source and not recital.audio_source %}
+      <p class="rc-modal__empty">This recital is being put together. Check back soon.</p>
+      {% endif %}
+      {% endwith %}
+      <p class="rc-modal__more"><a href="{% url 'assembly_recitals:recital' section.slug recital.slug %}">Open full page &rarr;</a> <span>to present it on the hall screen</span></p>
+    </template>
+    {% endfor %}
+
+    <dialog class="rc-modal" data-recital-modal aria-labelledby="rc-modal-title">
+      <button type="button" class="rc-modal__close" data-recital-close aria-label="Close">&times;</button>
+      <div class="rc-modal__body" data-recital-body></div>
+    </dialog>
     {% else %}
     <div class="ui-empty"><p>{{ section.name }} recitals are on their way. Check back soon.</p></div>
     {% endif %}
