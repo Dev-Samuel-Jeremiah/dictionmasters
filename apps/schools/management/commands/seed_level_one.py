@@ -8,8 +8,8 @@ already there.
 
 Content:
     EchoSpell Level 1, Groups 1-4: Spelling and Vocabulary cards, a
-        passage, a dialogue, and three activities each (missing letters,
-        rhyme match, sentence builder)
+        passage, a dialogue, and four activities each (missing letters,
+        rhyme match, sentence builder, word search)
     Conversational Dialogue: three Level 1 dialogues
     Tricks to Sound Fluent and the 44 Academy: two lessons each, with
         words, sentences and a tongue twister
@@ -184,6 +184,9 @@ class Command(BaseCommand):
                 ("missing-letters", "Fill the gaps", [{"prompt": p, "answer": a} for p, a in spec["missing"]]),
                 ("rhyme-match", "Find the rhyme", [{"prompt": p, "answer": a, "options": o} for p, a, o in spec["rhyme"]]),
                 ("sentence-builder", "Build the sentence", [{"answer": a} for a in spec["sentence"]]),
+                # The group's own words, with their meanings as clues.
+                ("word-search", "Find the words", [{"answer": word, "hint": meaning}
+                                                   for word, _ipa, meaning, _example in spec["spelling"] + spec["vocab"]]),
             ]
             for order, (kind, title, items) in enumerate(activities, start=1):
                 activity, created = Activity.objects.get_or_create(
