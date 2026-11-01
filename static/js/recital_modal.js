@@ -13,10 +13,6 @@
   if (!modal || typeof modal.showModal !== "function") return;
   var body = modal.querySelector("[data-recital-body]");
 
-  // A dialog sits above everything, so it needs its own name watermark.
-  var watermark = document.querySelector(".dm-watermark");
-  if (watermark) modal.appendChild(watermark.cloneNode(false));
-
   function open(id) {
     var content = document.getElementById(id);
     if (!content) return false;

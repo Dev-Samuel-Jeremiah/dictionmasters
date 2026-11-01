@@ -309,6 +309,4 @@ the app's window as black:
 
 This also stops teachers showing the app on Zoom/Teams or a shared classroom
 screen. To allow capture again, set it to `false`, raise `"version"` and push
-(§7). On the website (any browser, where blocking is impossible), every
-signed-in page carries a faint watermark with the person's name, username and
-the date instead (`apps/accounts/templatetags/watermark.py`).
+(§7). A website can't block capture, so none of this applies in a browser.

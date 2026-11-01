@@ -157,7 +157,6 @@ function webPreferences() {
 //   Mac                        blocked in screenshots and most recorders; some
 //                              tools on macOS 15+ (ScreenCaptureKit) ignore it
 //   Linux                      not possible: the system has no such setting
-// The website adds a name watermark too (templates/includes/watermark.html).
 function protectFromCapture(win) {
   if (settings.blockScreenCapture === false) return;
   try { win.setContentProtection(true); } catch (error) { /* not supported here */ }

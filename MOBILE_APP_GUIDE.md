@@ -573,6 +573,5 @@ that has never been online.
 Android's FLAG_SECURE (`scripts/configure-native.mjs` adds it to
 `MainActivity.java` on every build): screenshots fail, and screen recordings,
 screen sharing and the recent-apps preview show black. Set it to `false` and
-build again to allow them. iPhone doesn't let apps block screenshots. On the
-website, every signed-in page carries a faint watermark with the person's
-name instead (`apps/accounts/templatetags/watermark.py`).
+build again to allow them. iPhone doesn't let apps block screenshots, and a
+website can't block them in a browser.
