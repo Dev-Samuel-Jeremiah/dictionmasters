@@ -34,7 +34,7 @@
           <h1 class="es-hero__title">{{ activity.title }}</h1>
           <div class="es-hero__lede dm-rich-content">{{ activity.display_instructions|rich_text }}</div>
           <div class="es-hero__chips">
-            <span class="es-chip">{{ item_rows|length }} question{{ item_rows|length|pluralize }}</span>
+            <span class="es-chip">{{ item_rows|length }} {% if activity.mode == "search" %}word{% else %}question{% endif %}{{ item_rows|length|pluralize }}</span>
             <span class="es-chip">Pass mark {{ activity.pass_mark }}%</span>
             {% if previous %}<span class="es-chip {% if previous.passed %}es-chip--done{% else %}es-chip--gold{% endif %}">Your best: {% if previous.status == 'awaiting' %}sent to teacher{% else %}{{ previous.percent }}%{% endif %}</span>{% endif %}
           </div>
@@ -80,6 +80,29 @@
         </div>
         {% endfor %}
       </div>
+
+      {% elif activity.mode == "search" %}
+      {# ---- find every word in the grid ---- #}
+      {% with grid=activity.word_grid %}
+      <div class="word-search__how dm-rich-content">{{ activity.display_instructions|rich_text }}</div>
+      <div class="word-search" data-word-search>
+        <div class="word-search__grid" style="--size: {{ grid.size }}" role="group" aria-label="Grid of letters">
+          {% for row in grid.rows %}{% with r=forloop.counter0 %}{% for letter in row %}<button type="button" class="word-search__cell" data-r="{{ r }}" data-c="{{ forloop.counter0 }}">{{ letter }}</button>{% endfor %}{% endwith %}{% endfor %}
+        </div>
+        <div class="word-search__panel">
+          <p class="word-search__title">Words <span class="word-search__count" aria-live="polite"><span data-found>0</span> of {{ item_rows|length }} found</span></p>
+          <ul class="word-search__words">
+            {% for row in item_rows %}
+            <li class="word-search__word" data-word="{{ row.item.first_answer }}">
+              <input type="hidden" name="item-{{ row.item.id }}" value="">
+              <span class="word-search__text">{{ row.item.first_answer }}</span>
+              {% if row.item.hint %}<div class="word-search__hint dm-rich-content">{{ row.item.hint|rich_text }}</div>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endwith %}
 
       {% else %}
       <ol class="activity-items">
@@ -183,5 +206,6 @@
 {% block extra_js %}
 <script src="{% static 'js/echospell_activity.js' %}"></script>
 {% if qr %}<script src="{% static 'js/qr_box.js' %}" defer></script>{% endif %}
+{% if activity.mode == "search" %}<script src="{% static 'js/word_search.js' %}" defer></script>{% endif %}
 {% endblock %}
 {% endif %}

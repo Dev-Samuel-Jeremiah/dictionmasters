@@ -21,6 +21,7 @@ from .activity_kinds import (
     MODE_CHOICE,
     MODE_ORDER,
     MODE_RECORD,
+    MODE_SEARCH,
     MODE_SORT,
     MODE_TYPED,
 )
@@ -156,7 +157,7 @@ def mark_response(kind, item, given):
         return any(circled == {normalise(word) for word in _parse_lines(option)}
                    for option in alternatives(item.answer))
 
-    if kind.mode in (MODE_TYPED, MODE_CHOICE, MODE_SORT, MODE_ORDER):
+    if kind.mode in (MODE_TYPED, MODE_CHOICE, MODE_SORT, MODE_ORDER, MODE_SEARCH):
         return answers_match(given, item.answer)
 
     return None
@@ -170,6 +171,8 @@ def feedback_for(kind, item, given, is_correct):
         return "Correct"
     if kind is not None and kind.slug == "word-to-sentence":
         return grade_sentence_use(plain_text(item.prompt), given)[1]
+    if kind is not None and kind.mode == MODE_SEARCH:
+        return f"You didn't find {item.first_answer}."
     if not str(given or "").strip():
         return "You left this one blank."
     if kind is not None and kind.slug == "listen-and-number":

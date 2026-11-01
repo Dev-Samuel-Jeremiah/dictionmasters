@@ -5,7 +5,7 @@ An activity's *kind* is what the learner is asked to do ("transcribe
 this word", "spot the silent letter"). Its *mode* is how the answer is
 given and marked. Many kinds share a mode — Transcription and Dictation
 are both typed answers — so templates and the marker only ever branch
-on the five modes, and adding a new exercise type is one entry here
+on the six modes, and adding a new exercise type is one entry here
 rather than a new model, view and template.
 
 Modes:
@@ -13,6 +13,7 @@ Modes:
   choice  one option from a list (Listen and circle: every option heard)
   sort    drag each prompt into the bucket it belongs to
   order   drag shuffled words into the right sequence
+  search  find every word in a grid of letters
   record  read/say it aloud and record — marked by a teacher, not code
 """
 
@@ -22,6 +23,7 @@ MODE_TYPED = "typed"
 MODE_CHOICE = "choice"
 MODE_SORT = "sort"
 MODE_ORDER = "order"
+MODE_SEARCH = "search"
 MODE_RECORD = "record"
 
 MODE_LABELS = {
@@ -29,10 +31,11 @@ MODE_LABELS = {
     MODE_CHOICE: "Multiple choice",
     MODE_SORT: "Drag into boxes",
     MODE_ORDER: "Drag into order",
+    MODE_SEARCH: "Find in a grid",
     MODE_RECORD: "Record your voice",
 }
 
-AUTO_MARKED_MODES = {MODE_TYPED, MODE_CHOICE, MODE_SORT, MODE_ORDER}
+AUTO_MARKED_MODES = {MODE_TYPED, MODE_CHOICE, MODE_SORT, MODE_ORDER, MODE_SEARCH}
 
 
 @dataclass(frozen=True)
@@ -336,6 +339,19 @@ KINDS = [
         needs_audio=True,
         uses_prompt=False,
         tags=("listening", "drag"),
+    ),
+    # ---- find in a grid --------------------------------------------------
+    ActivityKind(
+        slug="word-search",
+        label="Word search",
+        mode=MODE_SEARCH,
+        icon="🔎",
+        summary="Find every word hidden in a grid of letters.",
+        instructions="Find every word in the grid. Drag across its letters, or tap the first letter and then the last.",
+        prompt_help="Not used — the words are shown beside the grid",
+        answer_help="One word to hide in the grid. Add a question for each word; the grid is made for you",
+        uses_prompt=False,
+        tags=("spelling", "puzzle"),
     ),
     # ---- recording ------------------------------------------------------
     ActivityKind(

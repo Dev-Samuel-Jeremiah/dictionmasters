@@ -29,6 +29,7 @@ import re
 from django.conf import settings
 from django.core.validators import FileExtensionValidator
 from django.db import models
+from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 # Strips a leading list marker from one entered line/segment, so admins
@@ -372,6 +373,13 @@ class ActivityBase(models.Model):
     @property
     def bucket_list(self):
         return _parse_lines(self.buckets)
+
+    @cached_property
+    def word_grid(self):
+        """The letters of a Word search, made from its questions' answers."""
+        from .word_search import build
+
+        return build([item.first_answer for item in self.items.all()], seed=f"{self._meta.label}:{self.pk}")
 
 
 class Activity(VideoContent, AudioContent, ActivityBase):

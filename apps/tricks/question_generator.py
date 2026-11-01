@@ -150,7 +150,7 @@ def generate_questions(activity, count, guidance=""):
         "wants in the question content. For multiple choice, provide plausible distractors and make the "
         "correct answer exactly one of the options; for Listen and circle, the answer is every word said, one per "
         "line, and each must be one of the options. For sorting, the answer must exactly match one supplied "
-        "sorting box. For recording tasks, provide a short, speakable prompt and an empty answer. For audio-led "
+        "sorting box. For Word search, each answer is one word to hide in the grid and the prompt stays empty. For recording tasks, provide a short, speakable prompt and an empty answer. For audio-led "
         "tasks, provide the private script/reference text staff should record; the application will not show that "
         "prompt to learners when the activity type hides it. Do not invent audio or image files. Avoid repeating "
         "the existing items. Generate exactly the requested number of distinct items. Return only the required data."

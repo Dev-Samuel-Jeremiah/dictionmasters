@@ -89,7 +89,7 @@
             {% if row.response.recording %}
             <audio controls src="{{ row.response.recording.url }}" class="result-item__audio"></audio>
             {% elif row.response.given %}
-            <p class="result-item__given">{% if activity.kind == "listen-and-circle" %}You circled{% else %}You wrote{% endif %}: <strong>{{ row.response.given }}</strong></p>
+            <p class="result-item__given">{% if activity.kind == "listen-and-circle" %}You circled{% elif activity.mode == "search" %}You found{% else %}You wrote{% endif %}: <strong>{{ row.response.given }}</strong></p>
             {% endif %}
             {% if row.teacher_mark is not None %}<p class="result-item__given">Teacher's mark: <strong>{{ row.teacher_mark }} / 5</strong></p>{% endif %}
             <p class="result-item__feedback">{{ row.feedback }}</p>
