@@ -1,11 +1,6 @@
 /* Assembly Recitals: the words set large and calm, and Present mode for
    the hall screen. Blue, yellow and white only. */
 
-.rc-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-.rc-tab { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 999px;
-  background: #fff; color: #55607E; font-weight: 700; font-size: 0.88rem; text-decoration: none; box-shadow: 0 2px 8px rgba(11, 26, 74, 0.06); }
-.rc-tab:hover { color: #0B1A4A; }
-.rc-tab.is-on { background: #0B1A4A; color: #fff; }
 .rc-media { display: inline-flex; gap: 4px; }
 .rc-media .ui-chip { font-size: 0.7rem; padding: 3px 8px; background: #E7EFFF; color: #1846E0; }
 

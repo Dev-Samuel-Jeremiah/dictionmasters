@@ -29,7 +29,6 @@ def section_detail(request, section_slug):
     return render(request, "assembly_recitals/section.html", {
         "section": section,
         "recitals": recitals,
-        "sections": _published_sections(),
     })
 
 

@@ -27,12 +27,6 @@
   </section>
 
   <div class="wrap ui-body">
-    <nav class="rc-tabs" aria-label="Sections">
-      {% for s in sections %}
-      <a href="{% url 'assembly_recitals:section' s.slug %}" class="rc-tab{% if s.pk == section.pk %} is-on{% endif %}"{% if s.pk == section.pk %} aria-current="page"{% endif %}><span aria-hidden="true">{{ s.icon }}</span> {{ s.name }}</a>
-      {% endfor %}
-    </nav>
-
     {% if recitals %}
     <div class="ui-grid">
       {% for recital in recitals %}
