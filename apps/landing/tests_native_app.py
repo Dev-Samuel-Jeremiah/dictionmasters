@@ -251,3 +251,14 @@ class DesktopAppTests(TestCase):
         self.assertEqual(page.context["computer"], "mac")
         self.assertNotContains(page, "DictionMasters-")
         self.assertContains(page, "Install on this computer")
+
+
+class SignedInFooterTests(TestCase):
+    @override_settings(NATIVE_APP_DESKTOP_DOWNLOAD_URL=DESKTOP_RELEASES)
+    def test_the_signed_in_footer_names_the_computer_too(self):
+        user = get_user_model().objects.create_user("ada@example.com", "mango-river-47", first_name="Ada", role="individual")
+        self.client.force_login(user)
+        agent = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0"
+        page = self.client.get("/privacy/", HTTP_USER_AGENT=agent)
+        self.assertContains(page, "Get the app for Linux", count=1)
+        self.assertNotContains(page, "&#128241; Get the app")
