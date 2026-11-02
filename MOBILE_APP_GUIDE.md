@@ -361,7 +361,7 @@ The app (and the website installed as an app) works without the internet:
 | | How |
 |---|---|
 | **Pages you've opened** | Kept automatically. They open offline. |
-| **Download lessons** | Me → *Offline lessons & videos* → **Download lessons**. It saves the front page of every learning tool and the lessons under them (up to 400 pages), and optionally their pictures and audio. It refreshes them by itself about twice a day on Wi-Fi. |
+| **Download lessons** | Me → *Offline lessons & videos* → **Download lessons**. It saves every lesson the learner's level can open, and optionally their pictures and audio. The server lists them with a version (`apps/offline/catalog.py`), so it refreshes by itself about twice a day on Wi-Fi by fetching only what changed, and removes what's gone. |
 | **Videos** | The ⬇ button on a video, as before (encrypted on the device). |
 | **Opening the app offline** | It opens on the dashboard from the device. |
 | **Progress made offline** | Marking lessons complete (EchoSpell, Learning Modules, Reading Club), Quick Words lists, assessment answers, and the EchoSpell card you're on wait on the device. They're sent automatically, in order, when the phone reconnects or the app is reopened. There's also a **Sync now** button. |

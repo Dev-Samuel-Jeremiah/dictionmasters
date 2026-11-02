@@ -141,6 +141,7 @@ LOCAL_APPS = [
     "apps.platform_search",
     "apps.book",
     "apps.videos",
+    "apps.offline",
     "apps.tricks",
     "apps.reference_library",
     "apps.diction_library",

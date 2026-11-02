@@ -1,6 +1,7 @@
 /*
  * Lessons on this device: download them for offline study, and keep them
- * up to date (templates/pwa/sw.js does the storing).
+ * up to date (templates/pwa/sw.js does the storing; the server lists what
+ * this learner may keep in apps/offline/catalog.py).
  *
  * Loaded on every page for signed-in learners (templates/base.html):
  *
@@ -79,12 +80,12 @@
   function download(options) {
     if (running) return running;
     options = options || {};
-    var state = options.resume || null;
-    var first = { type: "offline-download", media: !!options.media, limit: options.limit || 400 };
+    var state = null;
+    var first = { type: "offline-download", media: !!options.media, limit: options.limit || 0 };
     running = (function loop() {
       return ask(state ? { type: "offline-download", state: state } : first).then(function (next) {
         state = next;
-        write(KEY_RUN, state.done ? null : state);
+        write(KEY_RUN, state.done ? null : 1);   // the next sync picks up what's missing
         emit(state);
         if (!state.done) return loop();
         if (!state.stopped) write(KEY_LAST, Date.now());
@@ -133,7 +134,7 @@
     if (!unfinished && Date.now() - last < REFRESH_EVERY) return;
     onWifi().then(function (ok) {
       if (ok) {
-        download({ media: settings.media, resume: unfinished }).catch(function () {});
+        download({ media: settings.media }).catch(function () {});
         return;
       }
       // Mobile data, in the app: just the front pages and the first lessons,
@@ -208,6 +209,7 @@
     downloadBtn.disabled = false;
     if (state.stopped === "offline") say("The connection dropped. " + state.pages + " pages saved; tap Download again to carry on.");
     else if (state.stopped === "signed-out") say("Please sign in again, then download.");
+    else if (state.stopped === "no-access") say("Your plan has ended, so new lessons can't be downloaded.");
     else if (state.stopped) say("Something went wrong. " + state.pages + " pages were saved; please try again.");
     else say("Done. " + state.pages + " pages" + (state.media_kept ? " and " + state.media_kept + " pictures and recordings" : "") + " are ready to use offline.");
     refresh();
@@ -222,7 +224,7 @@
       write(KEY_SETTINGS, { media: withMedia, auto: autoBox ? autoBox.checked : true });
       downloadBtn.disabled = true;
       say("Starting…");
-      download({ media: withMedia, resume: read(KEY_RUN, null) }).then(finished, function () {
+      download({ media: withMedia }).then(finished, function () {
         downloadBtn.disabled = false;
         say("The download stopped. Please try again.");
       });

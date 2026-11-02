@@ -39,6 +39,7 @@ urlpatterns = [
     path("lesson-audio/", include("apps.lesson_audio.urls")),
     path("search/", include("apps.platform_search.urls")),
     path("videos/", include("apps.videos.urls")),
+    path("offline-sync/", include("apps.offline.urls")),
     path("book/", include("apps.book.urls")),
     path("tricks/", include("apps.tricks.urls")),
     path("reference-library/", include("apps.reference_library.urls")),

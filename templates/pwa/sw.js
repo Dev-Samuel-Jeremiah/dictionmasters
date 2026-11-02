@@ -5,10 +5,11 @@
  *                on this device for offline study. Admin, billing and
  *                account-entry pages are never cached. Logging out clears
  *                the learner cache and queued progress for this device.
- *   downloads    "Download lessons for offline" (static/js/offline_sync.js)
- *                walks the learning tools from their front pages and keeps
- *                every lesson page it finds, optionally with its pictures
- *                and audio, so lessons open with no connection at all.
+ *   library      a learner's lessons, kept for offline use. The server lists
+ *                every page they may open with a version (apps/offline/
+ *                catalog.py); a sync fetches only what's new or changed, with
+ *                its pictures and audio, and removes what's gone. Nothing
+ *                here is trimmed: it's the whole of what they asked to keep.
  *   /static/     the site's own files: kept once fetched, since a changed
  *                file always comes with a new address.
  *   media        lesson images and audio (ours, and the ones stored on
@@ -39,6 +40,13 @@ const HOME_PATH = "/accounts/dashboard/";
 const QUEUE_DB = "dm-offline-sync";
 const MAX_PAGES = 500;
 const MAX_MEDIA = 800;
+// The library: what a sync keeps, apart from the pages and media kept in
+// passing above, so those limits never trim it. Its index says which version
+// of each page is here, and which files that page uses.
+const LIBRARY_CACHE = "dm-library";
+const LIBRARY_MEDIA = "dm-library-media";
+const LIBRARY_DB = "dm-library-index";
+const MANIFEST_URL = "/offline-sync/manifest/";
 
 // Learner pages and progress are private to this browser profile. They are
 // removed when the learner logs out. Account entry, commerce and staff pages
@@ -100,7 +108,8 @@ self.addEventListener("activate", (event) => {
       const oldStatic = names.filter((name) => name.startsWith("dm-static-") && name !== CACHE);
       const keepStatic = new Set(oldStatic.slice(-4));
       await Promise.all(names.filter((name) => name.startsWith("dm-") && name !== CACHE &&
-        name !== PAGES_CACHE && name !== MEDIA_CACHE && !keepStatic.has(name)).map((name) => caches.delete(name)));
+        name !== PAGES_CACHE && name !== MEDIA_CACHE && name !== LIBRARY_CACHE && name !== LIBRARY_MEDIA &&
+        !keepStatic.has(name)).map((name) => caches.delete(name)));
       await self.clients.claim();
     })
   );
@@ -124,6 +133,9 @@ async function keepPage(request, response) {
 }
 
 async function cachedPath(pathname) {
+  const library = await caches.open(LIBRARY_CACHE);
+  const synced = await library.match(self.location.origin + pathname);
+  if (synced) return synced;
   const cache = await caches.open(PAGES_CACHE);
   const keys = await cache.keys();
   const key = keys.find((item) => new URL(item.url).pathname === pathname);
@@ -141,9 +153,16 @@ async function cachedPage(request) {
   return null;
 }
 
+async function clearLibrary() {
+  await caches.delete(LIBRARY_CACHE);
+  await caches.delete(LIBRARY_MEDIA);
+  await indexClear();
+}
+
 async function clearLearnerData() {
   await caches.delete(PAGES_CACHE);
   await caches.delete(MEDIA_CACHE);
+  await clearLibrary();
   await clearProgressQueue();
 }
 
@@ -166,15 +185,19 @@ async function putMedia(key, response) {
   trimCache(MEDIA_CACHE, MAX_MEDIA);
 }
 
+async function libraryMedia(url) {
+  return (await caches.open(LIBRARY_MEDIA)).match(mediaKey(url));
+}
+
 async function matchMedia(url) {
   const cache = await caches.open(MEDIA_CACHE);
-  return (await cache.match(mediaKey(url))) || (await cache.match(url));
+  return (await libraryMedia(url)) || (await cache.match(mediaKey(url))) || (await cache.match(url));
 }
 
 // Our own pictures and audio: keep what the learner has seen.
 async function cacheMedia(request) {
   const cache = await caches.open(MEDIA_CACHE);
-  const cached = await cache.match(request);
+  const cached = (await libraryMedia(request.url)) || (await cache.match(request));
   if (cached) return cached;
   try {
     const response = await fetch(request);
@@ -208,10 +231,10 @@ async function remoteMedia(request) {
   }
 }
 
-// Used by a lesson download: fetch a picture or recording and keep it.
+// Used by a sync: fetch a picture or recording and keep it in the library.
 async function downloadMedia(address) {
   const key = mediaKey(address);
-  const cache = await caches.open(MEDIA_CACHE);
+  const cache = await caches.open(LIBRARY_MEDIA);
   if (await cache.match(key)) return true;
   try {
     // A readable (CORS) copy, which plays back offline everywhere. Files on
@@ -219,7 +242,7 @@ async function downloadMedia(address) {
     const sameSite = new URL(address).origin === self.location.origin;
     const response = await fetch(address, sameSite ? { credentials: "include" } : { mode: "cors", credentials: "omit" });
     if (!response.ok) return false;
-    await putMedia(key, response);
+    await cache.put(key, response);
     return true;
   } catch (error) {
     return false;
@@ -238,15 +261,7 @@ async function downloadStatic(path) {
 
 // ------------------------------------------------------- lesson download
 
-// Where a download starts: the front page of every learning tool.
-const DOWNLOAD_SEEDS = [
-  HOME_PATH, "/learning-tools/", "/book/", "/book/44-academy/", "/book/phonemic-chart/",
-  "/tricks/", "/tricks/lessons/", "/echospell/", "/learning-modules/", "/reading-club/",
-  "/quick-words/", "/quick-words/lists/", "/daily-practice/", "/library/", "/reference-library/",
-  "/radio/", "/assessments/", "/assessments/results/", OFFLINE_PAGE,
-];
-
-// Links a download never follows: actions, searches, live or one-off pages.
+// Never kept, whatever the list says: actions, searches, live or one-off pages.
 const DOWNLOAD_SKIP = [
   /^\/search\//, /\/suggest\//, /\/read-along\//, /\/qr-sheet\//, /\.[a-z0-9]{2,5}$/i,
   /^\/videos\/(?!offline\/$)/, /^\/assessments\/(attempt|marking)\//, /^\/clash\/\d+/,
@@ -273,19 +288,15 @@ function staticFilesIn(html) {
   return [...files];
 }
 
-function linksIn(html, base) {
-  const pages = [];
+function mediaIn(html, base) {
   const media = [];
-  const anchor = /<a\b[^>]*?\bhref\s*=\s*["']([^"'#]+)["']/gi;
   const source = /<(?:img|audio|source)\b[^>]*?\bsrc\s*=\s*["']([^"']+)["']/gi;
   let match;
-  while ((match = anchor.exec(html))) {
-    try { pages.push(new URL(decodeEntities(match[1]), base)); } catch (error) { /* not an address */ }
-  }
   while ((match = source.exec(html))) {
     try { media.push(new URL(decodeEntities(match[1]), base)); } catch (error) { /* not an address */ }
   }
-  return { pages, media };
+  return media.filter((url) => (url.origin === self.location.origin && !url.pathname.startsWith(STATIC_PREFIX)) ||
+    isRemoteMedia(url));
 }
 
 async function tellClients(message) {
@@ -293,90 +304,153 @@ async function tellClients(message) {
   clients.forEach((client) => client.postMessage(message));
 }
 
-// A download runs in steps: the page (static/js/offline_sync.js) asks for
-// one step at a time and hands back where it got to. Browsers stop a
-// service worker that works on one job for too long, so each step is short.
-function newDownload(options) {
-  return {
-    media: Boolean(options && options.media),
-    limit: Math.min(Number(options && options.limit) || 400, MAX_PAGES),
-    queue: DOWNLOAD_SEEDS.map((path) => [path, 0]),
-    seen: DOWNLOAD_SEEDS.slice(),
-    mediaSeen: [],
-    pages: 0, media_kept: 0, failed: 0, done: false, stopped: "",
-  };
+// ---------------------------------------------------------------- library
+
+function openIndex() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(LIBRARY_DB, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains("pages")) request.result.createObjectStore("pages", { keyPath: "p" });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 }
 
-async function downloadStep(state, stepPages) {
-  const maxDepth = 5;
-  const seen = new Set(state.seen);
-  const mediaSeen = new Set(state.mediaSeen);
-  let doneThisStep = 0;
+async function indexChange(change) {
+  const db = await openIndex();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction("pages", "readwrite");
+    change(tx.objectStore("pages"));
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
 
-  async function one([path, depth]) {
-    const address = new URL(path, self.location.origin);
-    let response;
-    try {
-      response = await fetch(address.href, { credentials: "include", redirect: "follow",
-        headers: { Accept: "text/html" } });
-    } catch (error) {
-      state.failed += 1;
-      if (!navigator.onLine) state.stopped = "offline";
-      return;
-    }
-    const finalUrl = new URL(response.url || address.href);
-    if (finalUrl.pathname.startsWith("/accounts/login/")) { state.stopped = "signed-out"; return; }
-    if (!response.ok || isSensitive(finalUrl.pathname) ||
-        !(response.headers.get("Content-Type") || "").includes("text/html")) return;
+const indexPut = (entry) => indexChange((store) => store.put(entry));
+const indexDelete = (paths) => indexChange((store) => paths.forEach((path) => store.delete(path)));
+const indexClear = () => indexChange((store) => store.clear()).catch(() => {});
 
-    const html = await response.text();
-    // Stored as a fresh response under the address that was asked for, so
-    // it opens offline even if the server redirected to it.
-    await keepPage(new Request(address.href), new Response(html, {
-      status: 200, headers: { "Content-Type": response.headers.get("Content-Type") || "text/html; charset=utf-8" },
-    }));
-    state.pages += 1;
-    doneThisStep += 1;
-    await Promise.all(staticFilesIn(html).map(downloadStatic));
+async function indexAll() {
+  const db = await openIndex();
+  const entries = await new Promise((resolve, reject) => {
+    const request = db.transaction("pages", "readonly").objectStore("pages").getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return entries;
+}
 
-    const found = linksIn(html, finalUrl.href);
-    if (depth < maxDepth) {
-      for (const link of found.pages) {
-        link.search = "";
-        link.hash = "";
-        if (!followable(link) || seen.has(link.pathname)) continue;
-        seen.add(link.pathname);
-        state.queue.push([link.pathname, depth + 1]);
-      }
-    }
-    if (state.media) {
-      for (const media of found.media) {
-        const isOurs = media.origin === self.location.origin && !media.pathname.startsWith(STATIC_PREFIX);
-        if (!(isOurs || isRemoteMedia(media))) continue;
-        const key = mediaKey(media.href);
-        if (mediaSeen.has(key) || mediaSeen.size >= MAX_MEDIA) continue;
-        mediaSeen.add(key);
-        if (await downloadMedia(media.href)) state.media_kept += 1;
-      }
-    }
+// A sync runs in steps: the page (static/js/offline_sync.js) asks for one
+// step at a time and hands back where it got to. Browsers stop a service
+// worker that works on one job for too long, so each step is short. A sync
+// that's cut off loses nothing: the index knows what arrived, so the next
+// one carries on from there.
+async function newDownload(options) {
+  const state = {
+    media: Boolean(options && options.media),
+    limit: Number(options && options.limit) || 0,
+    todo: [], stale: [],
+    pages: 0, media_kept: 0, skipped: 0, failed: 0, remaining: 0, done: false, stopped: "",
+  };
+  const stop = (why) => { state.stopped = why; state.done = true; return state; };
+  let response;
+  try {
+    response = await fetch(MANIFEST_URL, { credentials: "include", headers: { Accept: "application/json" } });
+  } catch (error) {
+    return stop("offline");
   }
+  if (response.status === 401) return stop("signed-out");
+  if (!response.ok) return stop("error");
+  const manifest = await response.json();
+  // Their access has ended: nothing to fetch, and what's here is left alone.
+  if (!manifest.access) return stop("no-access");
 
-  // A few pages at a time: quick on Wi-Fi, gentle on the server.
-  while (state.queue.length && state.pages < state.limit && !state.stopped && doneThisStep < stepPages) {
-    const batch = state.queue.splice(0, 3);
-    await Promise.all(batch.map(one));
+  const kept = new Map((await indexAll()).map((entry) => [entry.p, entry]));
+  const wanted = manifest.pages.filter((page) => followable(new URL(page.p, self.location.origin)));
+  for (const page of wanted) {
+    const here = kept.get(page.p);
+    // A page with no version shows the learner's progress: always fetched.
+    if (!page.v || !here || here.v !== page.v || (state.media && here.pending)) state.todo.push([page.p, page.v]);
   }
-  state.seen = [...seen];
-  state.mediaSeen = [...mediaSeen];
-  state.done = Boolean(state.stopped) || !state.queue.length || state.pages >= state.limit;
-  state.remaining = state.done ? 0 : Math.min(state.queue.length, state.limit - state.pages);
+  if (state.limit) {
+    state.todo = state.todo.slice(0, state.limit);       // part of a sync: nothing is removed
+  } else {
+    const paths = new Set(wanted.map((page) => page.p));
+    state.stale = [...kept.keys()].filter((path) => !paths.has(path));
+  }
+  state.remaining = state.todo.length;
   return state;
 }
 
-// For tests and simple callers: a whole download in one go.
+async function syncPage(state, [path, version]) {
+  const address = new URL(path, self.location.origin);
+  let response;
+  try {
+    response = await fetch(address.href, { credentials: "include", redirect: "follow", headers: { Accept: "text/html" } });
+  } catch (error) {
+    state.failed += 1;
+    if (!navigator.onLine) state.stopped = "offline";
+    return;
+  }
+  const finalUrl = new URL(response.url || address.href);
+  if (finalUrl.pathname.startsWith("/accounts/login/")) { state.stopped = "signed-out"; return; }
+  // A lesson they haven't reached yet sends them back: a later sync gets it.
+  const movedOn = version && response.redirected && finalUrl.pathname !== address.pathname;
+  if (movedOn || !response.ok || isSensitive(finalUrl.pathname) ||
+      !(response.headers.get("Content-Type") || "").includes("text/html")) {
+    state.skipped += 1;
+    return;
+  }
+  const html = await response.text();
+  // Stored under the address that was asked for, so it opens offline even
+  // if the server redirected to it (a dashboard, say).
+  await (await caches.open(LIBRARY_CACHE)).put(address.origin + address.pathname, new Response(html, {
+    status: 200, headers: { "Content-Type": response.headers.get("Content-Type") || "text/html; charset=utf-8" },
+  }));
+  state.pages += 1;
+  await Promise.all(staticFilesIn(html).map(downloadStatic));
+
+  const media = mediaIn(html, finalUrl.href);
+  let pending = media.length > 0 && !state.media;
+  if (state.media) {
+    for (const url of media) {
+      if (await downloadMedia(url.href)) state.media_kept += 1;
+      else { pending = true; state.failed += 1; }
+    }
+  }
+  await indexPut({ p: path, v: version, media: media.map((url) => mediaKey(url.href)), pending });
+}
+
+// Pages that have gone, and the files only they used.
+async function tidyLibrary(state) {
+  if (state.stale.length) {
+    const cache = await caches.open(LIBRARY_CACHE);
+    await Promise.all(state.stale.map((path) => cache.delete(self.location.origin + path)));
+    await indexDelete(state.stale);
+  }
+  const used = new Set((await indexAll()).flatMap((entry) => entry.media || []));
+  const media = await caches.open(LIBRARY_MEDIA);
+  await Promise.all((await media.keys()).filter((key) => !used.has(key.url)).map((key) => media.delete(key)));
+}
+
+async function downloadStep(state, stepPages) {
+  // Two pages at a time: quick on Wi-Fi, gentle on the server.
+  for (let done = 0; state.todo.length && !state.stopped && done < stepPages; done += 2) {
+    await Promise.all(state.todo.splice(0, 2).map((page) => syncPage(state, page)));
+  }
+  state.remaining = state.todo.length;
+  state.done = Boolean(state.stopped) || !state.todo.length;
+  if (state.done && !state.stopped && !state.limit) await tidyLibrary(state);
+  return state;
+}
+
+// For tests and simple callers: a whole sync in one go.
 async function runDownload(options) {
-  let state = newDownload(options);
-  while (!state.done) state = await downloadStep(state, 25);
+  let state = await newDownload(options);
+  while (!state.done) state = await downloadStep(state, 10);
   return state;
 }
 
@@ -533,8 +607,7 @@ self.addEventListener("message", (event) => {
 
   if (data === "offline-pages" && port) {
     event.waitUntil((async () => {
-      const cache = await caches.open(PAGES_CACHE);
-      const keys = await cache.keys();
+      const keys = [...await (await caches.open(PAGES_CACHE)).keys(), ...await (await caches.open(LIBRARY_CACHE)).keys()];
       const seen = new Set();
       const pages = [];
       keys.forEach((key) => {
@@ -551,21 +624,23 @@ self.addEventListener("message", (event) => {
   // static/js/offline_sync.js: what's on this device, and downloading more.
   if (data && data.type === "offline-status" && port) {
     event.waitUntil((async () => {
-      const pages = await (await caches.open(PAGES_CACHE)).keys();
-      const media = await (await caches.open(MEDIA_CACHE)).keys();
-      port.postMessage({ pages: pages.length, media: media.length, pending: await countQueue() });
+      const count = async (name) => (await (await caches.open(name)).keys()).length;
+      port.postMessage({
+        pages: (await count(PAGES_CACHE)) + (await count(LIBRARY_CACHE)),
+        media: (await count(MEDIA_CACHE)) + (await count(LIBRARY_MEDIA)),
+        pending: await countQueue(),
+      });
     })());
   }
   // One step of a lesson download; the answer carries where to carry on.
   if (data && data.type === "offline-download" && port) {
     event.waitUntil((async () => {
-      const state = data.state || newDownload(data);
+      let state = data.state;
       try {
-        port.postMessage(await downloadStep(state, 20));
+        state = state || await newDownload(data);
+        port.postMessage(state.done ? state : await downloadStep(state, 10));
       } catch (error) {
-        state.stopped = "error";
-        state.done = true;
-        port.postMessage(state);
+        port.postMessage({ ...(state || { pages: 0, media_kept: 0 }), stopped: "error", done: true });
       }
     })());
   }
@@ -573,6 +648,7 @@ self.addEventListener("message", (event) => {
     event.waitUntil((async () => {
       await caches.delete(PAGES_CACHE);
       await caches.delete(MEDIA_CACHE);
+      await clearLibrary();
       if (port) port.postMessage({ cleared: true });
     })());
   }

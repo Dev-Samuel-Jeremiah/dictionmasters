@@ -42,16 +42,24 @@ const caches = {
   async match(r) { for (const c of stores.values()) { const x = await c.match(r); if (x) return x; } },
 };
 // ---- fake site
+const R2 = "https://acc.r2.cloudflarestorage.com/b/media";
 const site = {
-  "/accounts/dashboard/": `<a href="/echospell/">E</a><a href="/accounts/logout/">out</a><link rel="stylesheet" href="/static/css/ui.css?v=12"><script type="application/json">{"x": ["/static/js/boot.js"]}</script>`,
-  "/echospell/": `<a href="/echospell/level-1/">L1</a><a href="/search/?q=x">s</a><a href="/billing/">b</a><a href="https://other.com/x">o</a>`,
-  "/echospell/level-1/": `<a href="/echospell/level-1/group-a/">G</a><a href="/echospell/level-1/group-a/complete/">c</a>`,
-  "/echospell/level-1/group-a/": `<a href="/echospell/level-1/group-a/cards/">cards</a><img src="https://acc.r2.cloudflarestorage.com/b/media/pic.png?X-Amz-Signature=1&amp;X-Amz-Date=2"><audio src="https://acc.r2.cloudflarestorage.com/b/media/a.mp3?sig=2"></audio>`,
-  "/echospell/level-1/group-a/cards/": `<a href="/echospell/level-1/group-a/cards/deeper/">too deep</a>`,
-  "/echospell/level-1/group-a/cards/deeper/": `<a href="/echospell/level-1/group-a/cards/deeper/d5/">5</a>`,
-  "/echospell/level-1/group-a/cards/deeper/d5/": `<a href="/echospell/level-1/group-a/cards/deeper/d5/d6/">6</a>`,
-  "/echospell/level-1/group-a/cards/deeper/d5/d6/": `never`,
+  "/accounts/dashboard/": `<a href="/accounts/logout/">out</a><link rel="stylesheet" href="/static/css/ui.css?v=12"><script type="application/json">{"x": ["/static/js/boot.js"]}</script>`,
+  "/echospell/level-1/": `<a href="/billing/">b</a>`,
+  "/echospell/level-1/group-a/": `<img src="${R2}/pic.png?X-Amz-Signature=1&amp;X-Amz-Date=2"><audio src="${R2}/a.mp3?sig=2"></audio>`,
+  "/echospell/level-1/group-b/": `<audio src="${R2}/b.mp3?sig=3"></audio>`,
+  "/tricks/lessons/locked/": `moved`,
 };
+const list = (extra = {}) => ({ release: "r1", access: true, pages: [
+  { p: "/accounts/dashboard/", v: "" },
+  { p: "/echospell/level-1/", v: "r1.a" },
+  { p: "/echospell/level-1/group-a/", v: "r1.b" },
+  { p: "/echospell/level-1/group-b/", v: "r1.c" },
+  { p: "/tricks/lessons/locked/", v: "r1.d" },
+  { p: "/billing/", v: "r1.never" },
+  { p: "/accounts/logout/", v: "r1.never" },
+], ...extra });
+let manifest = list();
 const fetched = [];
 let online = true;
 globalThis.fetch = async (input, init = {}) => {
@@ -63,29 +71,39 @@ globalThis.fetch = async (input, init = {}) => {
   }
   if (url.origin !== ORIGIN) return new Response("x");
   if (url.pathname.startsWith("/static/")) return new Response("static", { status: 200 });
-  if (url.pathname === "/learning-tools/") { const r = new Response("", { status: 302 }); return r; }
+  if (url.pathname === "/offline-sync/manifest/") {
+    if (manifest === 401) return new Response("{}", { status: 401 });
+    return new Response(JSON.stringify(manifest), { status: 200, headers: { "Content-Type": "application/json" } });
+  }
   const body = site[url.pathname];
   if (body === undefined) return new Response("nope", { status: 404, headers: { "Content-Type": "text/html" } });
   const r = new Response("<html><body>" + body + "</body></html>", { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
-  Object.defineProperty(r, "url", { value: url.href });
+  Object.defineProperty(r, "url", { value: url.pathname === "/tricks/lessons/locked/" ? ORIGIN + "/tricks/" : url.href });
+  if (url.pathname === "/tricks/lessons/locked/") Object.defineProperty(r, "redirected", { value: true });
   Object.defineProperty(r, "type", { value: "basic" });
   return r;
 };
-// ---- fake IndexedDB (minimal, enough for the queue)
-const idb = { rows: new Map(), next: 1 };
+// ---- fake IndexedDB (minimal: one store per database)
+const dbs = new Map();
 function req(result) { const r = { result }; setTimeout(() => r.onsuccess && r.onsuccess()); return r; }
-globalThis.indexedDB = { open() {
+globalThis.indexedDB = { open(name) {
+  if (!dbs.has(name)) dbs.set(name, { rows: new Map(), next: 1 });
+  const idb = dbs.get(name);
   const db = {
     objectStoreNames: { contains: () => true },
     close() {},
     transaction() {
-      const tx = { objectStore() { return {
-        add(v) { const id = idb.next++; idb.rows.set(id, { ...v, id }); setTimeout(() => tx.oncomplete && tx.oncomplete()); },
-        delete(id) { idb.rows.delete(id); setTimeout(() => tx.oncomplete && tx.oncomplete()); },
-        clear() { idb.rows.clear(); setTimeout(() => tx.oncomplete && tx.oncomplete()); },
-        getAll() { return req([...idb.rows.values()]); },
-        count() { return req(idb.rows.size); },
-      }; } };
+      const tx = { objectStore() {
+        const done = () => setTimeout(() => tx.oncomplete && tx.oncomplete());
+        return {
+          add(v) { const id = idb.next++; idb.rows.set(id, { ...v, id }); done(); },
+          put(v) { idb.rows.set(v.p, v); done(); },
+          delete(id) { idb.rows.delete(id); done(); },
+          clear() { idb.rows.clear(); done(); },
+          getAll() { return req([...idb.rows.values()]); },
+          count() { return req(idb.rows.size); },
+        };
+      } };
       return tx;
     },
   };
@@ -103,7 +121,7 @@ const self = {
 globalThis.self = self;
 globalThis.caches = caches;
 Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true });
-const mod = new Function("self", "caches", src + "\nreturn { linksIn, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage };")(self, caches);
+const mod = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia };")(self, caches);
 
 // ---------------- tests
 assert.equal(mod.mediaKey("https://a.r2.cloudflarestorage.com/b/x.mp3?sig=1"), "https://a.r2.cloudflarestorage.com/b/x.mp3");
@@ -119,38 +137,90 @@ for (const q of ["/echospell/l/g/complete/", "/echospell/card-position/", "/quic
 for (const q of ["/book/44-academy/ee/assessment/quiz-1/result/4/", "/assessments/attempt/9/check/", "/tutor/start/", "/clash/start/", "/echospell/vocabulary/check-sentences/"]) assert.ok(!mod.canQueueProgress(post(q), q), q);
 console.log("helpers ok");
 
-// download
-const result = await mod.runDownload({ media: true, limit: 50 });
-const pages = [...stores.get("dm-pages").m.keys()].map((u) => new URL(u).pathname).sort();
-console.log("pages kept:", pages);
-assert.ok(pages.includes("/accounts/dashboard/"));
-assert.ok(pages.includes("/echospell/level-1/group-a/cards/"));
-assert.ok(pages.includes("/echospell/level-1/group-a/cards/deeper/d5/"), "depth 5 kept");
-assert.ok(!pages.includes("/echospell/level-1/group-a/cards/deeper/d5/d6/"), "depth limit");
-// steps: a 1-page step hands back a resumable state
-const s1 = await mod.downloadStep(mod.newDownload({}), 1);
-assert.ok(!s1.done && s1.queue.length > 0 && s1.pages >= 1);
-const again = JSON.parse(JSON.stringify(s1)); // survives being posted to the page and back
-const s2 = await mod.downloadStep(again, 1000);
-assert.ok(s2.done && s2.pages >= 7);
-assert.ok(!pages.some((p) => p.startsWith("/billing") || p.startsWith("/search") || p.includes("logout")));
-assert.ok(!fetched.some((x) => x.url.includes("/accounts/logout/")), "never visits logout");
-const media = [...stores.get("dm-media").m.keys()];
-console.log("media kept:", media);
-assert.ok(media.includes("https://acc.r2.cloudflarestorage.com/b/media/pic.png"));
-assert.ok(media.includes("https://acc.r2.cloudflarestorage.com/b/media/a.mp3"));
+// sync: the first one fetches the list, and what isn't there is skipped
+const paths = (name) => [...stores.get(name).m.keys()].map((u) => new URL(u).pathname).sort();
+const pagesFetched = () => fetched.filter((x) => new URL(x.url).origin === ORIGIN && !new URL(x.url).pathname.startsWith("/static/") &&
+  !new URL(x.url).pathname.startsWith("/offline-sync/")).map((x) => new URL(x.url).pathname);
+const result = await mod.runDownload({ media: true });
+assert.equal(result.done, true);
+assert.equal(result.stopped, "");
+assert.deepEqual(paths("dm-library"), ["/accounts/dashboard/", "/echospell/level-1/", "/echospell/level-1/group-a/", "/echospell/level-1/group-b/"]);
+assert.equal(result.pages, 4);
+assert.equal(result.skipped, 1, "a lesson not reached yet is skipped");
+assert.ok(!(await mod.indexAll()).some((e) => e.p === "/tricks/lessons/locked/"), "and tried again next time");
+assert.ok(!fetched.some((x) => x.url.includes("/accounts/logout/") || x.url.includes("/billing/")), "never fetches what shouldn't be kept");
+const media = [...stores.get("dm-library-media").m.keys()].sort();
+assert.deepEqual(media, [R2 + "/a.mp3", R2 + "/b.mp3", R2 + "/pic.png"]);
 const statics = [...stores.get("dm-static-abc123def456").m.keys()];
 assert.ok(statics.some((u) => u.includes("/static/css/ui.css?v=12")) && statics.some((u) => u.includes("/static/js/boot.js")), "static kept");
-assert.equal(result.done, true);
-assert.ok(result.pages >= 5);
+
+// the second sync fetches only what can change, and files aren't fetched twice
+fetched.length = 0;
+await mod.runDownload({ media: true });
+assert.deepEqual(pagesFetched().sort(), ["/accounts/dashboard/", "/tricks/lessons/locked/"]);
+
+// a page's content changed: only that page is fetched again
+manifest.pages[2].v = "r1.changed";
+fetched.length = 0;
+await mod.runDownload({ media: true });
+assert.deepEqual(pagesFetched().sort(), ["/accounts/dashboard/", "/echospell/level-1/group-a/", "/tricks/lessons/locked/"]);
+
+// a page removed from the list goes, with the files only it used
+manifest.pages.splice(3, 1);
+await mod.runDownload({ media: true });
+assert.ok(!paths("dm-library").includes("/echospell/level-1/group-b/"));
+assert.deepEqual([...stores.get("dm-library-media").m.keys()].sort(), [R2 + "/a.mp3", R2 + "/pic.png"]);
+
+// pages kept without their files (mobile data): files follow on Wi-Fi
+await mod.clearLearnerData();
+manifest = list();
+const light = await mod.runDownload({ media: false, limit: 3 });
+assert.equal(light.pages, 3);
+assert.ok(!stores.has("dm-library-media") || stores.get("dm-library-media").m.size === 0);
+fetched.length = 0;
+await mod.runDownload({ media: true });
+assert.ok(pagesFetched().includes("/echospell/level-1/group-a/"), "the page that needs its files comes again");
+assert.equal(stores.get("dm-library-media").m.size, 3);
+
+// a sync cut off part-way carries on where it stopped
+await mod.clearLearnerData();
+let partial = await mod.newDownload({ media: true });
+partial = await mod.downloadStep(JSON.parse(JSON.stringify(partial)), 2);
+assert.ok(!partial.done && partial.pages === 2);
+fetched.length = 0;
+const rest = await mod.runDownload({ media: true });
+assert.ok(rest.pages >= 2 && rest.stopped === "");
+assert.equal(paths("dm-library").length, 4);
+
+// offline pages and files open from the library, past the kept-in-passing limits
+online = false;
+const kept = await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/"));
+assert.ok(kept && (await kept.text()).includes("<audio"));
+assert.ok(await mod.matchMedia(R2 + "/a.mp3?sig=new"), "a new signature finds the same file");
+online = true;
+
+// signed out, or their plan has ended: nothing is fetched and nothing goes
+manifest = 401;
+assert.equal((await mod.runDownload({ media: true })).stopped, "signed-out");
+manifest = { release: "r1", access: false, pages: [] };
+const ended = await mod.runDownload({ media: true });
+assert.equal(ended.stopped, "no-access");
+assert.equal(paths("dm-library").length, 4, "what's on the device stays");
+manifest = list();
+
+// logging out clears the library too
+await mod.clearLearnerData();
+assert.ok(!stores.has("dm-library") && !stores.has("dm-library-media"));
+assert.equal((await mod.indexAll()).length, 0);
+await mod.runDownload({ media: true });
 console.log("download ok:", result.pages, "pages,", result.media_kept, "media");
 
 // offline: cached pages open, "/" opens dashboard
 online = false;
 const page = await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/?x=1"));
-assert.ok(page && (await page.text()).includes("group-a"));
+assert.ok(page && (await page.text()).includes("/billing/"));
 const home = await mod.cachedPage(new Request(ORIGIN + "/"));
-assert.ok(home && (await home.text()).includes("/echospell/"));
+assert.ok(home && (await home.text()).includes("/accounts/logout/"));
 console.log("offline pages ok");
 
 // queue and sync
