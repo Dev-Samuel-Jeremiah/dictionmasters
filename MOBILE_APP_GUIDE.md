@@ -363,6 +363,11 @@ The app (and the website installed as an app) works without the internet:
 | **Pages you've opened** | Kept automatically. They open offline. |
 | **Download lessons** | Me → *Offline lessons & videos* → **Download lessons**. It saves every lesson the learner's level can open, and optionally their pictures and audio. The server lists them with a version (`apps/offline/catalog.py`), so it refreshes by itself about twice a day on Wi-Fi by fetching only what changed, and removes what's gone. |
 | **Videos** | The ⬇ button on a video, as before (encrypted on the device). |
+| **The first time** | In the Android, iPhone and computer apps, after signing in on Wi-Fi the app saves the learner's lessons with their pictures and audio, then their level's videos, by itself, with a small note showing how far it's got. Short of room, it saves the pages and says how much space to free up. |
+| **Encrypted** | Everything saved except the site's own stylesheets and scripts is encrypted on the device (`templates/pwa/sw.js`, "sealing"). |
+| **Logging out** | Removes the learner's pages and waiting progress. Pictures and audio stay, encrypted, so the next sign-in doesn't fetch gigabytes again. |
+| **Site updates** | Don't re-download lessons. Only content that changed comes down. If a change to the pages themselves must reach every device, raise `OFFLINE_PAGES_VERSION`. |
+| **Videos** | Turn on `VIDEO_KEEP_DIRECT=1` once the CORS rule below is in place, so saved videos come straight from R2 and not through the server. |
 | **Opening the app offline** | It opens on the dashboard from the device. |
 | **Progress made offline** | Marking lessons complete (EchoSpell, Learning Modules, Reading Club), Quick Words lists, assessment answers, and the EchoSpell card you're on wait on the device. They're sent automatically, in order, when the phone reconnects or the app is reopened. There's also a **Sync now** button. |
 | **Needs the internet** | AI feedback, the reading tutor (Yela), looking up new words, checking an answer, submitting an assessment, live Clash matches, logging in and paying. Offline, these show a clear "This needs the internet" message. |
@@ -393,6 +398,7 @@ if R2 allows your site to read them. Set this up once:
        "AllowedOrigins": ["https://www.dictionmasters.app", "https://dictionmasters.app"],
        "AllowedMethods": ["GET", "HEAD"],
        "AllowedHeaders": ["*"],
+       "ExposeHeaders": ["Content-Range", "Content-Length", "Accept-Ranges"],
        "MaxAgeSeconds": 86400
      }
    ]

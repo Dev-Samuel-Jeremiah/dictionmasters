@@ -1,11 +1,14 @@
 """What a learner's app is told to keep, and when a page counts as changed."""
 
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.db import connection
-from django.test import TestCase
+from django.http import HttpResponse
+from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
@@ -14,6 +17,8 @@ from apps.billing.models import BillingSettings, Subscription
 from apps.echospell.models import Activity, ActivityItem, CardLesson, Category, Group, Level
 from apps.learning_modules.models import Day, LearningModule, Term, Week
 from apps.learning_tools.models import ToolLevels
+from apps.videos import links
+from apps.videos.models import OfflineVideoLicense, StudentDevice
 
 from .catalog import build, levels_for, manifest
 
@@ -155,6 +160,78 @@ class SecurityTests(ManifestCase):
         Subscription.objects.update_or_create(user=self.pupil, defaults={"trial_ends_at": timezone.now() - timedelta(days=2)})
         self.assertEqual(manifest(self.pupil)["access"], False)
         self.assertEqual(manifest(self.pupil)["pages"], [])
+
+
+class VideoTests(ManifestCase):
+    def setUp(self):
+        super().setUp()
+        section = Section.objects.create(name="Verses", slug="verses")
+        self.kept = Recital.objects.create(section=section, title="Psalm", slug="psalm", video_file="book/videos/psalm.mp4",
+                                           video_caption="The psalm")
+        self.linked = Recital.objects.create(section=section, title="Linked", slug="linked", video_url="https://example.com/v.mp4")
+        self.ref = f"{ContentType.objects.get_for_model(Recital).pk}-{self.kept.pk}"
+        self.client.force_login(self.pupil)
+
+    def test_only_videos_stored_here_are_listed(self):
+        videos = manifest(self.pupil)["videos"]
+        self.assertEqual(videos, [self.ref])                             # a video elsewhere can't be kept
+
+    def test_a_fresh_ticket_for_a_video_on_their_list(self):
+        answer = self.client.get(f"/offline-sync/video/{self.ref}/").json()
+        self.assertEqual(answer["title"], "The psalm")
+        found = links.read_ticket(answer["ticket"], links.WATCH)
+        self.assertEqual((found["o"], found["u"]), (self.kept.pk, self.pupil.pk))
+
+    def test_no_ticket_for_anything_else(self):
+        ToolLevels.objects.update_or_create(tool="assembly_recitals:hub", defaults={"levels": ",Level 3,"})
+        cache.clear()
+        self.assertEqual(self.client.get(f"/offline-sync/video/{self.ref}/").status_code, 404)  # not for their grade
+        self.assertEqual(self.client.get("/offline-sync/video/nonsense/").status_code, 404)
+        self.client.logout()
+        self.assertEqual(self.client.get(f"/offline-sync/video/{self.ref}/").status_code, 401)
+
+    def licence(self, device, video=None):
+        return OfflineVideoLicense.objects.create(student=self.pupil, device=device, video=video or self.kept, title="v",
+                                                  expires_at=OfflineVideoLicense.new_expiry())
+
+    def keep(self, device):
+        return self.client.get(f"{links.keep_url(self.kept, self.pupil)}?device={device.device_identifier}")
+
+    def test_a_saved_video_passes_through_here_unless_told_otherwise(self):
+        device = StudentDevice.objects.create(student=self.pupil, device_identifier="d1")
+        self.licence(device)
+        with patch("apps.videos.streaming.brief_link", return_value="https://r2.example/x"), \
+             patch("apps.videos.views.streaming.serve", return_value=HttpResponse("bytes")) as served:
+            self.assertEqual(self.keep(device).content, b"bytes")
+            served.assert_called_once()
+
+    @override_settings(VIDEO_KEEP_DIRECT=True)
+    def test_or_comes_straight_from_storage_still_checked_here(self):
+        device = StudentDevice.objects.create(student=self.pupil, device_identifier="d1")
+        licence = self.licence(device)
+        with patch("apps.videos.views.streaming.brief_link", return_value="https://r2.example/x"):
+            response = self.keep(device)
+            self.assertRedirects(response, "https://r2.example/x", fetch_redirect_response=False)
+            self.assertIn("no-store", response["Cache-Control"])
+            licence.delete()
+            self.assertEqual(self.keep(device).status_code, 404)         # no licence, no link
+
+    def test_checking_many_saved_videos_takes_no_more_queries_than_one(self):
+        device = StudentDevice.objects.create(student=self.pupil, device_identifier="d1")
+        self.licence(device)
+        def asked():
+            with CaptureQueriesContext(connection) as queries:
+                answer = self.client.post("/videos/licenses/", data={"device": "d1"}, content_type="application/json").json()
+            return len(queries), answer
+        self.client.post("/videos/licenses/", data={"device": "d1"}, content_type="application/json")   # trial, once
+        few, _ = asked()
+        section = Section.objects.first()
+        for number in range(6):
+            self.licence(device, Recital.objects.create(section=section, title=f"V{number}", slug=f"v{number}"))
+        many, answer = asked()
+        self.assertEqual(many, few)
+        self.assertEqual(len(answer["licenses"]), 7)
+        self.assertTrue(all(row["live"] for row in answer["licenses"]))
 
 
 class ReportTests(ManifestCase):

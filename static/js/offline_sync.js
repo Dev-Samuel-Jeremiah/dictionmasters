@@ -11,10 +11,12 @@
  *   - Everywhere, once a learner has downloaded lessons, it quietly
  *     refreshes them about twice a day when the device is online on Wi-Fi,
  *     and carries on a download that was interrupted by leaving the page.
- *   - In the Android/iPhone app this starts by itself: the first time a
- *     learner is signed in on Wi-Fi, their lessons (with pictures and audio)
- *     are saved on the phone, so the app works with no internet from then
- *     on. On mobile data it saves just the most-used pages, to spare data.
+ *   - In the Android, iPhone and computer apps this starts by itself: the
+ *     first time a learner is signed in on Wi-Fi, their lessons (with pictures
+ *     and audio), then their level's videos, are saved on the device, so the
+ *     app works with no internet from then on, with a small note showing how
+ *     far it's got. On mobile data it saves just the most-used pages, to
+ *     spare data.
  *
  * Progress made offline (lessons completed, words saved, answers) is sent
  * by the service worker when the device reconnects (static/js/pwa.js asks
@@ -30,7 +32,12 @@
   var KEY_SETTINGS = "dm-offline-settings"; // {media: bool, auto: bool}
   var KEY_RUN = "dm-offline-run";           // an unfinished download
   var KEY_LAST = "dm-offline-last";         // when the last one finished
+  var KEY_NEXT = "dm-offline-next";         // when the next one is due
   var REFRESH_EVERY = 12 * 60 * 60 * 1000;
+  // Each device picks its own time, so they don't all reach the server at once.
+  var REFRESH_SPREAD = 6 * 60 * 60 * 1000;
+  var PAUSE_BETWEEN_STEPS = 400;            // in the background, gentle on the server
+  var SHOW_NOTE_FROM = 30;                  // pages: a small refresh goes unnoticed
 
   function read(key, fallback) {
     try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
@@ -87,8 +94,14 @@
         state = next;
         write(KEY_RUN, state.done ? null : 1);   // the next sync picks up what's missing
         emit(state);
-        if (!state.done) return loop();
-        if (!state.stopped) write(KEY_LAST, Date.now());
+        if (!state.done) {
+          if (!options.gentle) return loop();
+          return new Promise(function (resolve) { setTimeout(resolve, PAUSE_BETWEEN_STEPS); }).then(loop);
+        }
+        if (!state.stopped) {
+          write(KEY_LAST, Date.now());
+          write(KEY_NEXT, Date.now() + REFRESH_EVERY + Math.random() * REFRESH_SPREAD);
+        }
         return state;
       });
     })().then(function (result) {
@@ -111,6 +124,7 @@
   function clearAll() {
     write(KEY_RUN, null);
     write(KEY_LAST, null);
+    write(KEY_NEXT, null);
     return ask({ type: "offline-clear" });
   }
 
@@ -120,6 +134,88 @@
   // ------------------------------------------------ in the background
   var inApp = document.documentElement.hasAttribute("data-native-app");
   var KEY_ESSENTIALS = "dm-offline-essentials"; // when the mobile-data top-up last ran
+  var KEY_ASKED_TO_STAY = "dm-offline-persist";
+
+  // The note in the corner of the app: how far a big download has got.
+  var note = null;
+  function showNote(text, link) {
+    if (!note) {
+      note = document.createElement("a");
+      note.className = "offline-note";
+      note.href = "/videos/offline/";
+      note.setAttribute("role", "status");
+      document.body.appendChild(note);
+    }
+    note.textContent = text;
+    note.hidden = false;
+    note.classList.toggle("offline-note--tap", !!link);
+  }
+  function hideNote(after) {
+    if (note) setTimeout(function () { note.hidden = true; }, after);
+  }
+
+  function noteProgress(state) {
+    var total = state.pages + (state.remaining || 0);
+    if (!state.done && total >= SHOW_NOTE_FROM) {
+      showNote("Saving lessons for offline… " + Math.round(state.pages * 100 / total) + "%");
+    }
+  }
+  function megabytes(mb) {
+    return mb >= 1000 ? (Math.ceil(mb / 100) / 10) + " GB" : mb + " MB";
+  }
+
+  // A browser may clear a site's storage when it's short of room. This asks
+  // it not to, once. It may say no; the next sync then fetches what went.
+  function askToStay() {
+    if (read(KEY_ASKED_TO_STAY, false) || !navigator.storage || !navigator.storage.persist) return;
+    write(KEY_ASKED_TO_STAY, true);
+    navigator.storage.persist().catch(function () {});
+  }
+
+  // The level's videos, one at a time, once its lessons are in. Only in the
+  // apps, only on Wi-Fi; if the page closes, the next one carries on.
+  var videosRunning = false;
+  function loadVideoScript() {
+    if (window.DMOfflineVideos) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var scripts = JSON.parse(document.getElementById("page-scripts").textContent);
+      var tag = document.createElement("script");
+      tag.src = scripts.offline[0];
+      tag.onload = resolve;
+      tag.onerror = reject;
+      document.head.appendChild(tag);
+    });
+  }
+  function saveVideos(refs) {
+    if (videosRunning || !refs || !refs.length) return;
+    videosRunning = true;
+    loadVideoScript().then(function () {
+      return window.DMOfflineVideos.saveAll(refs, {
+        allowed: onWifi,
+        progress: function (done, total) {
+          showNote("Saving videos for offline… " + done + " of " + total);
+          if (done === total) hideNote(4000);
+        },
+        lowSpace: function () { showNote("This device is nearly full, so the rest of the videos weren't saved.", true); },
+      });
+    }).catch(function () {}).then(function () {
+      videosRunning = false;
+      hideNote(4000);
+    });
+  }
+
+  function backgroundDone(state, settings) {
+    if (state.low_space_mb) {
+      showNote("Lessons saved. Free up " + megabytes(state.low_space_mb) + " to save their pictures and audio.", true);
+      return;
+    }
+    if (state.stopped) { hideNote(0); return; }
+    if (state.pages >= SHOW_NOTE_FROM) {
+      showNote("Your lessons are ready offline ✓");
+      hideNote(4000);
+    }
+    if (inApp && settings.media) saveVideos(state.videos);
+  }
 
   function background() {
     var settings = read(KEY_SETTINGS, null);
@@ -131,10 +227,19 @@
     if (!settings || !settings.auto || !navigator.onLine) return;
     var unfinished = read(KEY_RUN, null);
     var last = read(KEY_LAST, 0);
-    if (!unfinished && Date.now() - last < REFRESH_EVERY) return;
+    if (!unfinished && Date.now() < read(KEY_NEXT, 0)) {
+      // Lessons are up to date: carry on with any videos still to come.
+      onWifi().then(function (ok) {
+        if (ok && inApp && settings.media) ask({ type: "offline-videos" }).then(saveVideos).catch(function () {});
+      });
+      return;
+    }
     onWifi().then(function (ok) {
       if (ok) {
-        download({ media: settings.media }).catch(function () {});
+        askToStay();
+        download({ media: settings.media, gentle: true }).then(function (state) {
+          backgroundDone(state, settings);
+        }).catch(function () {});
         return;
       }
       // Mobile data, in the app: just the front pages and the first lessons,
@@ -149,6 +254,7 @@
       }
     });
   }
+  if (inApp) listeners.push(noteProgress);
   window.addEventListener("load", function () { setTimeout(background, 4000); });
   window.addEventListener("online", function () { setTimeout(background, 4000); });
 
@@ -211,6 +317,7 @@
     else if (state.stopped === "signed-out") say("Please sign in again, then download.");
     else if (state.stopped === "no-access") say("Your plan has ended, so new lessons can't be downloaded.");
     else if (state.stopped) say("Something went wrong. " + state.pages + " pages were saved; please try again.");
+    else if (state.low_space_mb) say("Lessons saved, but not their pictures and audio: free up " + megabytes(state.low_space_mb) + " on this device, then download again.");
     else say("Done. " + state.pages + " pages" + (state.media_kept ? " and " + state.media_kept + " pictures and recordings" : "") + " are ready to use offline.");
     refresh();
   }

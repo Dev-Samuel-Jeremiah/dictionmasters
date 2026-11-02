@@ -122,7 +122,8 @@ const self = {
 globalThis.self = self;
 globalThis.caches = caches;
 Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true });
-const mod = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia, sealKey, forgetSealKey, sealBytes, openBytes, unsealed, partOf };")(self, caches);
+const worker = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia, clearLibrary, sealKey, sealBytes, openBytes, unsealed, partOf };");
+const mod = worker(self, caches);
 
 // ---------------- tests
 assert.equal(mod.mediaKey("https://a.r2.cloudflarestorage.com/b/x.mp3?sig=1"), "https://a.r2.cloudflarestorage.com/b/x.mp3");
@@ -152,8 +153,8 @@ assert.ok(!(await mod.indexAll()).some((e) => e.p === "/tricks/lessons/locked/")
 assert.ok(!fetched.some((x) => x.url.includes("/accounts/logout/") || x.url.includes("/billing/")), "never fetches what shouldn't be kept");
 const media = [...stores.get("dm-library-media").m.keys()].sort();
 assert.deepEqual(media, [R2 + "/a.mp3", R2 + "/b.mp3", R2 + "/pic.png"]);
-const statics = [...stores.get("dm-static-abc123def456").m.keys()];
-assert.ok(statics.some((u) => u.includes("/static/css/ui.css?v=12")) && statics.some((u) => u.includes("/static/js/boot.js")), "static kept");
+const statics = [...stores.get("dm-library-static").m.keys()];
+assert.ok(statics.some((u) => u.includes("/static/css/ui.css?v=12")) && statics.some((u) => u.includes("/static/js/boot.js")), "a page's stylesheets stay with it");
 
 // everything kept is sealed: the stored bytes give nothing away
 const rawPage = await stores.get("dm-library").m.get(ORIGIN + "/echospell/level-1/group-a/").clone().arrayBuffer();
@@ -185,12 +186,13 @@ assert.equal(past.status, 416);
 const whole = await mod.partOf(new Request(R2 + "/a.mp3"), await mod.matchMedia(R2 + "/a.mp3"));
 assert.equal(whole.status, 200);
 
-// without the key, what's stored opens as nothing at all
-await mod.forgetSealKey();
-assert.equal(await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")), null);
-assert.equal(await mod.matchMedia(R2 + "/a.mp3"), null);
-await mod.clearLearnerData();
-await mod.runDownload({ media: true });
+// the same stored files with a different key (another device, say) open as nothing
+const keptKey = dbs.get("dm-offline-key");
+dbs.delete("dm-offline-key");
+const elsewhere = worker(self, caches);
+assert.equal(await elsewhere.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")), null);
+assert.equal(await elsewhere.matchMedia(R2 + "/a.mp3"), null);
+dbs.set("dm-offline-key", keptKey);
 
 // updating removes the old unencrypted stores, and keeps the sealed ones
 await caches.open("dm-pages");
@@ -221,6 +223,7 @@ assert.deepEqual([...stores.get("dm-library-media").m.keys()].sort(), [R2 + "/a.
 
 // pages kept without their files (mobile data): files follow on Wi-Fi
 await mod.clearLearnerData();
+await mod.clearLibrary();
 manifest = list();
 const light = await mod.runDownload({ media: false, limit: 3 });
 assert.equal(light.pages, 3);
@@ -232,6 +235,7 @@ assert.equal(stores.get("dm-library-media").m.size, 3);
 
 // a sync cut off part-way carries on where it stopped
 await mod.clearLearnerData();
+await mod.clearLibrary();
 let partial = await mod.newDownload({ media: true });
 partial = await mod.downloadStep(JSON.parse(JSON.stringify(partial)), 2);
 assert.ok(!partial.done && partial.pages === 2);
@@ -256,11 +260,47 @@ assert.equal(ended.stopped, "no-access");
 assert.equal(paths("dm-library").length, 4, "what's on the device stays");
 manifest = list();
 
-// logging out clears the library too
+// logging out removes what's personal; the heavy files stay, and open
+const sealedKey = dbs.get("dm-offline-key").rows.get("seal").key;
 await mod.clearLearnerData();
-assert.ok(!stores.has("dm-library") && !stores.has("dm-library-media"));
+assert.ok(!stores.has("dm-library"), "pages show who was signed in: they go");
 assert.equal((await mod.indexAll()).length, 0);
+assert.equal(stores.get("dm-library-media").m.size, 3, "pictures and audio stay");
+assert.equal(dbs.get("dm-offline-key").rows.get("seal").key, sealedKey, "with the key that opens them");
+assert.ok(await mod.matchMedia(R2 + "/a.mp3"));
+// the next sign-in doesn't fetch them again
+fetched.length = 0;
+const back = await mod.runDownload({ media: true });
+assert.equal(back.pages, 4);
+assert.ok(!fetched.some((x) => x.url.includes(".mp3") || x.url.includes(".png")), "files already here aren't fetched");
+// the next learner doesn't need one: it goes when their sync finishes
+manifest.pages.splice(3, 1);
+await mod.clearLearnerData();
 await mod.runDownload({ media: true });
+assert.deepEqual([...stores.get("dm-library-media").m.keys()].sort(), [R2 + "/a.mp3", R2 + "/pic.png"]);
+manifest = list();
+await mod.runDownload({ media: true });
+
+// "Remove downloads" takes the lot
+await mod.clearLibrary();
+assert.ok(!stores.has("dm-library") && !stores.has("dm-library-media") && !stores.has("dm-library-static"));
+await mod.runDownload({ media: true });
+
+// not enough room: pages come, the files wait, and it says how much is needed
+await mod.clearLearnerData();
+await mod.clearLibrary();
+manifest = list({ need_mb: 1800 });
+navigator.storage = { estimate: async () => ({ quota: 200 * 1048576, usage: 100 * 1048576 }) };
+const tight = await mod.runDownload({ media: true });
+assert.equal(tight.pages, 4);
+assert.ok(tight.low_space_mb > 100, "says how much is needed");
+assert.ok(!stores.has("dm-library-media") || stores.get("dm-library-media").m.size === 0);
+navigator.storage = { estimate: async () => ({ quota: 90000 * 1048576, usage: 0 }) };
+const roomy = await mod.runDownload({ media: true });
+assert.ok(!roomy.low_space_mb);
+assert.equal(stores.get("dm-library-media").m.size, 3, "and arrive when there's room");
+delete navigator.storage;
+manifest = list();
 console.log("download ok:", result.pages, "pages,", result.media_kept, "media");
 
 // offline: cached pages open, "/" opens dashboard

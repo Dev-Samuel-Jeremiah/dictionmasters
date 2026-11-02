@@ -4,7 +4,9 @@
  *   pages        learner pages are tried from the server first and kept
  *                on this device for offline study. Admin, billing and
  *                account-entry pages are never cached. Logging out clears
- *                the learner cache and queued progress for this device.
+ *                the learner's pages and queued progress from this device;
+ *                the pictures and audio stay, sealed, since they hold nothing
+ *                personal and take the longest to fetch again.
  *   library      a learner's lessons, kept for offline use. The server lists
  *                every page they may open with a version (apps/offline/
  *                catalog.py); a sync fetches only what's new or changed, with
@@ -53,6 +55,7 @@ const MAX_MEDIA = 800;
 // of each page is here, and which files that page uses.
 const LIBRARY_CACHE = "dm-library";
 const LIBRARY_MEDIA = "dm-library-media";
+const LIBRARY_STATIC = "dm-library-static";
 const LIBRARY_DB = "dm-library-index";
 const KEY_DB = "dm-offline-key";
 const MANIFEST_URL = "/offline-sync/manifest/";
@@ -118,7 +121,7 @@ self.addEventListener("activate", (event) => {
       const keepStatic = new Set(oldStatic.slice(-4));
       await Promise.all(names.filter((name) => name.startsWith("dm-") && name !== CACHE &&
         name !== PAGES_CACHE && name !== MEDIA_CACHE && name !== LIBRARY_CACHE && name !== LIBRARY_MEDIA &&
-        !keepStatic.has(name)).map((name) => caches.delete(name)));
+        name !== LIBRARY_STATIC && !keepStatic.has(name)).map((name) => caches.delete(name)));
       await self.clients.claim();
     })
   );
@@ -162,11 +165,6 @@ function sealKey() {
     return key;
   })().catch((error) => { sealKeyMade = null; throw error; });
   return sealKeyMade;
-}
-
-async function forgetSealKey() {
-  sealKeyMade = null;
-  await keyStore("readwrite", (store) => store.delete("seal")).catch(() => {});
 }
 
 async function sealBytes(bytes) {
@@ -265,15 +263,21 @@ async function cachedPage(request) {
 async function clearLibrary() {
   await caches.delete(LIBRARY_CACHE);
   await caches.delete(LIBRARY_MEDIA);
+  await caches.delete(LIBRARY_STATIC);
   await indexClear();
 }
 
+// Logging out: everything with this learner's name or work in it goes. The
+// pages show who's signed in, so they go too, and they're quick to fetch
+// again. The library's pictures and audio stay, with the key that opens
+// them: the next sync finds them already here, and removes any that the
+// next learner on this device doesn't need.
 async function clearLearnerData() {
   await caches.delete(PAGES_CACHE);
   await caches.delete(MEDIA_CACHE);
-  await clearLibrary();
+  await caches.delete(LIBRARY_CACHE);
+  await indexClear();
   await clearProgressQueue();
-  await forgetSealKey();
 }
 
 // ---------------------------------------------------------------- media
@@ -360,9 +364,10 @@ async function downloadMedia(address) {
   }
 }
 
-// The page's own stylesheets and scripts, so a downloaded page looks right offline.
+// The page's own stylesheets and scripts, so a kept page looks right offline.
+// They stay until no kept page names them, however many site updates pass.
 async function downloadStatic(path) {
-  const cache = await caches.open(CACHE);
+  const cache = await caches.open(LIBRARY_STATIC);
   if (await cache.match(path)) return;
   try {
     const response = await fetch(path);
@@ -493,7 +498,21 @@ async function newDownload(options) {
     state.stale = [...kept.keys()].filter((path) => !paths.has(path));
   }
   state.remaining = state.todo.length;
+  state.videos = manifest.videos || [];
+  await checkSpace(state, manifest, wanted.length);
   return state;
+}
+
+// Pictures and audio only if they'll fit. Pages take next to no room, so
+// those still come; the files follow at a sync when there's space.
+async function checkSpace(state, manifest, pages) {
+  if (!state.media || !manifest.need_mb || !state.todo.length || !navigator.storage || !navigator.storage.estimate) return;
+  const { quota = 0, usage = 0 } = await navigator.storage.estimate();
+  const needed = Math.ceil(manifest.need_mb * state.todo.length / Math.max(pages, 1));
+  if (quota && (quota - usage) / 1048576 < needed) {
+    state.media = false;
+    state.low_space_mb = needed;
+  }
 }
 
 async function syncPage(state, [path, version]) {
@@ -522,7 +541,8 @@ async function syncPage(state, [path, version]) {
     status: 200, headers: { "Content-Type": response.headers.get("Content-Type") || "text/html; charset=utf-8" },
   })));
   state.pages += 1;
-  await Promise.all(staticFilesIn(html).map(downloadStatic));
+  const statics = staticFilesIn(html);
+  await Promise.all(statics.map(downloadStatic));
 
   const media = mediaIn(html, finalUrl.href);
   let pending = media.length > 0 && !state.media;
@@ -532,7 +552,7 @@ async function syncPage(state, [path, version]) {
       else { pending = true; state.failed += 1; }
     }
   }
-  await indexPut({ p: path, v: version, media: media.map((url) => mediaKey(url.href)), pending });
+  await indexPut({ p: path, v: version, media: media.map((url) => mediaKey(url.href)), pending, statics });
 }
 
 // Pages that have gone, and the files only they used.
@@ -542,9 +562,13 @@ async function tidyLibrary(state) {
     await Promise.all(state.stale.map((path) => cache.delete(self.location.origin + path)));
     await indexDelete(state.stale);
   }
-  const used = new Set((await indexAll()).flatMap((entry) => entry.media || []));
+  const entries = await indexAll();
+  const used = new Set(entries.flatMap((entry) => entry.media || []));
   const media = await caches.open(LIBRARY_MEDIA);
   await Promise.all((await media.keys()).filter((key) => !used.has(key.url)).map((key) => media.delete(key)));
+  const named = new Set(entries.flatMap((entry) => entry.statics || []).map((path) => new URL(path, self.location.origin).href));
+  const statics = await caches.open(LIBRARY_STATIC);
+  await Promise.all((await statics.keys()).filter((key) => !named.has(key.url)).map((key) => statics.delete(key)));
 }
 
 async function downloadStep(state, stepPages) {
@@ -751,6 +775,14 @@ self.addEventListener("message", (event) => {
       });
     })());
   }
+  // Which videos this learner's app keeps.
+  if (data && data.type === "offline-videos" && port) {
+    event.waitUntil((async () => {
+      const response = await fetch(MANIFEST_URL, { credentials: "include" }).catch(() => null);
+      const manifest = response && response.ok ? await response.json() : null;
+      port.postMessage((manifest && manifest.videos) || []);
+    })());
+  }
   // One step of a lesson download; the answer carries where to carry on.
   if (data && data.type === "offline-download" && port) {
     event.waitUntil((async () => {
@@ -881,12 +913,13 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith(STATIC_PREFIX)) {
     event.respondWith(
-      caches.open(CACHE).then((cache) =>
-        cache.match(request).then((kept) => kept || fetch(request).then((response) => {
+      caches.open(CACHE).then(async (cache) => {
+        const kept = (await cache.match(request)) || (await (await caches.open(LIBRARY_STATIC)).match(request));
+        return kept || fetch(request).then((response) => {
           if (response.ok) cache.put(request, response.clone());
           return response;
-        }))
-      )
+        });
+      })
     );
   }
 });

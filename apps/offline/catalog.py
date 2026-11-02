@@ -25,6 +25,8 @@ learning tool is built, or the app won't keep it.
 import hashlib
 from collections import defaultdict
 
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.db.models import FileField
 from django.urls import reverse
@@ -49,6 +51,7 @@ class Shelf:
         self.seen = set()
         self.files = set()
         self.videos = set()
+        self.video_refs = []
         self.source = ""
         self.counts = defaultdict(int)
 
@@ -67,6 +70,9 @@ class Shelf:
             for field in fields:
                 if row.get(field.attname):
                     (self.videos if _is_video(field) else self.files).add(row[field.attname])
+                    if field.attname == "video_file":
+                        # The name static/js/offline_video.js keeps a copy under.
+                        self.video_refs.append(f"{ContentType.objects.get_for_model(queryset.model).pk}-{row['id']}")
         return found
 
 
@@ -152,7 +158,7 @@ def _lessons(shelf, programme, label):
     lessons = lessons_in_order(programme)
     ids = [lesson.pk for lesson in lessons]
     parts = defaultdict(list)
-    for relation in TAB_CONTENT.values():
+    for relation in (*TAB_CONTENT.values(), "videos"):
         field = Sound._meta.get_field(relation)
         link = field.field.attname
         for row in shelf.rows(field.related_model.objects.filter(**{f"{link}__in": ids})):
@@ -317,13 +323,15 @@ def build(levels, tools):
 
 
 def catalog(levels, tools):
-    """build's pages, kept for ten minutes: everyone on a level shares them."""
+    """build's pages and videos, kept for ten minutes: everyone on a level
+    shares them."""
     key = "offline-catalog-" + _version(sorted(levels), sorted(tools))
-    pages = cache.get(key)
-    if pages is None:
-        pages = build(levels, tools).pages
-        cache.set(key, pages, CACHE_SECONDS)
-    return pages
+    found = cache.get(key)
+    if found is None:
+        shelf = build(levels, tools)
+        found = {"pages": shelf.pages, "videos": shelf.video_refs}
+        cache.set(key, found, CACHE_SECONDS)
+    return found
 
 
 def levels_for(user):
@@ -354,19 +362,36 @@ def _library(user, tools):
             for item in items]
 
 
-def manifest(user):
-    """The list one person's app syncs against. A page's version includes
-    the site's release, because a page names that release's stylesheets."""
-    from apps.billing.access import has_access
-    from apps.landing.pwa import app_version
+def _open_tools(user):
     from apps.learning_tools.views import tools_for
 
-    release = app_version()
+    return {tool["url_name"] for tool in tools_for(user)}
+
+
+def manifest(user):
+    """The list one person's app syncs against.
+
+    A site update doesn't change a page's version: every learner fetching
+    every page after every update would swamp the server, and a page keeps
+    working offline because its stylesheets are kept with it. Raise
+    OFFLINE_PAGES_VERSION when a change to the pages themselves has to
+    reach every device."""
+    from apps.billing.access import has_access
+
     if not has_access(user):
-        return {"release": release, "access": False, "pages": []}
-    tools = {tool["url_name"] for tool in tools_for(user)}
-    pages = [*catalog(levels_for(user), tools), *_library(user, tools)]
+        return {"access": False, "pages": [], "videos": []}
+    tools = _open_tools(user)
+    found = catalog(levels_for(user), tools)
+    round_ = settings.OFFLINE_PAGES_VERSION
     return {
-        "release": release, "access": True,
-        "pages": [{"p": page["p"], "v": f"{release}.{page['v']}" if page["v"] else ""} for page in pages],
+        "access": True,
+        "need_mb": settings.OFFLINE_MEDIA_NEED_MB,
+        "pages": [{"p": page["p"], "v": f"{round_}.{page['v']}" if page["v"] else ""}
+                  for page in [*found["pages"], *_library(user, tools)]],
+        "videos": found["videos"],
     }
+
+
+def may_keep_video(user, ref):
+    """Is this one of the videos this person's app keeps?"""
+    return ref in catalog(levels_for(user), _open_tools(user))["videos"]

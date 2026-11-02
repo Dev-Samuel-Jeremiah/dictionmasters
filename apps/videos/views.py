@@ -19,6 +19,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError, transaction
+from django.conf import settings
 from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -80,6 +81,12 @@ def keep(request, ticket):
     licence = _licence_for(request.user, video, device_id)
     if licence is None or not licence.is_live:
         raise Http404("This device isn't allowed to keep that video.")
+    # Apps save a whole level's videos, so these can't all pass through here.
+    direct = streaming.brief_link(video.video_file) if settings.VIDEO_KEEP_DIRECT else ""
+    if direct:
+        response = HttpResponseRedirect(direct)
+        response["Cache-Control"] = "private, max-age=0, no-store"
+        return response
     return streaming.serve(request, video.video_file, content_type=_type_of(video))
 
 
@@ -206,14 +213,19 @@ def licenses(request):
     """Checked whenever the app is online: which kept copies are still
     good, which have run out, and which have been taken back."""
     device_id = str(_body(request).get("device") or "").strip()[:255]
-    rows = (OfflineVideoLicense.objects.filter(student=request.user, device__device_identifier=device_id)
-            .select_related("device"))
+    rows = list(OfflineVideoLicense.objects.filter(student=request.user, device__device_identifier=device_id)
+                .select_related("device"))
+    # Still entitled and not revoked: push the date out again, so a learner
+    # who keeps using the app never loses a copy mid-week. All in one go: an
+    # app that saves a level's videos holds a couple of hundred of these.
+    if _may_watch(request.user):
+        due = [licence for licence in rows if licence.is_active and licence.revoked_at is None and licence.device.is_active]
+        expiry = OfflineVideoLicense.new_expiry()
+        OfflineVideoLicense.objects.filter(pk__in=[licence.pk for licence in due]).update(expires_at=expiry)
+        for licence in due:
+            licence.expires_at = expiry
     renewed = []
     for licence in rows:
-        # Still entitled and not revoked: push the date out again, so a
-        # learner who keeps using the app never loses a copy mid-week.
-        if licence.is_active and licence.revoked_at is None and licence.device.is_active and _may_watch(request.user):
-            licence.renew()
         renewed.append({
             "id": licence.pk,
             "video": f"{licence.content_type_id}:{licence.object_id}",

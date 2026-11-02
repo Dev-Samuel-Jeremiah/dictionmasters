@@ -539,6 +539,49 @@
     });
   }
 
+  // Saving a level's videos by itself (static/js/offline_sync.js), one at a
+  // time. A device short of room stops; so does one over its device limit.
+  // A cut-off video carries on from its last piece next time.
+  var ROOM_TO_LEAVE = 500 * 1024 * 1024;
+
+  function roomLeft() {
+    if (!navigator.storage || !navigator.storage.estimate) return Promise.resolve(true);
+    return navigator.storage.estimate().then(function (space) {
+      return !space.quota || space.quota - space.usage > ROOM_TO_LEAVE;
+    });
+  }
+
+  function saveAll(refs, hooks) {
+    return ask("videos", "getAll").then(function (kept) {
+      var have = {};
+      (kept || []).forEach(function (record) { have[record.id] = true; });
+      var wanted = refs.filter(function (ref) { return !have[ref]; });
+      var total = refs.length, done = total - wanted.length;
+      function next() {
+        if (!wanted.length) return null;
+        return hooks.allowed().then(function (ok) {
+          if (!ok || !navigator.onLine) return null;
+          return roomLeft().then(function (room) {
+            if (!room) { hooks.lowSpace(); return null; }
+            return fetch("/offline-sync/video/" + encodeURIComponent(wanted[0]) + "/", { credentials: "same-origin" })
+              .then(readJson).then(function (answer) {
+                var ref = wanted.shift();
+                if (!answer.ok) return next();          // no longer on their list
+                hooks.progress(done, total);
+                return save({ ticket: answer.ticket, ticketId: ref, title: answer.title }).then(function () {
+                  done += 1;
+                  return next();
+                });
+              });
+          });
+        });
+      }
+      return next();
+    });
+  }
+
+  window.DMOfflineVideos = { saveAll: saveAll };
+
   function start() {
     var boxes = document.querySelectorAll("[data-video][data-ticket]");
     if (!boxes.length && !document.querySelector("[data-offline-list]")) return;

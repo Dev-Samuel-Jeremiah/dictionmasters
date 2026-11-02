@@ -1492,3 +1492,14 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .ui-card__desc, .lm-module__desc, .section-lede, .search-page__lede, .clash-pick__blurb {
   display: none !important;
 }
+
+/* How far the app has got saving lessons for offline (static/js/offline_sync.js). */
+.offline-note {
+  position: fixed; left: 16px; bottom: 16px; z-index: 900; max-width: min(340px, calc(100vw - 32px));
+  padding: 10px 14px; border-radius: 12px;
+  background: var(--navy, #0B1A4A); color: #fff; font-size: 0.86rem; font-weight: 600; line-height: 1.35;
+  text-decoration: none; box-shadow: 0 8px 24px rgba(11, 26, 74, 0.28);
+}
+.offline-note[hidden] { display: none; }
+.offline-note--tap { text-decoration: underline; }
+@media (max-width: 860px) { .offline-note { bottom: 84px; } }

@@ -527,6 +527,14 @@ OFFLINE_MEDIA_HOSTS = env_list("OFFLINE_MEDIA_HOSTS", "r2.cloudflarestorage.com,
 
 # How long a learner may keep a copy before the app checks with the site
 # again, and how many of their own devices may hold copies at once.
+# What the app keeps offline (apps/offline/catalog.py). Raise the version when
+# a change to the lesson pages themselves has to reach every device. The size
+# is what a level's pictures and audio come to at most (manage.py offline_report).
+OFFLINE_PAGES_VERSION = int(os.environ.get("OFFLINE_PAGES_VERSION", 1))
+OFFLINE_MEDIA_NEED_MB = int(os.environ.get("OFFLINE_MEDIA_NEED_MB", 1800))
+# Saved videos come straight from storage, not through this server. Turn on
+# only once the bucket allows it (the CORS rule, MOBILE_APP_GUIDE.md section 11).
+VIDEO_KEEP_DIRECT = os.environ.get("VIDEO_KEEP_DIRECT", "").strip().lower() in ("1", "true", "yes")
 OFFLINE_VIDEO_LICENSE_DAYS = int(os.environ.get("OFFLINE_VIDEO_LICENSE_DAYS", 7))
 MAX_OFFLINE_DEVICES_PER_STUDENT = int(os.environ.get("MAX_OFFLINE_DEVICES_PER_STUDENT", 2))
 # A playing link is short-lived; the one that fetches a copy lasts longer,
