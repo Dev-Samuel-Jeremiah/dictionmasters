@@ -98,6 +98,7 @@ globalThis.indexedDB = { open(name) {
         return {
           add(v) { const id = idb.next++; idb.rows.set(id, { ...v, id }); done(); },
           put(v) { idb.rows.set(v.p, v); done(); },
+          get(k) { const r = req(idb.rows.get(k)); done(); return r; },
           delete(id) { idb.rows.delete(id); done(); },
           clear() { idb.rows.clear(); done(); },
           getAll() { return req([...idb.rows.values()]); },
@@ -121,7 +122,7 @@ const self = {
 globalThis.self = self;
 globalThis.caches = caches;
 Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true });
-const mod = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia };")(self, caches);
+const mod = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia, sealKey, forgetSealKey, sealBytes, openBytes, unsealed, partOf };")(self, caches);
 
 // ---------------- tests
 assert.equal(mod.mediaKey("https://a.r2.cloudflarestorage.com/b/x.mp3?sig=1"), "https://a.r2.cloudflarestorage.com/b/x.mp3");
@@ -153,6 +154,53 @@ const media = [...stores.get("dm-library-media").m.keys()].sort();
 assert.deepEqual(media, [R2 + "/a.mp3", R2 + "/b.mp3", R2 + "/pic.png"]);
 const statics = [...stores.get("dm-static-abc123def456").m.keys()];
 assert.ok(statics.some((u) => u.includes("/static/css/ui.css?v=12")) && statics.some((u) => u.includes("/static/js/boot.js")), "static kept");
+
+// everything kept is sealed: the stored bytes give nothing away
+const rawPage = await stores.get("dm-library").m.get(ORIGIN + "/echospell/level-1/group-a/").clone().arrayBuffer();
+assert.ok(!Buffer.from(rawPage).toString("latin1").includes("<audio"), "a stored page isn't readable");
+assert.equal(stores.get("dm-library").m.get(ORIGIN + "/echospell/level-1/group-a/").headers.get("X-DM-Type"), "text/html; charset=utf-8");
+const rawMedia = await stores.get("dm-library-media").m.get(R2 + "/a.mp3").clone().arrayBuffer();
+assert.ok(!Buffer.from(rawMedia).toString("latin1").includes("MEDIA:"), "a stored file isn't readable");
+// the same page sealed twice looks different: nothing can be compared
+const same = new TextEncoder().encode("same words");
+assert.notDeepEqual(await mod.sealBytes(same), await mod.sealBytes(same));
+// the key can be used, never read out
+const key = dbs.get("dm-offline-key").rows.get("seal").key;
+assert.equal(key.extractable, false);
+await assert.rejects(crypto.subtle.exportKey("raw", key), "the key can't be exported");
+// changed stored bytes are refused, not shown
+const tampered = new Uint8Array(rawPage);
+tampered[20] ^= 1;
+assert.equal(await mod.unsealed(new Response(tampered, { headers: { "X-DM-Type": "text/html" } })), null);
+// reading back works, and audio can be asked for in parts
+assert.equal(await (await mod.matchMedia(R2 + "/a.mp3")).text(), "MEDIA:/b/media/a.mp3");
+const part = await mod.partOf(new Request(R2 + "/a.mp3", { headers: { range: "bytes=2-6" } }), await mod.matchMedia(R2 + "/a.mp3"));
+assert.equal(part.status, 206);
+assert.equal(part.headers.get("Content-Range"), "bytes 2-6/20");
+assert.equal(await part.text(), "DIA:/");
+const tail = await mod.partOf(new Request(R2 + "/a.mp3", { headers: { range: "bytes=-3" } }), await mod.matchMedia(R2 + "/a.mp3"));
+assert.equal(await tail.text(), "mp3");
+const past = await mod.partOf(new Request(R2 + "/a.mp3", { headers: { range: "bytes=99-" } }), await mod.matchMedia(R2 + "/a.mp3"));
+assert.equal(past.status, 416);
+const whole = await mod.partOf(new Request(R2 + "/a.mp3"), await mod.matchMedia(R2 + "/a.mp3"));
+assert.equal(whole.status, 200);
+
+// without the key, what's stored opens as nothing at all
+await mod.forgetSealKey();
+assert.equal(await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")), null);
+assert.equal(await mod.matchMedia(R2 + "/a.mp3"), null);
+await mod.clearLearnerData();
+await mod.runDownload({ media: true });
+
+// updating removes the old unencrypted stores, and keeps the sealed ones
+await caches.open("dm-pages");
+await caches.open("dm-media");
+await caches.open("dm-pages-2");
+let activated;
+listeners.activate[0]({ waitUntil: (work) => { activated = work; } });
+await activated;
+assert.ok(!stores.has("dm-pages") && !stores.has("dm-media"), "old plain stores are gone");
+assert.ok(stores.has("dm-library") && stores.has("dm-library-media") && stores.has("dm-pages-2"));
 
 // the second sync fetches only what can change, and files aren't fetched twice
 fetched.length = 0;
@@ -223,10 +271,13 @@ const home = await mod.cachedPage(new Request(ORIGIN + "/"));
 assert.ok(home && (await home.text()).includes("/accounts/logout/"));
 console.log("offline pages ok");
 
-// queue and sync
+// queue and sync (answers wait sealed)
 await mod.queueProgress(new Request(ORIGIN + "/echospell/l/g/complete/", { method: "POST", body: "csrfmiddlewaretoken=t", headers: { "Content-Type": "application/x-www-form-urlencoded" } }));
 await mod.queueProgress(new Request(ORIGIN + "/assessments/attempt/9/save/", { method: "POST", body: JSON.stringify({ question: 1 }), headers: { "Content-Type": "application/json", "X-CSRFToken": "t" } }));
 assert.equal(await mod.countQueue(), 2);
+for (const job of dbs.get("dm-offline-sync").rows.values()) {
+  assert.ok(!Buffer.from(job.body).toString("latin1").includes("csrfmiddlewaretoken") && !Buffer.from(job.body).toString("latin1").includes("question"), "answers wait sealed");
+}
 const j = await mod.queuedResponse(new Request(ORIGIN + "/assessments/attempt/9/save/", { method: "POST", headers: { Accept: "application/json" } }));
 assert.equal(j.status, 202); assert.equal((await j.json()).queued, true);
 await mod.flushProgressQueue(); // still offline

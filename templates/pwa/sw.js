@@ -18,11 +18,19 @@
  *   progress     learning actions made offline (marking lessons complete,
  *                word lists, saved answers, the card you were on) wait on
  *                this device and are sent, in order, when it reconnects.
+ *   sealing      all of the above except /static/ is encrypted before it's
+ *                stored: AES-256-GCM, with a key made on this device that no
+ *                script can read back out. Copying the stored files elsewhere
+ *                gets nothing readable. It isn't DRM: the key has to be on the
+ *                device for lessons to open offline, so someone determined,
+ *                on a device they've broken into, could still reach it.
  */
 const VERSION = "{{ version }}";
 const CACHE = "dm-static-" + VERSION;
-const PAGES_CACHE = "dm-pages";
-const MEDIA_CACHE = "dm-media";
+// "-2": encrypted. The stores from before encryption are deleted when this
+// worker activates, and the next sync fills these.
+const PAGES_CACHE = "dm-pages-2";
+const MEDIA_CACHE = "dm-media-2";
 // Not versioned like CACHE: a learner's kept pages shouldn't vanish just
 // because a release shipped a new stylesheet. They're cleared on logout
 // instead (below), and trimmed as they grow (MAX_PAGES).
@@ -46,6 +54,7 @@ const MAX_MEDIA = 800;
 const LIBRARY_CACHE = "dm-library";
 const LIBRARY_MEDIA = "dm-library-media";
 const LIBRARY_DB = "dm-library-index";
+const KEY_DB = "dm-offline-key";
 const MANIFEST_URL = "/offline-sync/manifest/";
 
 // Learner pages and progress are private to this browser profile. They are
@@ -115,6 +124,106 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// ---------------------------------------------------------------- sealing
+
+function openKeys() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(KEY_DB, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains("keys")) request.result.createObjectStore("keys", { keyPath: "p" });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function keyStore(mode, change) {
+  const db = await openKeys();
+  const answer = await new Promise((resolve, reject) => {
+    const tx = db.transaction("keys", mode);
+    const request = change(tx.objectStore("keys"));
+    tx.oncomplete = () => resolve(request && request.result);
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+  return answer;
+}
+
+let sealKeyMade = null;
+
+// One key for this device, made once. "false" means it can be used but
+// never exported, by this code or any other.
+function sealKey() {
+  sealKeyMade = sealKeyMade || (async () => {
+    const kept = await keyStore("readonly", (store) => store.get("seal"));
+    if (kept) return kept.key;
+    const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    await keyStore("readwrite", (store) => store.put({ p: "seal", key }));
+    return key;
+  })().catch((error) => { sealKeyMade = null; throw error; });
+  return sealKeyMade;
+}
+
+async function forgetSealKey() {
+  sealKeyMade = null;
+  await keyStore("readwrite", (store) => store.delete("seal")).catch(() => {});
+}
+
+async function sealBytes(bytes) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const secret = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await sealKey(), bytes);
+  const out = new Uint8Array(iv.length + secret.byteLength);
+  out.set(iv);
+  out.set(new Uint8Array(secret), iv.length);
+  return out;
+}
+
+async function openBytes(bytes) {
+  const all = new Uint8Array(bytes);
+  return crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12) }, await sealKey(), all.slice(12));
+}
+
+// The original type travels beside the sealed bytes: "text/html" gives
+// nothing away, and the browser needs it back to show the page.
+async function sealed(response) {
+  return new Response(await sealBytes(await response.arrayBuffer()), {
+    status: 200, headers: { "X-DM-Type": response.headers.get("Content-Type") || "application/octet-stream" },
+  });
+}
+
+// What was stored, readable again; null if nothing was, or it can't be
+// opened (the key has gone), which is treated just like not having it.
+async function unsealed(kept) {
+  if (!kept) return null;
+  try {
+    const bytes = await openBytes(await kept.arrayBuffer());
+    return new Response(bytes, { status: 200, headers: {
+      "Content-Type": kept.headers.get("X-DM-Type") || "application/octet-stream",
+      "Content-Length": String(bytes.byteLength), "Accept-Ranges": "bytes",
+    } });
+  } catch (error) {
+    return null;
+  }
+}
+
+// Audio players ask for part of a file to seek, and iPhones insist on it.
+async function partOf(request, response) {
+  const asked = response && /^bytes=(\d*)-(\d*)$/.exec(request.headers.get("range") || "");
+  if (!asked) return response;
+  const bytes = await response.arrayBuffer();
+  const size = bytes.byteLength;
+  const start = asked[1] ? Number(asked[1]) : Math.max(size - Number(asked[2]), 0);
+  const end = asked[1] && asked[2] ? Math.min(Number(asked[2]), size - 1) : size - 1;
+  if (start >= size || start > end) {
+    return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${size}` } });
+  }
+  return new Response(bytes.slice(start, end + 1), { status: 206, headers: {
+    "Content-Type": response.headers.get("Content-Type") || "application/octet-stream",
+    "Content-Range": `bytes ${start}-${end}/${size}`,
+    "Content-Length": String(end - start + 1), "Accept-Ranges": "bytes",
+  } });
+}
+
 // ---------------------------------------------------------------- pages
 
 async function trimCache(name, max) {
@@ -128,24 +237,24 @@ async function keepPage(request, response) {
   // "basic": fetched from this site; "default": a page a download stored.
   if (!response.ok || (response.type !== "basic" && response.type !== "default")) return;
   const cache = await caches.open(PAGES_CACHE);
-  await cache.put(request, response.clone());
+  await cache.put(request, await sealed(response.clone()));
   trimCache(PAGES_CACHE, MAX_PAGES);
 }
 
 async function cachedPath(pathname) {
   const library = await caches.open(LIBRARY_CACHE);
-  const synced = await library.match(self.location.origin + pathname);
+  const synced = await unsealed(await library.match(self.location.origin + pathname));
   if (synced) return synced;
   const cache = await caches.open(PAGES_CACHE);
   const keys = await cache.keys();
   const key = keys.find((item) => new URL(item.url).pathname === pathname);
-  return key ? cache.match(key) : null;
+  return key ? unsealed(await cache.match(key)) : null;
 }
 
 async function cachedPage(request) {
   const cache = await caches.open(PAGES_CACHE);
   const pathname = new URL(request.url).pathname;
-  const page = (await cache.match(request, { ignoreSearch: true })) || (await cachedPath(pathname));
+  const page = (await unsealed(await cache.match(request, { ignoreSearch: true }))) || (await cachedPath(pathname));
   if (page) return page;
   // The app and the installed web app open on "/", which only redirects:
   // offline, open the learner's dashboard instead.
@@ -164,6 +273,7 @@ async function clearLearnerData() {
   await caches.delete(MEDIA_CACHE);
   await clearLibrary();
   await clearProgressQueue();
+  await forgetSealKey();
 }
 
 // ---------------------------------------------------------------- media
@@ -181,24 +291,25 @@ function isRemoteMedia(url) {
 
 async function putMedia(key, response) {
   const cache = await caches.open(MEDIA_CACHE);
-  await cache.put(key, response);
+  await cache.put(key, await sealed(response));
   trimCache(MEDIA_CACHE, MAX_MEDIA);
 }
 
 async function libraryMedia(url) {
-  return (await caches.open(LIBRARY_MEDIA)).match(mediaKey(url));
+  return unsealed(await (await caches.open(LIBRARY_MEDIA)).match(mediaKey(url)));
 }
 
 async function matchMedia(url) {
   const cache = await caches.open(MEDIA_CACHE);
-  return (await libraryMedia(url)) || (await cache.match(mediaKey(url))) || (await cache.match(url));
+  return (await libraryMedia(url)) || (await unsealed(await cache.match(mediaKey(url)))) ||
+    unsealed(await cache.match(url));
 }
 
 // Our own pictures and audio: keep what the learner has seen.
 async function cacheMedia(request) {
   const cache = await caches.open(MEDIA_CACHE);
-  const cached = (await libraryMedia(request.url)) || (await cache.match(request));
-  if (cached) return cached;
+  const cached = (await libraryMedia(request.url)) || (await unsealed(await cache.match(request)));
+  if (cached) return partOf(request, cached);
   try {
     const response = await fetch(request);
     if (response.ok && response.type === "basic" && !request.headers.has("range")) {
@@ -206,7 +317,7 @@ async function cacheMedia(request) {
     }
     return response;
   } catch (error) {
-    return (await cache.match(request)) || Response.error();
+    return Response.error();
   }
 }
 
@@ -227,7 +338,7 @@ async function remoteMedia(request) {
     // normally. It is kept for offline use by a lesson download.
     return await fetch(request);
   } catch (error) {
-    return (await matchMedia(request.url)) || Response.error();
+    return (await partOf(request, await matchMedia(request.url))) || Response.error();
   }
 }
 
@@ -242,7 +353,7 @@ async function downloadMedia(address) {
     const sameSite = new URL(address).origin === self.location.origin;
     const response = await fetch(address, sameSite ? { credentials: "include" } : { mode: "cors", credentials: "omit" });
     if (!response.ok) return false;
-    await cache.put(key, response);
+    await cache.put(key, await sealed(response));
     return true;
   } catch (error) {
     return false;
@@ -407,9 +518,9 @@ async function syncPage(state, [path, version]) {
   const html = await response.text();
   // Stored under the address that was asked for, so it opens offline even
   // if the server redirected to it (a dashboard, say).
-  await (await caches.open(LIBRARY_CACHE)).put(address.origin + address.pathname, new Response(html, {
+  await (await caches.open(LIBRARY_CACHE)).put(address.origin + address.pathname, await sealed(new Response(html, {
     status: 200, headers: { "Content-Type": response.headers.get("Content-Type") || "text/html; charset=utf-8" },
-  }));
+  })));
   state.pages += 1;
   await Promise.all(staticFilesIn(html).map(downloadStatic));
 
@@ -471,7 +582,7 @@ function openQueue() {
 
 async function queueProgress(request) {
   // Kept as raw bytes, so forms with a recording or a JSON answer survive too.
-  const body = await request.clone().arrayBuffer();
+  const body = await sealBytes(await request.clone().arrayBuffer());
   const headers = {};
   request.headers.forEach((value, key) => { headers[key] = value; });
   const db = await openQueue();
@@ -559,9 +670,17 @@ async function flushProgressQueue() {
     let synced = 0;
     let dropped = 0;
     for (const job of jobs) {
+      let body;
+      try {
+        body = await openBytes(job.body);
+      } catch (error) {  // sealed with a key that's gone: it can't be sent
+        dropped += 1;
+        await remove(job.id);
+        continue;
+      }
       let response;
       try {
-        response = await fetch(job.url, { method: job.method, headers: job.headers, body: job.body,
+        response = await fetch(job.url, { method: job.method, headers: job.headers, body,
           credentials: "include", redirect: "follow" });
       } catch (error) { break; } // still offline: try again later
       // Signed out meanwhile: keep everything until they sign back in.
@@ -712,12 +831,9 @@ self.addEventListener("fetch", (event) => {
     if (url.pathname === OFFLINE_PAGE) {
       event.respondWith(
         fetch(request).then(async (response) => {
-          if (response.ok) {
-            const cache = await caches.open(CACHE);
-            await cache.put(OFFLINE_PAGE, response.clone());
-          }
+          if (response.ok) await keepPage(request, response);
           return response;
-        }).catch(() => caches.match(OFFLINE_PAGE).then((page) => page || caches.match(OFFLINE_URL)))
+        }).catch(async () => (await cachedPage(request)) || caches.match(OFFLINE_URL))
       );
       return;
     }

@@ -11,7 +11,8 @@ worker is built (templates/pwa/sw.js). Pages are tried from the server first
 and successful learner pages are kept on this browser for offline study.
 Account-entry, billing and staff pages are excluded. Logging out clears the
 learner page and media caches and queued progress so another learner on a
-shared device cannot see the previous learner's offline data. Static files
+shared device cannot see the previous learner's offline data. Everything
+learner-specific is encrypted on the device (the worker's "sealing"). Static files
 (stylesheets, scripts, pictures) are kept the same way as before, and their
 addresses change whenever they do, so nothing old is ever shown there.
 
