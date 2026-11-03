@@ -265,7 +265,7 @@
   function $(sel) { return panel.querySelector(sel); }
   var out = {
     pages: $("[data-os-pages]"), media: $("[data-os-media]"), pending: $("[data-os-pending]"),
-    last: $("[data-os-last]"), status: $("[data-os-status]"), bar: $("[data-os-progress]"),
+    last: $("[data-os-last]"), status: $("[data-os-status]"), bar: $("[data-os-progress]"), until: $("[data-os-until]"),
   };
   var mediaBox = $("[data-os-media-toggle]");
   var autoBox = $("[data-os-auto]");
@@ -298,6 +298,11 @@
       if (out.media) out.media.textContent = s.media;
       if (out.pending) out.pending.textContent = s.pending;
       if (out.last) out.last.textContent = when(read(KEY_LAST, 0));
+      if (out.until) {
+        out.until.textContent = s.until === null || s.until === undefined ? "–"
+          : s.until > Date.now() ? new Date(s.until).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+          : "Connect to reopen";
+      }
     }).catch(function () { say("Offline lessons need a moment to get ready. Reload this page."); });
   }
 

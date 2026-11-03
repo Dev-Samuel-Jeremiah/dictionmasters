@@ -122,7 +122,7 @@ const self = {
 globalThis.self = self;
 globalThis.caches = caches;
 Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true });
-const worker = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia, clearLibrary, sealKey, sealBytes, openBytes, unsealed, partOf };");
+const worker = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia, clearLibrary, accessOpen, connectAgainPage, sealKey, sealBytes, openBytes, unsealed, partOf };");
 const mod = worker(self, caches);
 
 // ---------------- tests
@@ -258,6 +258,36 @@ manifest = { release: "r1", access: false, pages: [] };
 const ended = await mod.runDownload({ media: true });
 assert.equal(ended.stopped, "no-access");
 assert.equal(paths("dm-library").length, 4, "what's on the device stays");
+assert.equal(await mod.accessOpen(), false, "but no longer opens");
+assert.equal(await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")), null);
+manifest = list();
+await mod.runDownload({ media: true });
+assert.equal(await mod.accessOpen(), true, "their plan back: open again");
+
+// offline for longer than the limit: lessons stay, but don't open until it connects
+const realNow = Date.now;
+const day = 86400000;
+let clock = realNow();
+Date.now = () => clock;
+manifest = list({ offline_days: 90 });
+await mod.runDownload({ media: true });
+clock += 89 * day;
+assert.equal(await mod.accessOpen(), true, "fine on day 89");
+assert.ok(await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")));
+clock += 2 * day;
+assert.equal(await mod.accessOpen(), false, "closed after 90 days offline");
+assert.equal(await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")), null);
+assert.equal(await mod.matchMedia(R2 + "/a.mp3"), null);
+assert.equal(paths("dm-library").length, 4, "still on the device");
+assert.equal(mod.connectAgainPage().status, 503);
+assert.ok((await mod.connectAgainPage().text()).includes("Connect to the internet once"));
+clock -= 60 * day;                                               // winding the clock back
+assert.equal(await mod.accessOpen(), false, "doesn't reopen them");
+clock += 61 * day;
+await mod.runDownload({ media: true });                          // connects once
+assert.equal(await mod.accessOpen(), true, "and they're back");
+assert.ok(await mod.matchMedia(R2 + "/a.mp3"));
+Date.now = realNow;
 manifest = list();
 
 // logging out removes what's personal; the heavy files stay, and open

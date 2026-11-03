@@ -155,11 +155,17 @@ class SecurityTests(ManifestCase):
         self.assertIn("no-store", response["Cache-Control"])
         self.assertTrue(response.json()["access"])
 
+    def test_the_app_is_told_how_long_it_may_stay_offline(self):
+        self.assertEqual(manifest(self.pupil)["offline_days"], 90)
+        with self.settings(OFFLINE_ACCESS_DAYS=30):
+            self.assertEqual(manifest(self.pupil)["offline_days"], 30)
+
     def test_no_list_once_their_access_has_ended(self):
         BillingSettings.objects.update_or_create(pk=1, defaults={"paywall_enabled": True})
         Subscription.objects.update_or_create(user=self.pupil, defaults={"trial_ends_at": timezone.now() - timedelta(days=2)})
         self.assertEqual(manifest(self.pupil)["access"], False)
         self.assertEqual(manifest(self.pupil)["pages"], [])
+        self.assertEqual(manifest(self.pupil)["offline_days"], 0)              # the app closes its lessons
 
 
 class VideoTests(ManifestCase):

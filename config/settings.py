@@ -535,7 +535,10 @@ OFFLINE_MEDIA_NEED_MB = int(os.environ.get("OFFLINE_MEDIA_NEED_MB", 1800))
 # Saved videos come straight from storage, not through this server. Turn on
 # only once the bucket allows it (the CORS rule, MOBILE_APP_GUIDE.md section 11).
 VIDEO_KEEP_DIRECT = os.environ.get("VIDEO_KEEP_DIRECT", "").strip().lower() in ("1", "true", "yes")
-OFFLINE_VIDEO_LICENSE_DAYS = int(os.environ.get("OFFLINE_VIDEO_LICENSE_DAYS", 7))
+# How long the apps keep opening lessons with no internet: the days since they
+# last checked in. Saved videos last as long.
+OFFLINE_ACCESS_DAYS = int(os.environ.get("OFFLINE_ACCESS_DAYS", 90))
+OFFLINE_VIDEO_LICENSE_DAYS = int(os.environ.get("OFFLINE_VIDEO_LICENSE_DAYS", OFFLINE_ACCESS_DAYS))
 MAX_OFFLINE_DEVICES_PER_STUDENT = int(os.environ.get("MAX_OFFLINE_DEVICES_PER_STUDENT", 2))
 # A playing link is short-lived; the one that fetches a copy lasts longer,
 # because a whole video has to come down over it.

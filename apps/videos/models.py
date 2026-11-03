@@ -28,7 +28,7 @@ from django.utils import timezone
 
 
 def license_days():
-    return int(getattr(settings, "OFFLINE_VIDEO_LICENSE_DAYS", 7))
+    return int(getattr(settings, "OFFLINE_VIDEO_LICENSE_DAYS", 90))
 
 
 def device_limit():

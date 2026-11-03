@@ -371,6 +371,10 @@ def _open_tools(user):
 def manifest(user):
     """The list one person's app syncs against.
 
+    "offline_days" is how long the app may keep opening lessons with no
+    internet after this check-in. Once their access has ended, the app is
+    told so and stops opening them offline (templates/pwa/sw.js, "access").
+
     A site update doesn't change a page's version: every learner fetching
     every page after every update would swamp the server, and a page keeps
     working offline because its stylesheets are kept with it. Raise
@@ -379,12 +383,13 @@ def manifest(user):
     from apps.billing.access import has_access
 
     if not has_access(user):
-        return {"access": False, "pages": [], "videos": []}
+        return {"access": False, "offline_days": 0, "pages": [], "videos": []}
     tools = _open_tools(user)
     found = catalog(levels_for(user), tools)
     round_ = settings.OFFLINE_PAGES_VERSION
     return {
         "access": True,
+        "offline_days": settings.OFFLINE_ACCESS_DAYS,
         "need_mb": settings.OFFLINE_MEDIA_NEED_MB,
         "pages": [{"p": page["p"], "v": f"{round_}.{page['v']}" if page["v"] else ""}
                   for page in [*found["pages"], *_library(user, tools)]],

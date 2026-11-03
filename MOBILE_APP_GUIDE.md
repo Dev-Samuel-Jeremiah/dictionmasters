@@ -368,6 +368,7 @@ The app (and the website installed as an app) works without the internet:
 | **Logging out** | Removes the learner's pages and waiting progress. Pictures and audio stay, encrypted, so the next sign-in doesn't fetch gigabytes again. |
 | **Site updates** | Don't re-download lessons. Only content that changed comes down. If a change to the pages themselves must reach every device, raise `OFFLINE_PAGES_VERSION`. |
 | **Videos** | Turn on `VIDEO_KEEP_DIRECT=1` once the CORS rule below is in place, so saved videos come straight from R2 and not through the server. |
+| **How long offline** | Lessons and saved videos keep opening for 90 days after the app last connected (`OFFLINE_ACCESS_DAYS`). After that, or once a learner's plan has ended, they stay on the device but show "Connect to the internet once" until it does. Winding the device's clock back doesn't reopen them. |
 | **Opening the app offline** | It opens on the dashboard from the device. |
 | **Progress made offline** | Marking lessons complete (EchoSpell, Learning Modules, Reading Club), Quick Words lists, assessment answers, and the EchoSpell card you're on wait on the device. They're sent automatically, in order, when the phone reconnects or the app is reopened. There's also a **Sync now** button. |
 | **Needs the internet** | AI feedback, the reading tutor (Yela), looking up new words, checking an answer, submitting an assessment, live Clash matches, logging in and paying. Offline, these show a clear "This needs the internet" message. |

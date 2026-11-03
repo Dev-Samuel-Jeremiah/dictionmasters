@@ -26,6 +26,10 @@
  *                gets nothing readable. It isn't DRM: the key has to be on the
  *                device for lessons to open offline, so someone determined,
  *                on a device they've broken into, could still reach it.
+ *   access       kept lessons open offline for OFFLINE_ACCESS_DAYS (Django
+ *                settings) after the app last checked in, and not at all once
+ *                the learner's plan has ended. Past that they stay stored,
+ *                sealed, and open again as soon as the app connects.
  */
 const VERSION = "{{ version }}";
 const CACHE = "dm-static-" + VERSION;
@@ -189,10 +193,11 @@ async function sealed(response) {
   });
 }
 
-// What was stored, readable again; null if nothing was, or it can't be
-// opened (the key has gone), which is treated just like not having it.
+// What was stored, readable again; null if nothing was, if it can't be
+// opened (the key has gone), or if offline access has run out — each
+// treated just like not having it.
 async function unsealed(kept) {
-  if (!kept) return null;
+  if (!kept || !(await accessOpen())) return null;
   try {
     const bytes = await openBytes(await kept.arrayBuffer());
     return new Response(bytes, { status: 200, headers: {
@@ -220,6 +225,53 @@ async function partOf(request, response) {
     "Content-Range": `bytes ${start}-${end}/${size}`,
     "Content-Length": String(end - start + 1), "Accept-Ranges": "bytes",
   } });
+}
+
+// ---------------------------------------------------------------- access
+
+// {p: "access", until, seen}: open until when, and the latest time this
+// device has shown. Winding the clock back doesn't reopen anything: the
+// later of now and "seen" is what counts. No record yet (nothing synced, or
+// pages kept before this existed) means open.
+let accessRecord;
+
+async function readAccess() {
+  if (accessRecord === undefined) accessRecord = (await keyStore("readonly", (store) => store.get("access")).catch(() => null)) || null;
+  return accessRecord;
+}
+
+async function writeAccess(record) {
+  accessRecord = record;
+  await keyStore("readwrite", (store) => store.put(record)).catch(() => {});
+}
+
+// After every check-in: open for that many days from now, or closed.
+async function grantAccess(days) {
+  const now = Date.now();
+  await writeAccess({ p: "access", until: days > 0 ? now + days * 86400000 : 0, seen: now });
+}
+
+async function accessOpen() {
+  const record = await readAccess();
+  if (!record) return true;
+  const now = Math.max(Date.now(), record.seen || 0);
+  if (now > (record.seen || 0) + 3600000) await writeAccess({ ...record, seen: now });
+  return now < record.until;
+}
+
+// Shown in place of a kept lesson once the app has been offline too long.
+function connectAgainPage() {
+  const html = '<!DOCTYPE html><html lang="en-gb"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Connect to keep learning</title></head>' +
+    '<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#F2F5FC;color:#0B1A4A;' +
+    'font:16px/1.5 system-ui,sans-serif;text-align:center;padding:24px">' +
+    '<main style="max-width:440px"><p style="font-size:44px;margin:0">&#128246;</p>' +
+    '<h1 style="font-size:22px">Connect to the internet once</h1>' +
+    '<p style="color:#55607E">Your lessons are still saved on this device. It has been a while since the app last ' +
+    'connected, so it needs to check your account before they open again. Connect for a moment and they\'ll be back.</p>' +
+    '<button onclick="location.reload()" style="border:0;border-radius:99px;background:#FFC72C;color:#0B1A4A;' +
+    'font:800 16px system-ui;padding:14px 30px">Try again</button></main></body></html>';
+  return new Response(html, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
 
 // ---------------------------------------------------------------- pages
@@ -481,7 +533,8 @@ async function newDownload(options) {
   if (response.status === 401) return stop("signed-out");
   if (!response.ok) return stop("error");
   const manifest = await response.json();
-  // Their access has ended: nothing to fetch, and what's here is left alone.
+  await grantAccess(manifest.access ? (manifest.offline_days ?? 90) : 0);
+  // Their access has ended: nothing to fetch, and what's here stays, closed.
   if (!manifest.access) return stop("no-access");
 
   const kept = new Map((await indexAll()).map((entry) => [entry.p, entry]));
@@ -768,7 +821,9 @@ self.addEventListener("message", (event) => {
   if (data && data.type === "offline-status" && port) {
     event.waitUntil((async () => {
       const count = async (name) => (await (await caches.open(name)).keys()).length;
+      const access = await readAccess();
       port.postMessage({
+        until: access ? access.until : null,
         pages: (await count(PAGES_CACHE)) + (await count(LIBRARY_CACHE)),
         media: (await count(MEDIA_CACHE)) + (await count(LIBRARY_MEDIA)),
         pending: await countQueue(),
@@ -880,6 +935,7 @@ self.addEventListener("fetch", (event) => {
         return response;
       }).catch(async () => {
         const page = sensitive ? null : await cachedPage(request);
+        if (!page && !sensitive && !(await accessOpen())) return connectAgainPage();
         return page || (await caches.match(OFFLINE_URL)) || Response.error();
       })
     );
