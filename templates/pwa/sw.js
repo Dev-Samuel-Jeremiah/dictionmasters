@@ -26,10 +26,12 @@
  *                gets nothing readable. It isn't DRM: the key has to be on the
  *                device for lessons to open offline, so someone determined,
  *                on a device they've broken into, could still reach it.
- *   access       kept lessons open offline for OFFLINE_ACCESS_DAYS (Django
- *                settings) after the app last checked in, and not at all once
- *                the learner's plan has ended. Past that they stay stored,
- *                sealed, and open again as soon as the app connects.
+ *   access       kept lessons open offline until the learner's plan ends, or
+ *                for OFFLINE_ACCESS_DAYS (Django settings) after the app last
+ *                checked in, whichever comes first, connected or not. Past
+ *                that they stay stored, sealed, and open again as soon as the
+ *                app connects with a plan running. Saved videos follow the
+ *                same record (static/js/offline_video.js).
  */
 const VERSION = "{{ version }}";
 const CACHE = "dm-static-" + VERSION;
@@ -245,10 +247,13 @@ async function writeAccess(record) {
   await keyStore("readwrite", (store) => store.put(record)).catch(() => {});
 }
 
-// After every check-in: open for that many days from now, or closed.
-async function grantAccess(days) {
+// After every check-in: open for that many days from now, but never past
+// the end of their plan; or closed.
+async function grantAccess(days, planEnds) {
   const now = Date.now();
-  await writeAccess({ p: "access", until: days > 0 ? now + days * 86400000 : 0, seen: now });
+  let until = days > 0 ? now + days * 86400000 : 0;
+  if (until && typeof planEnds === "number") until = Math.min(until, planEnds);
+  await writeAccess({ p: "access", until, seen: now });
 }
 
 async function accessOpen() {
@@ -533,7 +538,7 @@ async function newDownload(options) {
   if (response.status === 401) return stop("signed-out");
   if (!response.ok) return stop("error");
   const manifest = await response.json();
-  await grantAccess(manifest.access ? (manifest.offline_days ?? 90) : 0);
+  await grantAccess(manifest.access ? (manifest.offline_days ?? 90) : 0, manifest.access_ends);
   // Their access has ended: nothing to fetch, and what's here stays, closed.
   if (!manifest.access) return stop("no-access");
 

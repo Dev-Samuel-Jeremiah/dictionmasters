@@ -104,6 +104,16 @@ def _type_of(video):
     return "video/mp4"
 
 
+def _expiry_for(user):
+    """How long a saved copy may last: the usual licence, but never past the
+    end of the learner's plan, since the device may not connect again before."""
+    from apps.offline.catalog import plan_ends
+
+    usual = OfflineVideoLicense.new_expiry()
+    ends = plan_ends(user)
+    return min(usual, ends) if ends else usual
+
+
 def _licence_for(user, video, device_id):
     content_type = ContentType.objects.get_for_model(video)
     return OfflineVideoLicense.objects.filter(
@@ -153,7 +163,7 @@ def prepare(request):
         with transaction.atomic():
             licence, _ = OfflineVideoLicense.objects.update_or_create(
                 student=request.user, device=device, content_type=content_type, object_id=video.pk,
-                defaults={"title": title, "expires_at": OfflineVideoLicense.new_expiry(),
+                defaults={"title": title, "expires_at": _expiry_for(request.user),
                           "revoked_at": None, "is_active": True},
             )
     except IntegrityError:
@@ -220,7 +230,7 @@ def licenses(request):
     # app that saves a level's videos holds a couple of hundred of these.
     if _may_watch(request.user):
         due = [licence for licence in rows if licence.is_active and licence.revoked_at is None and licence.device.is_active]
-        expiry = OfflineVideoLicense.new_expiry()
+        expiry = _expiry_for(request.user)
         OfflineVideoLicense.objects.filter(pk__in=[licence.pk for licence in due]).update(expires_at=expiry)
         for licence in due:
             licence.expires_at = expiry

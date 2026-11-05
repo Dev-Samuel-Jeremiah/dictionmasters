@@ -368,12 +368,28 @@ def _open_tools(user):
     return {tool["url_name"] for tool in tools_for(user)}
 
 
+def plan_ends(user):
+    """When this person's access to the lessons ends: their own plan's end,
+    or their school's. None when it doesn't end: staff, the paywall switched
+    off, or an account with no plan to answer to. Only reads; the billing
+    rules themselves are apps/billing."""
+    from apps.billing.access import is_exempt, subscription_for
+    from apps.billing.models import BillingSettings
+
+    if is_exempt(user) or not BillingSettings.load().paywall_enabled:
+        return None
+    subscription = subscription_for(user)
+    return subscription.access_until if subscription else None
+
+
 def manifest(user):
     """The list one person's app syncs against.
 
     "offline_days" is how long the app may keep opening lessons with no
-    internet after this check-in. Once their access has ended, the app is
-    told so and stops opening them offline (templates/pwa/sw.js, "access").
+    internet after this check-in, and "access_ends" (milliseconds, like a
+    browser's clock) is when their plan ends: the app closes its lessons at
+    whichever comes first, connected or not. Once their access has ended,
+    the app is told so and closes them at once (templates/pwa/sw.js, "access").
 
     A site update doesn't change a page's version: every learner fetching
     every page after every update would swamp the server, and a page keeps
@@ -390,6 +406,7 @@ def manifest(user):
     return {
         "access": True,
         "offline_days": settings.OFFLINE_ACCESS_DAYS,
+        "access_ends": int(ends.timestamp() * 1000) if (ends := plan_ends(user)) else None,
         "need_mb": settings.OFFLINE_MEDIA_NEED_MB,
         "pages": [{"p": page["p"], "v": f"{round_}.{page['v']}" if page["v"] else ""}
                   for page in [*found["pages"], *_library(user, tools)]],

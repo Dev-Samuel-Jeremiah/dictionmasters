@@ -313,6 +313,43 @@
     });
   }
 
+  // ------------------------------------------------- may it open?
+
+  // Saved copies follow the same rule as saved lessons (templates/pwa/sw.js,
+  // "access"): offline, they open until the learner's plan ends or 90 days
+  // after the app last connected, and never past the copy's own date. The
+  // latest time this device has shown counts, so winding its clock back
+  // doesn't reopen anything. Online, the copy's date is renewed on every
+  // page (refresh, below), so that is all that counts.
+  var CLOSED = "This saved copy can't open offline any more. Connect to the internet once to renew it.";
+
+  function offlineAccess() {
+    return new Promise(function (resolve) {
+      var request = indexedDB.open("dm-offline-key", 1);
+      request.onupgradeneeded = function () { request.result.createObjectStore("keys", { keyPath: "p" }); };
+      request.onerror = function () { resolve(null); };
+      request.onsuccess = function () {
+        var store = request.result;
+        try {
+          var found = store.transaction("keys", "readonly").objectStore("keys").get("access");
+          found.onsuccess = function () { store.close(); resolve(found.result || null); };
+          found.onerror = function () { store.close(); resolve(null); };
+        } catch (error) {
+          store.close();
+          resolve(null);
+        }
+      };
+    });
+  }
+
+  function mayPlay(record) {
+    return offlineAccess().then(function (access) {
+      var now = Math.max(Date.now(), (access && access.seen) || 0);
+      if (!navigator.onLine && access && now >= access.until) return false;
+      return !record.expires || now < new Date(record.expires).getTime();
+    });
+  }
+
   // ---------------------------------------------------- keeping in step
 
   function refresh() {
@@ -517,7 +554,10 @@
     watchButton.addEventListener("click", function () {
       if (!record) return;
       say("Opening your copy…");
-      blobFor(record).then(function (blob) {
+      mayPlay(record).then(function (open) {
+        if (!open) throw new Error(CLOSED);
+        return blobFor(record);
+      }).then(function (blob) {
         if (playing) URL.revokeObjectURL(video.src);
         video.src = URL.createObjectURL(blob);
         playing = true;
@@ -626,10 +666,16 @@
         row.querySelector(".vid__btn--lesson").href = record.page || "/";
         var player = row.querySelector("video");
         row.querySelector(".vid__btn--watch").addEventListener("click", function () {
-          blobFor(record).then(function (blob) {
-            player.hidden = false;
-            player.src = URL.createObjectURL(blob);
-            player.play().catch(function () {});
+          mayPlay(record).then(function (open) {
+            if (!open) {
+              row.querySelector(".vid-kept__note").textContent = CLOSED;
+              return;
+            }
+            return blobFor(record).then(function (blob) {
+              player.hidden = false;
+              player.src = URL.createObjectURL(blob);
+              player.play().catch(function () {});
+            });
           });
         });
         row.querySelector(".vid__btn--remove").addEventListener("click", function () {

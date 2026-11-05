@@ -20,7 +20,7 @@ from apps.learning_tools.models import ToolLevels
 from apps.videos import links
 from apps.videos.models import OfflineVideoLicense, StudentDevice
 
-from .catalog import build, levels_for, manifest
+from .catalog import build, levels_for, manifest, plan_ends
 
 User = get_user_model()
 
@@ -160,6 +160,28 @@ class SecurityTests(ManifestCase):
         with self.settings(OFFLINE_ACCESS_DAYS=30):
             self.assertEqual(manifest(self.pupil)["offline_days"], 30)
 
+    def test_the_app_is_told_when_their_plan_ends(self):
+        BillingSettings.objects.update_or_create(pk=1, defaults={"paywall_enabled": True})
+        ends = timezone.now() + timedelta(days=12)
+        Subscription.objects.update_or_create(user=self.pupil, defaults={"trial_ends_at": ends})
+        self.assertEqual(manifest(self.pupil)["access_ends"], int(ends.timestamp() * 1000))
+
+    def test_a_schools_pupil_follows_the_schools_plan(self):
+        from apps.schools.models import School
+
+        BillingSettings.objects.update_or_create(pk=1, defaults={"paywall_enabled": True})
+        school = School.objects.create(name="Unity", email="u@example.com")
+        paid = timezone.now() + timedelta(days=40)
+        Subscription.objects.create(school=school, paid_until=paid)
+        pupil = person("schooled@example.com", role="student", level="Level 1", school=school)
+        self.assertEqual(manifest(pupil)["access_ends"], int(paid.timestamp() * 1000))
+
+    def test_no_end_date_when_nothing_ends(self):
+        BillingSettings.objects.update_or_create(pk=1, defaults={"paywall_enabled": False})
+        self.assertIsNone(manifest(self.pupil)["access_ends"])
+        staff = person("staff@example.com", is_staff=True)
+        self.assertIsNone(plan_ends(staff))
+
     def test_no_list_once_their_access_has_ended(self):
         BillingSettings.objects.update_or_create(pk=1, defaults={"paywall_enabled": True})
         Subscription.objects.update_or_create(user=self.pupil, defaults={"trial_ends_at": timezone.now() - timedelta(days=2)})
@@ -221,6 +243,21 @@ class VideoTests(ManifestCase):
             self.assertIn("no-store", response["Cache-Control"])
             licence.delete()
             self.assertEqual(self.keep(device).status_code, 404)         # no licence, no link
+
+    def test_a_saved_video_never_outlasts_the_plan(self):
+        BillingSettings.objects.update_or_create(pk=1, defaults={"paywall_enabled": True})
+        ends = timezone.now() + timedelta(days=5)
+        Subscription.objects.update_or_create(user=self.pupil, defaults={"trial_ends_at": ends})
+        device = StudentDevice.objects.create(student=self.pupil, device_identifier="d1")
+        licence = self.licence(device)
+        answer = self.client.post("/videos/licenses/", data={"device": "d1"}, content_type="application/json").json()
+        licence.refresh_from_db()
+        self.assertAlmostEqual(licence.expires_at, ends, delta=timedelta(seconds=1))
+        self.assertEqual(answer["licenses"][0]["expires_at"], licence.expires_at.isoformat())
+        Subscription.objects.filter(user=self.pupil).update(trial_ends_at=timezone.now() + timedelta(days=400))
+        self.client.post("/videos/licenses/", data={"device": "d1"}, content_type="application/json")
+        licence.refresh_from_db()                                       # a long plan: the usual 90 days
+        self.assertAlmostEqual(licence.expires_at, timezone.now() + timedelta(days=90), delta=timedelta(minutes=1))
 
     def test_checking_many_saved_videos_takes_no_more_queries_than_one(self):
         device = StudentDevice.objects.create(student=self.pupil, device_identifier="d1")

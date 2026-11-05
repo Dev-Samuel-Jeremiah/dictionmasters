@@ -287,6 +287,29 @@ clock += 61 * day;
 await mod.runDownload({ media: true });                          // connects once
 assert.equal(await mod.accessOpen(), true, "and they're back");
 assert.ok(await mod.matchMedia(R2 + "/a.mp3"));
+
+// the plan ends before the 90 days: closed on that date, even with no internet
+manifest = list({ offline_days: 90, access_ends: clock + 10 * day });
+await mod.runDownload({ media: true });
+clock += 9 * day;
+assert.equal(await mod.accessOpen(), true, "open while the plan runs");
+clock += 2 * day;
+assert.equal(await mod.accessOpen(), false, "closed the day the plan ends, offline");
+assert.equal(await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")), null);
+clock -= 5 * day;
+assert.equal(await mod.accessOpen(), false, "winding the clock back doesn't reopen it");
+// renewed: the next check-in reopens it
+clock += 6 * day;
+manifest = list({ offline_days: 90, access_ends: clock + 365 * day });
+await mod.runDownload({ media: true });
+assert.equal(await mod.accessOpen(), true, "renewed: open again");
+clock += 91 * day;
+assert.equal(await mod.accessOpen(), false, "a long plan still has the 90-day limit");
+// no end date (staff, or the paywall off): just the 90 days
+manifest = list({ offline_days: 90, access_ends: null });
+await mod.runDownload({ media: true });
+clock += 80 * day;
+assert.equal(await mod.accessOpen(), true);
 Date.now = realNow;
 manifest = list();
 
