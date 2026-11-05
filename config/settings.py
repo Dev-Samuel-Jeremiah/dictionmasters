@@ -532,9 +532,11 @@ OFFLINE_MEDIA_HOSTS = env_list("OFFLINE_MEDIA_HOSTS", "r2.cloudflarestorage.com,
 # is what a level's pictures and audio come to at most (manage.py offline_report).
 OFFLINE_PAGES_VERSION = int(os.environ.get("OFFLINE_PAGES_VERSION", 1))
 OFFLINE_MEDIA_NEED_MB = int(os.environ.get("OFFLINE_MEDIA_NEED_MB", 1800))
-# Saved videos come straight from storage, not through this server. Turn on
-# only once the bucket allows it (the CORS rule, MOBILE_APP_GUIDE.md section 11).
-VIDEO_KEEP_DIRECT = os.environ.get("VIDEO_KEEP_DIRECT", "").strip().lower() in ("1", "true", "yes")
+# Turn on once the storage bucket lets the apps read its files (the CORS rule,
+# MOBILE_APP_GUIDE.md section 11). Until then the apps don't save the pictures,
+# audio and videos kept there (they couldn't read them), and saved videos would
+# have to pass through this server. On: they're saved, straight from storage.
+STORAGE_CORS_READY = os.environ.get("STORAGE_CORS_READY", "").strip().lower() in ("1", "true", "yes")
 # How long the apps keep opening lessons with no internet: the days since they
 # last checked in. Saved videos last as long.
 OFFLINE_ACCESS_DAYS = int(os.environ.get("OFFLINE_ACCESS_DAYS", 90))

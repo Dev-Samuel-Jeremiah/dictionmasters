@@ -527,6 +527,7 @@ async function newDownload(options) {
     limit: Number(options && options.limit) || 0,
     todo: [], stale: [],
     pages: 0, media_kept: 0, skipped: 0, failed: 0, remaining: 0, done: false, stopped: "",
+    storage: true,
   };
   const stop = (why) => { state.stopped = why; state.done = true; return state; };
   let response;
@@ -542,6 +543,9 @@ async function newDownload(options) {
   // Their access has ended: nothing to fetch, and what's here stays, closed.
   if (!manifest.access) return stop("no-access");
 
+  // Files in the storage bucket can only be read once it allows the apps to:
+  // until then they're left for a later sync.
+  state.storage = manifest.storage_media !== false;
   const kept = new Map((await indexAll()).map((entry) => [entry.p, entry]));
   const wanted = manifest.pages.filter((page) => followable(new URL(page.p, self.location.origin)));
   for (const page of wanted) {
@@ -606,6 +610,7 @@ async function syncPage(state, [path, version]) {
   let pending = media.length > 0 && !state.media;
   if (state.media) {
     for (const url of media) {
+      if (!state.storage && isRemoteMedia(url)) { pending = true; continue; }
       if (await downloadMedia(url.href)) state.media_kept += 1;
       else { pending = true; state.failed += 1; }
     }

@@ -200,9 +200,16 @@ class VideoTests(ManifestCase):
         self.ref = f"{ContentType.objects.get_for_model(Recital).pk}-{self.kept.pk}"
         self.client.force_login(self.pupil)
 
+    @override_settings(STORAGE_CORS_READY=True)
     def test_only_videos_stored_here_are_listed(self):
         videos = manifest(self.pupil)["videos"]
         self.assertEqual(videos, [self.ref])                             # a video elsewhere can't be kept
+
+    @override_settings(STORAGE_CORS_READY=False)
+    def test_no_videos_or_stored_files_until_the_bucket_allows_it(self):
+        found = manifest(self.pupil)
+        self.assertEqual(found["videos"], [])
+        self.assertFalse(found["storage_media"])
 
     def test_a_fresh_ticket_for_a_video_on_their_list(self):
         answer = self.client.get(f"/offline-sync/video/{self.ref}/").json()
@@ -233,7 +240,7 @@ class VideoTests(ManifestCase):
             self.assertEqual(self.keep(device).content, b"bytes")
             served.assert_called_once()
 
-    @override_settings(VIDEO_KEEP_DIRECT=True)
+    @override_settings(STORAGE_CORS_READY=True)
     def test_or_comes_straight_from_storage_still_checked_here(self):
         device = StudentDevice.objects.create(student=self.pupil, device_identifier="d1")
         licence = self.licence(device)

@@ -204,6 +204,19 @@ await activated;
 assert.ok(!stores.has("dm-pages") && !stores.has("dm-media"), "old plain stores are gone");
 assert.ok(stores.has("dm-library") && stores.has("dm-library-media") && stores.has("dm-pages-2"));
 
+// until the bucket lets the apps read it, its files wait: none are fetched
+await mod.clearLearnerData();
+await mod.clearLibrary();
+manifest = list({ storage_media: false });
+fetched.length = 0;
+const waiting = await mod.runDownload({ media: true });
+assert.equal(waiting.pages, 4);
+assert.ok(!fetched.some((x) => x.url.startsWith(R2)), "nothing asked of the bucket");
+assert.ok((await mod.indexAll()).some((e) => e.pending), "they're noted as still to come");
+manifest = list();
+await mod.runDownload({ media: true });
+assert.equal(stores.get("dm-library-media").m.size, 3, "and arrive once it's turned on");
+
 // the second sync fetches only what can change, and files aren't fetched twice
 fetched.length = 0;
 await mod.runDownload({ media: true });

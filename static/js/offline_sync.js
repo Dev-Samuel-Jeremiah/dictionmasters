@@ -227,6 +227,12 @@
     if (!settings || !settings.auto || !navigator.onLine) return;
     var unfinished = read(KEY_RUN, null);
     var last = read(KEY_LAST, 0);
+    if (!read(KEY_NEXT, 0) && last) {
+      // Saved lessons from before this version: each device picks its own
+      // time within the next 12 hours, so they don't all fetch at once.
+      write(KEY_NEXT, Date.now() + Math.random() * REFRESH_EVERY);
+      return;
+    }
     if (!unfinished && Date.now() < read(KEY_NEXT, 0)) {
       // Lessons are up to date: carry on with any videos still to come.
       onWifi().then(function (ok) {

@@ -403,6 +403,7 @@ def manifest(user):
     tools = _open_tools(user)
     found = catalog(levels_for(user), tools)
     round_ = settings.OFFLINE_PAGES_VERSION
+    ready = settings.STORAGE_CORS_READY
     return {
         "access": True,
         "offline_days": settings.OFFLINE_ACCESS_DAYS,
@@ -410,7 +411,10 @@ def manifest(user):
         "need_mb": settings.OFFLINE_MEDIA_NEED_MB,
         "pages": [{"p": page["p"], "v": f"{round_}.{page['v']}" if page["v"] else ""}
                   for page in [*found["pages"], *_library(user, tools)]],
-        "videos": found["videos"],
+        # Files in the storage bucket, and the videos saved from it, wait
+        # until the bucket lets the apps read them (STORAGE_CORS_READY).
+        "storage_media": ready,
+        "videos": found["videos"] if ready else [],
     }
 
 

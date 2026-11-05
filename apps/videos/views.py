@@ -82,7 +82,7 @@ def keep(request, ticket):
     if licence is None or not licence.is_live:
         raise Http404("This device isn't allowed to keep that video.")
     # Apps save a whole level's videos, so these can't all pass through here.
-    direct = streaming.brief_link(video.video_file) if settings.VIDEO_KEEP_DIRECT else ""
+    direct = streaming.brief_link(video.video_file) if settings.STORAGE_CORS_READY else ""
     if direct:
         response = HttpResponseRedirect(direct)
         response["Cache-Control"] = "private, max-age=0, no-store"
