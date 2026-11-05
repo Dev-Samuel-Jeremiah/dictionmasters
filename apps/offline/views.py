@@ -10,10 +10,34 @@ from .catalog import learner_secret, levels_for, manifest, may_keep_video
 from .models import LessonPack
 
 
+def learner_info(request):
+    """The signed-in person, as their app keeps them (templates/pwa/sw.js,
+    "learners"): their number and key, their name for the offline sign-in
+    screen, and who on this device may sign in there by tapping their name.
+    That's the accounts remembered on the device's switcher that switch with
+    no password (apps/accounts/switcher.py): never an admin, nor an account
+    whose password has changed since. The app forgets everyone else's key
+    when they sign out, so their lessons stay locked until they sign in
+    online again."""
+    from apps.accounts import switcher
+
+    user = request.user
+    device = [row.user_id for row in switcher.device_accounts(request) if not row.needs_password]
+    return {
+        "id": user.pk,
+        "secret": learner_secret(user),
+        "name": user.get_full_name() or user.login_name,
+        "initials": f"{user.first_name[:1]}{user.last_name[:1]}".upper() or user.login_name[:1].upper(),
+        "device": device,
+    }
+
+
 def offline_manifest(request):
     if not request.user.is_authenticated:
         return JsonResponse({"signed_in": False}, status=401)
-    response = JsonResponse(manifest(request.user))
+    found = manifest(request.user)
+    found["learner"] = learner_info(request)
+    response = JsonResponse(found)
     response["Cache-Control"] = "private, no-store"
     return response
 
@@ -26,8 +50,7 @@ def learner(request):
 
     if not request.user.is_authenticated:
         return JsonResponse({"ok": False}, status=401)
-    response = JsonResponse({"ok": True, "id": request.user.pk, "secret": learner_secret(request.user),
-                             "token": get_token(request)})
+    response = JsonResponse({"ok": True, **learner_info(request), "token": get_token(request)})
     response["Cache-Control"] = "private, no-store"
     return response
 

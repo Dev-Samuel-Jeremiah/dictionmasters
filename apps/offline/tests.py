@@ -312,6 +312,44 @@ class LearnerTests(ManifestCase):
         self.client.logout()
         self.assertNotIn("data-learner", self.client.get("/").content.decode())
 
+    def sign_in(self, who, remember=True):
+        fields = {"username": who.email, "password": "mango-river-47"}
+        if remember:
+            fields["remember_device"] = "1"
+        self.client.post("/accounts/switch/add/")          # as on a shared device: "Add another account"
+        self.client.post("/accounts/login/", fields)
+
+    def test_who_may_sign_in_offline_on_this_device(self):
+        """Remembered on the device's switcher, with no password needed:
+        the app keeps their key for the offline sign-in screen."""
+        self.pupil.first_name, self.pupil.last_name = "Ada", "Obi"
+        self.pupil.save()
+        self.sign_in(self.pupil)
+        found = self.client.get("/offline-sync/learner/").json()
+        self.assertEqual((found["name"], found["initials"], found["device"]), ("Ada Obi", "AO", [self.pupil.pk]))
+        self.assertEqual(self.client.get("/offline-sync/manifest/").json()["learner"]["device"], [self.pupil.pk])
+        # A second pupil, signed in without "Remember me": the first stays listed, they don't.
+        other = person("other@example.com", role="student", level="Level 1")
+        self.sign_in(other, remember=False)
+        found = self.client.get("/offline-sync/learner/").json()
+        self.assertEqual((found["id"], found["device"]), (other.pk, [self.pupil.pk]))
+
+    def test_admins_and_changed_passwords_never_sign_in_offline(self):
+        admin = person("admin@example.com", is_staff=True)
+        self.sign_in(admin)
+        self.assertEqual(self.client.get("/offline-sync/learner/").json()["device"], [])
+        self.sign_in(self.pupil)
+        self.assertEqual(self.client.get("/offline-sync/learner/").json()["device"], [self.pupil.pk])
+        self.pupil.set_password("a-new-password-9")       # changed on another device: asks for it again
+        self.pupil.save()
+        self.client.force_login(self.pupil)
+        self.assertEqual(self.client.get("/offline-sync/learner/").json()["device"], [])
+
+    def test_taken_off_the_device(self):
+        self.sign_in(self.pupil)
+        self.client.post("/accounts/switch/remove/", {"user": self.pupil.pk})
+        self.assertEqual(self.client.get("/offline-sync/learner/").json()["device"], [])
+
 
 class ReportTests(ManifestCase):
     def test_a_level_can_be_measured(self):

@@ -48,7 +48,7 @@
           {% include "includes/form_fields.html" %}
           <label class="px-remember">
             <input type="checkbox" name="remember_device" value="1"{% if not form.is_bound or request.POST.remember_device %} checked{% endif %}>
-            <span>Remember me on this device<small>Family and shared devices: switch between accounts from the dashboard without typing passwords. Untick on a public computer.</small></span>
+            <span>Remember me on this device<small>Family and shared devices: switch between accounts from the dashboard without typing passwords, and sign in on the app even with no internet. Untick on a public computer.</small></span>
           </label>
           <button type="submit" class="px-bigbtn">Log in {% include "includes/icon.html" with name="chev" size=22 stroke="2.8" %}</button>
           <p class="px-forgot"><a href="{% url 'accounts:password_forgot' %}">Forgot your password?</a></p>

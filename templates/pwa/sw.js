@@ -31,6 +31,10 @@
  *                own key (from the server: apps/offline/views.py, learner),
  *                and locked again when they log out. Pictures, recordings and
  *                videos are shared: there's nothing personal in them.
+ *   signing in   with no connection, the log-in page lists the learners
+ *                remembered on this device ("Remember me"); tapping a name
+ *                opens their lessons. Back online, the site is brought round
+ *                to the same person before anyone carries on.
  *   access       kept lessons open offline until the learner's plan ends, or
  *                for OFFLINE_ACCESS_DAYS (Django settings) after the app last
  *                checked in, whichever comes first, connected or not. Past
@@ -57,6 +61,11 @@ const REQUIRED_PRECACHE = PRECACHE.filter((path) => !path.startsWith("/site-bran
 const BRAND_PRECACHE = PRECACHE.filter((path) => path.startsWith("/site-branding/"));
 const OFFLINE_PAGE = "/videos/offline/";
 const LOGOUT_PATH = "/accounts/logout/";
+const LOGIN_PATH = "/accounts/login/";
+const SWITCH_PATH = "/accounts/switch/";
+const REMOVE_PATH = "/accounts/switch/remove/";
+const FORGET_PATH = "/accounts/switch/forget/";
+const SIGN_IN_PATH = "/offline-sync/sign-in/";   // answered here only: the offline sign-in screen's taps
 const HOME_PATH = "/accounts/dashboard/";
 const QUEUE_DB = "dm-offline-sync";
 const MAX_PAGES = 500;
@@ -241,8 +250,16 @@ async function partOf(request, response) {
 // ---------------------------------------------------------------- learners
 
 // {p: "learner", id, key}: the learner whose stores are open, with their key
-// (usable, never readable). Set when the site says who's signed in; gone
-// when they log out, which locks their stores until they're back.
+// (usable, never readable). Set when the site says who's signed in, or when
+// they sign in offline by tapping their name; gone when they log out, which
+// locks their stores until they're back.
+//
+// {p: "kept:<id>", id, key, name, initials}: the people remembered on this
+// device ("Remember me", apps/accounts/switcher.py), whose keys stay when
+// they sign out so they can sign in again offline. The site says who they
+// are (apps/offline/views.py, learner_info): an admin, or an account whose
+// password has changed, is never among them. Nothing here checks a
+// password, so there is no password, or anything like one, to copy.
 let learnerNow;
 
 function fromBase64(text) {
@@ -287,12 +304,22 @@ async function fetchLearner() {
   }
 }
 
-// Open this learner's stores (and lock whoever's were open).
+function learnerKey(secret) {
+  return crypto.subtle.importKey("raw", fromBase64(secret), "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+// Open this learner's stores (and lock whoever's were open), as the site
+// says who they are.
 async function useLearner(info) {
   const current = await currentLearner();
-  if (current && String(current.id) === String(info.id)) return current;
-  const key = await crypto.subtle.importKey("raw", fromBase64(info.secret), "AES-GCM", false, ["encrypt", "decrypt"]);
-  learnerNow = { p: "learner", id: String(info.id), key };
+  const same = current && current.id === String(info.id);
+  const key = same ? current.key : await learnerKey(info.secret);
+  await keepLearners(info, key);
+  return same ? current : openLearner(String(info.id), key);
+}
+
+async function openLearner(id, key) {
+  learnerNow = { p: "learner", id, key };
   await keyStore("readwrite", (store) => store.put(learnerNow));
   const ids = [learnerNow.id, ...(await knownLearners()).filter((id) => id !== learnerNow.id)];
   // Room for so many learners' lessons: the longest unseen give theirs up
@@ -302,9 +329,39 @@ async function useLearner(info) {
     await caches.delete(old.pages);
     await caches.delete(old.library);
     await indexClear(old.index);
+    await forgetLearner(id);
   }
   await keyStore("readwrite", (store) => store.put({ p: "learners", ids }));
   return learnerNow;
+}
+
+// The people who may sign in here offline, the most recently seen first.
+async function keptLearners() {
+  const all = (await keyStore("readonly", (store) => store.getAll()).catch(() => null)) || [];
+  const kept = all.filter((record) => record.p.startsWith("kept:"));
+  const order = await knownLearners();
+  const at = (one) => (order.includes(one.id) ? order.indexOf(one.id) : order.length);
+  return kept.sort((a, b) => at(a) - at(b));
+}
+
+async function forgetLearner(id) {
+  await keyStore("readwrite", (store) => store.delete(`kept:${id}`)).catch(() => {});
+}
+
+// Keep this learner's key if they're remembered on this device, and let go
+// of anyone's who isn't any more (taken off the device, a password changed).
+async function keepLearners(info, key) {
+  if (!Array.isArray(info.device)) return;
+  const device = info.device.map(String);
+  const id = String(info.id);
+  for (const one of await keptLearners()) {
+    if (!device.includes(one.id)) await forgetLearner(one.id);
+  }
+  if (device.includes(id)) {
+    await keyStore("readwrite", (store) => store.put({
+      p: `kept:${id}`, id, key, name: String(info.name || "Learner"), initials: String(info.initials || ""),
+    }));
+  }
 }
 
 async function lockLearner() {
@@ -312,17 +369,163 @@ async function lockLearner() {
   await keyStore("readwrite", (store) => store.delete("learner")).catch(() => {});
 }
 
+function pageLearner(html) {
+  const mark = /data-learner="(\d+)"/.exec(html.slice(0, 4000));
+  return mark ? mark[1] : null;
+}
+
 // Whose page is this? The site marks every signed-in page with the learner
 // (templates/base.html, data-learner). A page for someone else than the
 // learner whose stores are open (they signed in as someone else) opens
 // theirs; a page with no mark goes where the current stores are.
 async function storesForPage(html) {
-  const mark = /data-learner="(\d+)"/.exec(html.slice(0, 4000));
+  const mark = pageLearner(html);
   if (!mark) return stores();
   const me = await currentLearner();
-  if (me && me.id === mark[1]) return storesOf(me);
+  if (me && me.id === mark) return storesOf(me);
   const who = await fetchLearner();
-  return who && String(who.id) === mark[1] ? storesOf(await useLearner(who)) : null;
+  return who && String(who.id) === mark ? storesOf(await useLearner(who)) : null;
+}
+
+// ---------------------------------------------------------- signing in
+
+// Offline, the log-in page lists the people remembered here: tapping a name
+// opens their lessons. The site doesn't know yet, so {p: "pending-sign-in",
+// id, name} keeps it (id "" for signing out offline). Back online, the
+// first page from the site finishes it: signed in as them already, nothing
+// to do; anyone else, and the app asks before going on (finishSignInPage),
+// so nobody carries on in someone else's account.
+async function pendingSignIn() {
+  return (await keyStore("readonly", (store) => store.get("pending-sign-in")).catch(() => null)) || null;
+}
+
+async function setPendingSignIn(id, name) {
+  await keyStore("readwrite", (store) => store.put({ p: "pending-sign-in", id, name })).catch(() => {});
+}
+
+async function clearPendingSignIn() {
+  await keyStore("readwrite", (store) => store.delete("pending-sign-in")).catch(() => {});
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
+}
+
+function shell(title, body, status = 200) {
+  const html = '<!DOCTYPE html><html lang="en-gb"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1"><title>' + title + '</title><style>' +
+    'body{margin:0;min-height:100vh;display:grid;place-items:center;background:#F2F5FC;color:#0B1A4A;' +
+    'font:16px/1.5 system-ui,sans-serif;padding:24px 16px;box-sizing:border-box}' +
+    'main{width:100%;max-width:440px;text-align:center}h1{font-size:24px;margin:8px 0}p{color:#55607E}' +
+    'ul{list-style:none;margin:20px 0;padding:0;display:grid;gap:12px}form{margin:0}' +
+    '.who{display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:10px 16px;border:0;' +
+    'border-radius:16px;background:#fff;box-shadow:0 2px 10px rgba(11,26,74,.1);color:#0B1A4A;' +
+    'font:700 17px system-ui,sans-serif;text-align:left;cursor:pointer}' +
+    '.who:focus-visible,.go:focus-visible{outline:3px solid #0B1A4A;outline-offset:2px}' +
+    '.face{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;' +
+    'background:#FFC72C;font-size:16px}.name{flex:1;min-width:0;overflow-wrap:anywhere}' +
+    '.note{display:block;font:500 13px system-ui,sans-serif;color:#8A4B00}' +
+    '.go{display:inline-block;min-height:56px;box-sizing:border-box;border:0;border-radius:99px;' +
+    'background:#FFC72C;color:#0B1A4A;font:800 16px system-ui,sans-serif;padding:16px 30px;cursor:pointer;margin:6px}' +
+    '.go--plain{background:#fff;box-shadow:inset 0 0 0 2px #0B1A4A}</style></head><body><main>' + body + '</main></body></html>';
+  return new Response(html, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+}
+
+// Is this learner's offline access closed (see "access")? Shown on their name.
+async function accessClosed(id) {
+  const record = await keyStore("readonly", (store) => store.get(`access:${id}`)).catch(() => null);
+  return Boolean(record) && Math.max(Date.now(), record.seen || 0) >= record.until;
+}
+
+// The log-in page with no connection: tap your name.
+async function signInPage() {
+  const people = await keptLearners();
+  if (!people.length) {
+    return shell("Sign in", '<p style="font-size:44px;margin:0">&#128246;</p><h1>Connect to sign in</h1>' +
+      '<p>Nobody can sign in on this device without the internet yet. Sign in once while connected, ' +
+      'with <strong>Remember me on this device</strong> ticked, and next time you can sign in here offline.</p>' +
+      '<button class="go" onclick="location.reload()">Try again</button>');
+  }
+  const rows = [];
+  for (const one of people) {
+    const closed = await accessClosed(one.id);
+    rows.push('<li><form method="post" action="' + SIGN_IN_PATH + '"><input type="hidden" name="user" value="' +
+      escapeHtml(one.id) + '"><button class="who" type="submit"><span class="face" aria-hidden="true">' +
+      escapeHtml(one.initials || one.name.slice(0, 1)) + '</span><span class="name">' + escapeHtml(one.name) +
+      (closed ? '<span class="note">Connect once to open your lessons</span>' : '') +
+      '</span><span aria-hidden="true">&rsaquo;</span></button></form></li>');
+  }
+  return shell("Who is learning?", '<p style="font-size:44px;margin:0">&#128075;</p><h1>Who is learning?</h1>' +
+    '<p>You are offline. Tap your name to open your lessons.</p><ul>' + rows.join("") + '</ul>' +
+    '<p style="font-size:14px">Not here? Connect to the internet to sign in with your password.</p>');
+}
+
+// A name tapped offline (on the sign-in screen, or the account switcher on a
+// kept dashboard): open their lessons, if they're remembered here.
+async function signInOffline(request) {
+  let id = "";
+  try {
+    id = String((await request.formData()).get("user") || "");
+  } catch (error) { /* not a form: nobody */ }
+  const one = (await keptLearners()).find((person) => person.id === id);
+  if (!one) {
+    return shell("Connect to sign in", '<p style="font-size:44px;margin:0">&#128246;</p><h1>Connect to sign in</h1>' +
+      '<p>This account needs the internet to sign in. Connect, then try again.</p>' +
+      '<button class="go" onclick="history.back()">Go back</button>', 503);
+  }
+  await openLearner(one.id, one.key);
+  await setPendingSignIn(one.id, one.name);
+  return Response.redirect(self.location.origin + HOME_PATH, 303);
+}
+
+// Back online, the site sent a page for someone other than who signed in
+// (or out) here offline: finish that first. Needs the site's security
+// token, so with none (still half-connected), the page is shown as it is.
+async function finishSignInPage(pending) {
+  const who = await fetchLearner();
+  if (!who) return null;
+  const token = '<input type="hidden" name="csrfmiddlewaretoken" value="' + escapeHtml(who.token) + '">';
+  const signOut = '<form method="post" action="' + LOGOUT_PATH + '" style="display:inline">' + token;
+  if (!pending.id) {
+    return shell("Signing out", '<p style="font-size:44px;margin:0">&#128075;</p><h1>Finishing signing out</h1>' +
+      '<p>Someone signed out of this device while it was offline.</p>' + signOut +
+      '<button class="go" type="submit">Carry on</button></form><script>document.forms[0].submit()</script>');
+  }
+  const name = escapeHtml(pending.name || "you");
+  return shell("Welcome back", '<p style="font-size:44px;margin:0">&#127881;</p><h1>Welcome back online</h1>' +
+    '<p><strong>' + name + '</strong> signed in on this device while it was offline. Carry on as ' + name + '?</p>' +
+    '<form method="post" action="' + SWITCH_PATH + '" style="display:inline">' + token +
+    '<input type="hidden" name="user" value="' + escapeHtml(pending.id) + '">' +
+    '<button class="go" type="submit">Yes, I am ' + name + '</button></form>' + signOut +
+    '<button class="go go--plain" type="submit">Someone else</button></form>');
+}
+
+// Signing out with no connection: their lessons lock now, and the site is
+// told once the device is back online (see finishSignInPage).
+async function signOutOffline() {
+  await clearLearnerData();
+  await setPendingSignIn("", "");
+  return Response.redirect(self.location.origin + LOGIN_PATH, 303);
+}
+
+// The site took a form (signed in, switched, signed out): it redirects.
+function wentThrough(response) {
+  return response.type === "opaqueredirect" || response.redirected || (response.status >= 300 && response.status < 400);
+}
+
+// The site's answer to a page, unless a sign-in made offline is still to be
+// finished (see above).
+async function settleSignIn(response) {
+  const pending = await pendingSignIn();
+  if (!pending || !response.ok || response.redirected) return null;
+  if (!(response.headers.get("Content-Type") || "").includes("text/html")) return null;
+  const mark = pageLearner(await response.clone().text());
+  if (!mark) return null;          // the log-in page, say: it lists who can carry on
+  if (mark === pending.id) {
+    await clearPendingSignIn();
+    return null;
+  }
+  return finishSignInPage(pending);
 }
 
 // ---------------------------------------------------------------- access
@@ -949,8 +1152,12 @@ async function flushProgressQueue() {
     // only while they're the one signed in: never under someone else's name.
     const who = await fetchLearner();
     if (!who) return;
-    const me = await currentLearner();
-    const mine = me && me.id === String(who.id) ? storesOf(me) : storesOf(await useLearner(who));
+    // Someone else signed in here offline and is still to finish signing
+    // in: the signed-in learner's progress goes, without opening their
+    // lessons on the screen in front of the other one.
+    const pending = await pendingSignIn();
+    const mine = pending && pending.id !== String(who.id) ?
+      storesOf({ id: String(who.id), key: await learnerKey(who.secret) }) : storesOf(await useLearner(who));
     const sent = [await sendQueue(mine.queue, mine.key, who.token), await sendQueue(QUEUE_DB, null, who.token)];
     const total = (field) => sent.reduce((sum, one) => sum + one[field], 0);
     await tellClients({ type: "learning-sync", synced: total("synced"), pending: total("pending"), dropped: total("dropped") });
@@ -1132,11 +1339,36 @@ self.addEventListener("fetch", (event) => {
     if (url.pathname === LOGOUT_PATH && request.method === "POST") {
       event.respondWith(fetch(request.clone()).then(async (response) => {
         await clearLearnerData();
+        if (wentThrough(response)) await clearPendingSignIn();
         return response;
-      }).catch(async () => {
-        await clearLearnerData();
-        return (await caches.match(OFFLINE_URL)) || Response.error();
-      }));
+      }).catch(() => signOutOffline()));
+      return;
+    }
+    // Signing in, offline and on: see "signing in".
+    if (url.pathname === SIGN_IN_PATH && request.method === "POST") {
+      event.respondWith(signInOffline(request));
+      return;
+    }
+    if ((url.pathname === SWITCH_PATH || url.pathname === LOGIN_PATH) && request.method === "POST") {
+      event.respondWith(fetch(request.clone()).then(async (response) => {
+        if (wentThrough(response)) await clearPendingSignIn();
+        return response;
+      }).catch(() => (url.pathname === SWITCH_PATH ? signInOffline(request) : signInPage())));
+      return;
+    }
+    // Taken off this device: they can't sign in here offline any more.
+    if ((url.pathname === REMOVE_PATH || url.pathname === FORGET_PATH) && request.method === "POST") {
+      event.respondWith((async () => {
+        const form = await request.clone().formData().catch(() => null);
+        const response = await fetch(request).catch(() => null);
+        if (!response) return needsInternetPage();
+        if (wentThrough(response)) {
+          const gone = url.pathname === FORGET_PATH ? (await keptLearners()).map((one) => one.id) :
+            [String((form && form.get("user")) || "")];
+          for (const id of gone) await forgetLearner(id);
+        }
+        return response;
+      })());
       return;
     }
     if (canQueueProgress(request, url.pathname)) {
@@ -1158,12 +1390,17 @@ self.addEventListener("fetch", (event) => {
       event.respondWith(
         fetch(request).then(async (response) => {
           await clearLearnerData();
+          if (wentThrough(response)) await clearPendingSignIn();
           return response;
-        }).catch(async () => {
-          await clearLearnerData();
-          return (await caches.match(OFFLINE_URL)) || Response.error();
-        })
+        }).catch(() => signOutOffline())
       );
+      return;
+    }
+
+    // No connection: the log-in page lists who can sign in here offline.
+    if (url.pathname === LOGIN_PATH) {
+      event.respondWith(fetch(request).then(async (response) => (await settleSignIn(response)) || response)
+        .catch(() => signInPage()));
       return;
     }
 
@@ -1171,6 +1408,8 @@ self.addEventListener("fetch", (event) => {
     if (url.pathname === OFFLINE_PAGE) {
       event.respondWith(
         fetch(request).then(async (response) => {
+          const settle = await settleSignIn(response);
+          if (settle) return settle;
           if (response.ok) await keepPage(request, response);
           return response;
         }).catch(async () => (await cachedPage(request)) || caches.match(OFFLINE_URL))
@@ -1181,6 +1420,8 @@ self.addEventListener("fetch", (event) => {
     const sensitive = isSensitive(url.pathname);
     event.respondWith(
       fetch(request).then(async (response) => {
+        const settle = await settleSignIn(response);
+        if (settle) return settle;
         const finalPath = response.url ? new URL(response.url).pathname : "";
         if (!sensitive && !response.redirected && !finalPath.startsWith("/accounts/login/")) {
           await keepPage(request, response);
@@ -1188,6 +1429,8 @@ self.addEventListener("fetch", (event) => {
         return response;
       }).catch(async () => {
         const page = sensitive ? null : await cachedPage(request);
+        // Nobody's lessons open (signed out): who is learning?
+        if (!page && !(await currentLearner()) && (await keptLearners()).length) return signInPage();
         if (!page && !sensitive && !(await accessOpen())) return connectAgainPage();
         return page || (await caches.match(OFFLINE_URL)) || Response.error();
       })

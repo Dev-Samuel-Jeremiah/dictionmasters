@@ -83,6 +83,10 @@ globalThis.fetch = async (input, init = {}) => {
     if (manifest === 401) return new Response("{}", { status: 401 });
     return new Response(JSON.stringify(manifest), { status: 200, headers: { "Content-Type": "application/json" } });
   }
+  // the site takes sign-in, switching and signing out with a redirect
+  if ((init.method || input.method) === "POST" && url.pathname.startsWith("/accounts/")) {
+    return new Response(null, { status: 302, headers: { Location: "/accounts/dashboard/" } });
+  }
   const body = site[url.pathname];
   if (body === undefined) return new Response("nope", { status: 404, headers: { "Content-Type": "text/html" } });
   const r = new Response("<html><body>" + body + "</body></html>", { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
@@ -109,7 +113,7 @@ globalThis.indexedDB = { open(name) {
           get(k) { const r = req(idb.rows.get(k)); done(); return r; },
           delete(id) { idb.rows.delete(id); done(); },
           clear() { idb.rows.clear(); done(); },
-          getAll() { return req([...idb.rows.values()]); },
+          getAll() { const r = req([...idb.rows.values()]); done(); return r; },
           count() { return req(idb.rows.size); },
         };
       } };
@@ -130,7 +134,7 @@ const self = {
 globalThis.self = self;
 globalThis.caches = caches;
 Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true });
-const worker = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia, clearLibrary, accessOpen, storesOf, useLearner, lockLearner, currentLearner, withToken, connectAgainPage, sealKey, sealBytes, openBytes, unsealed, partOf };");
+const worker = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia, clearLibrary, accessOpen, storesOf, useLearner, lockLearner, currentLearner, withToken, connectAgainPage, sealKey, sealBytes, openBytes, unsealed, partOf, keptLearners, pendingSignIn };");
 const mod = worker(self, caches);
 
 // ---------------- tests
@@ -575,4 +579,103 @@ assert.ok(stores.has(`dm-l${B}-library`), "learners' stores survive an update");
 signedIn = null;
 manifest = list();
 console.log("learners ok");
+
+// ------------------------------------------------ signing in offline: tap your name
+const nav = (path, init) => { const r = new Request(ORIGIN + path, init); Object.defineProperty(r, "mode", { value: "navigate" }); return r; };
+const visit = async (path, init) => {
+  let answer;
+  listeners.fetch[0]({ request: nav(path, init), respondWith(p) { answer = p; } });
+  return answer && await answer;
+};
+const form = (fields) => ({ method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(fields).toString() });
+const keyRows = () => dbs.get("dm-offline-key").rows;
+const C = "23";
+const person = (id, device, name) => ({ ...learnerFor(id), name, initials: name.slice(0, 1), device });
+online = true;
+// Bo signs in with "Remember me on this device": their key stays for offline
+site["/accounts/dashboard/"] = `<i data-learner="${B}">Bo's home</i>`;
+signedIn = person(B, [B], "Bo <Ade>");
+await mod.flushProgressQueue();
+assert.ok(keyRows().has(`kept:${B}`), "a remembered learner's key is kept");
+await visit("/accounts/dashboard/");
+let answer = await visit("/accounts/logout/", form({}));
+assert.equal(answer.status, 302);
+assert.equal(await mod.currentLearner(), null, "signing out locks their lessons");
+assert.ok(keyRows().has(`kept:${B}`), "but a remembered learner can sign in again offline");
+// Cy signs in without "Remember me": nothing kept for them
+signedIn = person(C, [B], "Cy");
+await mod.flushProgressQueue();
+assert.ok(!keyRows().has(`kept:${C}`), "someone not remembered has no key kept");
+await visit("/accounts/logout/", form({}));
+// offline: the log-in page lists who can tap their name
+online = false;
+answer = await visit("/accounts/login/");
+let text = await answer.text();
+assert.ok(text.includes("Who is learning?") && text.includes("Bo &#60;Ade&#62;") && !text.includes("Bo <Ade>"), "names listed, safely");
+assert.ok(!text.includes("Cy") && text.includes('action="/offline-sync/sign-in/"'));
+answer = await visit("/offline-sync/sign-in/", form({ user: C }));
+assert.equal(answer.status, 503, "someone not remembered needs the internet");
+assert.equal(await mod.currentLearner(), null);
+answer = await visit("/offline-sync/sign-in/", form({ user: B }));
+assert.equal(answer.status, 303);
+assert.equal(new URL(answer.headers.get("Location")).pathname, "/accounts/dashboard/");
+assert.equal((await mod.currentLearner()).id, B, "tapping their name opens their lessons");
+assert.equal((await mod.pendingSignIn()).id, B);
+text = await (await visit("/accounts/dashboard/")).text();
+assert.ok(text.includes("Bo's home"), "their own dashboard, offline");
+// signing out offline, then the app opened again: who is learning?
+answer = await visit("/accounts/logout/", form({}));
+assert.equal(answer.status, 303);
+assert.equal(new URL(answer.headers.get("Location")).pathname, "/accounts/login/");
+assert.equal((await mod.pendingSignIn()).id, "", "the site is still to hear about it");
+assert.ok((await (await visit("/")).text()).includes("Who is learning?"));
+// the dashboard's own switcher works offline too
+answer = await visit("/accounts/switch/", form({ user: B, csrfmiddlewaretoken: "old" }));
+assert.equal(answer.status, 303);
+assert.equal((await mod.currentLearner()).id, B);
+// back online, but the site still has Cy signed in: ask before going on
+site["/reading-club/"] = `<i data-learner="${C}">Cy's page</i>`;
+signedIn = person(C, [B], "Cy");
+online = true;
+answer = await visit("/reading-club/");
+text = await answer.text();
+assert.ok(text.includes("Welcome back online") && text.includes(`name="user" value="${B}"`) && text.includes("fresh-23"), "finish signing in as Bo");
+assert.ok(!text.includes("Cy's page"), "not Cy's page under Bo's name");
+assert.ok(!(stores.get(`dm-l${C}-pages`) && stores.get(`dm-l${C}-pages`).m.size), "nothing kept for Cy meanwhile");
+await mod.flushProgressQueue();
+assert.equal((await mod.currentLearner()).id, B, "Cy's waiting work goes without opening Cy's lessons on Bo's screen");
+answer = await visit("/accounts/switch/", form({ user: B, csrfmiddlewaretoken: "fresh-23" }));
+assert.equal(answer.status, 302);
+assert.equal(await mod.pendingSignIn(), null, "the site took the switch");
+signedIn = person(B, [B], "Bo <Ade>");
+assert.ok((await (await visit("/accounts/dashboard/")).text()).includes("Bo's home"));
+// signed out offline, and the site still has Bo signed in: finish signing out
+online = false;
+await visit("/accounts/logout/", form({}));
+online = true;
+text = await (await visit("/accounts/dashboard/")).text();
+assert.ok(text.includes("Finishing signing out") && text.includes('action="/accounts/logout/"') && text.includes("fresh-22"));
+await visit("/accounts/logout/", form({ csrfmiddlewaretoken: "fresh-22" }));
+assert.equal(await mod.pendingSignIn(), null);
+// a page for the learner who signed in offline settles it quietly
+online = false;
+await visit("/offline-sync/sign-in/", form({ user: B }));
+online = true;
+assert.ok((await (await visit("/accounts/dashboard/")).text()).includes("Bo's home"));
+assert.equal(await mod.pendingSignIn(), null, "signed in as them already");
+// taken off this device, or no longer on its list: no more offline sign-in
+await visit("/accounts/switch/remove/", form({ user: B }));
+assert.ok(!keyRows().has(`kept:${B}`), "removed from the device");
+await mod.flushProgressQueue();
+assert.ok(keyRows().has(`kept:${B}`));
+signedIn = person(C, [], "Cy");
+await mod.flushProgressQueue();
+assert.ok(!keyRows().has(`kept:${B}`), "the site's list of who is remembered here wins");
+online = false;
+assert.ok((await (await visit("/accounts/login/")).text()).includes("Connect to sign in"), "nobody to list");
+online = true;
+signedIn = null;
+delete site["/accounts/dashboard/"];
+delete site["/reading-club/"];
+console.log("signing in ok");
 console.log("ALL SERVICE WORKER TESTS PASSED");
