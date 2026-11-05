@@ -6,13 +6,31 @@ from django.http import JsonResponse
 from apps.billing.access import has_access
 from apps.videos import links
 
-from .catalog import manifest, may_keep_video
+from .catalog import levels_for, manifest, may_keep_video
+from .models import LessonPack
 
 
 def offline_manifest(request):
     if not request.user.is_authenticated:
         return JsonResponse({"signed_in": False}, status=401)
     response = JsonResponse(manifest(request.user))
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+def pack_key(request, pk):
+    """The key that opens a lesson pack, for a learner loading it from a flash
+    drive: only for that pack's level, and only with a plan running."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False, "error": "Sign in first, then load the pack."}, status=401)
+    pack = LessonPack.objects.filter(pk=pk, status=LessonPack.Status.READY).first()
+    if pack is None:
+        return JsonResponse({"ok": False, "error": "That pack has been replaced. Ask for the newest one."}, status=404)
+    if not has_access(request.user):
+        return JsonResponse({"ok": False, "error": "Your plan has ended, so this pack can't be loaded."}, status=403)
+    if not (request.user.is_staff or pack.level in levels_for(request.user)):
+        return JsonResponse({"ok": False, "error": f"This pack is for {pack.level}. Ask for your own level's pack."}, status=403)
+    response = JsonResponse({"ok": True, "level": pack.level, "key": pack.key})
     response["Cache-Control"] = "private, no-store"
     return response
 

@@ -52,6 +52,7 @@ class Shelf:
         self.files = set()
         self.videos = set()
         self.video_refs = []
+        self.video_files = []          # (ref, stored file, title): what a lesson pack carries
         self.source = ""
         self.counts = defaultdict(int)
 
@@ -72,7 +73,10 @@ class Shelf:
                     (self.videos if _is_video(field) else self.files).add(row[field.attname])
                     if field.attname == "video_file":
                         # The name static/js/offline_video.js keeps a copy under.
-                        self.video_refs.append(f"{ContentType.objects.get_for_model(queryset.model).pk}-{row['id']}")
+                        ref = f"{ContentType.objects.get_for_model(queryset.model).pk}-{row['id']}"
+                        self.video_refs.append(ref)
+                        title = row.get("video_caption") or row.get("title") or row.get("name") or "Lesson video"
+                        self.video_files.append((ref, row[field.attname], str(title)[:200]))
         return found
 
 

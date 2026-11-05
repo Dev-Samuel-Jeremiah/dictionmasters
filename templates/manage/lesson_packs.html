@@ -1,0 +1,58 @@
+{% extends "manage/base.html" %}
+
+{% block title %}Lesson packs — Control room{% endblock %}
+{% block extra_head %}{% if busy %}<meta http-equiv="refresh" content="15">{% endif %}{% endblock %}
+
+{% block content %}
+{% comment %}
+  Each level's lesson pack (apps/manage/lesson_packs.py): build it, then
+  download it to copy to a flash drive. Learners load it in the app from
+  Offline lessons & videos.
+{% endcomment %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#128190; Offline</p>
+    <h1 class="cr-pagehead__title">Lesson packs</h1>
+    <p class="cr-pagehead__note">A level's pictures, recordings and videos in one encrypted file. Copy it to a flash drive, and on each device open <strong>Offline lessons &amp; videos &rarr; Load from a file</strong>: the lessons arrive without using the internet. A copied pack only opens for a signed-in learner of that level with a plan running. Build it again after big changes to a level's lessons.</p>
+  </div>
+</header>
+
+<div class="cr-card">
+  <div class="cr-tablewrap">
+    <table class="cr-table">
+      <thead>
+        <tr><th scope="col">Level</th><th scope="col">Pack</th><th scope="col">Built</th><th scope="col"></th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <th scope="row">{{ row.label }}<br><small>{{ row.level }}</small></th>
+          <td>
+            {% if row.working %}
+              <strong>{{ row.working.get_status_display }}&hellip;</strong>
+              {% if row.working.files_total %}{{ row.working.files_done }} of {{ row.working.files_total }} files{% endif %}
+            {% elif row.ready %}
+              {{ row.ready.size|filesizeformat }} &middot; {{ row.ready.files_total }} files, of which {{ row.ready.videos }} videos
+              {% if row.ready.missing %}<br><small>{{ row.ready.missing }} file{{ row.ready.missing|pluralize }} weren't found in storage and were left out.</small>{% endif %}
+            {% else %}
+              <span class="cr-muted">Not built yet</span>
+            {% endif %}
+            {% if row.failed and not row.ready and not row.working %}<br><small class="cr-error">The last build failed: {{ row.failed.error|truncatechars:160 }}</small>{% endif %}
+          </td>
+          <td>{% if row.ready %}{{ row.ready.finished_at|date:"j M Y, H:i" }}{% endif %}</td>
+          <td class="cr-actions">
+            {% if row.ready %}<a class="cr-btn cr-btn--ghost" href="{{ row.ready.file.url }}" download="{{ row.ready.filename }}">Download</a>{% endif %}
+            {% if not row.working %}
+            <form method="post" action="{% url 'manage:build_pack' %}" style="display:inline">
+              {% csrf_token %}<input type="hidden" name="level" value="{{ row.level }}">
+              <button type="submit" class="cr-btn">{% if row.ready %}Build again{% else %}Build{% endif %}</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
