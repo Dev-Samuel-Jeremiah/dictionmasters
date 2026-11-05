@@ -8,9 +8,12 @@
  * learner of that level with a plan running, so this needs a moment of
  * internet. Each file is opened here, then handed to the service worker,
  * which seals it again with this device's own key and keeps it with the
- * synced lessons (templates/pwa/sw.js, "offline-import"). Files already on
- * the device are skipped, so a load that's cut off can simply be run again.
- * A sync afterwards brings the lesson pages, which are small.
+ * synced lessons (templates/pwa/sw.js, "offline-import"). Videos are
+ * licensed for this device one by one, as when they're saved from a lesson,
+ * and stored as saved videos (static/js/offline_video.js, importCopy).
+ * Anything already on the device is skipped, so a load that's cut off can
+ * simply be run again. A sync afterwards brings the lesson pages, which are
+ * small.
  */
 (function () {
   "use strict";
@@ -75,13 +78,17 @@
     });
   }
 
+  function openPiece(file, key, part) {
+    return slice(file, part[0], part[0] + part[1]).then(function (sealed) {
+      return crypto.subtle.decrypt({ name: "AES-GCM", iv: fromBase64(part[2]) }, key, sealed);
+    });
+  }
+
   function openFile(file, key, entry) {
     var pieces = [];
     var chain = Promise.resolve();
     entry.parts.forEach(function (part) {
-      chain = chain.then(function () { return slice(file, part[0], part[0] + part[1]); }).then(function (sealed) {
-        return crypto.subtle.decrypt({ name: "AES-GCM", iv: fromBase64(part[2]) }, key, sealed);
-      }).then(function (piece) { pieces.push(new Uint8Array(piece)); });
+      chain = chain.then(function () { return openPiece(file, key, part); }).then(function (piece) { pieces.push(new Uint8Array(piece)); });
     });
     return chain.then(function () {
       var total = pieces.reduce(function (sum, piece) { return sum + piece.length; }, 0);
@@ -101,8 +108,29 @@
     });
   }
 
+  // The pack's videos, each licensed for this device first. A device at its
+  // limit stops here with the server's own explanation.
+  function loadVideos(file, key, videos, step) {
+    var chain = Promise.resolve();
+    videos.forEach(function (video) {
+      chain = chain.then(function () {
+        return fetch("/offline-sync/video/" + encodeURIComponent(video.ref) + "/", { credentials: "same-origin" })
+          .then(function (response) { return response.json().catch(function () { return {}; }); });
+      }).then(function (answer) {
+        if (!answer.ok) { step(video.parts.length); return null; }       // not on this learner's list any more
+        return window.DMOfflineVideos.importCopy(
+          { ticket: answer.ticket, ticketId: video.ref, title: answer.title || video.title },
+          video.parts.length,
+          function (n) { return openPiece(file, key, video.parts[n]); },
+          function () { step(1); }
+        );
+      });
+    });
+    return chain;
+  }
+
   function load(file) {
-    var index, key, todo, done = 0;
+    var index, key, todo, videos = [], done = 0, total = 0;
     input.disabled = true;
     say("Reading the pack…");
     return readIndex(file).then(function (found) {
@@ -116,32 +144,48 @@
       var here = {};
       (have || []).forEach(function (address) { here[address] = true; });
       todo = index.files.filter(function (entry) { return !here[keyOf(entry)]; });
-      var needed = todo.reduce(function (sum, entry) { return sum + entry.size; }, 0);
+      var savedVideos = window.DMOfflineVideos ? window.DMOfflineVideos.savedIds() : Promise.resolve(null);
+      return savedVideos.then(function (ids) {
+        if (ids) {
+          var saved = {};
+          ids.forEach(function (id) { saved[id] = true; });
+          videos = (index.videos || []).filter(function (video) { return !saved[video.ref]; });
+        }
+        return have;
+      });
+    }).then(function () {
+      var needed = todo.concat(videos).reduce(function (sum, entry) { return sum + entry.size; }, 0);
+      total = todo.length + videos.reduce(function (sum, video) { return sum + video.parts.length; }, 0);
       return roomFor(needed).then(function (room) {
         if (!room) throw new Error("This device needs about " + megabytes(needed) + " free for this pack. Free some space, then try again.");
       });
     }).then(function () {
       bar.hidden = false;
+      function step(count) {
+        done += count;
+        bar.value = Math.min(100, Math.floor(done * 100 / Math.max(total, 1)));
+        say("Loading " + index.level + "'s lessons… " + bar.value + "%");
+      }
       var chain = Promise.resolve();
       todo.forEach(function (entry) {
         chain = chain.then(function () { return openFile(file, key, entry); }).then(function (bytes) {
           return ask({ type: "offline-import", key: keyOf(entry), contentType: entry.t, bytes: bytes }, [bytes]);
         }).then(function (answer) {
           if (!answer || !answer.ok) throw new Error((answer && answer.error) || "A file couldn't be saved. Is the device full?");
-          done += 1;
-          bar.value = Math.floor(done * 100 / todo.length);
-          say("Loading " + index.level + "'s lessons… " + done + " of " + todo.length);
+          step(1);
         });
       });
-      return chain;
+      return chain.then(function () {
+        if (videos.length && window.DMOfflineVideos) return loadVideos(file, key, videos, step);
+      });
     }).then(function () {
       // Kept even before a sync reaches the lessons that use them.
       return ask({ type: "offline-pack-keys", keys: index.files.map(keyOf) });
     }).then(function () {
       bar.hidden = true;
-      say("Done: " + index.level + "'s pictures and recordings are on this device" +
-          (todo.length < index.files.length ? " (" + (index.files.length - todo.length) + " were here already)" : "") +
-          ". Getting the lesson pages now…");
+      if (window.DMOfflineVideos) window.DMOfflineVideos.showSaved();
+      say("Done: " + index.level + "'s pictures, recordings" + ((index.videos || []).length ? " and videos" : "") +
+          " are on this device. Getting the lesson pages now…");
       if (window.DMOffline && navigator.onLine) {
         return window.DMOffline.download({ media: true }).then(function (state) {
           say(state.stopped ? "The pictures and recordings are loaded. Tap Download lessons when you're online to get the lesson pages."
@@ -150,7 +194,9 @@
       }
     }).catch(function (error) {
       bar.hidden = true;
-      say(error.message || "The pack couldn't be loaded.");
+      var limit = error.code === "device_limit" || error.code === "device_inactive";
+      say((limit ? "The pictures and recordings are loaded, but not the videos: " : "") +
+          (error.message || "The pack couldn't be loaded."));
     }).then(function () {
       input.disabled = false;
       input.value = "";

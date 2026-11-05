@@ -620,7 +620,58 @@
     });
   }
 
-  window.DMOfflineVideos = { saveAll: saveAll };
+  // A copy from a lesson pack on a flash drive (static/js/offline_pack.js):
+  // licensed for this device like any saved copy (the server checks the
+  // learner, applies the device limit and the plan's end), but its pieces
+  // come from the file, not the network. readPiece(n) gives the n-th 4 MB
+  // piece, opened from the pack, in the same pieces this file keeps.
+  function importCopy(entry, pieceCount, readPiece, onPiece) {
+    return Promise.all([deviceId(), key()]).then(function (both) {
+      var device = both[0], secret = both[1];
+      return fetch("/videos/prepare/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+        body: JSON.stringify({ ticket: entry.ticket, device: device, device_name: deviceName(), title: entry.title })
+      }).then(readJson).then(function (allowed) {
+        if (!allowed.ok) {
+          var denied = new Error(allowed.error || "That copy isn't allowed.");
+          denied.code = allowed.code || "";
+          throw denied;
+        }
+        var record = {
+          id: entry.ticketId, licence: allowed.id, title: allowed.title, size: allowed.size,
+          type: allowed.content_type, expires: allowed.expires_at, watch: allowed.watch_url,
+          page: entry.page || "/videos/offline/", pieces: 0, device: device
+        };
+        var chain = Promise.resolve();
+        for (var n = 0; n < pieceCount; n++) {
+          (function (number) {
+            chain = chain.then(function () { return readPiece(number); }).then(function (bytes) {
+              return writePiece(bytes, secret, record, number);
+            }).then(function () {
+              record.pieces = number + 1;
+              if (onPiece) onPiece();
+            });
+          })(n);
+        }
+        // Only a whole copy is listed; a cut-off one is written again next time.
+        return chain.then(function () { return ask("videos", "put", record); }).then(function () { return record; });
+      });
+    });
+  }
+
+  function savedIds() {
+    return ask("videos", "getAll").then(function (kept) {
+      return (kept || []).map(function (record) { return record.id; });
+    }).catch(function () { return []; });
+  }
+
+  function showSaved() {
+    var list = document.querySelector("[data-offline-list]");
+    if (list) fillList(list);
+  }
+
+  window.DMOfflineVideos = { saveAll: saveAll, importCopy: importCopy, savedIds: savedIds, showSaved: showSaved };
 
   function start() {
     var boxes = document.querySelectorAll("[data-video][data-ticket]");
