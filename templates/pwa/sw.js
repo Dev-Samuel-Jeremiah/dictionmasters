@@ -322,6 +322,15 @@ async function clearLibrary() {
   await caches.delete(LIBRARY_MEDIA);
   await caches.delete(LIBRARY_STATIC);
   await indexClear();
+  await keyStore("readwrite", (store) => store.delete("pack-keys")).catch(() => {});
+}
+
+// The files a lesson pack brought (static/js/offline_pack.js): kept even
+// before a sync reaches the lessons that use them, such as a Tricks lesson the
+// learner hasn't got to yet.
+async function packKeys() {
+  const kept = await keyStore("readonly", (store) => store.get("pack-keys")).catch(() => null);
+  return (kept && kept.keys) || [];
 }
 
 // Logging out: everything with this learner's name or work in it goes. The
@@ -642,7 +651,7 @@ async function tidyLibrary(state) {
     await indexDelete(state.stale);
   }
   const entries = await indexAll();
-  const used = new Set(entries.flatMap((entry) => entry.media || []));
+  const used = new Set([...entries.flatMap((entry) => entry.media || []), ...await packKeys()]);
   const media = await caches.open(LIBRARY_MEDIA);
   await Promise.all((await media.keys()).filter((key) => !used.has(key.url)).map((key) => media.delete(key)));
   const named = new Set(entries.flatMap((entry) => entry.statics || []).map((path) => new URL(path, self.location.origin).href));
@@ -874,6 +883,30 @@ self.addEventListener("message", (event) => {
         media: (await count(MEDIA_CACHE)) + (await count(LIBRARY_MEDIA)),
         pending: await countQueue(),
       });
+    })());
+  }
+  // A lesson pack loaded from a file (static/js/offline_pack.js): which of
+  // its files are here already, keeping one, and remembering them all.
+  if (data && data.type === "offline-has" && port) {
+    event.waitUntil((async () => {
+      port.postMessage((await (await caches.open(LIBRARY_MEDIA)).keys()).map((key) => key.url));
+    })());
+  }
+  if (data && data.type === "offline-import" && port) {
+    event.waitUntil((async () => {
+      try {
+        const file = new Response(data.bytes, { headers: { "Content-Type": data.contentType || "application/octet-stream" } });
+        await (await caches.open(LIBRARY_MEDIA)).put(data.key, await sealed(file));
+        port.postMessage({ ok: true });
+      } catch (error) {
+        port.postMessage({ ok: false, error: error && error.name === "QuotaExceededError" ? "This device is full." : "" });
+      }
+    })());
+  }
+  if (data && data.type === "offline-pack-keys" && port) {
+    event.waitUntil((async () => {
+      await keyStore("readwrite", (store) => store.put({ p: "pack-keys", keys: data.keys || [] }));
+      port.postMessage({ ok: true });
     })());
   }
   // Which videos this learner's app keeps.

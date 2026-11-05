@@ -245,6 +245,27 @@ assert.ok(!(await mod.indexAll()).some((e) => e.pending));
 site["/echospell/level-1/group-b/"] = `<audio src="${R2}/b.mp3?sig=3"></audio>`;
 await mod.runDownload({ media: true });
 
+// a lesson pack loaded from a file: its files go in sealed, and stay even
+// before a sync reaches the lessons that use them
+const askWorker = (message) => new Promise((resolve) => {
+  const port = { postMessage: resolve };
+  listeners.message[0]({ data: message, ports: [port], waitUntil: (work) => work });
+});
+await mod.clearLearnerData();
+await mod.clearLibrary();
+const packed = R2 + "/not-reached-yet.mp3";
+assert.equal((await askWorker({ type: "offline-import", key: packed, contentType: "audio/mpeg", bytes: new TextEncoder().encode("PACKED AUDIO").buffer })).ok, true);
+const rawPacked = await stores.get("dm-library-media").m.get(packed).clone().arrayBuffer();
+assert.ok(!Buffer.from(rawPacked).toString("latin1").includes("PACKED AUDIO"), "sealed with this device's key");
+assert.equal(await (await mod.matchMedia(packed + "?sig=x")).text(), "PACKED AUDIO");
+assert.deepEqual(await askWorker({ type: "offline-has" }), [packed]);
+await askWorker({ type: "offline-pack-keys", keys: [packed] });
+await mod.runDownload({ media: true });
+assert.ok(stores.get("dm-library-media").m.has(packed), "kept though no lesson uses it yet");
+await mod.clearLibrary();
+await mod.runDownload({ media: true });
+assert.ok(!stores.get("dm-library-media").m.has(packed), "Remove downloads takes it too");
+
 // the second sync fetches only what can change, and files aren't fetched twice
 fetched.length = 0;
 await mod.runDownload({ media: true });

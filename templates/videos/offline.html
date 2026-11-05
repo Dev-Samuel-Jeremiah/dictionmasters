@@ -56,6 +56,19 @@
       <p class="ui-note">Things that need our servers — AI feedback, the reading tutor, looking up new words and live Clash matches — still need the internet.</p>
     </section>
 
+    {# A level's lessons from a file on a flash drive (static/js/offline_pack.js). #}
+    <section class="ui-panel os-pack" data-pack hidden>
+      <header class="ui-section__head">
+        <h2 class="ui-section__title">Load lessons from a file</h2>
+      </header>
+      <p class="ui-panel__lede">Got a lesson pack on a flash drive from your school? Load it here instead of downloading. You need to be online for a moment, so the pack can be unlocked for you.</p>
+      <div class="os-actions">
+        <label class="ui-btn ui-btn--gold os-pack__pick">Choose the pack file<input type="file" accept=".dmpack" class="os-pack__input" data-pack-file></label>
+      </div>
+      <progress class="os-progress" data-pack-progress max="100" value="0" hidden></progress>
+      <p class="os-status" data-pack-status role="status" aria-live="polite"></p>
+    </section>
+
     <section class="ui-panel">
       <header class="ui-section__head">
         <h2 class="ui-section__title">Saved videos</h2>
@@ -98,4 +111,5 @@
 
 {% block extra_js %}
   <script src="{% static 'js/offline_video.js' %}" defer></script>
+  <script src="{% static 'js/offline_pack.js' %}" defer></script>
 {% endblock %}
