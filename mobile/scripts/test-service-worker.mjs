@@ -60,6 +60,10 @@ const list = (extra = {}) => ({ release: "r1", access: true, pages: [
   { p: "/accounts/logout/", v: "r1.never" },
 ], ...extra });
 let manifest = list();
+// who the fake site says is signed in (/offline-sync/learner/)
+const secretFor = (id) => Buffer.from(Array.from({ length: 32 }, (_, i) => (i * 7 + Number(id)) % 256)).toString("base64");
+const learnerFor = (id) => ({ ok: true, id, secret: secretFor(id), token: "fresh-" + id });
+let signedIn = null;
 const fetched = [];
 let online = true;
 globalThis.fetch = async (input, init = {}) => {
@@ -71,6 +75,10 @@ globalThis.fetch = async (input, init = {}) => {
   }
   if (url.origin !== ORIGIN) return new Response("x");
   if (url.pathname.startsWith("/static/")) return new Response("static", { status: 200 });
+  if (url.pathname === "/offline-sync/learner/") {
+    return signedIn ? new Response(JSON.stringify(signedIn), { status: 200, headers: { "Content-Type": "application/json" } })
+                    : new Response("{}", { status: 401 });
+  }
   if (url.pathname === "/offline-sync/manifest/") {
     if (manifest === 401) return new Response("{}", { status: 401 });
     return new Response(JSON.stringify(manifest), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -122,7 +130,7 @@ const self = {
 globalThis.self = self;
 globalThis.caches = caches;
 Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true });
-const worker = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia, clearLibrary, accessOpen, connectAgainPage, sealKey, sealBytes, openBytes, unsealed, partOf };");
+const worker = new Function("self", "caches", src + "\nreturn { mediaIn, indexAll, clearLearnerData, staticFilesIn, followable, canQueueProgress, mediaKey, isRemoteMedia, runDownload, downloadStep, newDownload, cachedPage, queueProgress, flushProgressQueue, countQueue, wantsJson, queuedResponse, keepPage, matchMedia, clearLibrary, accessOpen, storesOf, useLearner, lockLearner, currentLearner, withToken, connectAgainPage, sealKey, sealBytes, openBytes, unsealed, partOf };");
 const mod = worker(self, caches);
 
 // ---------------- tests
@@ -442,21 +450,129 @@ fetched.length = 0;
 messages.length = 0;
 // server answers 200 for the first, 404 (gone) for the second
 const realFetch = globalThis.fetch;
-globalThis.fetch = async (input, init) => {
+const asWho = (other) => async (input, init) => {
+  if (String(input).includes("/offline-sync/learner/")) {
+    return new Response(JSON.stringify(learnerFor("7")), { status: 200, headers: { "Content-Type": "application/json" } });
+  }
   fetched.push({ url: input, init });
-  return new Response("ok", { status: String(input).includes("/save/") ? 404 : 200 });
+  return other(input, init);
 };
+globalThis.fetch = asWho(async (input) => new Response("ok", { status: String(input).includes("/save/") ? 404 : 200 }));
 await mod.flushProgressQueue();
 assert.equal(await mod.countQueue(), 0);
 assert.equal(fetched.length, 2);
-assert.equal(new TextDecoder().decode(fetched[0].init.body), "csrfmiddlewaretoken=t", "body replayed intact");
+assert.equal(new TextDecoder().decode(fetched[0].init.body), "csrfmiddlewaretoken=fresh-7", "sent with today's security token");
 assert.equal(fetched[0].init.headers["content-type"], "application/x-www-form-urlencoded");
+assert.equal(fetched[1].init.headers["x-csrftoken"], "fresh-7");
 const note = messages.find((m) => m.type === "learning-sync");
 assert.deepEqual([note.synced, note.dropped, note.pending], [1, 1, 0]);
 // server error keeps the queue
 await mod.queueProgress(new Request(ORIGIN + "/echospell/l/g/complete/", { method: "POST", body: "a=1" }));
-globalThis.fetch = async () => new Response("err", { status: 502 });
+globalThis.fetch = asWho(async () => new Response("err", { status: 502 }));
 await mod.flushProgressQueue();
 assert.equal(await mod.countQueue(), 1, "kept on 5xx");
+globalThis.fetch = realFetch;
 console.log("sync ok");
+
+// ------------------------------------------------ learners on a shared tablet
+await mod.lockLearner();
+await mod.clearLibrary();
+await mod.clearLearnerData();
+online = true;
+const A = "21", B = "22";
+const rawOf = async (name, path) => stores.get(name) && stores.get(name).m.get(ORIGIN + path);
+// Ada syncs: her pages go in her own store, sealed with her own key
+signedIn = learnerFor(A);
+manifest = list({ learner: { id: A, secret: secretFor(A) } });
+await mod.runDownload({ media: true });
+assert.equal((await mod.currentLearner()).id, A);
+assert.ok(await rawOf(`dm-l${A}-library`, "/echospell/level-1/group-a/"), "in her own store");
+assert.ok(!stores.has("dm-library") || stores.get("dm-library").m.size === 0, "not the device's");
+const adaPage = await rawOf(`dm-l${A}-library`, "/echospell/level-1/group-a/");
+assert.equal(await mod.unsealed(adaPage.clone()), null, "the device's own key can't open it");
+assert.ok(await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")));
+// she logs out: her store stays, locked
+await mod.clearLearnerData();
+assert.equal(await mod.currentLearner(), null);
+assert.ok(await rawOf(`dm-l${A}-library`, "/echospell/level-1/group-a/"), "kept");
+assert.equal(await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")), null, "but nobody can open it");
+// Bo signs in on the same tablet: his own store; he never sees Ada's
+signedIn = learnerFor(B);
+manifest = list({ learner: { id: B, secret: secretFor(B) } });
+await mod.runDownload({ media: true });
+assert.equal((await mod.currentLearner()).id, B);
+assert.ok(await rawOf(`dm-l${B}-library`, "/echospell/level-1/group-a/"));
+assert.equal(await mod.unsealed((await rawOf(`dm-l${A}-library`, "/echospell/level-1/group-a/")).clone(), (await mod.currentLearner()).key), null,
+  "Bo's key can't open Ada's pages");
+// the shared recordings stayed: Bo didn't fetch them again
+assert.equal(stores.get("dm-library-media").m.size, 3);
+// Bo answers offline; his work waits in his own queue
+online = false;
+await mod.queueProgress(new Request(ORIGIN + "/echospell/l/g/complete/", { method: "POST", body: "csrfmiddlewaretoken=old&done=bo",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" } }));
+assert.equal(dbs.get(`dm-l${B}-queue`).rows.size, 1);
+// Ada is back: her lessons are still here, only the front pages come again
+await mod.clearLearnerData();
+online = true;
+signedIn = learnerFor(A);
+manifest = list({ learner: { id: A, secret: secretFor(A) } });
+fetched.length = 0;
+await mod.runDownload({ media: true });
+assert.deepEqual(pagesFetched().sort(), ["/accounts/dashboard/", "/tricks/lessons/locked/"], "her lessons were kept");
+// with Ada signed in, Bo's waiting work is not sent under her name
+const sentAs = [];
+globalThis.fetch = async (input, init) => {
+  if (String(input).includes("/offline-sync/learner/")) return new Response(JSON.stringify(signedIn), { status: 200 });
+  sentAs.push(signedIn.id);
+  return new Response("ok", { status: 200 });
+};
+await mod.flushProgressQueue();
+assert.deepEqual(sentAs, [], "nothing of Bo's went out as Ada");
+assert.equal(dbs.get(`dm-l${B}-queue`).rows.size, 1, "it waits for Bo");
+// Bo signs in again: his work goes, as him, with his fresh token
+await mod.clearLearnerData();
+signedIn = learnerFor(B);
+const bodies = [];
+globalThis.fetch = async (input, init) => {
+  if (String(input).includes("/offline-sync/learner/")) return new Response(JSON.stringify(signedIn), { status: 200 });
+  sentAs.push(signedIn.id);
+  bodies.push(new TextDecoder().decode(init.body));
+  return new Response("ok", { status: 200 });
+};
+await mod.flushProgressQueue();
+assert.deepEqual(sentAs, [B]);
+assert.equal(bodies[0], "csrfmiddlewaretoken=fresh-22&done=bo");
+assert.equal(dbs.get(`dm-l${B}-queue`).rows.size, 0);
+globalThis.fetch = realFetch;
+// a page that says someone else is signed in stops the sync, rather than filing it under the wrong learner
+site["/echospell/level-1/group-a/"] = `<html data-learner="99"><audio src="${R2}/a.mp3?sig=2"></audio>`;
+manifest = list({ learner: { id: B, secret: secretFor(B) } });
+manifest.pages[2].v = "r1.someone-else";
+const mixed = await mod.runDownload({ media: true });
+assert.equal(mixed.stopped, "switched");
+site["/echospell/level-1/group-a/"] = `<img src="${R2}/pic.png?X-Amz-Signature=1&amp;X-Amz-Date=2"><audio src="${R2}/a.mp3?sig=2"></audio>`;
+// a recording sent with a form gets the fresh token, and its bytes stay exactly as they were
+const formBoundary = "XyZ";
+const formAudio = Uint8Array.from([0, 13, 10, 255, 128, 13, 10, 7]);
+const formHead = new TextEncoder().encode(`--${formBoundary}\r\nContent-Disposition: form-data; name="csrfmiddlewaretoken"\r\n\r\nOLDTOKEN\r\n--${formBoundary}\r\nContent-Disposition: form-data; name="rec"\r\n\r\n`);
+const formTail = new TextEncoder().encode(`\r\n--${formBoundary}--\r\n`);
+const formBytes = new Uint8Array([...formHead, ...formAudio, ...formTail]);
+const swapped = mod.withToken({ headers: { "content-type": `multipart/form-data; boundary=${formBoundary}` } }, formBytes.buffer, "NEWTOKEN1");
+const formText = Buffer.from(swapped.body).toString("latin1");
+assert.ok(formText.includes("\r\n\r\nNEWTOKEN1\r\n") && !formText.includes("OLDTOKEN"));
+assert.deepEqual([...swapped.body.slice(swapped.body.length - formTail.length - formAudio.length, swapped.body.length - formTail.length)], [...formAudio], "the recording is untouched");
+// a crowded tablet: the learners not seen for longest give up their lessons (not their waiting work)
+for (let n = 0; n < 12; n++) await mod.useLearner({ id: String(100 + n), secret: secretFor(String(100 + n)) });
+assert.ok(!stores.has(`dm-l${A}-library`), "the longest unseen learner's lessons make room");
+signedIn = learnerFor(B);
+manifest = list({ learner: { id: B, secret: secretFor(B) } });
+await mod.runDownload({ media: true });
+// updating the app keeps every learner's stores
+let reactivated;
+listeners.activate[0]({ waitUntil: (work) => { reactivated = work; } });
+await reactivated;
+assert.ok(stores.has(`dm-l${B}-library`), "learners' stores survive an update");
+signedIn = null;
+manifest = list();
+console.log("learners ok");
 console.log("ALL SERVICE WORKER TESTS PASSED");

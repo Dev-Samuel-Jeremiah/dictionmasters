@@ -29,6 +29,10 @@
   "use strict";
 
   var DB = "dm-offline-video";
+  // Who is signed in (templates/base.html). Copies are shared on a device, but
+  // each remembers the learner whose licence it holds, so one learner's
+  // check-in never removes another's.
+  var WHO = document.documentElement.getAttribute("data-learner") || "";
   var VERSION = 1;
   var PIECE = 4 * 1024 * 1024;               // written in 4MB pieces
   var db = null;
@@ -158,7 +162,7 @@
           record = {
             id: entry.ticketId, licence: allowed.id, title: allowed.title, size: allowed.size,
             type: allowed.content_type, expires: allowed.expires_at, watch: allowed.watch_url,
-            page: location.pathname, pieces: carryOn ? partial.pieces : 0, device: device
+            page: location.pathname, pieces: carryOn ? partial.pieces : 0, device: device, learner: WHO
           };
           var clear = carryOn || !partial ? Promise.resolve() : dropPieces(record.id, partial.pieces + 1);
           return clear.then(function () {
@@ -331,7 +335,7 @@
       request.onsuccess = function () {
         var store = request.result;
         try {
-          var found = store.transaction("keys", "readonly").objectStore("keys").get("access");
+          var found = store.transaction("keys", "readonly").objectStore("keys").get(WHO ? "access:" + WHO : "access");
           found.onsuccess = function () { store.close(); resolve(found.result || null); };
           found.onerror = function () { store.close(); resolve(null); };
         } catch (error) {
@@ -365,6 +369,7 @@
         return ask("videos", "getAll").then(function (kept) {
           var chain = Promise.resolve();
           (kept || []).forEach(function (record) {
+            if ((record.learner || WHO) !== WHO) return;        // another learner's licence: theirs to renew
             var row = live[record.licence];
             if (!row || !row.live) {
               chain = chain.then(function () { return forget(record); });
@@ -593,8 +598,12 @@
 
   function saveAll(refs, hooks) {
     return ask("videos", "getAll").then(function (kept) {
+      // A copy whose licence has run out (another learner's who hasn't been
+      // back) is licensed again for this learner, rather than skipped.
       var have = {};
-      (kept || []).forEach(function (record) { have[record.id] = true; });
+      (kept || []).forEach(function (record) {
+        if (!record.expires || new Date(record.expires).getTime() > Date.now()) have[record.id] = true;
+      });
       var wanted = refs.filter(function (ref) { return !have[ref]; });
       var total = refs.length, done = total - wanted.length;
       function next() {
@@ -641,7 +650,7 @@
         var record = {
           id: entry.ticketId, licence: allowed.id, title: allowed.title, size: allowed.size,
           type: allowed.content_type, expires: allowed.expires_at, watch: allowed.watch_url,
-          page: entry.page || "/videos/offline/", pieces: 0, device: device
+          page: entry.page || "/videos/offline/", pieces: 0, device: device, learner: WHO
         };
         var chain = Promise.resolve();
         for (var n = 0; n < pieceCount; n++) {

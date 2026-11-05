@@ -26,6 +26,11 @@
  *                gets nothing readable. It isn't DRM: the key has to be on the
  *                device for lessons to open offline, so someone determined,
  *                on a device they've broken into, could still reach it.
+ *   learners     on a shared tablet each learner's pages, their list and their
+ *                waiting progress are kept apart, sealed with that learner's
+ *                own key (from the server: apps/offline/views.py, learner),
+ *                and locked again when they log out. Pictures, recordings and
+ *                videos are shared: there's nothing personal in them.
  *   access       kept lessons open offline until the learner's plan ends, or
  *                for OFFLINE_ACCESS_DAYS (Django settings) after the app last
  *                checked in, whichever comes first, connected or not. Past
@@ -65,6 +70,8 @@ const LIBRARY_STATIC = "dm-library-static";
 const LIBRARY_DB = "dm-library-index";
 const KEY_DB = "dm-offline-key";
 const MANIFEST_URL = "/offline-sync/manifest/";
+const LEARNER_URL = "/offline-sync/learner/";
+const MAX_LEARNERS = 12;      // learners whose lessons one device keeps; the longest unseen go first
 
 // Learner pages and progress are private to this browser profile. They are
 // removed when the learner logs out. Account entry, commerce and staff pages
@@ -127,7 +134,7 @@ self.addEventListener("activate", (event) => {
       const keepStatic = new Set(oldStatic.slice(-4));
       await Promise.all(names.filter((name) => name.startsWith("dm-") && name !== CACHE &&
         name !== PAGES_CACHE && name !== MEDIA_CACHE && name !== LIBRARY_CACHE && name !== LIBRARY_MEDIA &&
-        name !== LIBRARY_STATIC && !keepStatic.has(name)).map((name) => caches.delete(name)));
+        name !== LIBRARY_STATIC && !/^dm-l\d+-/.test(name) && !keepStatic.has(name)).map((name) => caches.delete(name)));
       await self.clients.claim();
     })
   );
@@ -173,24 +180,26 @@ function sealKey() {
   return sealKeyMade;
 }
 
-async function sealBytes(bytes) {
+// Sealed with a learner's own key (their pages and progress), or else this
+// device's (pictures, recordings, and anything from before learners).
+async function sealBytes(bytes, key) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const secret = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await sealKey(), bytes);
+  const secret = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key || await sealKey(), bytes);
   const out = new Uint8Array(iv.length + secret.byteLength);
   out.set(iv);
   out.set(new Uint8Array(secret), iv.length);
   return out;
 }
 
-async function openBytes(bytes) {
+async function openBytes(bytes, key) {
   const all = new Uint8Array(bytes);
-  return crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12) }, await sealKey(), all.slice(12));
+  return crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12) }, key || await sealKey(), all.slice(12));
 }
 
 // The original type travels beside the sealed bytes: "text/html" gives
 // nothing away, and the browser needs it back to show the page.
-async function sealed(response) {
-  return new Response(await sealBytes(await response.arrayBuffer()), {
+async function sealed(response, key) {
+  return new Response(await sealBytes(await response.arrayBuffer(), key), {
     status: 200, headers: { "X-DM-Type": response.headers.get("Content-Type") || "application/octet-stream" },
   });
 }
@@ -198,10 +207,10 @@ async function sealed(response) {
 // What was stored, readable again; null if nothing was, if it can't be
 // opened (the key has gone), or if offline access has run out — each
 // treated just like not having it.
-async function unsealed(kept) {
+async function unsealed(kept, key) {
   if (!kept || !(await accessOpen())) return null;
   try {
-    const bytes = await openBytes(await kept.arrayBuffer());
+    const bytes = await openBytes(await kept.arrayBuffer(), key);
     return new Response(bytes, { status: 200, headers: {
       "Content-Type": kept.headers.get("X-DM-Type") || "application/octet-stream",
       "Content-Length": String(bytes.byteLength), "Accept-Ranges": "bytes",
@@ -229,20 +238,113 @@ async function partOf(request, response) {
   } });
 }
 
+// ---------------------------------------------------------------- learners
+
+// {p: "learner", id, key}: the learner whose stores are open, with their key
+// (usable, never readable). Set when the site says who's signed in; gone
+// when they log out, which locks their stores until they're back.
+let learnerNow;
+
+function fromBase64(text) {
+  const raw = atob(text);
+  return Uint8Array.from(raw, (char) => char.charCodeAt(0));
+}
+
+async function currentLearner() {
+  if (learnerNow === undefined) learnerNow = (await keyStore("readonly", (store) => store.get("learner")).catch(() => null)) || null;
+  return learnerNow;
+}
+
+// Where a learner's things are kept; with nobody signed in, the device's own
+// stores (and anything from before learners).
+function storesOf(learner) {
+  if (!learner) {
+    return { id: null, key: null, pages: PAGES_CACHE, library: LIBRARY_CACHE, index: LIBRARY_DB, queue: QUEUE_DB, access: "access" };
+  }
+  const name = `dm-l${learner.id}`;
+  return { id: String(learner.id), key: learner.key, pages: `${name}-pages`, library: `${name}-library`,
+           index: `${name}-index`, queue: `${name}-queue`, access: `access:${learner.id}` };
+}
+
+async function stores() {
+  return storesOf(await currentLearner());
+}
+
+async function knownLearners() {
+  const kept = await keyStore("readonly", (store) => store.get("learners")).catch(() => null);
+  return (kept && kept.ids) || [];
+}
+
+// Who the site says is signed in, with their key; null offline or signed out.
+async function fetchLearner() {
+  try {
+    const response = await fetch(LEARNER_URL, { credentials: "include", headers: { Accept: "application/json" } });
+    if (!response.ok) return null;
+    const answer = await response.json();
+    return answer.ok ? answer : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+// Open this learner's stores (and lock whoever's were open).
+async function useLearner(info) {
+  const current = await currentLearner();
+  if (current && String(current.id) === String(info.id)) return current;
+  const key = await crypto.subtle.importKey("raw", fromBase64(info.secret), "AES-GCM", false, ["encrypt", "decrypt"]);
+  learnerNow = { p: "learner", id: String(info.id), key };
+  await keyStore("readwrite", (store) => store.put(learnerNow));
+  const ids = [learnerNow.id, ...(await knownLearners()).filter((id) => id !== learnerNow.id)];
+  // Room for so many learners' lessons: the longest unseen give theirs up
+  // (their waiting progress stays, to be sent when they're back).
+  for (const id of ids.slice(MAX_LEARNERS)) {
+    const old = storesOf({ id });
+    await caches.delete(old.pages);
+    await caches.delete(old.library);
+    await indexClear(old.index);
+  }
+  await keyStore("readwrite", (store) => store.put({ p: "learners", ids }));
+  return learnerNow;
+}
+
+async function lockLearner() {
+  learnerNow = null;
+  await keyStore("readwrite", (store) => store.delete("learner")).catch(() => {});
+}
+
+// Whose page is this? The site marks every signed-in page with the learner
+// (templates/base.html, data-learner). A page for someone else than the
+// learner whose stores are open (they signed in as someone else) opens
+// theirs; a page with no mark goes where the current stores are.
+async function storesForPage(html) {
+  const mark = /data-learner="(\d+)"/.exec(html.slice(0, 4000));
+  if (!mark) return stores();
+  const me = await currentLearner();
+  if (me && me.id === mark[1]) return storesOf(me);
+  const who = await fetchLearner();
+  return who && String(who.id) === mark[1] ? storesOf(await useLearner(who)) : null;
+}
+
 // ---------------------------------------------------------------- access
 
-// {p: "access", until, seen}: open until when, and the latest time this
-// device has shown. Winding the clock back doesn't reopen anything: the
-// later of now and "seen" is what counts. No record yet (nothing synced, or
-// pages kept before this existed) means open.
+// {p: "access", until, seen}, one per learner: open until when, and the
+// latest time this device has shown. Winding the clock back doesn't reopen
+// anything: the later of now and "seen" is what counts. No record yet
+// (nothing synced, or pages kept before this existed) means open.
 let accessRecord;
+let accessName;
 
 async function readAccess() {
-  if (accessRecord === undefined) accessRecord = (await keyStore("readonly", (store) => store.get("access")).catch(() => null)) || null;
+  const name = (await stores()).access;
+  if (accessName !== name) {
+    accessName = name;
+    accessRecord = (await keyStore("readonly", (store) => store.get(name)).catch(() => null)) || null;
+  }
   return accessRecord;
 }
 
 async function writeAccess(record) {
+  accessName = record.p;
   accessRecord = record;
   await keyStore("readwrite", (store) => store.put(record)).catch(() => {});
 }
@@ -253,7 +355,7 @@ async function grantAccess(days, planEnds) {
   const now = Date.now();
   let until = days > 0 ? now + days * 86400000 : 0;
   if (until && typeof planEnds === "number") until = Math.min(until, planEnds);
-  await writeAccess({ p: "access", until, seen: now });
+  await writeAccess({ p: (await stores()).access, until, seen: now });
 }
 
 async function accessOpen() {
@@ -291,25 +393,32 @@ async function trimCache(name, max) {
 async function keepPage(request, response) {
   // "basic": fetched from this site; "default": a page a download stored.
   if (!response.ok || (response.type !== "basic" && response.type !== "default")) return;
-  const cache = await caches.open(PAGES_CACHE);
-  await cache.put(request, await sealed(response.clone()));
-  trimCache(PAGES_CACHE, MAX_PAGES);
+  const html = await response.clone().text();
+  const where = await storesForPage(html);
+  if (!where) return;
+  const cache = await caches.open(where.pages);
+  await cache.put(request, await sealed(new Response(html, {
+    headers: { "Content-Type": response.headers.get("Content-Type") || "text/html; charset=utf-8" },
+  }), where.key));
+  trimCache(where.pages, MAX_PAGES);
 }
 
 async function cachedPath(pathname) {
-  const library = await caches.open(LIBRARY_CACHE);
-  const synced = await unsealed(await library.match(self.location.origin + pathname));
+  const where = await stores();
+  const library = await caches.open(where.library);
+  const synced = await unsealed(await library.match(self.location.origin + pathname), where.key);
   if (synced) return synced;
-  const cache = await caches.open(PAGES_CACHE);
+  const cache = await caches.open(where.pages);
   const keys = await cache.keys();
   const key = keys.find((item) => new URL(item.url).pathname === pathname);
-  return key ? unsealed(await cache.match(key)) : null;
+  return key ? unsealed(await cache.match(key), where.key) : null;
 }
 
 async function cachedPage(request) {
-  const cache = await caches.open(PAGES_CACHE);
+  const where = await stores();
+  const cache = await caches.open(where.pages);
   const pathname = new URL(request.url).pathname;
-  const page = (await unsealed(await cache.match(request, { ignoreSearch: true }))) || (await cachedPath(pathname));
+  const page = (await unsealed(await cache.match(request, { ignoreSearch: true }), where.key)) || (await cachedPath(pathname));
   if (page) return page;
   // The app and the installed web app open on "/", which only redirects:
   // offline, open the learner's dashboard instead.
@@ -317,11 +426,15 @@ async function cachedPage(request) {
   return null;
 }
 
+// "Remove downloads": every learner's on this device, and the shared files.
+// Waiting progress stays, to be sent.
 async function clearLibrary() {
-  await caches.delete(LIBRARY_CACHE);
+  for (const where of [storesOf(null), ...(await knownLearners()).map((id) => storesOf({ id }))]) {
+    await caches.delete(where.library);
+    await indexClear(where.index);
+  }
   await caches.delete(LIBRARY_MEDIA);
   await caches.delete(LIBRARY_STATIC);
-  await indexClear();
   await keyStore("readwrite", (store) => store.delete("pack-keys")).catch(() => {});
 }
 
@@ -333,17 +446,18 @@ async function packKeys() {
   return (kept && kept.keys) || [];
 }
 
-// Logging out: everything with this learner's name or work in it goes. The
-// pages show who's signed in, so they go too, and they're quick to fetch
-// again. The library's pictures and audio stay, with the key that opens
-// them: the next sync finds them already here, and removes any that the
-// next learner on this device doesn't need.
+// Logging out: the learner's own stores are locked, not deleted, so their
+// lessons and waiting progress are there when they're back, and nobody else
+// on this device can open them. Pages kept from before learners (the
+// device's own stores) go, as they always did. Pictures and recordings stay:
+// there's nothing personal in them.
 async function clearLearnerData() {
   await caches.delete(PAGES_CACHE);
   await caches.delete(MEDIA_CACHE);
   await caches.delete(LIBRARY_CACHE);
-  await indexClear();
-  await clearProgressQueue();
+  await indexClear(LIBRARY_DB);
+  await clearProgressQueue(QUEUE_DB);
+  await lockLearner();
 }
 
 // ---------------------------------------------------------------- media
@@ -488,9 +602,10 @@ async function tellClients(message) {
 
 // ---------------------------------------------------------------- library
 
-function openIndex() {
+async function openIndex(name) {
+  name = name || (await stores()).index;
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(LIBRARY_DB, 1);
+    const request = indexedDB.open(name, 1);
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains("pages")) request.result.createObjectStore("pages", { keyPath: "p" });
     };
@@ -499,8 +614,8 @@ function openIndex() {
   });
 }
 
-async function indexChange(change) {
-  const db = await openIndex();
+async function indexChange(change, name) {
+  const db = await openIndex(name);
   await new Promise((resolve, reject) => {
     const tx = db.transaction("pages", "readwrite");
     change(tx.objectStore("pages"));
@@ -512,10 +627,10 @@ async function indexChange(change) {
 
 const indexPut = (entry) => indexChange((store) => store.put(entry));
 const indexDelete = (paths) => indexChange((store) => paths.forEach((path) => store.delete(path)));
-const indexClear = () => indexChange((store) => store.clear()).catch(() => {});
+const indexClear = (name) => indexChange((store) => store.clear(), name).catch(() => {});
 
-async function indexAll() {
-  const db = await openIndex();
+async function indexAll(name) {
+  const db = await openIndex(name);
   const entries = await new Promise((resolve, reject) => {
     const request = db.transaction("pages", "readonly").objectStore("pages").getAll();
     request.onsuccess = () => resolve(request.result || []);
@@ -549,6 +664,7 @@ async function newDownload(options) {
   if (response.status === 401) return stop("signed-out");
   if (!response.ok) return stop("error");
   const manifest = await response.json();
+  if (manifest.learner) await useLearner(manifest.learner);
   await grantAccess(manifest.access ? (manifest.offline_days ?? 90) : 0, manifest.access_ends);
   // Their access has ended: nothing to fetch, and what's here stays, closed.
   if (!manifest.access) return stop("no-access");
@@ -607,11 +723,14 @@ async function syncPage(state, [path, version]) {
     return;
   }
   const html = await response.text();
+  const where = await stores();
+  const mark = /data-learner="(\d+)"/.exec(html.slice(0, 4000));
+  if (mark && mark[1] !== where.id) { state.stopped = "switched"; return; }     // someone else signed in meanwhile
   // Stored under the address that was asked for, so it opens offline even
   // if the server redirected to it (a dashboard, say).
-  await (await caches.open(LIBRARY_CACHE)).put(address.origin + address.pathname, await sealed(new Response(html, {
+  await (await caches.open(where.library)).put(address.origin + address.pathname, await sealed(new Response(html, {
     status: 200, headers: { "Content-Type": response.headers.get("Content-Type") || "text/html; charset=utf-8" },
-  })));
+  }), where.key));
   state.pages += 1;
   const statics = staticFilesIn(html);
   await Promise.all(statics.map(downloadStatic));
@@ -643,14 +762,20 @@ async function settlePending() {
   }
 }
 
-// Pages that have gone, and the files only they used.
+// Every learner's list on this device, and the one from before learners.
+async function everyonesEntries() {
+  const names = [LIBRARY_DB, ...(await knownLearners()).map((id) => storesOf({ id }).index)];
+  return (await Promise.all(names.map((name) => indexAll(name).catch(() => [])))).flat();
+}
+
+// Pages that have gone, and the files no learner on this device uses.
 async function tidyLibrary(state) {
   if (state.stale.length) {
-    const cache = await caches.open(LIBRARY_CACHE);
+    const cache = await caches.open((await stores()).library);
     await Promise.all(state.stale.map((path) => cache.delete(self.location.origin + path)));
     await indexDelete(state.stale);
   }
-  const entries = await indexAll();
+  const entries = await everyonesEntries();
   const used = new Set([...entries.flatMap((entry) => entry.media || []), ...await packKeys()]);
   const media = await caches.open(LIBRARY_MEDIA);
   await Promise.all((await media.keys()).filter((key) => !used.has(key.url)).map((key) => media.delete(key)));
@@ -699,9 +824,9 @@ async function runDownload(options) {
 
 // ------------------------------------------------------------- progress
 
-function openQueue() {
+function openQueue(name = QUEUE_DB) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(QUEUE_DB, 1);
+    const request = indexedDB.open(name, 1);
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains("progress")) {
         request.result.createObjectStore("progress", { keyPath: "id", autoIncrement: true });
@@ -714,10 +839,11 @@ function openQueue() {
 
 async function queueProgress(request) {
   // Kept as raw bytes, so forms with a recording or a JSON answer survive too.
-  const body = await sealBytes(await request.clone().arrayBuffer());
+  const where = await stores();
+  const body = await sealBytes(await request.clone().arrayBuffer(), where.key);
   const headers = {};
   request.headers.forEach((value, key) => { headers[key] = value; });
-  const db = await openQueue();
+  const db = await openQueue(where.queue);
   await new Promise((resolve, reject) => {
     const tx = db.transaction("progress", "readwrite");
     tx.objectStore("progress").add({ url: request.url, method: request.method, headers, body,
@@ -730,7 +856,7 @@ async function queueProgress(request) {
 }
 
 async function countQueue() {
-  const db = await openQueue().catch(() => null);
+  const db = await openQueue((await stores()).queue).catch(() => null);
   if (!db) return 0;
   const count = await new Promise((resolve) => {
     const request = db.transaction("progress", "readonly").objectStore("progress").count();
@@ -783,56 +909,101 @@ function needsInternetPage() {
 
 let flushing = null;
 
+// Signing in renews the site's security token, so progress kept before it
+// would be refused (and lost). It's sent with the current token instead.
+const CSRF_FIELD = new TextEncoder().encode('name="csrfmiddlewaretoken"\r\n\r\n');
+
+function withToken(job, body, token) {
+  const headers = { ...job.headers };
+  if ("x-csrftoken" in headers) headers["x-csrftoken"] = token;
+  const type = (headers["content-type"] || "").toLowerCase();
+  let bytes = new Uint8Array(body);
+  if (type.startsWith("application/x-www-form-urlencoded")) {
+    const form = new URLSearchParams(new TextDecoder().decode(bytes));
+    if (form.has("csrfmiddlewaretoken")) {
+      form.set("csrfmiddlewaretoken", token);
+      bytes = new TextEncoder().encode(form.toString());
+    }
+  } else if (type.startsWith("multipart/form-data")) {
+    // Swap just the token's own part, byte for byte; a recording stays as it is.
+    const at = bytes.findIndex((_, i) => CSRF_FIELD.every((b, j) => bytes[i + j] === b));
+    if (at >= 0) {
+      const start = at + CSRF_FIELD.length;
+      let end = start;
+      while (end < bytes.length && bytes[end] !== 13) end += 1;
+      const swapped = new TextEncoder().encode(token);
+      const out = new Uint8Array(bytes.length - (end - start) + swapped.length);
+      out.set(bytes.slice(0, start));
+      out.set(swapped, start);
+      out.set(bytes.slice(end), start + swapped.length);
+      bytes = out;
+    }
+  }
+  return { headers, body: bytes };
+}
+
 async function flushProgressQueue() {
   if (flushing) return flushing;
   flushing = (async () => {
-    const db = await openQueue();
-    const jobs = await new Promise((resolve, reject) => {
-      const tx = db.transaction("progress", "readonly");
-      const request = tx.objectStore("progress").getAll();
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
-    const remove = (id) => new Promise((resolve, reject) => {
-      const tx = db.transaction("progress", "readwrite");
-      tx.objectStore("progress").delete(id);
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
-    let synced = 0;
-    let dropped = 0;
-    for (const job of jobs) {
-      let body;
-      try {
-        body = await openBytes(job.body);
-      } catch (error) {  // sealed with a key that's gone: it can't be sent
-        dropped += 1;
-        await remove(job.id);
-        continue;
-      }
-      let response;
-      try {
-        response = await fetch(job.url, { method: job.method, headers: job.headers, body,
-          credentials: "include", redirect: "follow" });
-      } catch (error) { break; } // still offline: try again later
-      // Signed out meanwhile: keep everything until they sign back in.
-      if (new URL(response.url || job.url).pathname.startsWith("/accounts/login/")) break;
-      if (response.status >= 500) break; // the server is struggling: try again later
-      // Sent (2xx/3xx), or refused for good (4xx: the lesson was removed,
-      // the attempt had closed...). Either way it must not block the rest.
-      if (!response.ok && response.status >= 400) dropped += 1;
-      else synced += 1;
-      await remove(job.id);
-    }
-    db.close();
-    const pending = jobs.length - synced - dropped;
-    await tellClients({ type: "learning-sync", synced, pending, dropped });
+    // Who is signed in here, and their token. Each learner's progress goes
+    // only while they're the one signed in: never under someone else's name.
+    const who = await fetchLearner();
+    if (!who) return;
+    const me = await currentLearner();
+    const mine = me && me.id === String(who.id) ? storesOf(me) : storesOf(await useLearner(who));
+    const sent = [await sendQueue(mine.queue, mine.key, who.token), await sendQueue(QUEUE_DB, null, who.token)];
+    const total = (field) => sent.reduce((sum, one) => sum + one[field], 0);
+    await tellClients({ type: "learning-sync", synced: total("synced"), pending: total("pending"), dropped: total("dropped") });
   })().finally(() => { flushing = null; });
   return flushing;
 }
 
-async function clearProgressQueue() {
-  const db = await openQueue().catch(() => null);
+async function sendQueue(name, key, token) {
+  const db = await openQueue(name);
+  const jobs = await new Promise((resolve, reject) => {
+    const tx = db.transaction("progress", "readonly");
+    const request = tx.objectStore("progress").getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+  const remove = (id) => new Promise((resolve, reject) => {
+    const tx = db.transaction("progress", "readwrite");
+    tx.objectStore("progress").delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  let synced = 0;
+  let dropped = 0;
+  for (const job of jobs) {
+    let body;
+    try {
+      body = await openBytes(job.body, key);
+    } catch (error) {  // sealed with a key that's gone: it can't be sent
+      dropped += 1;
+      await remove(job.id);
+      continue;
+    }
+    const signed = withToken(job, body, token);
+    let response;
+    try {
+      response = await fetch(job.url, { method: job.method, headers: signed.headers, body: signed.body,
+        credentials: "include", redirect: "follow" });
+    } catch (error) { break; } // still offline: try again later
+    // Signed out meanwhile: keep everything until they sign back in.
+    if (new URL(response.url || job.url).pathname.startsWith("/accounts/login/")) break;
+    if (response.status >= 500) break; // the server is struggling: try again later
+    // Sent (2xx/3xx), or refused for good (4xx: the lesson was removed,
+    // the attempt had closed...). Either way it must not block the rest.
+    if (!response.ok && response.status >= 400) dropped += 1;
+    else synced += 1;
+    await remove(job.id);
+  }
+  db.close();
+  return { synced, dropped, pending: jobs.length - synced - dropped };
+}
+
+async function clearProgressQueue(name) {
+  const db = await openQueue(name).catch(() => null);
   if (!db) return;
   await new Promise((resolve) => {
     const tx = db.transaction("progress", "readwrite");
@@ -858,7 +1029,8 @@ self.addEventListener("message", (event) => {
 
   if (data === "offline-pages" && port) {
     event.waitUntil((async () => {
-      const keys = [...await (await caches.open(PAGES_CACHE)).keys(), ...await (await caches.open(LIBRARY_CACHE)).keys()];
+      const where = await stores();
+      const keys = [...await (await caches.open(where.pages)).keys(), ...await (await caches.open(where.library)).keys()];
       const seen = new Set();
       const pages = [];
       keys.forEach((key) => {
@@ -877,9 +1049,10 @@ self.addEventListener("message", (event) => {
     event.waitUntil((async () => {
       const count = async (name) => (await (await caches.open(name)).keys()).length;
       const access = await readAccess();
+      const where = await stores();
       port.postMessage({
         until: access ? access.until : null,
-        pages: (await count(PAGES_CACHE)) + (await count(LIBRARY_CACHE)),
+        pages: (await count(where.pages)) + (await count(where.library)),
         media: (await count(MEDIA_CACHE)) + (await count(LIBRARY_MEDIA)),
         pending: await countQueue(),
       });
@@ -931,6 +1104,7 @@ self.addEventListener("message", (event) => {
   }
   if (data && data.type === "offline-clear") {
     event.waitUntil((async () => {
+      await caches.delete((await stores()).pages);
       await caches.delete(PAGES_CACHE);
       await caches.delete(MEDIA_CACHE);
       await clearLibrary();

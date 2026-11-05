@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from apps.billing.access import has_access
 from apps.videos import links
 
-from .catalog import levels_for, manifest, may_keep_video
+from .catalog import learner_secret, levels_for, manifest, may_keep_video
 from .models import LessonPack
 
 
@@ -14,6 +14,20 @@ def offline_manifest(request):
     if not request.user.is_authenticated:
         return JsonResponse({"signed_in": False}, status=401)
     response = JsonResponse(manifest(request.user))
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+def learner(request):
+    """Who is signed in on this device, for the app's per-learner stores: their
+    number, their key, and a fresh security token to send waiting progress
+    with (signing in renews the token, so older progress would be refused)."""
+    from django.middleware.csrf import get_token
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False}, status=401)
+    response = JsonResponse({"ok": True, "id": request.user.pk, "secret": learner_secret(request.user),
+                             "token": get_token(request)})
     response["Cache-Control"] = "private, no-store"
     return response
 

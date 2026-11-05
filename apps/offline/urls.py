@@ -6,6 +6,7 @@ app_name = "offline"
 
 urlpatterns = [
     path("manifest/", views.offline_manifest, name="manifest"),
+    path("learner/", views.learner, name="learner"),
     path("video/<str:ref>/", views.video_ticket, name="video_ticket"),
     path("pack/<int:pk>/", views.pack_key, name="pack_key"),
 ]

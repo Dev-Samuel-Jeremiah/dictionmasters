@@ -372,6 +372,19 @@ def _open_tools(user):
     return {tool["url_name"] for tool in tools_for(user)}
 
 
+def learner_secret(user):
+    """The key a learner's pages and waiting progress are sealed with on
+    their devices (templates/pwa/sw.js, "learners"): theirs alone, made from
+    the site's secret, so it never needs storing and survives a password
+    reset. Base64."""
+    import base64
+    import hmac
+    from hashlib import sha256
+
+    raw = hmac.new(settings.SECRET_KEY.encode(), f"dm-offline-learner:{user.pk}".encode(), sha256).digest()
+    return base64.b64encode(raw).decode()
+
+
 def plan_ends(user):
     """When this person's access to the lessons ends: their own plan's end,
     or their school's. None when it doesn't end: staff, the paywall switched
@@ -402,14 +415,16 @@ def manifest(user):
     reach every device."""
     from apps.billing.access import has_access
 
+    learner = {"id": user.pk, "secret": learner_secret(user)}
     if not has_access(user):
-        return {"access": False, "offline_days": 0, "pages": [], "videos": []}
+        return {"access": False, "offline_days": 0, "learner": learner, "pages": [], "videos": []}
     tools = _open_tools(user)
     found = catalog(levels_for(user), tools)
     round_ = settings.OFFLINE_PAGES_VERSION
     ready = settings.STORAGE_CORS_READY
     return {
         "access": True,
+        "learner": learner,
         "offline_days": settings.OFFLINE_ACCESS_DAYS,
         "access_ends": int(ends.timestamp() * 1000) if (ends := plan_ends(user)) else None,
         "need_mb": settings.OFFLINE_MEDIA_NEED_MB,

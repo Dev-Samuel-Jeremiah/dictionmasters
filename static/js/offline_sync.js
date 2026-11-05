@@ -29,10 +29,14 @@
 
   if (!("serviceWorker" in navigator) || !window.MessageChannel) return;
 
-  var KEY_SETTINGS = "dm-offline-settings"; // {media: bool, auto: bool}
-  var KEY_RUN = "dm-offline-run";           // an unfinished download
-  var KEY_LAST = "dm-offline-last";         // when the last one finished
-  var KEY_NEXT = "dm-offline-next";         // when the next one is due
+  // One set per learner: on a shared tablet each has their own lessons, so
+  // their own schedule (templates/pwa/sw.js, "learners").
+  var WHO = document.documentElement.getAttribute("data-learner") || "";
+  var FOR = WHO ? ":" + WHO : "";
+  var KEY_SETTINGS = "dm-offline-settings" + FOR; // {media: bool, auto: bool}
+  var KEY_RUN = "dm-offline-run" + FOR;           // an unfinished download
+  var KEY_LAST = "dm-offline-last" + FOR;         // when the last one finished
+  var KEY_NEXT = "dm-offline-next" + FOR;         // when the next one is due
   var REFRESH_EVERY = 12 * 60 * 60 * 1000;
   // Each device picks its own time, so they don't all reach the server at once.
   var REFRESH_SPREAD = 6 * 60 * 60 * 1000;
@@ -144,7 +148,7 @@
 
   // ------------------------------------------------ in the background
   var inApp = document.documentElement.hasAttribute("data-native-app");
-  var KEY_ESSENTIALS = "dm-offline-essentials"; // when the mobile-data top-up last ran
+  var KEY_ESSENTIALS = "dm-offline-essentials" + FOR; // when the mobile-data top-up last ran
   var KEY_ASKED_TO_STAY = "dm-offline-persist";
 
   // The note in the corner of the app: how far a big download has got.

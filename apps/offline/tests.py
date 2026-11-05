@@ -1,5 +1,6 @@
 """What a learner's app is told to keep, and when a page counts as changed."""
 
+import base64
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -20,7 +21,7 @@ from apps.learning_tools.models import ToolLevels
 from apps.videos import links
 from apps.videos.models import OfflineVideoLicense, StudentDevice
 
-from .catalog import build, levels_for, manifest, plan_ends
+from .catalog import build, learner_secret, levels_for, manifest, plan_ends
 
 User = get_user_model()
 
@@ -282,6 +283,34 @@ class VideoTests(ManifestCase):
         self.assertEqual(many, few)
         self.assertEqual(len(answer["licenses"]), 7)
         self.assertTrue(all(row["live"] for row in answer["licenses"]))
+
+
+class LearnerTests(ManifestCase):
+    def test_who_is_signed_in_with_their_key_and_a_fresh_token(self):
+        self.client.force_login(self.pupil)
+        answer = self.client.get("/offline-sync/learner/")
+        self.assertIn("no-store", answer["Cache-Control"])
+        found = answer.json()
+        self.assertEqual(found["id"], self.pupil.pk)
+        self.assertEqual(len(base64.b64decode(found["secret"])), 32)
+        self.assertTrue(found["token"])
+        self.assertEqual(manifest(self.pupil)["learner"], {"id": self.pupil.pk, "secret": found["secret"]})
+
+    def test_each_learner_has_their_own_key_and_it_lasts(self):
+        other = person("other@example.com", role="student", level="Level 1")
+        self.assertNotEqual(learner_secret(self.pupil), learner_secret(other))
+        self.pupil.set_password("a-new-password-9")                     # a password reset keeps it
+        self.assertEqual(learner_secret(self.pupil), learner_secret(User.objects.get(pk=self.pupil.pk)))
+
+    def test_signed_out_gets_nothing(self):
+        self.assertEqual(self.client.get("/offline-sync/learner/").status_code, 401)
+
+    def test_signed_in_pages_carry_the_learner(self):
+        self.client.force_login(self.pupil)
+        page = self.client.get("/accounts/dashboard/", follow=True).content.decode()
+        self.assertIn(f'data-learner="{self.pupil.pk}"', page[:4000])          # where the app looks for it
+        self.client.logout()
+        self.assertNotIn("data-learner", self.client.get("/").content.decode())
 
 
 class ReportTests(ManifestCase):
