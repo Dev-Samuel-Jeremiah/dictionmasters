@@ -217,6 +217,34 @@ manifest = list();
 await mod.runDownload({ media: true });
 assert.equal(stores.get("dm-library-media").m.size, 3, "and arrive once it's turned on");
 
+// a lesson full of recordings: short steps that keep moving, files queued
+// across them, the page pending until all its files are here
+await mod.clearLearnerData();
+await mod.clearLibrary();
+site["/echospell/level-1/group-b/"] = Array.from({ length: 40 }, (_, i) => `<audio src="${R2}/many-${i}.mp3?sig=1"></audio>`).join("");
+let heavy = await mod.newDownload({ media: true });
+const progress = [];
+for (let steps = 0; !heavy.done && steps < 200; steps++) {
+  heavy = await mod.downloadStep(JSON.parse(JSON.stringify(heavy)), 1000, 0);   // no time at all: one batch each
+  progress.push(heavy.pages + heavy.skipped + heavy.media_kept + heavy.failed);
+}
+assert.ok(heavy.done && heavy.stopped === "", "it finishes");
+assert.ok(progress.every((n, i) => i === 0 || n > progress[i - 1]), "every step moves on");
+assert.ok(progress.length > 20, "in many short steps, not one long one");
+assert.equal(heavy.media_kept, 42);
+assert.ok(!(await mod.indexAll()).some((e) => e.pending), "nothing left pending once all files are here");
+// cut off half-way through the files: the page stays pending and the rest follow
+await mod.clearLibrary();
+let half = await mod.newDownload({ media: true });
+for (let i = 0; i < 6; i++) half = await mod.downloadStep(half, 1000, 0);
+assert.ok(!half.done && half.files.length > 0);
+assert.ok((await mod.indexAll()).find((e) => e.p === "/echospell/level-1/group-b/").pending, "still pending");
+const finish = await mod.runDownload({ media: true });
+assert.equal(stores.get("dm-library-media").m.size, 42, "the rest arrive next time");
+assert.ok(!(await mod.indexAll()).some((e) => e.pending));
+site["/echospell/level-1/group-b/"] = `<audio src="${R2}/b.mp3?sig=3"></audio>`;
+await mod.runDownload({ media: true });
+
 // the second sync fetches only what can change, and files aren't fetched twice
 fetched.length = 0;
 await mod.runDownload({ media: true });

@@ -49,14 +49,16 @@
     } catch (e) { /* private mode: nothing to remember */ }
   }
 
-  // Ask the service worker something and wait for its answer.
+  // Ask the service worker something and wait for its answer. A step of a
+  // download answers within about 8 seconds; this only catches a worker
+  // that has gone quiet altogether.
   function ask(message) {
     return navigator.serviceWorker.ready.then(function (registration) {
       var worker = navigator.serviceWorker.controller || registration.active;
       if (!worker) throw new Error("no worker");
       return new Promise(function (resolve, reject) {
         var channel = new MessageChannel();
-        var timer = setTimeout(function () { reject(new Error("timeout")); }, 120000);
+        var timer = setTimeout(function () { reject(new Error("timeout")); }, 300000);
         channel.port1.onmessage = function (event) {
           clearTimeout(timer);
           channel.port1.close();
@@ -77,6 +79,15 @@
     var c = navigator.connection;
     if (c && (c.saveData || c.type === "cellular" || /2g/.test(c.effectiveType || ""))) return Promise.resolve(false);
     return Promise.resolve(navigator.onLine);
+  }
+
+  // How far a sync has got: pages, then their pictures and audio, together.
+  function done(state) {
+    return state.pages + (state.skipped || 0) + (state.media_kept || 0) + (state.failed || 0);
+  }
+  function percent(state) {
+    var total = done(state) + (state.remaining || 0);
+    return total ? Math.min(99, Math.floor(done(state) * 100 / total)) : 0;
   }
 
   var running = null;
@@ -155,9 +166,8 @@
   }
 
   function noteProgress(state) {
-    var total = state.pages + (state.remaining || 0);
-    if (!state.done && total >= SHOW_NOTE_FROM) {
-      showNote("Saving lessons for offline… " + Math.round(state.pages * 100 / total) + "%");
+    if (!state.done && done(state) + (state.remaining || 0) >= SHOW_NOTE_FROM) {
+      showNote("Saving lessons for offline… " + percent(state) + "%");
     }
   }
   function megabytes(mb) {
@@ -245,7 +255,12 @@
         askToStay();
         download({ media: settings.media, gentle: true }).then(function (state) {
           backgroundDone(state, settings);
-        }).catch(function () {});
+        }).catch(function () {
+          // The worker went quiet (the browser may have stopped it). What came
+          // down is kept; carry on in a minute.
+          if (note && !note.hidden) showNote("Saving paused. It will carry on in a moment…");
+          setTimeout(background, 60000);
+        });
         return;
       }
       // Mobile data, in the app: just the front pages and the first lessons,
@@ -314,11 +329,10 @@
 
   function showProgress(state) {
     if (!out.bar) return;
-    var total = state.pages + (state.remaining || 0);
     out.bar.hidden = state.done;
-    out.bar.max = Math.max(total, 1);
-    out.bar.value = state.pages;
-    if (!state.done) say("Downloading… " + state.pages + " pages saved" + (state.media_kept ? ", " + state.media_kept + " pictures and recordings" : "") + ".");
+    out.bar.max = 100;
+    out.bar.value = percent(state);
+    if (!state.done) say("Downloading… " + percent(state) + "% · " + state.pages + " pages" + (state.media_kept ? ", " + state.media_kept + " pictures and recordings" : "") + " saved.");
   }
   listeners.push(showProgress);
 

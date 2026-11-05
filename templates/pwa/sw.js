@@ -528,6 +528,7 @@ async function newDownload(options) {
     todo: [], stale: [],
     pages: 0, media_kept: 0, skipped: 0, failed: 0, remaining: 0, done: false, stopped: "",
     storage: true,
+    files: [], queued: [],       // pictures and audio still to fetch, and every one ever queued
   };
   const stop = (why) => { state.stopped = why; state.done = true; return state; };
   let response;
@@ -606,16 +607,31 @@ async function syncPage(state, [path, version]) {
   const statics = staticFilesIn(html);
   await Promise.all(statics.map(downloadStatic));
 
+  // The page's files are queued, not fetched here: one lesson can hold dozens
+  // of recordings, and a step must stay short (downloadStep). Until they're
+  // all here the page is "pending", so a cut-off sync fetches it again (with
+  // fresh links) and carries on.
   const media = mediaIn(html, finalUrl.href);
-  let pending = media.length > 0 && !state.media;
+  const keys = media.map((url) => mediaKey(url.href));
   if (state.media) {
+    const queued = new Set(state.queued);
     for (const url of media) {
-      if (!state.storage && isRemoteMedia(url)) { pending = true; continue; }
-      if (await downloadMedia(url.href)) state.media_kept += 1;
-      else { pending = true; state.failed += 1; }
+      const key = mediaKey(url.href);
+      if (queued.has(key) || (!state.storage && isRemoteMedia(url))) continue;
+      queued.add(key);
+      state.queued.push(key);
+      state.files.push(url.href);
     }
   }
-  await indexPut({ p: path, v: version, media: media.map((url) => mediaKey(url.href)), pending, statics });
+  await indexPut({ p: path, v: version, media: keys, pending: keys.length > 0, statics });
+}
+
+// After a whole sync: a page is no longer pending once all its files are here.
+async function settlePending() {
+  const here = new Set((await (await caches.open(LIBRARY_MEDIA)).keys()).map((key) => key.url));
+  for (const entry of await indexAll()) {
+    if (entry.pending && (entry.media || []).every((key) => here.has(key))) await indexPut({ ...entry, pending: false });
+  }
 }
 
 // Pages that have gone, and the files only they used.
@@ -634,21 +650,41 @@ async function tidyLibrary(state) {
   await Promise.all((await statics.keys()).filter((key) => !named.has(key.url)).map((key) => statics.delete(key)));
 }
 
-async function downloadStep(state, stepPages) {
-  // Two pages at a time: quick on Wi-Fi, gentle on the server.
-  for (let done = 0; state.todo.length && !state.stopped && done < stepPages; done += 2) {
+// One step of a sync: pages first, then their files, two at a time (quick
+// on Wi-Fi, gentle on the server), for about STEP_MS at most (8 seconds), so the page
+// hears back often and the browser never stops the worker mid-step. A file
+// already started is finished; a very large one may run the step over.
+const STEP_MS = 8000;
+
+async function downloadStep(state, stepPages = 1000, budget = STEP_MS) {
+  const until = Date.now() + budget;
+  let worked = false;                      // every step moves on by at least one batch
+  const timeLeft = () => !worked || Date.now() < until;
+  for (let done = 0; state.todo.length && !state.stopped && done < stepPages && timeLeft(); done += 2) {
     await Promise.all(state.todo.splice(0, 2).map((page) => syncPage(state, page)));
+    worked = true;
   }
-  state.remaining = state.todo.length;
-  state.done = Boolean(state.stopped) || !state.todo.length;
-  if (state.done && !state.stopped && !state.limit) await tidyLibrary(state);
+  while (!state.todo.length && state.files.length && !state.stopped && timeLeft()) {
+    worked = true;
+    await Promise.all(state.files.splice(0, 2).map(async (address) => {
+      if (await downloadMedia(address)) state.media_kept += 1;
+      else state.failed += 1;
+    }));
+    if (!navigator.onLine) state.stopped = "offline";
+  }
+  state.remaining = state.todo.length + state.files.length;
+  state.done = Boolean(state.stopped) || !state.remaining;
+  if (state.done && !state.stopped) {
+    await settlePending();
+    if (!state.limit) await tidyLibrary(state);
+  }
   return state;
 }
 
 // For tests and simple callers: a whole sync in one go.
 async function runDownload(options) {
   let state = await newDownload(options);
-  while (!state.done) state = await downloadStep(state, 10);
+  while (!state.done) state = await downloadStep(state);
   return state;
 }
 
@@ -854,7 +890,7 @@ self.addEventListener("message", (event) => {
       let state = data.state;
       try {
         state = state || await newDownload(data);
-        port.postMessage(state.done ? state : await downloadStep(state, 10));
+        port.postMessage(state.done ? state : await downloadStep(state));
       } catch (error) {
         port.postMessage({ ...(state || { pages: 0, media_kept: 0 }), stopped: "error", done: true });
       }
