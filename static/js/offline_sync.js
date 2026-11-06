@@ -298,11 +298,15 @@
   // Offline: the browser says so, or this page came from the device because
   // the site couldn't be reached (Wi-Fi with no internet still says online).
   var cutOff = false;
+  var onlineOnly = [];          // the service worker's list: pages that always need the internet
   function markLinks() {
     if (!WHO) return;
     ask({ type: "offline-saved" }).then(function (answer) {
       cutOff = Boolean(answer && answer.offline) || !navigator.onLine;
       if (!cutOff) return;
+      onlineOnly = ((answer && answer.online) || []).map(function (source) {
+        try { return new RegExp(source); } catch (e) { return null; }
+      }).filter(Boolean);
       var saved = {};
       ((answer && answer.paths) || []).forEach(function (path) { saved[path] = true; });
       document.querySelectorAll("a[href]").forEach(function (link) {
@@ -322,7 +326,7 @@
     });
   }
   var toastTimer;
-  function needsNet() {
+  function needsNet(link) {
     var box = document.getElementById("dm-needs-net-toast");
     if (!box) {
       box = document.createElement("div");
@@ -331,7 +335,13 @@
       box.setAttribute("role", "status");
       document.body.appendChild(box);
     }
-    box.textContent = "You're offline: this needs the internet. Your saved lessons still work.";
+    // Something only our servers can do, or a page this device hasn't
+    // downloaded (another level, say): different things to do about it.
+    var path = link ? pageLink(link) : null;
+    var always = path && onlineOnly.some(function (pattern) { return pattern.test(path.pathname); });
+    box.textContent = always || !path
+      ? "You're offline: this needs the internet. Your saved lessons still work."
+      : "This isn't saved on this device yet. When you're online, download it from Offline lessons & videos.";
     box.classList.add("is-on");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { box.classList.remove("is-on"); }, 4000);
@@ -340,7 +350,7 @@
     var link = event.target.closest ? event.target.closest("a.dm-needs-net") : null;
     if (!link || !cutOff) return;
     event.preventDefault();
-    needsNet();
+    needsNet(link);
   }, true);
   window.addEventListener("offline", markLinks);
   window.addEventListener("online", unmarkLinks);

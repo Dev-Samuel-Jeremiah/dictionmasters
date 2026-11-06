@@ -1492,7 +1492,7 @@ self.addEventListener("message", (event) => {
       const paths = new Set(keys.map((key) => new URL(key.url).pathname));
       if (paths.has(HOME_PATH)) paths.add("/");
       [LOGIN_PATH, LOGOUT_PATH, OFFLINE_URL, OFFLINE_PAGE].forEach((path) => paths.add(path));
-      port.postMessage({ offline: servedOffline, paths: [...paths] });
+      port.postMessage({ offline: servedOffline, paths: [...paths], online: ONLINE_ONLY.map(([pattern]) => pattern.source) });
     })());
   }
 
