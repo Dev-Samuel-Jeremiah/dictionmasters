@@ -215,6 +215,7 @@ TEMPLATES = [
                 "apps.learning_tools.context_processors.hidden_tools",
                 "apps.notifications.context_processors.bell",
                 "apps.landing.native_app.context",
+                "apps.offline.context.offline",
             ],
             # {{ colour|palette }} everywhere, for colours stored in the database.
             "builtins": ["apps.landing.templatetags.palette"],

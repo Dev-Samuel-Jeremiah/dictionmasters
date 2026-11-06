@@ -292,10 +292,12 @@ def offline_page(request):
     """What this device is holding, and how long each copy has left. The
     list itself is read from the browser's own store, so the page works
     with no connection (static/js/offline_video.js)."""
-    from apps.offline.catalog import MAX_CHOSEN_LEVELS, level_choices
+    from apps.offline.catalog import MAX_CHOSEN_LEVELS, level_choices, worked_in
 
+    choices = level_choices(request.user)
     return render(request, "videos/offline.html", {
-        "level_choices": level_choices(request.user),
+        "level_choices": choices,
+        "worked_in": worked_in(request.user) if choices else [],
         "max_levels": MAX_CHOSEN_LEVELS,
         "days": license_days(),
         "limit": device_limit(),

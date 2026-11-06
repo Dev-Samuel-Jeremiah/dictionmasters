@@ -48,7 +48,7 @@
       {# You can open every level, which won't all fit on one device. #}
       <fieldset class="os-levels" data-os-levels data-max="{{ max_levels }}">
         <legend class="os-levels__title">Levels to keep on this device</legend>
-        <p class="os-levels__lede">You can open every level, but they won't all fit on one device. {% if user.level %}{{ user.level }} is kept anyway. Choose up to {{ max_levels }} more{% else %}Choose up to {{ max_levels }}{% endif %}: each takes about 1 to 2 GB with pictures and audio.</p>
+        <p class="os-levels__lede">You can open every level, but they won't all fit on one device. {% if user.level %}{{ user.level }} is kept anyway. Choose up to {{ max_levels }} more{% else %}Choose up to {{ max_levels }}{% endif %}: each takes about 1 to 2 GB with pictures and audio.{% if worked_in %} With none ticked, the levels you've been working in are kept: <strong>{{ worked_in|join:", " }}</strong>.{% endif %}</p>
         <div class="os-levels__grid">
           {% for level in level_choices %}<label class="os-level"><input type="checkbox" value="{{ level }}" data-os-level> {{ level }}</label>{% endfor %}
         </div>

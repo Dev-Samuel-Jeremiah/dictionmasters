@@ -375,6 +375,25 @@ class ChosenLevelsTests(ManifestCase):
         self.assertFalse(any(p.startswith(f"/echospell/{self.two.slug}/") for p in chosen))
         self.assertEqual(levels_for(admin, ["Level 1", "Level 2", "Level 3", "Level 4"]), ["Level 1", "Level 2", "Level 3"])
 
+    def test_with_none_ticked_the_levels_they_work_in_are_kept(self):
+        from apps.echospell.models import GroupStepsSeen
+
+        admin = person("boss@example.com", is_staff=True)
+        self.client.force_login(admin)
+        self.assertIn('data-offline-levels="-"', self.client.get("/accounts/dashboard/", follow=True).content.decode()[:3000])
+        GroupStepsSeen.objects.create(user=admin, group=self.group)       # they open a Level 1 card
+        page = self.client.get("/accounts/dashboard/", follow=True).content.decode()
+        self.assertIn('data-offline-levels="Level 1"', page[:3000], "the app hears of it, and downloads it")
+        pages = [entry["p"] for entry in self.client.get("/offline-sync/manifest/").json()["pages"]]
+        self.assertIn(f"/echospell/{self.one.slug}/{self.group.slug}/", pages)
+        self.assertContains(self.client.get("/videos/offline/"), "the levels you've been working in are kept: <strong>Level 1</strong>")
+        # Ticking levels on the device wins.
+        pages = [entry["p"] for entry in self.client.get("/offline-sync/manifest/?levels=Level 2").json()["pages"]]
+        self.assertFalse(any(p.startswith(f"/echospell/{self.one.slug}/{self.group.slug}") for p in pages))
+        # A pupil's page says nothing: their level decides.
+        self.client.force_login(self.pupil)
+        self.assertNotIn("data-offline-levels", self.client.get("/accounts/dashboard/", follow=True).content.decode()[:3000])
+
     def test_a_pupil_keeps_their_own_level_whatever_is_asked(self):
         self.client.force_login(self.pupil)
         pages = [page["p"] for page in self.client.get("/offline-sync/manifest/?levels=Level 2").json()["pages"]]

@@ -377,18 +377,33 @@ def level_choices(user):
     return [level for level in LEVEL_ORDER if level != user.level]
 
 
+def worked_in(user):
+    """The EchoSpell levels someone has been working in, most recent first:
+    where they left off, and the cards they've opened. Two small lookups,
+    asked on every page only by those who can open every level
+    (apps/offline/context.py), so a level they start is offline soon."""
+    from apps.accounts.access import LEVEL_ORDER
+    from apps.echospell.models import CardPosition, GroupStepsSeen
+
+    names = list(CardPosition.objects.filter(user=user).values_list("group__level__name", flat=True)[:1])
+    names += list(GroupStepsSeen.objects.filter(user=user).order_by("-updated_at")
+                  .values_list("group__level__name", flat=True)[:40])
+    return [name for name in dict.fromkeys(names) if name in LEVEL_ORDER][:MAX_CHOSEN_LEVELS]
+
+
 def levels_for(user, chosen=()):
     """The levels this person's app keeps: their own. Someone who can open
     every level keeps their own (if they have one) and the ones chosen on
     that device's Offline page, up to MAX_CHOSEN_LEVELS; with none chosen,
-    the shared tools only."""
+    the levels they've been working in (worked_in), so EchoSpell works
+    offline without their having to find the setting."""
     from apps.accounts.access import LEVEL_ORDER, accessible_levels
 
     levels = accessible_levels(user)
     if levels is None:
         own = [user.level] if user.level else []
-        picked = [level for level in dict.fromkeys(chosen) if level in LEVEL_ORDER and level not in own]
-        return own + picked[:MAX_CHOSEN_LEVELS]
+        picked = [level for level in dict.fromkeys(chosen) if level in LEVEL_ORDER] or worked_in(user)
+        return own + [level for level in picked if level not in own][:MAX_CHOSEN_LEVELS]
     return list(levels)
 
 

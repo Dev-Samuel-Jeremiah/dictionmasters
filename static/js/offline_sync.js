@@ -37,6 +37,10 @@
   var KEY_RUN = "dm-offline-run" + FOR;           // an unfinished download
   var KEY_LAST = "dm-offline-last" + FOR;         // when the last one finished
   var KEY_NEXT = "dm-offline-next" + FOR;         // when the next one is due
+  var KEY_LEVELS = "dm-offline-levels" + FOR;     // the levels the last full one kept
+  // Someone who can open every level keeps the levels they've been working
+  // in (apps/offline/context.py); when those change, they're fetched now.
+  var LEVELS = document.documentElement.getAttribute("data-offline-levels");
   var REFRESH_EVERY = 12 * 60 * 60 * 1000;
   // Each device picks its own time, so they don't all reach the server at once.
   var REFRESH_SPREAD = 6 * 60 * 60 * 1000;
@@ -116,6 +120,7 @@
         if (!state.stopped) {
           write(KEY_LAST, Date.now());
           write(KEY_NEXT, Date.now() + REFRESH_EVERY + Math.random() * REFRESH_SPREAD);
+          if (!options.limit && LEVELS) write(KEY_LEVELS, LEVELS);
         }
         return state;
       });
@@ -241,7 +246,10 @@
     if (!settings || !settings.auto || !navigator.onLine) return;
     var unfinished = read(KEY_RUN, null);
     var last = read(KEY_LAST, 0);
-    if (!read(KEY_NEXT, 0) && last) {
+    // A level they've started working in isn't on the device yet: now.
+    var newLevel = LEVELS && LEVELS !== "-" && read(KEY_LEVELS, null) !== LEVELS;
+    if (newLevel) unfinished = true;
+    if (!newLevel && !read(KEY_NEXT, 0) && last) {
       // Saved lessons from before this version: each device picks its own
       // time within the next 12 hours, so they don't all fetch at once.
       write(KEY_NEXT, Date.now() + Math.random() * REFRESH_EVERY);
