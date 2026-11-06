@@ -856,13 +856,88 @@ async function downloadMedia(address) {
 
 // The page's own stylesheets and scripts, so a kept page looks right offline.
 // They stay until no kept page names them, however many site updates pass.
-async function downloadStatic(path) {
+// The files a stylesheet uses itself: the stylesheets it imports, its
+// pictures and fonts (the cat on EchoSpell's pages, say), or they're
+// missing offline.
+function filesInCss(text, path) {
+  const base = new URL(path, self.location.origin);
+  const found = [...text.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map((match) => {
+    try { return new URL(match[1], base); } catch (error) { return null; }
+  }).filter((url) => url && url.origin === self.location.origin && url.pathname.startsWith(STATIC_PREFIX));
+  const imports = [...text.matchAll(/@import\s+["']([^"']+)["']/g)].map((match) => new URL(match[1], base))
+    .filter((url) => url.origin === self.location.origin && url.pathname.startsWith(STATIC_PREFIX));
+  return [...new Set([...found, ...imports].map((url) => url.pathname))];
+}
+
+// Keeps a file; answers with every file kept for it (a stylesheet's own
+// pictures and fonts too), so the page's index names them all and tidying
+// up leaves them be.
+async function downloadStatic(path, seen = new Set()) {
+  if (seen.has(path)) return [];                  // stylesheets importing each other
+  seen.add(path);
   const cache = await caches.open(LIBRARY_STATIC);
-  if (await cache.match(path)) return;
+  const css = /\.css(\?|$)/.test(path);
   try {
-    const response = await fetch(path);
-    if (response.ok) await cache.put(path, response);
+    let kept = await cache.match(path);
+    if (!kept) {
+      const response = await fetch(path);
+      if (!response.ok) return [];
+      await cache.put(path, response.clone());
+      kept = response;
+    }
+    if (!css) return [path];
+    const inside = await Promise.all(filesInCss(await kept.text(), path).map((file) => downloadStatic(file, seen)));
+    return [path, ...inside.flat()];
+  } catch (error) {
+    return [];                       // try again next download
+  }
+}
+
+// ---------------------------------------------------------- read-along
+
+// A recording's measured word timings (static/js/read_along.js lights each
+// word as it's spoken). Nothing personal: kept with the shared files, under
+// the recording's own name, since the link's signature changes each time the
+// page is made.
+const READ_ALONG_PATH = "/book/read-along/";
+
+function readAlongKey(url) {
+  const u = new URL(url, self.location.origin);
+  return self.location.origin + READ_ALONG_PATH + u.pathname.slice(READ_ALONG_PATH.length).split(":")[0] + "/";
+}
+
+function readAlongIn(html) {
+  return [...html.matchAll(/data-ra-sync="([^"]+)"/g)].map((match) => decodeEntities(match[1]));
+}
+
+async function keepReadAlong(url, response) {
+  const data = await response.clone().json().catch(() => null);
+  if (data && data.status === "ready") await (await caches.open(LIBRARY_STATIC)).put(readAlongKey(url), response.clone());
+}
+
+// Answers with where it's kept (for the page's index), or nothing yet.
+async function downloadReadAlong(url) {
+  const cache = await caches.open(LIBRARY_STATIC);
+  const key = readAlongKey(url);
+  if (await cache.match(key)) return [key];
+  try {
+    const response = await fetch(new URL(url, self.location.origin).href, { credentials: "include", headers: { Accept: "application/json" } });
+    if (response.ok) await keepReadAlong(url, response);
   } catch (error) { /* try again next download */ }
+  return (await cache.match(key)) ? [key] : [];
+}
+
+async function readAlong(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) await keepReadAlong(request.url, response);
+    return response;
+  } catch (error) {
+    const kept = await (await caches.open(LIBRARY_STATIC)).match(readAlongKey(request.url));
+    // Not kept: say so once, rather than the page asking again and again.
+    return kept || new Response(JSON.stringify({ status: "offline", retry: 0, words: [], speech: [] }),
+      { status: 200, headers: { "Content-Type": "application/json" } });
+  }
 }
 
 // ------------------------------------------------------- lesson download
@@ -955,6 +1030,20 @@ async function indexAll(name) {
 // worker that works on one job for too long, so each step is short. A sync
 // that's cut off loses nothing: the index knows what arrived, so the next
 // one carries on from there.
+// Someone who can open every level chooses which to keep on this device
+// (the Offline page; apps/offline/catalog.py, levels_for): kept per
+// learner, so every download and video save asks for the same ones.
+async function chosenLevels() {
+  const name = `levels:${(await stores()).id || ""}`;
+  const kept = await keyStore("readonly", (store) => store.get(name)).catch(() => null);
+  return (kept && kept.levels) || [];
+}
+
+async function manifestUrl() {
+  const levels = await chosenLevels();
+  return levels.length ? `${MANIFEST_URL}?levels=${encodeURIComponent(levels.join(","))}` : MANIFEST_URL;
+}
+
 async function newDownload(options) {
   const state = {
     media: Boolean(options && options.media),
@@ -967,7 +1056,7 @@ async function newDownload(options) {
   const stop = (why) => { state.stopped = why; state.done = true; return state; };
   let response;
   try {
-    response = await fetch(MANIFEST_URL, { credentials: "include", headers: { Accept: "application/json" } });
+    response = await fetch(await manifestUrl(), { credentials: "include", headers: { Accept: "application/json" } });
   } catch (error) {
     return stop("offline");
   }
@@ -1053,8 +1142,10 @@ async function syncPage(state, [path, version]) {
     status: 200, headers: { "Content-Type": response.headers.get("Content-Type") || "text/html; charset=utf-8" },
   }), where.key));
   state.pages += 1;
-  const statics = staticFilesIn(html);
-  await Promise.all(statics.map(downloadStatic));
+  const statics = [...new Set([
+    ...(await Promise.all(staticFilesIn(html).map((file) => downloadStatic(file)))).flat(),
+    ...(await Promise.all(readAlongIn(html).map(downloadReadAlong))).flat(),
+  ])];
 
   // The page's files are queued, not fetched here: one lesson can hold dozens
   // of recordings, and a step must stay short (downloadStep). Until they're
@@ -1446,11 +1537,22 @@ self.addEventListener("message", (event) => {
   // Which videos this learner's app keeps.
   if (data && data.type === "offline-videos" && port) {
     event.waitUntil((async () => {
-      const response = await fetch(MANIFEST_URL, { credentials: "include" }).catch(() => null);
+      const response = await fetch(await manifestUrl(), { credentials: "include" }).catch(() => null);
       const manifest = response && response.ok ? await response.json() : null;
       port.postMessage((manifest && manifest.videos) || []);
     })());
   }
+  // The levels kept on this device (the Offline page): read, or changed.
+  if (data && data.type === "offline-levels" && port) {
+    event.waitUntil((async () => {
+      const name = `levels:${(await stores()).id || ""}`;
+      if (Array.isArray(data.levels)) {
+        await keyStore("readwrite", (store) => store.put({ p: name, levels: data.levels.map(String).slice(0, 12) }));
+      }
+      port.postMessage({ levels: await chosenLevels() });
+    })());
+  }
+
   // One step of a lesson download; the answer carries where to carry on.
   if (data && data.type === "offline-download" && port) {
     event.waitUntil((async () => {
@@ -1611,12 +1713,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Read-along word timings: kept, so the highlighting works offline.
+  if (url.pathname.startsWith(READ_ALONG_PATH)) {
+    event.respondWith(readAlong(request));
+    return;
+  }
+
   // A video is never kept by the worker: saved copies are encrypted in
   // the browser's own database instead.
   if (url.pathname.startsWith("/videos/")) return;
 
-  // Keep same-origin lesson images and audio on this device.
-  if (request.destination === "image" || request.destination === "audio") {
+  // Keep same-origin lesson images and audio on this device. The site's own
+  // pictures (in /static/, like a stylesheet's) are site files: below.
+  if ((request.destination === "image" || request.destination === "audio") && !url.pathname.startsWith(STATIC_PREFIX)) {
     event.respondWith(cacheMedia(request));
     return;
   }

@@ -45,3 +45,20 @@ def parts_rule_applies(request):
     """Check "open every part of the lesson first"? Not for a copy being
     kept, nor for answers given offline."""
     return not (is_copy(request) or is_replay(request))
+
+
+class ReplayedVisitMiddleware:
+    """A page opened offline, opened again now it's back online so the visit
+    counts (templates/pwa/sw.js): nobody looks at it, so nothing comes back
+    but "done". Pupils on expensive data don't pay for the page twice."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.http import HttpResponse
+
+        response = self.get_response(request)
+        if request.method == "GET" and is_replay(request) and response.status_code == 200:
+            return HttpResponse(status=204)
+        return response

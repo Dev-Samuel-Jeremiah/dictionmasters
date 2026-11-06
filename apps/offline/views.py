@@ -3,10 +3,11 @@
 from django.contrib.contenttypes.models import ContentType
 from django.http import JsonResponse
 
+from apps.accounts.access import can_see_level
 from apps.billing.access import has_access
 from apps.videos import links
 
-from .catalog import learner_secret, levels_for, manifest, may_keep_video
+from .catalog import learner_secret, manifest, may_keep_video
 from .models import LessonPack
 
 
@@ -37,7 +38,10 @@ def learner_info(request):
 def offline_manifest(request):
     if not request.user.is_authenticated:
         return JsonResponse({"signed_in": False}, status=401)
-    found = manifest(request.user)
+    # Levels chosen on this device's Offline page (someone who can open
+    # every level): templates/pwa/sw.js sends them.
+    chosen = [level for level in request.GET.get("levels", "").split(",") if level]
+    found = manifest(request.user, chosen)
     found["learner"] = learner_info(request)
     response = JsonResponse(found)
     response["Cache-Control"] = "private, no-store"
@@ -67,7 +71,7 @@ def pack_key(request, pk):
         return JsonResponse({"ok": False, "error": "That pack has been replaced. Ask for the newest one."}, status=404)
     if not has_access(request.user):
         return JsonResponse({"ok": False, "error": "Your plan has ended, so this pack can't be loaded."}, status=403)
-    if not (request.user.is_staff or pack.level in levels_for(request.user)):
+    if not can_see_level(request.user, pack.level):
         return JsonResponse({"ok": False, "error": f"This pack is for {pack.level}. Ask for your own level's pack."}, status=403)
     response = JsonResponse({"ok": True, "level": pack.level, "key": pack.key})
     response["Cache-Control"] = "private, no-store"

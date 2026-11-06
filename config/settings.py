@@ -182,6 +182,8 @@ MIDDLEWARE = [
     "apps.billing.middleware.SubscriptionRequiredMiddleware",
     # After billing: a tool kept for other levels (learning_tools.ToolLevels).
     "apps.learning_tools.middleware.ToolLevelsMiddleware",
+    # A page opened offline, counted now it's back online: just "done" (apps/offline/copies.py).
+    "apps.offline.copies.ReplayedVisitMiddleware",
 ]
 
 # Serves the site's own CSS, JS and images in production, so no separate

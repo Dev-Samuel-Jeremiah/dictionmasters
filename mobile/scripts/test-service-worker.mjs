@@ -75,7 +75,14 @@ globalThis.fetch = async (input, init = {}) => {
     if (init.mode === "cors") return new Response("MEDIA:" + url.pathname, { status: 200 });
   }
   if (url.origin !== ORIGIN) return new Response("x");
+  if (url.pathname === "/static/css/ui.css") {
+    return new Response('body{background:url("../img/app/cat.jpg")} @font-face{src:url(/static/fonts/a.woff2)} .x{background:url(data:image/png;base64,AA)}', { status: 200 });
+  }
   if (url.pathname.startsWith("/static/")) return new Response("static", { status: 200 });
+  if (url.pathname.startsWith("/book/read-along/")) {
+    return new Response(JSON.stringify({ status: url.pathname.includes("pending") ? "pending" : "ready", retry: 0, words: [[0, 1]] }),
+      { status: 200, headers: { "Content-Type": "application/json" } });
+  }
   if (url.pathname === "/offline-sync/learner/") {
     return signedIn ? new Response(JSON.stringify(signedIn), { status: 200, headers: { "Content-Type": "application/json" } })
                     : new Response("{}", { status: 401 });
@@ -744,4 +751,45 @@ assert.equal([...dbs.get(`dm-l${D}-queue`).rows.values()].length, 0);
 signedIn = null;
 manifest = list();
 console.log("visits ok");
+
+// ------------------------------------------------ levels chosen on this device (someone who can open every level)
+assert.deepEqual((await askWorker({ type: "offline-levels" })).levels, []);
+assert.deepEqual((await askWorker({ type: "offline-levels", levels: ["Pre-Level", "Level 2"] })).levels, ["Pre-Level", "Level 2"]);
+fetched.length = 0;
+await mod.runDownload({ media: false, limit: 1 });
+const asked = fetched.find((x) => x.url.includes("/offline-sync/manifest/"));
+assert.equal(new URL(asked.url).searchParams.get("levels"), "Pre-Level,Level 2", "every download asks for them");
+await askWorker({ type: "offline-videos" });
+assert.ok(fetched.filter((x) => x.url.includes("/offline-sync/manifest/?levels=")).length === 2, "and so does saving videos");
+await askWorker({ type: "offline-levels", levels: [] });
+console.log("chosen levels ok");
+
+// ------------------------------------------------ a stylesheet's pictures and fonts; read-along timings
+const staticKept = [...stores.get("dm-library-static").m.keys()].map((u) => new URL(u, ORIGIN).pathname);
+assert.ok(staticKept.includes("/static/img/app/cat.jpg") && staticKept.includes("/static/fonts/a.woff2"),
+  "pictures and fonts a stylesheet uses are kept with it");
+site["/echospell/level-1/group-a/"] = `<i data-learner="${D}"></i><div data-read-along data-ra-sync="/book/read-along/eyJhIjoxfQ:1aBcD:sig1/"></div><div data-ra-sync="/book/read-along/pending:1a:s/"></div>`;
+manifest = list({ learner: { id: D, secret: secretFor(D) } });
+manifest.pages[2].v = "r1.with-read-along";
+signedIn = person(D, [D], "Dee");
+await mod.runDownload({ media: false });
+online = false;
+let timing;
+listeners.fetch[0]({ request: new Request(ORIGIN + "/book/read-along/eyJhIjoxfQ:9zZzZ:other-sig/"), respondWith(p) { timing = p; } });
+assert.equal((await (await timing).json()).status, "ready", "kept, and found whatever the link's signature");
+listeners.fetch[0]({ request: new Request(ORIGIN + "/book/read-along/pending:2b:t/"), respondWith(p) { timing = p; } });
+const notKept = await (await timing).json();
+assert.deepEqual([notKept.status, notKept.retry], ["offline", 0], "not measured yet: not kept, and the page stops asking");
+online = true;
+signedIn = null;
+manifest = list();
+// the browser asks for a stylesheet's picture as an image: found among the site's files offline
+online = false;
+let picture;
+const catRequest = new Request(ORIGIN + "/static/img/app/cat.jpg");
+Object.defineProperty(catRequest, "destination", { value: "image" });
+listeners.fetch[0]({ request: catRequest, respondWith(p) { picture = p; } });
+assert.equal((await picture).status, 200, "the cat shows offline");
+online = true;
+console.log("read-along ok");
 console.log("ALL SERVICE WORKER TESTS PASSED");

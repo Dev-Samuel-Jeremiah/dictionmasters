@@ -374,6 +374,34 @@
   if (autoBox) autoBox.addEventListener("change", remember);
 
   function say(text) { if (out.status) out.status.textContent = text; }
+
+  // Levels to keep, for someone who can open every level (the boxes are
+  // only on the page for them). Kept by the service worker, per learner.
+  var levelBoxes = [].slice.call(panel.querySelectorAll("[data-os-level]"));
+  var levelSet = panel.querySelector("[data-os-levels]");
+  var levelMax = levelSet ? Number(levelSet.getAttribute("data-max")) || 3 : 3;
+  function levelLimits() {
+    var picked = levelBoxes.filter(function (box) { return box.checked; }).length;
+    levelBoxes.forEach(function (box) { box.disabled = !box.checked && picked >= levelMax; });
+  }
+  if (levelBoxes.length) {
+    ask({ type: "offline-levels" }).then(function (answer) {
+      var kept = (answer && answer.levels) || [];
+      levelBoxes.forEach(function (box) { box.checked = kept.indexOf(box.value) >= 0; });
+      levelLimits();
+    }).catch(function () {});
+    levelBoxes.forEach(function (box) {
+      box.addEventListener("change", function () {
+        levelLimits();
+        var levels = levelBoxes.filter(function (one) { return one.checked; }).map(function (one) { return one.value; });
+        ask({ type: "offline-levels", levels: levels }).then(function () {
+          say(levels.length ? "Saved. Tap Download lessons to fetch " + levels.join(", ") + "."
+                            : "Saved. Only the shared tools will be kept.");
+        }).catch(function () { say("That didn't save. Please try again."); });
+      });
+    });
+  }
+
   function when(time) {
     if (!time) return "Never";
     var d = new Date(time);

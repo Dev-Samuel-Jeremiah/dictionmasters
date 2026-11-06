@@ -362,6 +362,32 @@ class EverythingReachableTests(ManifestCase):
             self.assertIn(path, seen)
 
 
+class ChosenLevelsTests(ManifestCase):
+    """Someone who can open every level chooses which to keep on a device."""
+
+    def test_an_admin_keeps_the_levels_they_choose(self):
+        admin = person("boss@example.com", is_staff=True)
+        self.client.force_login(admin)
+        bare = [page["p"] for page in self.client.get("/offline-sync/manifest/").json()["pages"]]
+        self.assertFalse(any(p.startswith("/echospell/level-1/") for p in bare), "nothing chosen: shared tools only")
+        chosen = [page["p"] for page in self.client.get("/offline-sync/manifest/?levels=Level 1,Nonsense").json()["pages"]]
+        self.assertIn(f"/echospell/{self.one.slug}/{self.group.slug}/", chosen)
+        self.assertFalse(any(p.startswith(f"/echospell/{self.two.slug}/") for p in chosen))
+        self.assertEqual(levels_for(admin, ["Level 1", "Level 2", "Level 3", "Level 4"]), ["Level 1", "Level 2", "Level 3"])
+
+    def test_a_pupil_keeps_their_own_level_whatever_is_asked(self):
+        self.client.force_login(self.pupil)
+        pages = [page["p"] for page in self.client.get("/offline-sync/manifest/?levels=Level 2").json()["pages"]]
+        self.assertIn(f"/echospell/{self.one.slug}/{self.group.slug}/", pages)
+        self.assertFalse(any(p.startswith(f"/echospell/{self.two.slug}/") for p in pages))
+
+    def test_the_offline_page_offers_the_choice_only_to_those_who_have_one(self):
+        self.client.force_login(person("boss@example.com", is_staff=True))
+        self.assertContains(self.client.get("/videos/offline/"), "Levels to keep on this device")
+        self.client.force_login(self.pupil)
+        self.assertNotContains(self.client.get("/videos/offline/"), "Levels to keep on this device")
+
+
 class ReportTests(ManifestCase):
     def test_a_level_can_be_measured(self):
         shelf = build(["Level 1"], {"echospell:hub"})

@@ -25,8 +25,10 @@ class EchoSpellCopyTests(ManifestCase):
         self.assertFalse(CardPosition.objects.filter(user=self.pupil).exists(), "pick up where you left off is theirs")
         self.assertFalse(GroupStepsSeen.objects.filter(user=self.pupil).exists())
         self.assertFalse(GroupProgress.objects.filter(user=self.pupil).exists())
-        # Opening it (online, or replayed from offline) counts as before.
-        self.client.get(url, **REPLAY)
+        # Opening it (online, or replayed from offline) counts as before; a
+        # replayed visit sends nothing back.
+        replayed = self.client.get(url, **REPLAY)
+        self.assertEqual((replayed.status_code, replayed.content), (204, b""))
         self.assertTrue(CardPosition.objects.filter(user=self.pupil, group=self.group).exists())
         self.assertTrue(GroupStepsSeen.objects.filter(user=self.pupil, group=self.group).exists())
 

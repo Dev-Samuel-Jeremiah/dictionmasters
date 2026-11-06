@@ -44,6 +44,16 @@
         <div><dt>Last download</dt><dd data-os-last>&ndash;</dd></div>
         <div><dt>Opens offline until</dt><dd data-os-until>&ndash;</dd></div>
       </dl>
+      {% if level_choices %}
+      {# You can open every level, which won't all fit on one device. #}
+      <fieldset class="os-levels" data-os-levels data-max="{{ max_levels }}">
+        <legend class="os-levels__title">Levels to keep on this device</legend>
+        <p class="os-levels__lede">You can open every level, but they won't all fit on one device. {% if user.level %}{{ user.level }} is kept anyway. Choose up to {{ max_levels }} more{% else %}Choose up to {{ max_levels }}{% endif %}: each takes about 1 to 2 GB with pictures and audio.</p>
+        <div class="os-levels__grid">
+          {% for level in level_choices %}<label class="os-level"><input type="checkbox" value="{{ level }}" data-os-level> {{ level }}</label>{% endfor %}
+        </div>
+      </fieldset>
+      {% endif %}
       <label class="os-check"><input type="checkbox" data-os-media-toggle> Also save pictures and audio <small>(uses more data and space)</small></label>
       <label class="os-check"><input type="checkbox" data-os-auto checked> Keep them up to date automatically on Wi-Fi</label>
       <progress class="os-progress" data-os-progress hidden></progress>

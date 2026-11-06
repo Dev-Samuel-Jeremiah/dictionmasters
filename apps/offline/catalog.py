@@ -28,6 +28,7 @@ from collections import defaultdict
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import FieldError
 from django.db.models import FileField
 from django.urls import reverse
 
@@ -361,15 +362,33 @@ def catalog(levels, tools):
     return found
 
 
-def levels_for(user):
-    """The levels this person's app keeps: their own. Someone with none set
-    (an individual learner with no level, for instance) can open every level,
-    which won't fit on a device, so theirs keeps the shared tools only."""
-    from apps.accounts.access import accessible_levels
+MAX_CHOSEN_LEVELS = 3
+
+
+def level_choices(user):
+    """The levels this person may choose to keep on a device: for someone who
+    can open every level (an admin, an individual learner with no level),
+    which won't all fit on one. Empty for a learner whose levels are set:
+    theirs are kept, nothing to choose."""
+    from apps.accounts.access import LEVEL_ORDER, accessible_levels
+
+    if accessible_levels(user) is not None:
+        return []
+    return [level for level in LEVEL_ORDER if level != user.level]
+
+
+def levels_for(user, chosen=()):
+    """The levels this person's app keeps: their own. Someone who can open
+    every level keeps their own (if they have one) and the ones chosen on
+    that device's Offline page, up to MAX_CHOSEN_LEVELS; with none chosen,
+    the shared tools only."""
+    from apps.accounts.access import LEVEL_ORDER, accessible_levels
 
     levels = accessible_levels(user)
     if levels is None:
-        return [user.level] if user.level else []
+        own = [user.level] if user.level else []
+        picked = [level for level in dict.fromkeys(chosen) if level in LEVEL_ORDER and level not in own]
+        return own + picked[:MAX_CHOSEN_LEVELS]
     return list(levels)
 
 
@@ -422,8 +441,9 @@ def plan_ends(user):
     return subscription.access_until if subscription else None
 
 
-def manifest(user):
-    """The list one person's app syncs against.
+def manifest(user, chosen=()):
+    """The list one person's app syncs against: their levels, with `chosen`
+    for someone who can open every level (see levels_for).
 
     "offline_days" is how long the app may keep opening lessons with no
     internet after this check-in, and "access_ends" (milliseconds, like a
@@ -442,7 +462,7 @@ def manifest(user):
     if not has_access(user):
         return {"access": False, "offline_days": 0, "learner": learner, "pages": [], "videos": []}
     tools = _open_tools(user)
-    found = catalog(levels_for(user), tools)
+    found = catalog(levels_for(user, chosen), tools)
     round_ = settings.OFFLINE_PAGES_VERSION
     ready = settings.STORAGE_CORS_READY
     return {
@@ -461,5 +481,16 @@ def manifest(user):
 
 
 def may_keep_video(user, ref):
-    """Is this one of the videos this person's app keeps?"""
+    """Is this one of the videos this person's app keeps? Someone who can open
+    every level keeps whichever levels they choose on each device, so any
+    lesson video may be theirs."""
+    from apps.accounts.access import accessible_levels
+
+    if accessible_levels(user) is None:
+        try:
+            content_type_id, _sep, pk = ref.partition("-")
+            model = ContentType.objects.get_for_id(int(content_type_id)).model_class()
+            return model is not None and model.objects.filter(pk=int(pk)).exclude(video_file="").exists()
+        except (ValueError, LookupError, FieldError, ContentType.DoesNotExist):
+            return False
     return ref in catalog(levels_for(user), _open_tools(user))["videos"]
