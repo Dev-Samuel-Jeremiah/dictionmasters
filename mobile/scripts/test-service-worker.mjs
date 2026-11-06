@@ -38,6 +38,7 @@ class FakeCache {
 const caches = {
   async open(n) { if (!stores.has(n)) stores.set(n, new FakeCache()); return stores.get(n); },
   async delete(n) { return stores.delete(n); },
+  async has(n) { return stores.has(n); },
   async keys() { return [...stores.keys()]; },
   async match(r) { for (const c of stores.values()) { const x = await c.match(r); if (x) return x; } },
 };
@@ -87,7 +88,7 @@ globalThis.fetch = async (input, init = {}) => {
   if ((init.method || input.method) === "POST" && url.pathname.startsWith("/accounts/")) {
     return new Response(null, { status: 302, headers: { Location: "/accounts/dashboard/" } });
   }
-  const body = site[url.pathname];
+  const body = site[url.pathname + url.search] ?? site[url.pathname];
   if (body === undefined) return new Response("nope", { status: 404, headers: { "Content-Type": "text/html" } });
   const r = new Response("<html><body>" + body + "</body></html>", { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
   Object.defineProperty(r, "url", { value: url.pathname === "/tricks/lessons/locked/" ? ORIGIN + "/tricks/" : url.href });
@@ -158,10 +159,11 @@ const pagesFetched = () => fetched.filter((x) => new URL(x.url).origin === ORIGI
 const result = await mod.runDownload({ media: true });
 assert.equal(result.done, true);
 assert.equal(result.stopped, "");
-assert.deepEqual(paths("dm-library"), ["/accounts/dashboard/", "/echospell/level-1/", "/echospell/level-1/group-a/", "/echospell/level-1/group-b/"]);
-assert.equal(result.pages, 4);
-assert.equal(result.skipped, 1, "a lesson not reached yet is skipped");
-assert.ok(!(await mod.indexAll()).some((e) => e.p === "/tricks/lessons/locked/"), "and tried again next time");
+assert.deepEqual(paths("dm-library"), ["/accounts/dashboard/", "/echospell/level-1/", "/echospell/level-1/group-a/", "/echospell/level-1/group-b/", "/tricks/lessons/locked/"]);
+assert.equal(result.pages, 5);
+assert.equal(result.skipped, 0);
+assert.ok((await mod.indexAll()).find((e) => e.p === "/tricks/lessons/locked/").moved,
+  "a lesson not reached yet keeps what the site shows instead (finish the one before), and is tried again next time");
 assert.ok(!fetched.some((x) => x.url.includes("/accounts/logout/") || x.url.includes("/billing/")), "never fetches what shouldn't be kept");
 const media = [...stores.get("dm-library-media").m.keys()].sort();
 assert.deepEqual(media, [R2 + "/a.mp3", R2 + "/b.mp3", R2 + "/pic.png"]);
@@ -222,7 +224,7 @@ await mod.clearLibrary();
 manifest = list({ storage_media: false });
 fetched.length = 0;
 const waiting = await mod.runDownload({ media: true });
-assert.equal(waiting.pages, 4);
+assert.equal(waiting.pages, 5);
 assert.ok(!fetched.some((x) => x.url.startsWith(R2)), "nothing asked of the bucket");
 assert.ok((await mod.indexAll()).some((e) => e.pending), "they're noted as still to come");
 manifest = list();
@@ -316,7 +318,7 @@ assert.ok(!partial.done && partial.pages === 2);
 fetched.length = 0;
 const rest = await mod.runDownload({ media: true });
 assert.ok(rest.pages >= 2 && rest.stopped === "");
-assert.equal(paths("dm-library").length, 4);
+assert.equal(paths("dm-library").length, 5);
 
 // offline pages and files open from the library, past the kept-in-passing limits
 online = false;
@@ -331,7 +333,7 @@ assert.equal((await mod.runDownload({ media: true })).stopped, "signed-out");
 manifest = { release: "r1", access: false, pages: [] };
 const ended = await mod.runDownload({ media: true });
 assert.equal(ended.stopped, "no-access");
-assert.equal(paths("dm-library").length, 4, "what's on the device stays");
+assert.equal(paths("dm-library").length, 5, "what's on the device stays");
 assert.equal(await mod.accessOpen(), false, "but no longer opens");
 assert.equal(await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")), null);
 manifest = list();
@@ -352,7 +354,7 @@ clock += 2 * day;
 assert.equal(await mod.accessOpen(), false, "closed after 90 days offline");
 assert.equal(await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/")), null);
 assert.equal(await mod.matchMedia(R2 + "/a.mp3"), null);
-assert.equal(paths("dm-library").length, 4, "still on the device");
+assert.equal(paths("dm-library").length, 5, "still on the device");
 assert.equal(mod.connectAgainPage().status, 503);
 assert.ok((await mod.connectAgainPage().text()).includes("Connect to the internet once"));
 clock -= 60 * day;                                               // winding the clock back
@@ -398,7 +400,7 @@ assert.ok(await mod.matchMedia(R2 + "/a.mp3"));
 // the next sign-in doesn't fetch them again
 fetched.length = 0;
 const back = await mod.runDownload({ media: true });
-assert.equal(back.pages, 4);
+assert.equal(back.pages, 5);
 assert.ok(!fetched.some((x) => x.url.includes(".mp3") || x.url.includes(".png")), "files already here aren't fetched");
 // the next learner doesn't need one: it goes when their sync finishes
 manifest.pages.splice(3, 1);
@@ -419,7 +421,7 @@ await mod.clearLibrary();
 manifest = list({ need_mb: 1800 });
 navigator.storage = { estimate: async () => ({ quota: 200 * 1048576, usage: 100 * 1048576 }) };
 const tight = await mod.runDownload({ media: true });
-assert.equal(tight.pages, 4);
+assert.equal(tight.pages, 5);
 assert.ok(tight.low_space_mb > 100, "says how much is needed");
 assert.ok(!stores.has("dm-library-media") || stores.get("dm-library-media").m.size === 0);
 navigator.storage = { estimate: async () => ({ quota: 90000 * 1048576, usage: 0 }) };
@@ -678,4 +680,68 @@ signedIn = null;
 delete site["/accounts/dashboard/"];
 delete site["/reading-club/"];
 console.log("signing in ok");
+
+// ------------------------------------------------ lessons saved before learners had their own stores
+await mod.lockLearner();
+manifest = list();                                     // an older server: no learner in the list
+await mod.runDownload({ media: true });
+assert.ok(stores.get("dm-library").m.size >= 4, "kept in the device's stores, as before the update");
+const D = "24";
+signedIn = person(D, [D], "Dee");
+await mod.flushProgressQueue();                        // the first learner the app meets after the update
+assert.equal((await mod.currentLearner()).id, D);
+assert.ok(!stores.has("dm-library"), "moved out of the device's stores");
+assert.ok(stores.get(`dm-l${D}-library`).m.size >= 4, "into Dee's");
+assert.ok((await mod.indexAll(`dm-l${D}-index`)).length >= 4, "with what the next sync needs to know");
+online = false;
+assert.ok((await (await mod.cachedPage(new Request(ORIGIN + "/echospell/level-1/group-a/"))).text()).includes("<audio"),
+  "opens offline, nothing downloaded again");
+// offline, a page that isn't saved says so, and what needs the internet says that
+text = await (await visit("/tutor/")).text();
+assert.ok(text.includes("The AI tutor needs the internet") && text.includes('href="/accounts/dashboard/"'));
+text = await (await visit("/somewhere-not-saved/")).text();
+assert.ok(text.includes("isn't on this device yet"));
+const saved = await askWorker({ type: "offline-saved" });
+assert.equal(saved.offline, true, "the last page came from the device");
+assert.ok(saved.paths.includes("/echospell/level-1/group-a/") && saved.paths.includes("/accounts/logout/") && !saved.paths.includes("/tutor/"));
+online = true;
+// a sync after that fetches only what changed
+fetched.length = 0;
+manifest = list({ learner: { id: D, secret: secretFor(D) } });
+await mod.runDownload({ media: true });
+assert.deepEqual(pagesFetched().sort(), ["/accounts/dashboard/", "/tricks/lessons/locked/"], "Dee's moved lessons aren't fetched again");
+signedIn = null;
+manifest = list();
+console.log("old downloads ok");
+
+// ------------------------------------------------ copies aren't visits; offline visits are made again online
+const copied = fetched.filter((x) => new URL(x.url).pathname === "/accounts/dashboard/");
+assert.ok(copied.length && copied.every((x) => x.init.headers["X-DM-Offline-Copy"] === "1"), "a page fetched to keep says so");
+const DAY = "/learning-modules/m/t/w/monday/";
+site[DAY] = `<i data-learner="${D}">Monday start</i>`;
+site[DAY + "?step=1"] = `<i data-learner="${D}">Step one</i>`;
+site[DAY + "?step=2"] = `<i data-learner="${D}">Step two</i>`;
+signedIn = person(D, [D], "Dee");
+manifest = list({ learner: { id: D, secret: secretFor(D) } });
+manifest.pages.push({ p: DAY, v: "r1.day" }, { p: DAY + "?step=1", v: "r1.day" }, { p: DAY + "?step=2", v: "r1.day" });
+await mod.runDownload({ media: true });
+online = false;
+assert.ok((await (await visit(DAY + "?step=2")).text()).includes("Step two"), "each step of a day is its own page offline");
+assert.ok((await (await visit(DAY + "?step=1")).text()).includes("Step one"));
+assert.ok((await (await visit(DAY + "?step=9")).text()).includes("Monday start"), "an unknown step falls back to the day");
+await visit(DAY + "?step=2");                                        // opened twice: counts once
+await visit("/echospell/level-1/");                                  // not a page that counts
+const waitingJobs = [...dbs.get(`dm-l${D}-queue`).rows.values()].filter((job) => job.method === "GET").map((job) => new URL(job.url).search);
+assert.deepEqual(waitingJobs.sort(), ["?step=1", "?step=2", "?step=9"], "visits that count wait for the connection");
+online = true;
+fetched.length = 0;
+await mod.flushProgressQueue();
+const replays = fetched.filter((x) => x.url.includes(DAY));
+assert.equal(replays.length, 3);
+assert.ok(replays.every((x) => x.init.method === "GET" && x.init.body === undefined && x.init.headers["x-dm-offline-replay"] === "1"),
+  "made again as the visits they were, marked as done offline");
+assert.equal([...dbs.get(`dm-l${D}-queue`).rows.values()].length, 0);
+signedIn = null;
+manifest = list();
+console.log("visits ok");
 console.log("ALL SERVICE WORKER TESTS PASSED");

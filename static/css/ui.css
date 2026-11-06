@@ -1551,3 +1551,14 @@ html.qs-open { overflow: hidden; }
   .tab-steps__arrow { width: 30px; height: 30px; font-size: 15px; }
   .tab-steps__count { display: none; }
 }
+
+/* Offline: links to pages this device hasn't saved (static/js/offline_sync.js). */
+a.dm-needs-net { opacity: .45; filter: grayscale(1); cursor: not-allowed; }
+.dm-needs-net-toast {
+  position: fixed; left: 50%; bottom: 24px; z-index: 10000; max-width: min(92vw, 440px);
+  padding: 14px 18px; border-radius: 14px; background: var(--ink, #0b1a4a); color: #fff;
+  font-weight: 600; line-height: 1.4; text-align: center; box-shadow: 0 10px 30px rgba(11, 26, 74, .3);
+  opacity: 0; pointer-events: none; transform: translate(-50%, 12px); transition: opacity .2s, transform .2s;
+}
+.dm-needs-net-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .dm-needs-net-toast { transition: none; } }

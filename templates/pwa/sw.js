@@ -115,6 +115,20 @@ const QUEUEABLE_PROGRESS = [
   /^\/echospell\/[^/]+\/[^/]+\/activities\/[^/]+\/$/,
 ];
 
+// Pages where opening them counts as progress (apps/offline/copies.py): an
+// EchoSpell group or card, a Tricks or 44 Academy tab, a step of a Learning
+// Modules day. Opened offline, the visit waits in the queue and is made again
+// once back online, in order, so the site records it just as it happened.
+const COUNTED_VISITS = [
+  /^\/echospell\/[^/]+\/[^/]+\/([^/]+\/)?$/,
+  /^\/(tricks\/lessons|book\/44-academy)\/[^/]+\/([^/]+\/)?$/,
+  /^\/learning-modules\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/$/,
+];
+
+function countsAsVisit(pathname) {
+  return COUNTED_VISITS.some((pattern) => pattern.test(pathname)) && !/\/(activities|assessment)\/[^/]+\/$/.test(pathname);
+}
+
 function isActivity(pathname) {
   return /\/(assessment|activities)\/[^/]+\/$/.test(pathname);
 }
@@ -144,6 +158,9 @@ self.addEventListener("activate", (event) => {
       await Promise.all(names.filter((name) => name.startsWith("dm-") && name !== CACHE &&
         name !== PAGES_CACHE && name !== MEDIA_CACHE && name !== LIBRARY_CACHE && name !== LIBRARY_MEDIA &&
         name !== LIBRARY_STATIC && !/^dm-l\d+-/.test(name) && !keepStatic.has(name)).map((name) => caches.delete(name)));
+      // A device that met its learner before this could move their old
+      // downloads (see "learners") does it now.
+      await adoptOldDownloads(await currentLearner()).catch(() => {});
       await self.clients.claim();
     })
   );
@@ -321,6 +338,7 @@ async function useLearner(info) {
 async function openLearner(id, key) {
   learnerNow = { p: "learner", id, key };
   await keyStore("readwrite", (store) => store.put(learnerNow));
+  await adoptOldDownloads(learnerNow);
   const ids = [learnerNow.id, ...(await knownLearners()).filter((id) => id !== learnerNow.id)];
   // Room for so many learners' lessons: the longest unseen give theirs up
   // (their waiting progress stays, to be sent when they're back).
@@ -333,6 +351,49 @@ async function openLearner(id, key) {
   }
   await keyStore("readwrite", (store) => store.put({ p: "learners", ids }));
   return learnerNow;
+}
+
+// Lessons saved before each learner had their own stores sit in the
+// device's stores, sealed with the device's key. They belong to whoever was
+// signed in then (signing out used to delete them), which is the first
+// learner the app meets: they move into that learner's stores, sealed
+// again with their key, so nothing has to be downloaded again.
+let adopting = null;
+
+function adoptOldDownloads(learner) {
+  adopting = adopting || (async () => {
+    if (!learner || !(await caches.has(LIBRARY_CACHE) || await caches.has(PAGES_CACHE))) return;
+    const into = storesOf(learner);
+    for (const [from, to] of [[LIBRARY_CACHE, into.library], [PAGES_CACHE, into.pages]]) {
+      if (!(await caches.has(from))) continue;
+      const old = await caches.open(from);
+      const fresh = await caches.open(to);
+      for (const request of await old.keys()) {
+        if (await fresh.match(request)) continue;            // theirs already, and newer
+        const kept = await old.match(request);
+        try {
+          const bytes = await openBytes(await kept.arrayBuffer());
+          await fresh.put(request, await sealed(new Response(bytes, {
+            headers: { "Content-Type": kept.headers.get("X-DM-Type") || "text/html; charset=utf-8" },
+          }), learner.key));
+        } catch (error) { /* unreadable: left behind, fetched again at the next sync */ }
+      }
+    }
+    const entries = await indexAll(LIBRARY_DB).catch(() => []);
+    if (entries.length) {
+      const have = new Set((await indexAll(into.index).catch(() => [])).map((entry) => entry.p));
+      await indexChange((store) => entries.filter((entry) => !have.has(entry.p)).forEach((entry) => store.put(entry)), into.index);
+    }
+    const access = await keyStore("readonly", (store) => store.get("access")).catch(() => null);
+    const theirs = await keyStore("readonly", (store) => store.get(into.access)).catch(() => null);
+    if (access && !theirs) await keyStore("readwrite", (store) => store.put({ ...access, p: into.access }));
+    await caches.delete(LIBRARY_CACHE);
+    await caches.delete(PAGES_CACHE);
+    await indexClear(LIBRARY_DB);
+    await keyStore("readwrite", (store) => store.delete("access")).catch(() => {});
+    accessName = null;
+  })().finally(() => { adopting = null; });
+  return adopting;
 }
 
 // The people who may sign in here offline, the most recently seen first.
@@ -382,9 +443,23 @@ async function storesForPage(html) {
   const mark = pageLearner(html);
   if (!mark) return stores();
   const me = await currentLearner();
-  if (me && me.id === mark) return storesOf(me);
+  if (me && me.id === mark) {
+    refreshLearner(mark);
+    return storesOf(me);
+  }
   const who = await fetchLearner();
   return who && String(who.id) === mark ? storesOf(await useLearner(who)) : null;
+}
+
+// Once in a while (each time the worker starts), ask who is remembered on
+// this device, so a learner who has just ticked "Remember me" can sign in
+// offline straight away, not only after their next sync.
+const refreshed = new Set();
+
+function refreshLearner(id) {
+  if (refreshed.has(id)) return;
+  refreshed.add(id);
+  fetchLearner().then((who) => (who && String(who.id) === id ? useLearner(who) : null)).catch(() => {});
 }
 
 // ---------------------------------------------------------- signing in
@@ -498,6 +573,34 @@ async function finishSignInPage(pending) {
     '<input type="hidden" name="user" value="' + escapeHtml(pending.id) + '">' +
     '<button class="go" type="submit">Yes, I am ' + name + '</button></form>' + signOut +
     '<button class="go go--plain" type="submit">Someone else</button></form>');
+}
+
+// Did the last page come from this device because the site couldn't be
+// reached? Browsers often still say "online" on Wi-Fi with no internet.
+let servedOffline = false;
+
+// Offline, a page this device hasn't saved: say which, and what still works.
+const ONLINE_ONLY = [
+  [/^\/tutor\//, "The AI tutor"],
+  [/^\/clash\//, "Clash"],
+  [/^\/search\//, "Search"],
+  [/^\/notifications\//, "Notifications"],
+  [/^\/learning-tools\/book-scanner\//, "The book scanner"],
+  [/^\/accounts\//, "Your account settings"],
+  [/^\/assessments\/(?!results\/|type\/|$)/, "Taking a test"],
+  [/^\/app\//, "Getting the app"],
+];
+
+function notSavedPage(pathname) {
+  const online = ONLINE_ONLY.find(([pattern]) => pattern.test(pathname));
+  const heading = online ? `${online[1]} needs the internet` : "This page isn't on this device yet";
+  const words = online ? "Connect to the internet, then try again. Your saved lessons still work offline." :
+    "It wasn't saved for offline use. Connect to the internet to open it; your saved lessons still work offline.";
+  return shell(heading, '<p style="font-size:44px;margin:0">&#128246;</p><h1>' + escapeHtml(heading) + '</h1>' +
+    '<p>' + words + '</p><button class="go" onclick="history.length > 1 ? history.back() : location.assign(\'' +
+    HOME_PATH + '\')">Go back</button><a class="go go--plain" href="' + HOME_PATH + '" style="text-decoration:none">' +
+    'My dashboard</a><p style="margin-top:18px"><a href="' + OFFLINE_PAGE + '" style="color:#1846E0;font-weight:700">' +
+    'Saved videos</a></p>', 503);
 }
 
 // Signing out with no connection: their lessons lock now, and the site is
@@ -620,7 +723,9 @@ async function cachedPath(pathname) {
 async function cachedPage(request) {
   const where = await stores();
   const cache = await caches.open(where.pages);
-  const pathname = new URL(request.url).pathname;
+  const { pathname, search } = new URL(request.url);
+  const step = search && (await unsealed(await (await caches.open(where.library)).match(self.location.origin + pathname + search), where.key));
+  if (step) return step;
   const page = (await unsealed(await cache.match(request, { ignoreSearch: true }), where.key)) || (await cachedPath(pathname));
   if (page) return page;
   // The app and the installed web app open on "/", which only redirects:
@@ -880,7 +985,7 @@ async function newDownload(options) {
   for (const page of wanted) {
     const here = kept.get(page.p);
     // A page with no version shows the learner's progress: always fetched.
-    if (!page.v || !here || here.v !== page.v || (state.media && here.pending)) state.todo.push([page.p, page.v]);
+    if (!page.v || !here || here.v !== page.v || here.moved || (state.media && here.pending)) state.todo.push([page.p, page.v]);
   }
   if (state.limit) {
     state.todo = state.todo.slice(0, state.limit);       // part of a sync: nothing is removed
@@ -910,7 +1015,10 @@ async function syncPage(state, [path, version]) {
   const address = new URL(path, self.location.origin);
   let response;
   try {
-    response = await fetch(address.href, { credentials: "include", redirect: "follow", headers: { Accept: "text/html" } });
+    // Marked as a copy (apps/offline/copies.py): fetching a page to keep
+    // isn't the learner opening it, so it records no progress.
+    response = await fetch(address.href, { credentials: "include", redirect: "follow",
+      headers: { Accept: "text/html", "X-DM-Offline-Copy": "1" } });
   } catch (error) {
     state.failed += 1;
     if (!navigator.onLine) state.stopped = "offline";
@@ -918,9 +1026,16 @@ async function syncPage(state, [path, version]) {
   }
   const finalUrl = new URL(response.url || address.href);
   if (finalUrl.pathname.startsWith("/accounts/login/")) { state.stopped = "signed-out"; return; }
-  // A lesson they haven't reached yet sends them back: a later sync gets it.
-  const movedOn = version && response.redirected && finalUrl.pathname !== address.pathname;
-  if (movedOn || !response.ok || isSensitive(finalUrl.pathname) ||
+  // Turned away for now: a lesson they haven't reached ("finish this one
+  // first"), or an activity before every part of its lesson was opened (sent
+  // back up to the lesson). What the site shows instead is kept under this
+  // address, as it would show online, and fetched again at every sync until
+  // it opens. Sent along to a page beside or below (a lesson opening on its
+  // first tab) is just where that address leads: kept, nothing to retry.
+  const sentUp = response.redirected && finalUrl.pathname !== address.pathname &&
+    address.pathname.startsWith(finalUrl.pathname);
+  const turnedAway = Boolean(version) && (sentUp || response.status === 403);
+  if ((!response.ok && !turnedAway) || isSensitive(finalUrl.pathname) ||
       !(response.headers.get("Content-Type") || "").includes("text/html")) {
     state.skipped += 1;
     return;
@@ -930,8 +1045,9 @@ async function syncPage(state, [path, version]) {
   const mark = /data-learner="(\d+)"/.exec(html.slice(0, 4000));
   if (mark && mark[1] !== where.id) { state.stopped = "switched"; return; }     // someone else signed in meanwhile
   // Stored under the address that was asked for, so it opens offline even
-  // if the server redirected to it (a dashboard, say).
-  await (await caches.open(where.library)).put(address.origin + address.pathname, await sealed(new Response(html, {
+  // if the server redirected to it (a dashboard, say). A step of a lesson
+  // (?step=2) is a page of its own.
+  await (await caches.open(where.library)).put(address.origin + address.pathname + address.search, await sealed(new Response(html, {
     status: 200, headers: { "Content-Type": response.headers.get("Content-Type") || "text/html; charset=utf-8" },
   }), where.key));
   state.pages += 1;
@@ -954,7 +1070,7 @@ async function syncPage(state, [path, version]) {
       state.files.push(url.href);
     }
   }
-  await indexPut({ p: path, v: version, media: keys, pending: keys.length > 0, statics });
+  await indexPut({ p: path, v: version, media: keys, pending: keys.length > 0, statics, moved: turnedAway });
 }
 
 // After a whole sync: a page is no longer pending once all its files are here.
@@ -1054,6 +1170,28 @@ async function queueProgress(request) {
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
+  db.close();
+  try { await self.registration.sync.register("dm-learning-sync"); } catch (error) { /* foreground reconnect also syncs */ }
+}
+
+async function queueVisit(url) {
+  const where = await stores();
+  const db = await openQueue(where.queue);
+  const waiting = await new Promise((resolve) => {
+    const request = db.transaction("progress", "readonly").objectStore("progress").getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => resolve([]);
+  });
+  // The same page opened twice offline counts once.
+  if (!waiting.some((job) => job.method === "GET" && job.url === url)) {
+    const body = await sealBytes(new ArrayBuffer(0), where.key);
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction("progress", "readwrite");
+      tx.objectStore("progress").add({ url, method: "GET", headers: { accept: "text/html" }, body, created: Date.now() });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  }
   db.close();
   try { await self.registration.sync.register("dm-learning-sync"); } catch (error) { /* foreground reconnect also syncs */ }
 }
@@ -1193,8 +1331,9 @@ async function sendQueue(name, key, token) {
     const signed = withToken(job, body, token);
     let response;
     try {
-      response = await fetch(job.url, { method: job.method, headers: signed.headers, body: signed.body,
-        credentials: "include", redirect: "follow" });
+      // Done offline, sent now (apps/offline/copies.py).
+      response = await fetch(job.url, { method: job.method, headers: { ...signed.headers, "x-dm-offline-replay": "1" },
+        body: job.method === "GET" ? undefined : signed.body, credentials: "include", redirect: "follow" });
     } catch (error) { break; } // still offline: try again later
     // Signed out meanwhile: keep everything until they sign back in.
     if (new URL(response.url || job.url).pathname.startsWith("/accounts/login/")) break;
@@ -1248,6 +1387,19 @@ self.addEventListener("message", (event) => {
           decodeURIComponent(url.pathname.replace(/^\/|\/$/g, "").split("/").slice(-1)[0] || "Home").replace(/[-_]/g, " ") });
       });
       port.postMessage(pages);
+    })());
+  }
+
+  // static/js/offline_sync.js: which pages open here offline, so links to
+  // the rest can say they need the internet.
+  if (data && data.type === "offline-saved" && port) {
+    event.waitUntil((async () => {
+      const where = await stores();
+      const keys = [...await (await caches.open(where.pages)).keys(), ...await (await caches.open(where.library)).keys()];
+      const paths = new Set(keys.map((key) => new URL(key.url).pathname));
+      if (paths.has(HOME_PATH)) paths.add("/");
+      [LOGIN_PATH, LOGOUT_PATH, OFFLINE_URL, OFFLINE_PAGE].forEach((path) => paths.add(path));
+      port.postMessage({ offline: servedOffline, paths: [...paths] });
     })());
   }
 
@@ -1420,6 +1572,7 @@ self.addEventListener("fetch", (event) => {
     const sensitive = isSensitive(url.pathname);
     event.respondWith(
       fetch(request).then(async (response) => {
+        servedOffline = false;
         const settle = await settleSignIn(response);
         if (settle) return settle;
         const finalPath = response.url ? new URL(response.url).pathname : "";
@@ -1428,10 +1581,13 @@ self.addEventListener("fetch", (event) => {
         }
         return response;
       }).catch(async () => {
+        servedOffline = true;
         const page = sensitive ? null : await cachedPage(request);
+        if (page && countsAsVisit(url.pathname)) await queueVisit(url.href).catch(() => {});
         // Nobody's lessons open (signed out): who is learning?
         if (!page && !(await currentLearner()) && (await keptLearners()).length) return signInPage();
         if (!page && !sensitive && !(await accessOpen())) return connectAgainPage();
+        if (!page && (await currentLearner())) return notSavedPage(url.pathname);
         return page || (await caches.match(OFFLINE_URL)) || Response.error();
       })
     );

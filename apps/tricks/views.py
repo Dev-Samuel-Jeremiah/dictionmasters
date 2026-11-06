@@ -22,6 +22,7 @@ from apps.book.programmes import programme_for
 from apps.echospell.activity_kinds import MODE_RECORD
 from apps.echospell.marking import feedback_for, given_answer, mark_response
 from apps.echospell.views import _item_rows, qr_box
+from apps.offline import copies
 
 from . import progress
 from .models import LessonActivity, LessonActivityAttempt, LessonActivityResponse
@@ -51,7 +52,8 @@ def open_lesson(request, programme, slug, tab="lens"):
         populated = [one["slug"] for one in step["tabs"]]
         if tab not in populated and populated:
             return redirect(info["lesson_tab"], slug=lesson.slug, tab=populated[0])
-    progress.record_tab(request.user, lesson, tab)
+    if copies.opened(request):          # not a copy kept for offline use
+        progress.record_tab(request.user, lesson, tab)
     step = progress.Standing(request.user, programme).step(lesson)
     return book.lesson_detail(
         request, programme, slug, tab, sound=lesson,
@@ -71,7 +73,7 @@ def _open_activity(request, programme, slug, activity_slug):
     standing = progress.Standing(request.user, programme)
     if standing.blocker(lesson):
         return lesson, activity, standing, redirect(info["lesson"], slug=lesson.slug)
-    if not standing.step(lesson)["finished"]:
+    if not standing.step(lesson)["finished"] and copies.parts_rule_applies(request):
         messages.info(request, f"Open every part of the {info['lesson_word']} first, then take its assessment.")
         return lesson, activity, standing, redirect(info["lesson_tab"], slug=lesson.slug, tab=ASSESSMENT)
     return lesson, activity, standing, None

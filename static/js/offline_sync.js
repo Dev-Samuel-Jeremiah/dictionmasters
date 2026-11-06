@@ -283,6 +283,70 @@
   window.addEventListener("load", function () { setTimeout(background, 4000); });
   window.addEventListener("online", function () { setTimeout(background, 4000); });
 
+  // ------------------------------------------------------ offline links
+  // With no connection, a link to a page this device hasn't saved (the AI
+  // tutor, search, a page outside the learner's level) is greyed out, and
+  // tapping it says why instead of opening a dead end.
+  function pageLink(link) {
+    try {
+      var u = new URL(link.getAttribute("href"), location.href);
+      if (u.origin !== location.origin || link.hasAttribute("download")) return null;
+      if (u.pathname === location.pathname || /^\/(static|media)\//.test(u.pathname)) return null;
+      return u;
+    } catch (e) { return null; }
+  }
+  // Offline: the browser says so, or this page came from the device because
+  // the site couldn't be reached (Wi-Fi with no internet still says online).
+  var cutOff = false;
+  function markLinks() {
+    if (!WHO) return;
+    ask({ type: "offline-saved" }).then(function (answer) {
+      cutOff = Boolean(answer && answer.offline) || !navigator.onLine;
+      if (!cutOff) return;
+      var saved = {};
+      ((answer && answer.paths) || []).forEach(function (path) { saved[path] = true; });
+      document.querySelectorAll("a[href]").forEach(function (link) {
+        var u = pageLink(link);
+        if (u && !saved[u.pathname]) {
+          link.classList.add("dm-needs-net");
+          link.setAttribute("aria-disabled", "true");
+        }
+      });
+    }).catch(function () { /* no worker yet: links open as they are */ });
+  }
+  function unmarkLinks() {
+    cutOff = false;
+    document.querySelectorAll("a.dm-needs-net").forEach(function (link) {
+      link.classList.remove("dm-needs-net");
+      link.removeAttribute("aria-disabled");
+    });
+  }
+  var toastTimer;
+  function needsNet() {
+    var box = document.getElementById("dm-needs-net-toast");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "dm-needs-net-toast";
+      box.className = "dm-needs-net-toast";
+      box.setAttribute("role", "status");
+      document.body.appendChild(box);
+    }
+    box.textContent = "You're offline: this needs the internet. Your saved lessons still work.";
+    box.classList.add("is-on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { box.classList.remove("is-on"); }, 4000);
+  }
+  document.addEventListener("click", function (event) {
+    var link = event.target.closest ? event.target.closest("a.dm-needs-net") : null;
+    if (!link || !cutOff) return;
+    event.preventDefault();
+    needsNet();
+  }, true);
+  window.addEventListener("offline", markLinks);
+  window.addEventListener("online", unmarkLinks);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", markLinks);
+  else markLinks();
+
   // ------------------------------------------------------ the panel
   var panel = document.querySelector("[data-offline-sync]");
   if (!panel) return;

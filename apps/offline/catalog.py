@@ -106,7 +106,20 @@ def _front_pages(shelf, tools):
         if tool in tools:
             for name in names:
                 shelf.add(reverse(name))
+    if "tricks:home" in tools:
+        # Tricks one section at a time (every lesson's Word Bank, say).
+        from apps.tricks.progress import TAB_CONTENT
+
+        for section in TAB_CONTENT:
+            shelf.add(reverse("tricks:section", args=[section]))
+    # The tests on offer and their results. Taking a test needs the
+    # internet; seeing what there is, and how they did, doesn't.
+    from apps.assessments.models import Assessment
+
     shelf.add(reverse("assessments:hub"))
+    shelf.add(reverse("assessments:my_results"))
+    for kind in Assessment.Kind.values:
+        shelf.add(reverse("assessments:kind_list", args=[kind]))
 
 
 def _echospell(shelf, levels):
@@ -155,7 +168,7 @@ def _lessons(shelf, programme, label):
     from apps.book.models import Sound
     from apps.book.programmes import programme_for
     from apps.tricks.models import LessonActivity, LessonActivityItem
-    from apps.tricks.progress import TAB_CONTENT, _tabs_with_content, lessons_in_order
+    from apps.tricks.progress import TAB_CONTENT, lessons_in_order
 
     shelf.source = label
     info = programme_for(programme)
@@ -175,14 +188,15 @@ def _lessons(shelf, programme, label):
         parts[row["lesson_id"]].append(row)
     for row in shelf.rows(LessonActivityItem.objects.filter(activity__lesson_id__in=ids, activity__is_published=True)):
         parts[owners.get(row["activity_id"])].append(row)
-    tabs = _tabs_with_content(lessons)
     for lesson in lessons:
         version = _version(lesson.name, lesson.symbol, parts[lesson.pk])
         shelf.add(reverse(info["lesson"], args=[lesson.slug]), version)
-        for tab in tabs.get(lesson.pk, []):
+        # Every tab, empty ones too: the section pages link them all, and an
+        # empty one shows (or, in Tricks, sends them to) the lesson's first.
+        for tab in TAB_CONTENT:
             shelf.add(reverse(info["lesson_tab"], args=[lesson.slug, tab]), version)
-        if activities[lesson.pk]:
-            shelf.add(reverse(info["lesson_tab"], args=[lesson.slug, "assessment"]), version)
+        # Every lesson has an Assessment tab, even before it has activities.
+        shelf.add(reverse(info["lesson_tab"], args=[lesson.slug, "assessment"]), version)
         for activity in activities[lesson.pk]:
             shelf.add(reverse(info["activity"], args=[lesson.slug, activity["slug"]]), version)
 
@@ -208,9 +222,11 @@ def _modules(shelf, levels):
     days = list(Day.objects.filter(is_published=True, week__term__module_id__in=ids).select_related("week__term__module"))
     parts = defaultdict(list)
     item_days = {}
+    item_count = defaultdict(int)
     for row in shelf.rows(LessonItem.objects.filter(is_published=True, day__in=days)):
         parts[row["day_id"]].append(row)
         item_days[row["id"]] = row["day_id"]
+        item_count[row["day_id"]] += 1
     for model in (LessonSlide, LessonResource):
         for row in shelf.rows(model.objects.filter(lesson_item__day__in=days, lesson_item__is_published=True)):
             parts[item_days.get(row["lesson_item_id"])].append(row)
@@ -224,8 +240,15 @@ def _modules(shelf, levels):
         shelf.add(reverse("learning_modules:week_detail", args=[week.term.module.slug, week.term.slug, week.slug]), outline)
     for day in days:
         week = day.week
-        shelf.add(reverse("learning_modules:day_detail", args=[week.term.module.slug, week.term.slug, week.slug, day.day_name]),
-                  _version(parts[day.pk]))
+        url = reverse("learning_modules:day_detail", args=[week.term.module.slug, week.term.slug, week.slug, day.day_name])
+        version = _version(parts[day.pk])
+        shelf.add(url, version)
+        # A day shows one item per screen (?step=N) and ends on ?step=finish
+        # (apps/learning_modules/lesson_path.py): each is its own page.
+        if item_count[day.pk]:
+            for number in range(1, item_count[day.pk] + 1):
+                shelf.add(f"{url}?step={number}", version)
+            shelf.add(f"{url}?step=finish", version)
 
 
 def _reading_club(shelf, levels):

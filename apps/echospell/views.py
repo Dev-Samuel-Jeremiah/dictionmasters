@@ -23,6 +23,8 @@ from django.urls import Resolver404, resolve, reverse
 from django.utils.http import content_disposition_header, urlencode
 from django.views.decorators.http import require_POST
 
+from apps.offline import copies
+
 from . import lesson_path as path_of
 from .levels import limit_to_levels, require_level
 from . import qr
@@ -165,7 +167,7 @@ def group_detail(request, level_slug, group_slug):
 
     # The group page is the guided lesson's start and finish screen.
     lesson = path_of.lesson_path(request.user, level, group)
-    if path_of.award(request.user, lesson, group):
+    if copies.opened(request) and path_of.award(request.user, lesson, group):
         completed_ids.add(group.id)
 
     groups = list(level.groups.all())
@@ -200,12 +202,14 @@ def card_detail(request, level_slug, group_slug, category_slug):
 
     # Remember this card page for "Pick up where you left off". The exact
     # card on it is filled in by save_card_position as they work down it.
-    position, created = CardPosition.objects.get_or_create(
-        user=request.user, defaults={"group": group, "category": category}
-    )
-    if not created and (position.group_id, position.category_id) != (group.id, category.id):
-        position.group, position.category, position.lesson = group, category, None
-        position.save()
+    # (Not for a copy kept for offline use: apps/offline/copies.py.)
+    if copies.opened(request):
+        position, created = CardPosition.objects.get_or_create(
+            user=request.user, defaults={"group": group, "category": category}
+        )
+        if not created and (position.group_id, position.category_id) != (group.id, category.id):
+            position.group, position.category, position.lesson = group, category, None
+            position.save()
 
     if category.kind == "passage":
         context["passage"] = getattr(group, "passage", None)
@@ -245,9 +249,11 @@ def card_detail(request, level_slug, group_slug, category_slug):
     # the people who make the books, not to every learner.
     context.update(_card_steps(level, group, category))
     # The guided lesson: opening a card type is what counts as doing it.
-    path_of.record_card(request.user, group, category)
+    if copies.opened(request):
+        path_of.record_card(request.user, group, category)
     lesson = path_of.lesson_path(request.user, level, group)
-    path_of.award(request.user, lesson, group)
+    if copies.opened(request):
+        path_of.award(request.user, lesson, group)
     context["lesson"] = path_of.at_step(lesson, f"card-{category.pk}")
     context["card_url"] = _card_link(level, group, category)
     context["qr_filename"] = _qr_filename(level, group, category)

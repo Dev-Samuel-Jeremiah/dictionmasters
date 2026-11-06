@@ -17,6 +17,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.access import limit_to_level_list
+from apps.offline import copies
 
 from . import lesson_path as path_of
 from .models import DAY_CHOICES, Day, DayProgress, LearningModule, LessonItem, Week
@@ -248,12 +249,13 @@ def day_detail(request, module_slug, term_slug, week_slug, day_name):
     lesson_items = []
     if number:
         current = items[number - 1]
-        path_of.record_item(request.user, day, current)
-        lesson = path_of.lesson_path(request.user, day, items)
+        if copies.opened(request):          # not a copy kept for offline use
+            path_of.record_item(request.user, day, current)
+            lesson = path_of.lesson_path(request.user, day, items)
         lesson_items = list(
             day.lesson_items.filter(pk=current.pk).prefetch_related("slides", "resources")
         )
-    if path_of.award(request.user, lesson, day):
+    if copies.opened(request) and path_of.award(request.user, lesson, day):
         completed_ids.add(day.id)
 
     terms = list(_module_tree(module))

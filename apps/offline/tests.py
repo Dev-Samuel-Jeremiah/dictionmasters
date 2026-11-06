@@ -351,6 +351,16 @@ class LearnerTests(ManifestCase):
         self.assertEqual(self.client.get("/offline-sync/learner/").json()["device"], [])
 
 
+class EverythingReachableTests(ManifestCase):
+    def test_pages_a_learner_reaches_from_the_tools_are_listed(self):
+        """Found by visiting every link offline: these opened online but
+        weren't kept, so the app showed "You're offline" instead."""
+        seen = build(["Level 1"], {"tricks:home"}).seen
+        for path in ["/tricks/sections/", "/tricks/sections/lens/", "/tricks/sections/minimal-pairs/",
+                     "/assessments/", "/assessments/results/", "/assessments/type/practice/"]:
+            self.assertIn(path, seen)
+
+
 class ReportTests(ManifestCase):
     def test_a_level_can_be_measured(self):
         shelf = build(["Level 1"], {"echospell:hub"})
