@@ -274,8 +274,10 @@ async function partOf(request, response) {
 // {p: "kept:<id>", id, key, name, initials}: the people remembered on this
 // device ("Remember me", apps/accounts/switcher.py), whose keys stay when
 // they sign out so they can sign in again offline. The site says who they
-// are (apps/offline/views.py, learner_info): an admin, or an account whose
-// password has changed, is never among them. Nothing here checks a
+// are (apps/offline/views.py, learner_info): an account whose password has
+// changed is never among them. An admin may be: offline that opens only the
+// lessons kept here, never the control room, and back online the site asks
+// for their password before switching to them. Nothing here checks a
 // password, so there is no password, or anything like one, to copy.
 let learnerNow;
 

@@ -84,6 +84,7 @@ def device_accounts(request):
         if by_hash.get(row.key_hash) != row.user_id or not row.user.is_active:
             continue
         current = secrets.compare_digest(row.auth_hash, row.user.get_session_auth_hash())
+        row.password_changed = not current
         row.needs_password = row.user.is_staff or row.user.is_superuser or not current
         row.user.switch_locked = row.needs_password
         rows[row.user_id] = row

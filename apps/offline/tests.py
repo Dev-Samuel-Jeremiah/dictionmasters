@@ -334,10 +334,11 @@ class LearnerTests(ManifestCase):
         found = self.client.get("/offline-sync/learner/").json()
         self.assertEqual((found["id"], found["device"]), (other.pk, [self.pupil.pk]))
 
-    def test_admins_and_changed_passwords_never_sign_in_offline(self):
+    def test_admins_may_but_changed_passwords_never_sign_in_offline(self):
         admin = person("admin@example.com", is_staff=True)
         self.sign_in(admin)
-        self.assertEqual(self.client.get("/offline-sync/learner/").json()["device"], [])
+        self.assertEqual(self.client.get("/offline-sync/learner/").json()["device"], [admin.pk])
+        self.client = self.client_class()                   # the pupil's own device
         self.sign_in(self.pupil)
         self.assertEqual(self.client.get("/offline-sync/learner/").json()["device"], [self.pupil.pk])
         self.pupil.set_password("a-new-password-9")       # changed on another device: asks for it again

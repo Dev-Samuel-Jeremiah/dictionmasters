@@ -14,15 +14,17 @@ def learner_info(request):
     """The signed-in person, as their app keeps them (templates/pwa/sw.js,
     "learners"): their number and key, their name for the offline sign-in
     screen, and who on this device may sign in there by tapping their name.
-    That's the accounts remembered on the device's switcher that switch with
-    no password (apps/accounts/switcher.py): never an admin, nor an account
-    whose password has changed since. The app forgets everyone else's key
-    when they sign out, so their lessons stay locked until they sign in
-    online again."""
+    That's the accounts remembered on the device's switcher
+    (apps/accounts/switcher.py), but not one whose password has changed
+    since. Admins too: offline that opens only the lessons kept on the
+    device (the control room and admin pages are never kept), and back
+    online the site asks for their password as it always does. The app
+    forgets everyone else's key when they sign out, so their lessons stay
+    locked until they sign in online again."""
     from apps.accounts import switcher
 
     user = request.user
-    device = [row.user_id for row in switcher.device_accounts(request) if not row.needs_password]
+    device = [row.user_id for row in switcher.device_accounts(request) if not row.password_changed]
     return {
         "id": user.pk,
         "secret": learner_secret(user),
