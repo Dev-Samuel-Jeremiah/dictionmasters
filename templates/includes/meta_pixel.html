@@ -1,0 +1,14 @@
+{# Meta Pixel, with consent first (apps/landing/meta_pixel.py, static/js/meta_pixel.js). #}
+{% load static %}
+<div id="dm-meta-pixel" data-pixel="{{ meta_pixel.id }}" data-event="{{ meta_pixel.event }}" hidden></div>
+{% if meta_pixel.banner %}
+<link rel="stylesheet" href="{% static 'css/consent.css' %}">
+<section class="dm-consent" data-consent hidden role="region" aria-label="Cookie choice">
+  <p class="dm-consent__text">We use Meta's pixel on these pages to see which of our adverts bring parents, teachers and schools here. Nothing is ever sent from lessons or pupils' accounts. <a href="{% url 'landing:privacy' %}#ads">More in our privacy notice</a>.</p>
+  <div class="dm-consent__actions">
+    <button type="button" class="dm-consent__btn dm-consent__btn--yes" data-consent-yes>Accept</button>
+    <button type="button" class="dm-consent__btn" data-consent-no>No thanks</button>
+  </div>
+</section>
+{% endif %}
+<script src="{% static 'js/meta_pixel.js' %}" defer></script>

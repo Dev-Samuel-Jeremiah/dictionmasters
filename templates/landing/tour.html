@@ -90,5 +90,6 @@
 </main>
 <script src="{% static 'js/tour.js' %}" defer></script>
 {% if native_app %}<script src="{% static 'js/native_app.js' %}" defer></script>{% endif %}
+{% if meta_pixel %}{% include "includes/meta_pixel.html" %}{% endif %}
 </body>
 </html>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% comment %}
   The privacy policy, at /privacy/. The App Store and Google Play both ask
   for this address when you publish the apps.
@@ -17,7 +18,7 @@
   <div class="wrap ui-body ui-stack">
     <article class="ui-panel">
       <h1 class="ui-panel__title">Privacy policy</h1>
-      <p class="ui-panel__lede">Last updated: 1 October 2026</p>
+      <p class="ui-panel__lede">Last updated: 10 November 2026</p>
 
       <p>Diction Masters ("we", "us") is a British English tutor for learners, teachers and schools, on the web and in our Android and iPhone apps. This policy explains what we collect, why, and the choices you have. Questions: <a href="mailto:{{ contact }}">{{ contact }}</a>.</p>
 
@@ -41,12 +42,21 @@
         <li><strong>ElevenLabs</strong> — creates the spoken audio for words, the reading tutor, and text you choose to read in Scan &amp; Listen.</li>
         <li><strong>Paystack</strong> — processes payments.</li>
         <li><strong>Cloudflare</strong> — stores lesson media and uploads.</li>
+        <li><strong>Meta (Facebook)</strong> — only if you accept it, and only on our public pages: see <a href="#ads">Measuring our adverts</a>.</li>
         <li><strong>Our hosting and email providers</strong> — run the website and send account emails.</li>
       </ul>
       <p>If you joined through a school, your school admin and teachers can see your progress and results.</p>
 
+      <h2 id="ads">Measuring our adverts</h2>
+      <p>We advertise Diction Masters on Facebook and Instagram. To see which adverts bring parents, teachers and schools to us, our home page, welcome tour and the sign-up pages for schools and adult learners can use the Meta Pixel, but only after you tap <strong>Accept</strong> on the notice there. It tells Meta that the page was visited, and, once a school or adult learner signs up, that a sign-up happened. Meta may link this to a Facebook or Instagram account you're signed in to in the same browser.</p>
+      <p>It is never used on pupils' sign-up pages, in lessons, on any page once you are signed in, or in our Android, iPhone and desktop apps, and nothing about children or their learning is ever sent to Meta. Meta's own use is covered by <a href="https://www.facebook.com/privacy/policy/" rel="noopener" target="_blank">Meta's privacy policy</a>.</p>
+      <p class="ads-choice">Your choice in this browser: <span data-ads-choice-note>&hellip;</span>
+        <button type="button" class="ui-btn ui-btn--small ui-btn--ghost" data-ads-choice="yes">Allow it</button>
+        <button type="button" class="ui-btn ui-btn--small ui-btn--ghost" data-ads-choice="no">Turn it off</button>
+      </p>
+
       <h2>Children</h2>
-      <p>Many of our learners are school children. Children join through their school, which is responsible for getting the consent it needs from parents or guardians. We collect only what is needed to teach and show progress.</p>
+      <p>Many of our learners are school children. Children join through their school, which is responsible for getting the consent it needs from parents or guardians. We collect only what is needed to teach and show progress, and never share anything about children for advertising.</p>
 
       <h2>How long we keep it</h2>
       <p>We keep your data while your account is open. When you delete your account, your details, progress and recordings are deleted. Payment records are kept, without your name attached, for as long as the law requires.</p>
@@ -68,3 +78,5 @@
 </div>
 {% endwith %}
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/meta_pixel.js' %}" defer></script>{% endblock %}

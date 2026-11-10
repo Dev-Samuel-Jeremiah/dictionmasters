@@ -1571,3 +1571,5 @@ a.dm-needs-net { opacity: .45; filter: grayscale(1); cursor: not-allowed; }
 }
 .dm-needs-net-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { .dm-needs-net-toast { transition: none; } }
+
+.ads-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

@@ -15,6 +15,7 @@ from django.views.decorators.http import require_POST
 from apps.billing.access import subscription_for
 from apps.billing.models import Plan
 from apps.billing.services import begin_access
+from apps.landing import meta_pixel
 
 from . import grown_ups as grown_up_pin
 from .access import pupils_of
@@ -122,6 +123,7 @@ def register_school(request):
         if user is not None:
             auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             send_welcome(request, user)
+            meta_pixel.mark_signup(request)          # the ads hear of it, with their consent
             plan = _chosen_plan(form, Plan.AUDIENCE_SCHOOL)
             if plan is not None:
                 # Remembered now, trial or not: it sets how many teachers can join.
@@ -265,6 +267,7 @@ def register_individual(request):
         if user is not None:
             auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             send_welcome(request, user)
+            meta_pixel.mark_signup(request)          # an adult learner: the ads hear of it, with consent
             messages.success(request, "Welcome to Diction Masters!")
             return redirect(begin_access(request, user, form.cleaned_data.get("start"), _chosen_plan(form, Plan.AUDIENCE_INDIVIDUAL),
                                           form.cleaned_data.get("promo_code", "")))

@@ -216,6 +216,7 @@ TEMPLATES = [
                 "apps.notifications.context_processors.bell",
                 "apps.landing.native_app.context",
                 "apps.offline.context.offline",
+                "apps.landing.meta_pixel.context",
             ],
             # {{ colour|palette }} everywhere, for colours stored in the database.
             "builtins": ["apps.landing.templatetags.palette"],
@@ -540,6 +541,11 @@ OFFLINE_MEDIA_NEED_MB = int(os.environ.get("OFFLINE_MEDIA_NEED_MB", 1800))
 # audio and videos kept there (they couldn't read them), and saved videos would
 # have to pass through this server. On: they're saved, straight from storage.
 STORAGE_CORS_READY = os.environ.get("STORAGE_CORS_READY", "").strip().lower() in ("1", "true", "yes")
+
+# Meta (Facebook) Pixel for the ads: only on the public pages adults come in
+# by, and only after the visitor accepts (apps/landing/meta_pixel.py). Empty
+# switches it off, as in development and tests.
+META_PIXEL_ID = os.environ.get("META_PIXEL_ID", "").strip()
 # How long the apps keep opening lessons with no internet: the days since they
 # last checked in. Saved videos last as long.
 OFFLINE_ACCESS_DAYS = int(os.environ.get("OFFLINE_ACCESS_DAYS", 90))
