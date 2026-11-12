@@ -75,6 +75,9 @@ def steady(html):
     to the apps again."""
     for token in set(_CSRF.findall(html)):
         html = html.replace(token, "desktop")
+    # A lesson video's ticket (for saving it on the website) changes on every
+    # render; the app plays the copy in the release instead (Media.rewrite).
+    html = re.sub(r"""data-ticket=(["'])[^"']*\1""", 'data-ticket=""', html)
     # Daily practice's "Give me a new set" link carries a random seed.
     return re.sub(r"\?shuffle=[0-9a-f]{32}", "?shuffle=desktop", html)
 
@@ -199,6 +202,14 @@ class Media:
             return address
         return None
 
+    def _video_address(self, ticket):
+        from apps.videos import links
+
+        found = links.read_ticket(unescape(ticket), links.WATCH)
+        video = links.video_from_ticket(found) if found else None
+        stored = getattr(video, "video_file", None) if video is not None else None
+        return self._stored(stored.name) if stored else None
+
     def rewrite(self, html):
         """The page with every file address it uses changed to the app's."""
         def swap(match):
@@ -210,12 +221,19 @@ class Media:
             return (address if address is not None else found) + trailing
 
         html = _ABSOLUTE.sub(swap, html)
+        # Lesson videos: the stored file the ticket stands for, kept like any
+        # recording, so the video plays with no internet.
+        html = _PLAY.sub(lambda match: self._video_address(match.group(1)) or match.group(0), html)
         media_url = settings.MEDIA_URL or ""
         if media_url.startswith("/") and media_url != "/":
             pattern = re.compile(r"""(?<=["'(=\s,])""" + re.escape(media_url) + r"""[^\s"'<>()\\`?#]+(?:\?[^\s"'<>()\\`]*)?""")
             html = pattern.sub(lambda m: self._stored(unquote(unescape(m.group(0)).split("?")[0][len(media_url):])), html)
         return html
 
+
+# A lesson video plays from /videos/play/<ticket>/: a short-lived address the
+# website gives the pupil looking at the page (apps/videos), not the file.
+_PLAY = re.compile(r"""(?<=["'])/videos/play/([^/"'\s]+)/(?=["'])""")
 
 _READ_ALONG = re.compile(r"""(?<=data-ra-sync=["'])(/book/read-along/([^/"':]+)[^"']*)(?=["'])""")
 

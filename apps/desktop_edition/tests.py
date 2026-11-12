@@ -347,3 +347,30 @@ class UnlockAdminAndCheckTests(TestCase):
                                   content_type="application/json")
         self.assertEqual(answer.status_code, 404)
         self.assertNotIn("stopped", answer.json())
+
+
+class LessonVideoTests(TestCase):
+    """A lesson video plays on the website from /videos/play/<ticket>/; the
+    release must carry the video file itself, or the app can't play it."""
+
+    def test_the_ticket_becomes_the_stored_video(self):
+        from apps.accounts.models import User
+        from apps.book.models import TRICKS, Articulation, Sound, SoundCategory
+        from apps.videos import links
+
+        from .export import Media, steady
+
+        sound = Sound.objects.create(category=SoundCategory.for_tricks(), name="-age Ending", order=1)
+        video = Articulation.objects.create(sound=sound, trap_text="x", mouth_position_text="y")
+        video.video_file.name = "book/videos/2026/09/lesson.mp4"
+        video.save()
+        pupil = User.objects.create_user("p@example.com", "pw-12345678", first_name="Ada")
+        ticket = links.ticket(video, pupil)
+        page = f'<div class="vid" data-ticket="{ticket}"><video src="/videos/play/{ticket}/"></video></div>'
+        media = Media(fetch_linked=False)
+        kept = steady(media.rewrite(page))
+        self.assertNotIn(ticket, kept, "nothing that changes on every render")
+        self.assertIn('src="/_m/book/videos/2026/09/lesson.mp4"', kept)
+        self.assertEqual(media.wanted["/_m/book/videos/2026/09/lesson.mp4"], ("storage", "book/videos/2026/09/lesson.mp4"))
+        self.assertIn("/videos/play/nonsense/", media.rewrite('<video src="/videos/play/nonsense/"></video>'),
+                      "a ticket that isn't ours is left alone")
