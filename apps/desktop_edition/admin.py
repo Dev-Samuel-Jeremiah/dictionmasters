@@ -1,6 +1,9 @@
 """
 The offline computer app, in /admin/:
 
+    Unlocked computers  "Add" = unlock a computer with no internet: type the
+                        number it shows, choose the level and end date, and
+                        send back the code it gives (unlock.py)
     Activation codes    make codes, see which computers use each one, free a
                         seat (tick "revoked" on that computer), stop a code
     Lessons releases    "Add" builds a new release of every lesson (or some
@@ -18,7 +21,8 @@ from django.contrib import admin, messages
 
 from apps.echospell.models import LEVEL_NAME_CHOICES
 
-from .models import Activation, ActivationCode, ContentRelease, new_code
+from . import unlock
+from .models import Activation, ActivationCode, ComputerUnlock, ContentRelease, new_code
 
 
 def start_build(release):
@@ -116,3 +120,57 @@ class ContentReleaseAdmin(admin.ModelAdmin):
         if not change:
             start_build(obj)
             messages.info(request, "The release is building in the background. Refresh this list to follow it.")
+
+
+class ComputerUnlockForm(forms.ModelForm):
+    computer = forms.CharField(label="Computer number", max_length=12,
+                               help_text="As the computer shows it, e.g. K7QX-3MPA. A wrong character is caught.")
+
+    class Meta:
+        model = ComputerUnlock
+        fields = ["computer", "level", "valid_until", "holder", "notes", "revoked"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.initial["computer"] = self.instance.computer_label
+
+    def clean_computer(self):
+        number = unlock.clean_computer(self.cleaned_data["computer"])
+        if not number:
+            raise forms.ValidationError("That isn't a computer number: check each character with the school.")
+        return number
+
+    def clean(self):
+        data = super().clean()
+        try:
+            if data.get("computer") and data.get("level"):
+                unlock.make_code(data["computer"], data["level"], data.get("valid_until"))
+        except ValueError as error:
+            raise forms.ValidationError(str(error))
+        return data
+
+
+@admin.register(ComputerUnlock)
+class ComputerUnlockAdmin(admin.ModelAdmin):
+    form = ComputerUnlockForm
+    list_display = ["computer_label", "level", "holder", "valid_until", "code", "revoked", "last_seen", "created_at"]
+    list_filter = ["level", "revoked"]
+    search_fields = ["computer", "holder", "code", "notes"]
+    readonly_fields = ["code", "created_by", "created_at", "last_seen"]
+
+    @admin.display(description="Computer", ordering="computer")
+    def computer_label(self, obj):
+        return obj.computer_label
+
+    def get_fields(self, request, obj=None):
+        fields = ["computer", "level", "valid_until", "holder", "notes"]
+        return ["code", *fields, "revoked", "created_by", "created_at", "last_seen"] if obj else fields
+
+    def save_model(self, request, obj, form, change):
+        obj.code = unlock.make_code(obj.computer, obj.level, obj.valid_until)
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+        until = f"until {obj.valid_until:%d %B %Y}" if obj.valid_until else "with no end date"
+        messages.success(request, f"Unlock code for computer {obj.computer_label} ({obj.level}, {until}): {obj.code}")

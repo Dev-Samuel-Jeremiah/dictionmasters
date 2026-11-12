@@ -216,3 +216,134 @@ class HiddenPupilTests(TestCase):
         totals = analytics.build({})["totals"]
         self.assertEqual(totals["students"], 1)
         self.assertEqual(totals["paying"], 0, "its endless plan isn't a paying customer")
+
+
+# ----------------------------------------------------------- unlocking offline
+
+FIXED_KEY = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+
+
+@override_settings(DESKTOP_CONTENT_KEY=FIXED_KEY)
+class UnlockCodeTests(TestCase):
+    """unlock.py. The same example is in the app's tests (test/unlock.test.js):
+    the two must always agree."""
+
+    def test_the_example_the_app_checks_too(self):
+        import datetime
+
+        from . import unlock
+
+        computer = unlock.computer_number("0f3c2a6e9b7d4e1f8a2b3c4d5e6f7a8b")
+        self.assertEqual(computer, "7GF38R79")
+        self.assertEqual(unlock.make_code(computer, "Level 1", datetime.date(2027, 7, 31)), "DM-GXXA-NBMH-8NAY-V6EM-GN7H")
+        self.assertEqual(unlock.factor("Level 1").hex(), "59807329d4957ccb")
+
+    def test_a_code_opens_one_level_on_one_computer(self):
+        import datetime
+
+        from . import unlock
+
+        here, there = unlock.computer_number("machine-a"), unlock.computer_number("machine-b")
+        code = unlock.make_code(here, "Level 3", datetime.date(2027, 1, 31))
+        self.assertEqual(unlock.read_code(code.lower().replace("-", " "), unlock.show_computer(here)),
+                         {"level": "Level 3", "until": datetime.date(2027, 1, 31)})
+        self.assertIsNone(unlock.read_code(code, there), "another computer")
+        typo = code[:-1] + ("A" if code[-1] != "A" else "B")
+        self.assertIsNone(unlock.read_code(typo, here), "a typing mistake")
+        self.assertEqual(unlock.read_code(unlock.make_code(here, "Pre-Level"), here)["until"], None)
+
+    def test_the_end_date_cant_be_edited(self):
+        """Changing the date bits inside a code changes the mask, so the
+        factor comes out wrong (and the check catches it first)."""
+        import datetime
+
+        from . import unlock
+
+        here = unlock.computer_number("machine-a")
+        code = unlock.make_code(here, "Level 1", datetime.date(2026, 12, 31))
+        value = unlock._number(unlock._letters(code)[2:]) >> 12
+        later = value + (365 << 64)                       # a year more
+        forged = unlock._chars(later << 12 | unlock._check(later), unlock.CODE_CHARS)
+        self.assertIsNone(unlock.read_code(forged, here))
+
+    def test_computer_numbers_catch_mistakes(self):
+        from . import unlock
+
+        number = unlock.computer_number("machine-a")
+        self.assertEqual(unlock.clean_computer(unlock.show_computer(number).lower()), number)
+        wrong = number[:2] + ("A" if number[2] != "A" else "B") + number[3:]
+        self.assertEqual(unlock.clean_computer(wrong), "")
+        self.assertEqual(unlock.clean_computer("K7QX"), "")
+
+    def test_the_keys_open_only_with_the_right_factor(self):
+        from . import keys, unlock
+
+        wrapped = unlock.wrap("Level 2")
+        opened = unlock.unwrap(wrapped, "Level 2", unlock.factor("Level 2"))
+        self.assertEqual(opened, {"Level 2": keys.content_key_b64("Level 2"), "common": keys.content_key_b64("common")})
+        self.assertIsNone(unlock.unwrap(wrapped, "Level 2", unlock.factor("Level 3")))
+        self.assertIsNone(unlock.unwrap(wrapped, "Level 3", unlock.factor("Level 2")), "a wrap for one level only")
+
+
+@override_settings(DESKTOP_CONTENT_KEY=FIXED_KEY)
+class UnlockAdminAndCheckTests(TestCase):
+    def setUp(self):
+        from apps.accounts.models import User
+
+        from . import unlock
+
+        self.admin = User.objects.create_superuser("boss@example.com", "pw-12345678", first_name="Boss")
+        self.client.force_login(self.admin)
+        self.computer = unlock.computer_number("school-pc-1")
+
+    def unlock_it(self, **extra):
+        from .models import ComputerUnlock
+
+        fields = {"computer": self.computer[:4].lower() + "-" + self.computer[4:], "level": "Level 1",
+                  "valid_until": "", "holder": "White Diamonds Academy", "notes": ""}
+        fields.update(extra)
+        response = self.client.post("/admin/desktop_edition/computerunlock/add/", fields, follow=True)
+        return response, ComputerUnlock.objects.order_by("-pk").first()
+
+    def test_unlocking_a_computer_in_the_control_room(self):
+        from . import unlock
+
+        response, record = self.unlock_it(valid_until="2027-07-31")
+        self.assertEqual(record.computer, self.computer)
+        self.assertContains(response, record.code)
+        self.assertEqual(unlock.read_code(record.code, self.computer)["level"], "Level 1")
+        self.assertEqual(record.created_by, self.admin)
+        response, _ = self.unlock_it(computer="K7QX-3MPA")
+        self.assertContains(response, "check each character")
+
+    def test_an_unlocked_computer_going_online_gets_new_lessons(self):
+        import json
+
+        _response, record = self.unlock_it()
+        check = self.client.post("/desktop-app/check/", json.dumps({"computer": self.computer, "unlock": record.code}),
+                                 content_type="application/json").json()
+        self.assertTrue(check["ok"])
+        self.assertEqual(set(check["keys"]), {"common", "Level 1"})
+        latest = self.client.get("/desktop-app/content/latest/", HTTP_X_DM_LICENCE=f"{check['licence']}.{check['signature']}")
+        self.assertEqual(latest.status_code, 200)
+        again = self.client.post("/desktop-app/check/", json.dumps({"licence": check["licence"], "signature": check["signature"]}),
+                                 content_type="application/json").json()
+        self.assertTrue(again["ok"])
+        record.revoked = True
+        record.save()
+        stopped = self.client.post("/desktop-app/check/", json.dumps({"computer": self.computer, "unlock": record.code}),
+                                   content_type="application/json").json()
+        self.assertTrue(stopped["stopped"])
+        self.assertEqual(self.client.get("/desktop-app/content/latest/",
+                                         HTTP_X_DM_LICENCE=f"{check['licence']}.{check['signature']}").status_code, 403)
+
+    def test_a_right_code_with_no_record_isnt_stopped(self):
+        import json
+
+        from . import unlock
+
+        code = unlock.make_code(self.computer, "Level 2")
+        answer = self.client.post("/desktop-app/check/", json.dumps({"computer": self.computer, "unlock": code}),
+                                  content_type="application/json")
+        self.assertEqual(answer.status_code, 404)
+        self.assertNotIn("stopped", answer.json())

@@ -137,3 +137,32 @@ class ContentRelease(models.Model):
     @classmethod
     def latest(cls):
         return cls.objects.filter(status=cls.Status.READY).order_by("-pk").first()
+
+
+class ComputerUnlock(models.Model):
+    """One computer unlocked with no internet (unlock.py): the number the
+    computer showed, the level, the end date, and the code made for it.
+    "Revoked" only reaches the computer if it ever goes online; the end date
+    always applies, online or not."""
+
+    computer = models.CharField(max_length=8, help_text="The number the computer shows, e.g. K7QX-3MPA.")
+    level = models.CharField(max_length=40, choices=LEVEL_NAME_CHOICES)
+    valid_until = models.DateField(null=True, blank=True, help_text="Leave empty for no end date.")
+    holder = models.CharField(max_length=200, help_text="Who it is for: the school, family or learner.")
+    notes = models.TextField(blank=True, help_text="Anything to remember: the room, the person who asked, how they paid.")
+    code = models.CharField(max_length=40, editable=False)
+    revoked = models.BooleanField(default=False, help_text="Stops it only when that computer next goes online.")
+    created_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_seen = models.DateTimeField(null=True, blank=True, help_text="The last time it went online, if ever.")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Unlocked computer"
+
+    def __str__(self):
+        return f"{self.computer_label} · {self.level} · {self.holder}"
+
+    @property
+    def computer_label(self):
+        return f"{self.computer[:4]}-{self.computer[4:]}"

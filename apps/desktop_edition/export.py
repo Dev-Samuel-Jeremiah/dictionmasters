@@ -48,7 +48,7 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
-from . import keys
+from . import keys, unlock
 from .models import ContentRelease
 
 logger = logging.getLogger(__name__)
@@ -482,7 +482,7 @@ def build(release, log=None):
 
     manifest = {"format": FORMAT, "release": release.pk, "built": timezone.now().isoformat(),
                 "site": settings.SITE_URL, "placeholder": LEARNER_PLACEHOLDER,
-                "common": {"files": {}}, "levels": {}}
+                "common": {"files": {}}, "levels": {}, "level_order": unlock.LEVELS}
 
     say("The site's styles and scripts")
     for address, path in static_files():
@@ -518,7 +518,9 @@ def build(release, log=None):
             if number % 25 == 0:
                 say(f"{level}: files {number} of {len(media.wanted)}")
 
-        manifest["levels"][level] = {"home": rendered["home"], "files": files, "redirects": rendered["redirects"]}
+        # The level's lesson keys, locked: only a computer's unlock code opens them (unlock.py).
+        manifest["levels"][level] = {"home": rendered["home"], "files": files, "redirects": rendered["redirects"],
+                                     "unlock": unlock.wrap(level)}
         skipped += rendered["skipped"]
         page_count += len(rendered["pages"])
         file_count += len(files)

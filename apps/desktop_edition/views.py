@@ -26,9 +26,9 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from . import keys
+from . import keys, unlock
 from .export import blob_path, read_manifest
-from .models import Activation, ActivationCode, ContentRelease, clean_code
+from .models import Activation, ActivationCode, ComputerUnlock, ContentRelease, clean_code
 
 ATTEMPTS_PER_HOUR = 20
 
@@ -82,6 +82,52 @@ def licence_for(activation):
     body, signature = keys.sign(payload)
     content_keys = {group: keys.content_key_b64(group) for group in [keys.COMMON, *levels]}
     return body, signature, content_keys
+
+
+def licence_for_unlock(record):
+    """(licence, signature, keys) for a computer unlocked with no internet,
+    when it does go online: the same as an activated one's, so it fetches
+    new lessons the same way. "k": "u" says which record it is."""
+    payload = {
+        "v": 1, "k": "u", "a": record.pk, "code": record.code, "holder": record.holder, "learner": "",
+        "device": record.computer, "levels": [record.level],
+        "until": record.valid_until.isoformat() if record.valid_until else None,
+        "issued": timezone.now().isoformat(), "site": settings.SITE_URL, "recheck_days": 0,
+    }
+    body, signature = keys.sign(payload)
+    return body, signature, {group: keys.content_key_b64(group) for group in [keys.COMMON, record.level]}
+
+
+def _unlocked(record):
+    """Why this unlocked computer is stopped, or ""."""
+    if record.revoked:
+        return "This computer's unlock code has been stopped. Please contact Diction Masters."
+    if record.valid_until and timezone.localdate() > record.valid_until:
+        return f"This computer's unlock code ended on {record.valid_until:%d %B %Y}. Please contact Diction Masters to renew it."
+    return ""
+
+
+def _check_unlocked(data):
+    """check/ for a computer unlocked with no internet: its number and code."""
+    computer = unlock.clean_computer(data.get("computer"))
+    found = unlock.read_code(data.get("unlock"), computer)
+    if not found:
+        return _json({"ok": False, "error": "This computer's unlock code isn't valid."}, 403)
+    canonical = unlock.make_code(computer, found["level"], found["until"])
+    record = ComputerUnlock.objects.filter(computer=computer, code=canonical).first()
+    if record is None:
+        # A right code with no record here (made on another copy of the site):
+        # leave the computer as it is, with no new lessons.
+        return _json({"ok": False, "error": "This computer isn't on our list. Please contact Diction Masters."}, 404)
+    reason = _unlocked(record)
+    if reason:
+        return _json({"ok": False, "stopped": True, "error": reason}, 403)
+    record.last_seen = timezone.now()
+    record.save(update_fields=["last_seen"])
+    body, signature, content_keys = licence_for_unlock(record)
+    latest = ContentRelease.latest()
+    return _json({"ok": True, "licence": body, "signature": signature, "keys": content_keys,
+                  "release": latest.pk if latest else 0})
 
 
 def _answer(activation):
@@ -138,6 +184,11 @@ def _licensed(request):
     payload = keys.verify(body, signature)
     if not payload:
         return None
+    if payload.get("k") == "u":
+        record = ComputerUnlock.objects.filter(pk=payload.get("a"), computer=payload.get("device")).first()
+        if record is None or _unlocked(record):
+            return None
+        return record, [record.level]
     activation = Activation.objects.select_related("code").filter(pk=payload.get("a"), device_id=payload.get("device")).first()
     if activation is None or activation.revoked or _why_not(activation.code):
         return None
@@ -148,9 +199,14 @@ def _licensed(request):
 @require_POST
 def check(request):
     data = _body(request)
+    if data.get("unlock") and not data.get("licence"):
+        return _check_unlocked(data)
     payload = keys.verify(data.get("licence", ""), data.get("signature", ""))
     if not payload:
         return _json({"ok": False, "stopped": True, "error": "This computer's licence isn't valid. Type your code again."}, 403)
+    if payload.get("k") == "u":
+        record = ComputerUnlock.objects.filter(pk=payload.get("a"), computer=payload.get("device")).first()
+        return _check_unlocked({"computer": payload.get("device"), "unlock": record.code if record else ""})
     activation = Activation.objects.select_related("code").filter(pk=payload.get("a"), device_id=payload.get("device")).first()
     if activation is None or activation.revoked:
         return _json({"ok": False, "stopped": True,
