@@ -119,10 +119,15 @@ def teacher_email(teacher, rows):
 
 def _due(queryset, now):
     """Accounts with an inbox of their own that want this week's email and
-    haven't had it."""
+    haven't had it. Not the hidden pupils the offline computer app's lessons
+    are rendered as (apps/desktop_edition/export.py): their addresses end in
+    .invalid, so mail to them would only bounce."""
+    from apps.desktop_edition.export import EXPORT_EMAIL_DOMAIN
+
     return (
         queryset.filter(is_active=True, is_staff=False)
         .exclude(email__endswith="@" + INTERNAL_EMAIL_DOMAIN)
+        .exclude(email__endswith="@" + EXPORT_EMAIL_DOMAIN)
         .exclude(grown_up__weekly_email=False)
         .exclude(grown_up__last_summary_at__gte=now - RESEND_AFTER)
     )

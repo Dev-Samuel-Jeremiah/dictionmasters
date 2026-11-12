@@ -240,7 +240,11 @@ def build(params):
     revenue_prev_series = [_naira(v) for v in p.series(paid, "paid_at", "amount", previous=True)]
     count_now, count_before = paid_now.count(), paid_before.count()
 
-    users = User.objects.filter(is_staff=False)
+    # Not the hidden pupils the offline computer app's lessons are rendered
+    # as (apps/desktop_edition/export.py): they aren't learners or customers.
+    from apps.desktop_edition.export import EXPORT_EMAIL_DOMAIN
+    hidden = "@" + EXPORT_EMAIL_DOMAIN
+    users = User.objects.filter(is_staff=False).exclude(email__endswith=hidden)
     joined_now = _in(users, "date_joined", p.start, p.end)
     joined_before = _in(users, "date_joined", p.prev_start, p.prev_end)
     role_series = {role: p.series(users.filter(role=role), "date_joined") for role in ROLE_LABELS}
@@ -271,17 +275,17 @@ def build(params):
     active_series = _active_learner_series(p)
 
     # Subscriptions right now.
-    subs = Subscription.objects.select_related("plan")
+    subs = Subscription.objects.select_related("plan").exclude(user__email__endswith=hidden)
     state = {"school": {"active": 0, "trial": 0, "expired": 0}, "learner": {"active": 0, "trial": 0, "expired": 0}}
     for sub in subs:
         state["school" if sub.school_id else "learner"][sub.state(now)] += 1
     paying_now = state["school"]["active"] + state["learner"]["active"]
 
     # Trial to paid: accounts that started in the period and have paid since.
-    started = _in(Subscription.objects.all(), "created_at", p.start, p.end)
+    started = _in(Subscription.objects.exclude(user__email__endswith=hidden), "created_at", p.start, p.end)
     converted = started.filter(payments__status=Payment.STATUS_SUCCESS, payments__amount__gt=0).distinct().count()
     started_n = started.count()
-    started_before = _in(Subscription.objects.all(), "created_at", p.prev_start, p.prev_end)
+    started_before = _in(Subscription.objects.exclude(user__email__endswith=hidden), "created_at", p.prev_start, p.prev_end)
     converted_before = started_before.filter(payments__status=Payment.STATUS_SUCCESS, payments__amount__gt=0).distinct().count()
     conv_now = round(converted / started_n * 100, 1) if started_n else 0
     conv_before = round(converted_before / started_before.count() * 100, 1) if started_before.count() else 0

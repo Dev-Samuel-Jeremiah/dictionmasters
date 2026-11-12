@@ -142,6 +142,7 @@ LOCAL_APPS = [
     "apps.book",
     "apps.videos",
     "apps.offline",
+    "apps.desktop_edition",
     "apps.tricks",
     "apps.reference_library",
     "apps.diction_library",
@@ -550,6 +551,17 @@ META_PIXEL_ID = os.environ.get("META_PIXEL_ID", "").strip()
 # last checked in. Saved videos last as long.
 OFFLINE_ACCESS_DAYS = int(os.environ.get("OFFLINE_ACCESS_DAYS", 90))
 OFFLINE_VIDEO_LICENSE_DAYS = int(os.environ.get("OFFLINE_VIDEO_LICENSE_DAYS", OFFLINE_ACCESS_DAYS))
+
+# The offline computer app (apps/desktop_edition, DESKTOP_EDITION_GUIDE.md).
+# Make the two keys once with `manage.py desktop_keys` and never change them:
+# installed apps depend on them. Empty = made from DJANGO_SECRET_KEY (testing).
+DESKTOP_LICENCE_PRIVATE_KEY = os.environ.get("DESKTOP_LICENCE_PRIVATE_KEY", "").strip()
+DESKTOP_CONTENT_KEY = os.environ.get("DESKTOP_CONTENT_KEY", "").strip()
+# Lets the app's build on GitHub download every level into the installer.
+DESKTOP_BUILD_TOKEN = os.environ.get("DESKTOP_BUILD_TOKEN", "").strip()
+# Days an activated computer may go without checking in before it must
+# (so a freed seat or a stopped code reaches it). 0 = never required.
+DESKTOP_RECHECK_DAYS = int(os.environ.get("DESKTOP_RECHECK_DAYS", "0") or 0)
 MAX_OFFLINE_DEVICES_PER_STUDENT = int(os.environ.get("MAX_OFFLINE_DEVICES_PER_STUDENT", 2))
 # A playing link is short-lived; the one that fetches a copy lasts longer,
 # because a whole video has to come down over it.
