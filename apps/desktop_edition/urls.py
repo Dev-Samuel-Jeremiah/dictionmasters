@@ -10,4 +10,5 @@ urlpatterns = [
     path("content/latest/", views.latest, name="latest"),
     path("content/blob/<str:blob_id>/", views.blob, name="blob"),
     path("public-key/", views.public_key, name="public_key"),
+    path("downloads/<int:pk>/", views.bundle_download, name="bundle_download"),
 ]

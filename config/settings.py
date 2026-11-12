@@ -562,6 +562,12 @@ DESKTOP_BUILD_TOKEN = os.environ.get("DESKTOP_BUILD_TOKEN", "").strip()
 # Days an activated computer may go without checking in before it must
 # (so a freed seat or a stopped code reaches it). 0 = never required.
 DESKTOP_RECHECK_DAYS = int(os.environ.get("DESKTOP_RECHECK_DAYS", "0") or 0)
+# Where GitHub publishes each level's installers (the dictionmasters-desktop
+# repository's "offline" release); the level zips are packed from them.
+DESKTOP_INSTALLERS_URL = os.environ.get(
+    "DESKTOP_INSTALLERS_URL",
+    "https://github.com/Dev-Samuel-Jeremiah/dictionmasters-desktop/releases/download/offline",
+).rstrip("/")
 MAX_OFFLINE_DEVICES_PER_STUDENT = int(os.environ.get("MAX_OFFLINE_DEVICES_PER_STUDENT", 2))
 # A playing link is short-lived; the one that fetches a copy lasts longer,
 # because a whole video has to come down over it.

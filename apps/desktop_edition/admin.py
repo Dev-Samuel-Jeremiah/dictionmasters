@@ -22,13 +22,13 @@ from django.contrib import admin, messages
 from apps.echospell.models import LEVEL_NAME_CHOICES
 
 from . import unlock
-from .models import Activation, ActivationCode, ComputerUnlock, ContentRelease, new_code
+from .models import Activation, ActivationCode, ComputerUnlock, ContentRelease, DesktopBundle, new_code
 
 
-def start_build(release):
+def start_build(release, command="export_desktop_content", flag="--release"):
     """Run the build in its own process, which carries on after this request."""
     subprocess.Popen(
-        [sys.executable, str(Path(settings.BASE_DIR) / "manage.py"), "export_desktop_content", "--release", str(release.pk)],
+        [sys.executable, str(Path(settings.BASE_DIR) / "manage.py"), command, flag, str(release.pk)],
         cwd=settings.BASE_DIR, start_new_session=True,
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
@@ -174,3 +174,36 @@ class ComputerUnlockAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         until = f"until {obj.valid_until:%d %B %Y}" if obj.valid_until else "with no end date"
         messages.success(request, f"Unlock code for computer {obj.computer_label} ({obj.level}, {until}): {obj.code}")
+
+
+@admin.register(DesktopBundle)
+class DesktopBundleAdmin(admin.ModelAdmin):
+    """One zip per level for flash drives (bundles.py). Build the level's
+    installers on GitHub first (the app's Actions -> Build installers)."""
+
+    list_display = ["level", "status", "progress", "size_gb", "videos", "download", "finished_at"]
+    readonly_fields = ["status", "progress", "file", "size", "videos", "error", "created_at", "finished_at"]
+    fields = ["level", *readonly_fields]
+
+    @admin.display(description="Size (GB)")
+    def size_gb(self, obj):
+        return round(obj.size / 1073741824, 1) if obj.size else ""
+
+    @admin.display(description="Download")
+    def download(self, obj):
+        from django.urls import reverse
+        from django.utils.html import format_html
+
+        if obj.status != DesktopBundle.Status.READY:
+            return ""
+        return format_html('<a href="{}">Download the zip</a>', reverse("desktop_edition:bundle_download", args=[obj.pk]))
+
+    def has_change_permission(self, request, obj=None):
+        return obj is None
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not change:
+            start_build(obj, "make_desktop_bundle", "--bundle")
+            messages.info(request, f"Packing {obj.level} in the background: its installers from GitHub and its videos. "
+                                   "Refresh this list to follow it; it can take an hour.")

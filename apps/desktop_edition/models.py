@@ -166,3 +166,31 @@ class ComputerUnlock(models.Model):
     @property
     def computer_label(self):
         return f"{self.computer[:4]}-{self.computer[4:]}"
+
+
+class DesktopBundle(models.Model):
+    """One level's zip for flash drives (bundles.py): its installers for every
+    kind of computer, built on GitHub, and its videos, from storage."""
+
+    class Status(models.TextChoices):
+        QUEUED = "queued", "Waiting to start"
+        BUILDING = "building", "Packing"
+        READY = "ready", "Ready to download"
+        FAILED = "failed", "Failed"
+
+    level = models.CharField(max_length=40, choices=LEVEL_NAME_CHOICES)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.QUEUED)
+    file = models.CharField(max_length=255, blank=True, help_text="Where the zip is kept in storage.")
+    size = models.BigIntegerField(default=0)
+    videos = models.PositiveIntegerField(default=0)
+    progress = models.CharField(max_length=200, blank=True)
+    error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-pk"]
+        verbose_name = "Offline app download"
+
+    def __str__(self):
+        return f"{self.level} ({self.get_status_display()})"

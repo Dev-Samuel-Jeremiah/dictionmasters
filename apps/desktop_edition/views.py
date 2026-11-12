@@ -259,3 +259,22 @@ def blob(request, blob_id):
 @require_GET
 def public_key(request):
     return _json({"public_key": keys.public_key_b64()})
+
+
+def bundle_download(request, pk):
+    """A level's zip for flash drives: staff only, straight from storage."""
+    from django.http import Http404
+
+    from .models import DesktopBundle
+
+    if not (request.user.is_authenticated and request.user.is_staff):
+        raise Http404
+    bundle = DesktopBundle.objects.filter(pk=pk, status=DesktopBundle.Status.READY).first()
+    if bundle is None or not default_storage.exists(bundle.file):
+        raise Http404
+    url = default_storage.url(bundle.file)
+    if url.startswith(("http://", "https://")):
+        return HttpResponseRedirect(url)
+    response = FileResponse(default_storage.open(bundle.file, "rb"), as_attachment=True,
+                            filename=bundle.file.rsplit("/", 1)[-1])
+    return response

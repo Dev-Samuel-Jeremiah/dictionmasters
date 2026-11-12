@@ -374,3 +374,73 @@ class LessonVideoTests(TestCase):
         self.assertEqual(media.wanted["/_m/book/videos/2026/09/lesson.mp4"], ("storage", "book/videos/2026/09/lesson.mp4"))
         self.assertIn("/videos/play/nonsense/", media.rewrite('<video src="/videos/play/nonsense/"></video>'),
                       "a ticket that isn't ours is left alone")
+
+
+class BundleTests(TestCase):
+    """One zip per level for flash drives (bundles.py)."""
+
+    def setUp(self):
+        self.media = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.media, True)
+        override = override_settings(MEDIA_ROOT=self.media, DESKTOP_INSTALLERS_URL="https://example.invalid/offline", STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        })
+        override.enable()
+        self.addCleanup(override.disable)
+
+    def fake_github(self, have_installers=True):
+        import json as _json
+
+        manifest = {"levels": {"Level 1": {"files": {
+            "/_m/a.mp4": {"b": "a" * 40, "t": "video/mp4", "s": 5},
+            "/_m/b.mp3": {"b": "b" * 40, "t": "audio/mpeg", "s": 5},
+        }}}}
+
+        def download(url, target):
+            if not have_installers:
+                raise OSError("404")
+            with open(target, "wb") as handle:
+                handle.write(_json.dumps(manifest).encode() if url.endswith("manifest.json") else b"installer:" + url.encode())
+            return target
+        return download
+
+    def test_a_level_zip_holds_installers_videos_and_a_read_me(self):
+        import zipfile
+
+        from django.core.files.storage import default_storage
+
+        from .bundles import build
+        from .export import blob_path
+        from .models import DesktopBundle
+
+        default_storage.save(blob_path("a" * 40), ContentFile(b"sealed video"))
+        with patch("apps.desktop_edition.bundles._download", side_effect=self.fake_github()):
+            bundle = build(DesktopBundle.objects.create(level="Level 1"))
+        self.assertEqual(bundle.status, DesktopBundle.Status.READY, bundle.error)
+        self.assertEqual(bundle.videos, 1, "only the videos: recordings are inside the installers")
+        with zipfile.ZipFile(default_storage.open(bundle.file, "rb")) as packed:
+            names = set(packed.namelist())
+            folder = "Diction Masters - Level 1/"
+            self.assertEqual(names, {folder + name for name in [
+                "Install on Windows 10 or 11.exe", "Install on Windows 7 or 8.exe", "Diction Masters (Ubuntu, Debian).deb",
+                "Diction Masters (other Linux).AppImage", "videos/" + "a" * 40, "READ ME.txt"]})
+            self.assertEqual(packed.read(folder + "videos/" + "a" * 40), b"sealed video")
+            self.assertIn(b"DictionMasters-Level-1-Setup.exe", packed.read(folder + "Install on Windows 10 or 11.exe"))
+            self.assertIn("unlock code", packed.read(folder + "READ ME.txt").decode())
+
+        # Staff download it; nobody else.
+        self.assertEqual(self.client.get(f"/desktop-app/downloads/{bundle.pk}/").status_code, 404)
+        from apps.accounts.models import User
+
+        self.client.force_login(User.objects.create_superuser("boss@example.com", "pw-12345678", first_name="Boss"))
+        self.assertEqual(self.client.get(f"/desktop-app/downloads/{bundle.pk}/").status_code, 200)
+
+    def test_no_installers_on_github_says_what_to_do(self):
+        from .bundles import build
+        from .models import DesktopBundle
+
+        with patch("apps.desktop_edition.bundles._download", side_effect=self.fake_github(have_installers=False)):
+            bundle = build(DesktopBundle.objects.create(level="Level 1"))
+        self.assertEqual(bundle.status, DesktopBundle.Status.FAILED)
+        self.assertIn("Build installers for Level 1", bundle.error)
