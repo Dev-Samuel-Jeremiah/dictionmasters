@@ -1,0 +1,51 @@
+{% extends "manage/base.html" %}
+{% comment %}
+  Screen protection (apps/manage/views.py, screen_protection): whether
+  staff and admins may take screenshots and record the screen in the apps.
+  Schools, teachers and students are always blocked (apps/landing/capture.py).
+{% endcomment %}
+
+{% block title %}Screen protection — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow">&#128274; Site settings</p>
+    <h1 class="cr-pagehead__title">Screen protection</h1>
+  </div>
+</header>
+
+<section class="cr-card cr-capture{% if protection.staff_may_capture %} cr-capture--open{% endif %}" aria-live="polite">
+  <p class="cr-capture__now">
+    {% if protection.staff_may_capture %}
+      &#127909; <strong>Staff and admins can take screenshots and record the screen</strong> in the apps.
+    {% else %}
+      &#128274; <strong>Screenshots and screen recording are blocked</strong> in the apps for everyone.
+    {% endif %}
+  </p>
+  <p class="cr-help">Schools, teachers, students and learners are always blocked, whichever you choose.</p>
+
+  <form method="post" class="cr-capture__form">
+    {% csrf_token %}
+    {% if protection.staff_may_capture %}
+      <input type="hidden" name="staff_may_capture" value="off">
+      <button type="submit" class="cr-btn cr-btn--gold">&#128274; Block again</button>
+      <p class="cr-help">Do this when you've finished recording.</p>
+    {% else %}
+      <input type="hidden" name="staff_may_capture" value="on">
+      <button type="submit" class="cr-btn cr-btn--gold">&#127909; Let staff and admins record</button>
+      <p class="cr-help">Then open a new page in the app. Block it again when you've finished.</p>
+    {% endif %}
+  </form>
+</section>
+
+<section class="cr-card">
+  <h2 class="cr-card__title">Where this works</h2>
+  <ul class="cr-capture__where">
+    <li><strong>Android app:</strong> from the next app version (the one with this switch). Older copies of the app block everyone.</li>
+    <li><strong>Computer app</strong> (Windows and Mac): from its next version, which installs itself. Linux can't block screenshots at all.</li>
+    <li><strong>iPhone app and web browsers:</strong> they can't block screenshots, so nothing changes there.</li>
+    <li><strong>Offline computer app</strong> (flash drives): always blocked. It never connects to the website, so this switch can't reach it.</li>
+  </ul>
+</section>
+{% endblock %}

@@ -42,3 +42,11 @@ def nav(request):
         if path.startswith(prefixes):
             return {"nav_section": section, "show_back": show_back}
     return {"nav_section": "", "show_back": show_back}
+
+
+def capture(request):
+    """"allow" or "block": may this person screenshot and record the screen
+    in the apps (apps/landing/capture.py)? Read by static/js/screen_capture.js."""
+    from .capture import may_capture
+
+    return {"screen_capture": "allow" if may_capture(getattr(request, "user", None)) else "block"}

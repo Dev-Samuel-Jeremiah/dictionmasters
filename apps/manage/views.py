@@ -42,7 +42,7 @@ from apps.assembly_recitals.audio_zip import AudioZipError as RecitalAudioZipErr
 from apps.assembly_recitals.models import Recital
 from apps.billing.models import BillingSettings
 from apps.billing.services import CheckoutError, grant_plan, grant_school_plan
-from apps.landing.models import SiteBranding
+from apps.landing.models import ScreenProtection, SiteBranding
 from apps.quick_words.audio_zip import start_audio_zip_import
 from apps.quick_words.models import QuickWordAudioImportJob
 
@@ -776,6 +776,30 @@ def branding(request):
     # The preview comes from the saved row (the `branding` context
     # processor), not the form, so a rejected upload never shows as current.
     return render(request, "manage/branding.html", _base_context(request, "branding", form=form))
+
+
+# ---------------------------------------------------------------------------
+# Screen protection: whether staff may screenshot and record in the apps
+# ---------------------------------------------------------------------------
+
+@staff_only
+def screen_protection(request):
+    """One switch: let staff and admins take screenshots and record the screen
+    in the apps, or block them like everyone else. Schools, teachers and
+    students are always blocked (apps/landing/capture.py)."""
+    obj = ScreenProtection.load()
+    if request.method == "POST":
+        allow = request.POST.get("staff_may_capture") == "on"
+        obj.staff_may_capture = allow
+        obj.save()
+        _record(request, obj, CHANGE, "Staff may record the screen" if allow else "Screen recording blocked for staff again")
+        messages.success(request, (
+            "Done. Staff and admins can now take screenshots and record the screen in the apps. "
+            "Open a new page in the app for it to take effect." if allow else
+            "Done. Screenshots and screen recording are blocked again for everyone."))
+        return redirect("manage:screen_protection")
+    return render(request, "manage/screen_protection.html",
+                  _base_context(request, "screen-protection", protection=obj))
 
 
 @staff_only

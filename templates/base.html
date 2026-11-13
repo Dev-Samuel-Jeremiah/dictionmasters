@@ -101,6 +101,8 @@
     "lesson": ["{% static 'js/lesson_start.js' %}"]
   }</script>
   <script src="{% static 'js/boot.js' %}" defer></script>
+  {# Screenshots and recording in the apps: allowed only for staff, when switched on (apps/landing/capture.py). #}
+  <script src="{% static 'js/screen_capture.js' %}" data-capture="{{ screen_capture|default:'block' }}" defer></script>
   {% block extra_js %}{% endblock %}
   <script src="{% static 'js/submit_once.js' %}" defer></script>
   {% if meta_pixel %}{% include "includes/meta_pixel.html" %}{% endif %}

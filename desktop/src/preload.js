@@ -7,11 +7,17 @@
  */
 "use strict";
 
-const { contextBridge } = require("electron");
+const { contextBridge, ipcRenderer } = require("electron");
 
 const OS = { win32: "windows", darwin: "mac", linux: "linux" }[process.platform] || process.platform;
 
-contextBridge.exposeInMainWorld("DMDesktop", Object.freeze({ platform: "desktop", os: OS }));
+contextBridge.exposeInMainWorld("DMDesktop", Object.freeze({
+  platform: "desktop",
+  os: OS,
+  // Screenshots and recording: our pages say block, or allow for staff while
+  // the control room's switch is on (static/js/screen_capture.js, main.js).
+  setCaptureBlocked: (block) => ipcRenderer.send("dm-capture", block !== false),
+}));
 
 // The mouse's back / forward side buttons (Mac and Linux; Windows is handled in main.js).
 if (process.platform !== "win32") {

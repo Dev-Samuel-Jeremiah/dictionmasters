@@ -211,6 +211,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.landing.context_processors.branding",
                 "apps.landing.context_processors.nav",
+                "apps.landing.context_processors.capture",
                 "apps.accounts.master_login.context",
                 "apps.billing.context_processors.billing",
                 "apps.learning_tools.context_processors.hidden_tools",
