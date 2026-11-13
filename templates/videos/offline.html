@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Offline videos — Diction Masters{% endblock %}
+{% block title %}My downloads — Diction Masters{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
@@ -13,15 +13,15 @@
     <div class="wrap">
       <ol class="ui-crumbs">
         <li><a href="{% url 'accounts:dashboard' %}">My dashboard</a></li>
-        <li>Offline lessons &amp; videos</li>
+        <li>My downloads</li>
       </ol>
       <div class="ui-hero__inner">
         <div class="ui-hero__main">
           <span class="ui-hero__icon" aria-hidden="true">&#128246;</span>
           <div>
             <p class="ui-hero__eyebrow">Learn without the internet</p>
-            <h1 class="ui-hero__title">Offline lessons &amp; videos</h1>
-            <p class="ui-hero__lede">Download lessons once, then open them anywhere. What you do offline is sent automatically when you're back online.</p>
+            <h1 class="ui-hero__title">My downloads</h1>
+            <p class="ui-hero__lede">Everything saved on this device for learning without the internet: your lessons, the pages you saved, and your videos and recordings. What you do offline is sent automatically when you're back online.</p>
           </div>
         </div>
       </div>
@@ -79,12 +79,23 @@
       <p class="os-status" data-pack-status role="status" aria-live="polite"></p>
     </section>
 
+    {# Pages saved one by one: "Save this page for offline" (static/js/offline_save_page.js). #}
+    <section class="ui-panel" id="saved-pages">
+      <header class="ui-section__head">
+        <h2 class="ui-section__title">Saved pages</h2>
+      </header>
+      <ul class="vid-keptlist" data-saved-pages>
+        <li class="vid-kept__none">Looking for the pages saved on this device&hellip;</li>
+      </ul>
+      <p class="ui-note saved-space" data-space-used hidden></p>
+    </section>
+
     <section class="ui-panel">
       <header class="ui-section__head">
-        <h2 class="ui-section__title">Saved videos</h2>
+        <h2 class="ui-section__title">Saved videos and recordings</h2>
       </header>
       <ul class="vid-keptlist" data-offline-list>
-        <li class="vid-kept__none">Looking for your saved videos&hellip;</li>
+        <li class="vid-kept__none">Looking for your saved videos and recordings&hellip;</li>
       </ul>
     </section>
 
@@ -99,7 +110,7 @@
         <li class="vid-device{% if not device.active %} vid-device--off{% endif %}">
           <div>
             <p class="vid-device__name">{{ device.name }}</p>
-            <p class="vid-device__note">{{ device.copies }} video{{ device.copies|pluralize }} saved{% if not device.active %} · turned off{% endif %}</p>
+            <p class="vid-device__note">{{ device.copies }} saved{% if not device.active %} · turned off{% endif %}</p>
           </div>
           {% if device.active %}
           <form method="post" action="{% url 'videos:deactivate_device' device.id %}" data-device-form>

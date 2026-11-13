@@ -50,8 +50,8 @@
     {% for recital in recitals %}
     <template id="recital-{{ recital.pk }}">
       <h2 class="rc-modal__title" id="rc-modal-title">{{ recital.title }}</h2>
-      {% if recital.video_source %}<div class="rc-modal__video">{% video_player recital offline=False %}</div>{% endif %}
-      {% if recital.audio_source %}<audio controls src="{{ recital.audio_source }}" class="rc-audio"></audio>{% endif %}
+      {% if recital.video_source %}<div class="rc-modal__video">{% video_player recital title=recital.title %}</div>{% endif %}
+      {% if recital.audio_source %}{% audio_player recital css="rc-audio" %}{% endif %}
       {% with verses=recital.verses %}
       {% if verses %}
       <div class="rc-verses rc-modal__words">
@@ -67,7 +67,7 @@
     </template>
     {% endfor %}
 
-    <dialog class="rc-modal" data-recital-modal aria-labelledby="rc-modal-title">
+    <dialog class="rc-modal" data-recital-modal data-offline-later aria-labelledby="rc-modal-title">
       <button type="button" class="rc-modal__close" data-recital-close aria-label="Close">&times;</button>
       <div class="rc-modal__body" data-recital-body></div>
     </dialog>

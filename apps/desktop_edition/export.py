@@ -207,7 +207,7 @@ class Media:
 
         found = links.read_ticket(unescape(ticket), links.WATCH)
         video = links.video_from_ticket(found) if found else None
-        stored = getattr(video, "video_file", None) if video is not None else None
+        stored = links.stored_file(video, links.media_of(found)) if found else None
         return self._stored(stored.name) if stored else None
 
     def rewrite(self, html):

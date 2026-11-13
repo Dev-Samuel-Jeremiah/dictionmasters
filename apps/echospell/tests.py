@@ -1,5 +1,7 @@
 """What a learner sees on an EchoSpell card."""
 
+import re
+
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -47,7 +49,7 @@ class SpellingCardTests(TestCase):
         self.assertIn(">Quick</span>", body)
         self.assertIn("https://example.com/goat.mp3", body)
         self.assertIn("https://example.com/goat-quick.mp3", body)
-        self.assertEqual(body.count("<audio controls"), 2)
+        self.assertEqual(len(re.findall(r"<audio\b[^>]*\bcontrols", body)), 2)
 
     def test_a_card_can_have_the_quick_one_alone(self):
         self.card(quick_audio_url="https://example.com/goat-quick.mp3")

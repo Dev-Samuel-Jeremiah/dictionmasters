@@ -61,7 +61,7 @@
     <section class="ui-panel"{% if chapter.audio_source and chapter.body %} data-read-along{% read_along_sync chapter %}{% endif %}>
       {% if chapter.audio_source %}
       <p class="ui-panel__label">Model reading</p>
-      <audio controls src="{{ chapter.audio_source }}" data-ra-media style="margin-bottom: 18px;"></audio>
+      <div style="margin-bottom: 18px;">{% audio_player chapter ra=True preload="metadata" %}</div>
       {% endif %}
       {% if chapter.body %}
       <div class="lesson-body ui-prose dm-rich-content" data-ra-text>{{ chapter.body|rich_text }}</div>

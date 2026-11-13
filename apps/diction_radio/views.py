@@ -8,6 +8,20 @@ from apps.manage.rich_text import sanitize_rich_text
 from .models import RadioEpisode, RadioProgram
 
 
+def _offer_offline(episode, user):
+    """An episode of ours can be saved for listening offline, like any
+    recording (apps/videos): a ticket for its "Save" button, and the name its
+    copy is kept under (static/js/diction_radio.js). A hosted link can't."""
+    from django.contrib.contenttypes.models import ContentType
+
+    from apps.videos import links
+
+    episode.offline_ticket = ""
+    if user.is_authenticated and episode.audio_file and not episode.audio_url:
+        episode.offline_ticket = links.ticket(episode, user, media=links.AUDIO)
+        episode.offline_ref = f"{ContentType.objects.get_for_model(episode).pk}-{episode.pk}-a"
+
+
 @login_required
 def home(request):
     programs = list(
@@ -38,5 +52,6 @@ def home(request):
     for program in programs:
         for episode in program.episodes.all():
             episode.queue_index = queue_indexes[episode.pk]
+            _offer_offline(episode, request.user)
     return render(request, "diction_radio/home.html", {"programs": programs, "queue": queue})
 

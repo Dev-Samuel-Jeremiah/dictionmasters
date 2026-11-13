@@ -47,6 +47,7 @@
 
 <section>
   <div class="wrap es-body es-body--narrow">
+    {% include "offline/_save_page.html" %}
     {% if lesson %}{% include "includes/lesson_bar.html" with hide_next=True %}{% endif %}
     {% if item_rows %}
     <form method="post" enctype="multipart/form-data" class="activity-form" data-mode="{{ activity.mode }}">

@@ -23,7 +23,7 @@
     {% endif %}
     <a href="{% url 'videos:offline' %}" class="account-menu__item"{% if '/videos/offline/' in request.path %} aria-current="page"{% endif %}>
       <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="video" size=18 %}</span>
-      <span class="account-menu__text"><span>Offline lessons &amp; videos</span><small>Download, and sync your progress</small></span>
+      <span class="account-menu__text"><span>My downloads</span><small>Lessons, pages and videos saved for offline</small></span>
     </a>
     <a href="{% url 'accounts:password_change' %}" class="account-menu__item"{% if request.resolver_match.url_name == 'password_change' %} aria-current="page"{% endif %}>
       <span class="account-menu__icon" aria-hidden="true">{% include "includes/icon.html" with name="lock" size=18 %}</span>

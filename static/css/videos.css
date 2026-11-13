@@ -75,7 +75,7 @@
 }
 .vid-kept .vid__state, .ui-body > .vid .vid__state { color: var(--ink); }
 .ui-body > .vid .vid__manage-devices { color: var(--maroon); }
-.vid-kept .vid__btn--remove, .ui-body > .vid .vid__btn--remove { color: #1846E0; border-color: rgba(24, 70, 224, 0.35); background: transparent; }
+.vid-kept .vid__btn--remove, .vid-device .vid__btn--remove, .ui-body > .vid .vid__btn--remove { color: #1846E0; border-color: rgba(24, 70, 224, 0.35); background: transparent; }
 
 /* The Offline videos page */
 .vid-keptlist, .vid-devices { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
@@ -155,3 +155,47 @@
 /* The offline bar shows only the buttons that fit the moment (offline_video.js
    hides the rest); a button's own display must not bring them back. */
 .vid [hidden], .vid__btn[hidden] { display: none !important; }
+
+/* A recording with the same save strip ({% audio_player %}). Recordings
+   sit on light panels, so the strip turns light, with navy text; inside a
+   dark card (.vid--on-dark) it keeps the video look. */
+.vid--audio .vid__player { height: 54px; border-radius: 12px; background: transparent; }
+.vid--audio:not(.vid--on-dark) .vid__bar { color: #0b1a4a; background: #eef3ff; border-color: #d3defb; }
+.vid--audio:not(.vid--on-dark) .vid__state { color: #0b1a4a; }
+.vid--audio:not(.vid--on-dark) .vid__state--good { color: #1d6b45; }
+.vid--audio:not(.vid--on-dark) .vid__state--bad { color: #a33a2e; }
+.vid--audio:not(.vid--on-dark) .vid__state--working::before { border-color: rgba(11, 26, 74, 0.2); border-top-color: #E9AE00; }
+.vid--audio:not(.vid--on-dark) .vid__progress { background: #d3defb; }
+.vid--audio:not(.vid--on-dark) .vid__btn--remove { color: #233b78; background: #ffffff; border-color: #b9c8f2; }
+.vid--audio:not(.vid--on-dark) .vid__btn--remove:hover { color: #0b1a4a; background: #dfe7fd; }
+.vid--audio:not(.vid--on-dark) .vid__manage-devices { color: #1846E0; }
+/* Children tap these: big enough for small fingers. */
+.vid--audio .vid__btn { min-height: 48px; }
+
+/* A video on a light page: a dark stage, so its save strip reads well. */
+.vid-stage { padding: 10px; border-radius: 18px; background: #0b1a4a; }
+.vid-stage .vid__player { max-height: 70vh; }
+
+/* "Save this page for offline" (templates/offline/_save_page.html): one
+   strip above a page of short sounds. Light, like the panels it sits on. */
+.save-page {
+  display: grid; gap: 10px; margin: 0 0 18px; padding: 14px 16px; border-radius: 16px;
+  color: #0b1a4a; background: #eef3ff; border: 1px solid #d3defb;
+}
+.save-page[hidden] { display: none; }
+.save-page__text { display: grid; gap: 2px; }
+.save-page__title { font-size: 0.98rem; }
+.save-page__state { color: #45507a; font-size: 0.9rem; }
+.save-page--good .save-page__state { color: #1d6b45; font-weight: 700; }
+.save-page--bad .save-page__state { color: #a33a2e; font-weight: 700; }
+.save-page__progress { background: #d3defb; }
+.save-page__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.save-page .vid__btn { min-height: 48px; }
+.save-page__remove { color: #233b78; background: #ffffff; border-color: #b9c8f2; }
+.save-page__remove:hover { color: #0b1a4a; background: #dfe7fd; }
+@media (max-width: 480px) { .save-page .vid__btn { flex: 1 1 100%; } }
+
+/* My downloads: a saved page's "Open" is a link styled as a button. */
+.saved-page .vid__btn--watch { text-decoration: none; }
+.saved-space { margin: 12px 0 0; font-weight: 700; color: #233b78; }
+.saved-space[hidden] { display: none; }

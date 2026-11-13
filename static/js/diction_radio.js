@@ -47,6 +47,7 @@
     const item = queue[activeIndex];
     if (audio.dataset.trackId !== String(item.id)) {
       audio.dataset.trackId = String(item.id);
+      delete audio.dataset.offlineCopy;
       audio.src = item.src;
       audio.load();
     }
@@ -96,8 +97,12 @@
     }
   }
 
+  let listening = false;
   async function start(index = activeIndex) {
+    listening = true;
     if (index !== activeIndex) paintTrack(index);
+    // No internet: the saved copy, if this episode has one.
+    if (!navigator.onLine && !audio.dataset.offlineCopy && await playSaved(true)) return;
     status.textContent = "Connecting to Diction Radio…";
     try {
       await audio.play();
@@ -144,12 +149,92 @@
     }
   });
   audio.addEventListener("error", () => {
+    if (!audio.dataset.offlineCopy) {
+      // Played only if someone pressed Play: a page opened offline stays quiet.
+      playSaved(listening).then((playing) => { if (!playing) skipBroken(); });
+      return;
+    }
+    skipBroken();
+  });
+  function skipBroken() {
     status.textContent = "This episode could not be played. Skipping to the next episode…";
     if (activeIndex < queue.length - 1) window.setTimeout(() => start(activeIndex + 1), 900);
     else audio.pause();
-  });
+  }
+
+  // ---- saved for listening offline (static/js/offline_video.js) ----------
+  // Each episode of ours has a Save button. Offline, or when an episode won't
+  // load, the player plays the saved copy instead.
+  const saveBoxes = new Map([...root.querySelectorAll("[data-radio-offline]")]
+    .filter((box) => box.dataset.ticket)
+    .map((box) => [Number(box.dataset.radioOffline), box]));
+  let offlineUrl = "";
+
+  function withCopies(job) {
+    if (window.DMOfflineVideos) return job(window.DMOfflineVideos);
+    document.addEventListener("dm-offline-videos", () => job(window.DMOfflineVideos), { once: true });
+  }
+
+  function paintSave(box, record, note) {
+    const keep = box.querySelector("[data-radio-save]");
+    const drop = box.querySelector("[data-radio-unsave]");
+    keep.disabled = Boolean(record) || Boolean(note);
+    keep.classList.toggle("is-saved", Boolean(record));
+    keep.textContent = note || (record ? "✓ Saved" : "⬇ Save");
+    drop.hidden = !record;
+  }
+
+  function wireSave(api, index, box) {
+    const entry = { ticket: box.dataset.ticket, ticketId: box.dataset.ref, title: box.dataset.title || "Diction Radio" };
+    box.hidden = false;
+    api.copyOf(entry.ticketId).then((record) => paintSave(box, record));
+    box.querySelector("[data-radio-save]").addEventListener("click", () => {
+      paintSave(box, null, "Saving…");
+      api.keepCopy(entry, (percent) => paintSave(box, null, `Saving ${percent}%`))
+        .then((record) => {
+          paintSave(box, record);
+          status.textContent = `${entry.title} is saved on this device for listening offline.`;
+        })
+        .catch((error) => {
+          paintSave(box, null);
+          status.textContent = (error && error.message) || "That episode couldn't be saved. Please try again.";
+        });
+    });
+    box.querySelector("[data-radio-unsave]").addEventListener("click", () => {
+      api.copyOf(entry.ticketId).then((record) => record && api.dropCopy(record)).then(() => paintSave(box, null));
+    });
+  }
+
+  // The saved copy of the episode on now, if there is one: true once playing from it.
+  function playSaved(andPlay) {
+    const box = saveBoxes.get(activeIndex);
+    if (!box) return Promise.resolve(false);
+    // The saving script may still be on its way (it loads after this one).
+    if (!window.DMOfflineVideos) return new Promise((resolve) => withCopies(() => resolve(playSaved(andPlay))));
+    const api = window.DMOfflineVideos;
+    const wanted = activeIndex;
+    return api.copyOf(box.dataset.ref).then((record) => {
+      if (!record) return false;
+      return api.openCopy(record).then((blob) => {
+        if (wanted !== activeIndex) return false;
+        if (offlineUrl) URL.revokeObjectURL(offlineUrl);
+        offlineUrl = URL.createObjectURL(blob);
+        audio.src = offlineUrl;
+        audio.dataset.offlineCopy = "1";
+        if (andPlay) audio.play().catch(() => {});
+        status.textContent = `Playing your saved copy of ${queue[activeIndex].title}.`;
+        return true;
+      });
+    }).catch((error) => {
+      status.textContent = (error && error.message) || "That saved copy couldn't be opened.";
+      return false;
+    });
+  }
+
+  if (saveBoxes.size) withCopies((api) => saveBoxes.forEach((box, index) => wireSave(api, index, box)));
 
   paintTrack(activeIndex);
+  if (!navigator.onLine) playSaved(false);
   if (savedState && String(savedState.id) === String(queue[activeIndex].id) && savedState.time > 0) {
     audio.addEventListener("loadedmetadata", () => {
       if (Number.isFinite(audio.duration) && savedState.time < audio.duration) audio.currentTime = savedState.time;

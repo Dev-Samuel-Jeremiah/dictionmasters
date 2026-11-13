@@ -97,6 +97,12 @@ class LibraryItem(models.Model):
         }.get(self.narration_status, "—")
     narration_label.fget.short_description = "Read-aloud"
 
+    def offline_file(self, media):
+        """The file to keep for offline (apps/videos/links.py): an audio or
+        video item's own upload. Books and documents have none to keep."""
+        wanted = {"audio": self.Kind.AUDIO, "video": self.Kind.VIDEO}.get(media)
+        return self.file if (self.file and self.kind == wanted) else None
+
     @property
     def ready_chapters(self):
         return [chapter for chapter in self.chapters.all() if chapter.audio_source]

@@ -404,6 +404,9 @@
   // ------------------------------------------------------------ the page
 
   function wire(box) {
+    // Once only: a popup's contents can be wired again when it reopens.
+    if (box.getAttribute("data-offline-wired")) return;
+    box.setAttribute("data-offline-wired", "1");
     var video = box.querySelector("[data-video-el]");
     var keepButton = box.querySelector("[data-offline-keep]");
     var resumeButton = box.querySelector("[data-offline-resume]");
@@ -418,7 +421,7 @@
 
     var entry = {
       ticket: box.dataset.ticket,
-      title: box.dataset.title || "Lesson video",
+      title: box.dataset.title || (box.dataset.kind === "audio" ? "Recording" : "Lesson video"),
       ticketId: box.dataset.videoId                       // which lesson video this is
     };
     var record = null, playing = false, recordLoaded = false;
@@ -680,12 +683,45 @@
     if (list) fillList(list);
   }
 
-  window.DMOfflineVideos = { saveAll: saveAll, importCopy: importCopy, savedIds: savedIds, showSaved: showSaved };
+  // Licences are checked once per page, before any button is wired.
+  var checked = null;
+  function checkedOnce() {
+    if (!checked) checked = refresh();
+    return checked;
+  }
+
+  // Players put on the page later (the recital popup, static/js/recital_modal.js).
+  function wireIn(root) {
+    return checkedOnce().then(function () {
+      Array.prototype.forEach.call((root || document).querySelectorAll("[data-video][data-ticket]"), wire);
+    });
+  }
+
+  // For a player that plays many recordings in turn (Diction Radio,
+  // static/js/diction_radio.js): each one's copy, saved, opened and removed
+  // directly, without a strip of buttons under every episode.
+  function copyOf(ref) {
+    return checkedOnce().then(function () { return ask("videos", "get", ref); }).catch(function () { return null; });
+  }
+  function keepCopy(entry, onProgress) {
+    return checkedOnce().then(function () { return save(entry, onProgress, {}); });
+  }
+  function openCopy(record) {
+    return mayPlay(record).then(function (open) {
+      if (!open) throw new Error(CLOSED);
+      return blobFor(record);
+    });
+  }
+
+  window.DMOfflineVideos = { saveAll: saveAll, importCopy: importCopy, savedIds: savedIds, showSaved: showSaved, wireIn: wireIn,
+                             copyOf: copyOf, keepCopy: keepCopy, openCopy: openCopy, dropCopy: forget };
+  // Scripts that arrived first wait for this (static/js/diction_radio.js).
+  document.dispatchEvent(new Event("dm-offline-videos"));
 
   function start() {
     var boxes = document.querySelectorAll("[data-video][data-ticket]");
     if (!boxes.length && !document.querySelector("[data-offline-list]")) return;
-    refresh().then(function () {
+    checkedOnce().then(function () {
       Array.prototype.forEach.call(boxes, wire);
       var list = document.querySelector("[data-offline-list]");
       if (list) fillList(list);
@@ -708,23 +744,26 @@
       list.innerHTML = "";
       if (!kept || !kept.length) {
         list.innerHTML = '<li class="vid-kept__none">Nothing saved on this device yet. ' +
-          'Open a lesson video and choose “Save for offline”.</li>';
+          'Open a lesson video or recording and choose “Save for offline”.</li>';
         return;
       }
       kept.forEach(function (record) {
+        // A recording plays in a slim audio player, a video in a video one.
+        var audio = /^audio\//.test(record.type || "");
         var row = document.createElement("li");
-        row.className = "vid-kept";
+        row.className = "vid-kept" + (audio ? " vid-kept--audio" : "");
         row.innerHTML = '<div class="vid-kept__body"><p class="vid-kept__title"></p>' +
           '<p class="vid-kept__note"></p></div>' +
-          '<video class="vid-kept__player" controls playsinline hidden></video>' +
+          (audio ? '<audio class="vid-kept__player" controls hidden></audio>'
+                 : '<video class="vid-kept__player" controls playsinline hidden></video>') +
           '<div class="vid-kept__actions">' +
-          '<button type="button" class="vid__btn vid__btn--watch">&#9654; Watch offline</button>' +
+          '<button type="button" class="vid__btn vid__btn--watch">&#9654; ' + (audio ? "Listen" : "Watch") + ' offline</button>' +
           '<a class="vid__btn vid__btn--lesson" href="">Open the lesson</a>' +
           '<button type="button" class="vid__btn vid__btn--remove">Remove</button></div>';
         row.querySelector(".vid-kept__title").textContent = record.title;
         row.querySelector(".vid-kept__note").textContent = "Saved on this device · until " + when(record.expires);
         row.querySelector(".vid__btn--lesson").href = record.page || "/";
-        var player = row.querySelector("video");
+        var player = row.querySelector(".vid-kept__player");
         row.querySelector(".vid__btn--watch").addEventListener("click", function () {
           mayPlay(record).then(function (open) {
             if (!open) {

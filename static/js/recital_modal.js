@@ -17,6 +17,8 @@
     var content = document.getElementById(id);
     if (!content) return false;
     body.replaceChildren(content.content.cloneNode(true));
+    // Its "Save for offline" buttons (static/js/offline_video.js).
+    if (window.DMOfflineVideos) window.DMOfflineVideos.wireIn(body);
     modal.showModal();
     modal.scrollTop = 0;
     var player = body.querySelector("video") || body.querySelector("audio");

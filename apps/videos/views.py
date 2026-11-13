@@ -1,5 +1,5 @@
 """
-Playing a lesson video, and keeping one for later.
+Playing a lesson video (or recording), and keeping one for later.
 
     /videos/play/<ticket>/     the player reads from here
     /videos/keep/<ticket>/     a copy is fetched from here, once allowed
@@ -11,6 +11,9 @@ Playing a lesson video, and keeping one for later.
 
 Every one of them needs a signed-in account whose access is live, and
 the ticket in a link only works for the account it was made for.
+
+Recordings (audio) use the same addresses: the ticket says which file of
+the row it is for (apps/videos/links.py), and so does each saved copy.
 """
 
 import json
@@ -40,13 +43,16 @@ def _may_watch(user):
 
 
 def _video_for(request, raw, purpose):
+    """(row, stored file, "video" or "audio") for a ticket of this person's."""
     found = links.read_ticket(raw, purpose)
     if not found or found.get("u") != request.user.pk:
         raise Http404("That link has expired. Open the lesson again.")
     video = links.video_from_ticket(found)
-    if video is None or not getattr(video, "video_file", None):
+    media = links.media_of(found)
+    stored = links.stored_file(video, media)
+    if stored is None:
         raise Http404("That video has gone.")
-    return video
+    return video, stored, media
 
 
 @login_required
@@ -61,13 +67,13 @@ def play(request, ticket):
     through instead."""
     if not _may_watch(request.user):
         raise Http404("That video isn't available on your plan.")
-    video = _video_for(request, ticket, links.WATCH)
-    short_lived = streaming.brief_link(video.video_file)
+    _video, stored, media = _video_for(request, ticket, links.WATCH)
+    short_lived = streaming.brief_link(stored)
     if short_lived:
         response = HttpResponseRedirect(short_lived)
         response["Cache-Control"] = "private, max-age=0, no-store"
         return response
-    return streaming.serve(request, video.video_file, content_type=_type_of(video))
+    return streaming.serve(request, stored, content_type=_type_of(stored, media))
 
 
 @login_required
@@ -76,25 +82,32 @@ def keep(request, ticket):
     """The bytes of a copy, for a device that has been allowed one."""
     if not _may_watch(request.user):
         raise Http404("That video isn't available on your plan.")
-    video = _video_for(request, ticket, links.KEEP)
+    video, stored, media = _video_for(request, ticket, links.KEEP)
     device_id = request.GET.get("device", "")
-    licence = _licence_for(request.user, video, device_id)
+    licence = _licence_for(request.user, video, device_id, media)
     if licence is None or not licence.is_live:
         raise Http404("This device isn't allowed to keep that video.")
     # Apps save a whole level's videos, so these can't all pass through here.
-    direct = streaming.brief_link(video.video_file) if settings.STORAGE_CORS_READY else ""
+    direct = streaming.brief_link(stored) if settings.STORAGE_CORS_READY else ""
     if direct:
         response = HttpResponseRedirect(direct)
         response["Cache-Control"] = "private, max-age=0, no-store"
         return response
-    return streaming.serve(request, video.video_file, content_type=_type_of(video))
+    return streaming.serve(request, stored, content_type=_type_of(stored, media))
 
 
-def _type_of(video):
-    name = (video.video_file.name or "").lower()
-    # A read-aloud kept the same way (Scan & Listen readings).
-    if name.endswith(".mp3"):
-        return "audio/mpeg"
+AUDIO_TYPES = {".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".wav": "audio/wav",
+               ".oga": "audio/ogg", ".opus": "audio/ogg"}
+
+
+def _type_of(stored, media=links.VIDEO):
+    name = (stored.name or "").lower()
+    # Recordings kept the same way (read-alouds, model recordings, chapters).
+    for ending, kind in AUDIO_TYPES.items():
+        if name.endswith(ending):
+            return kind
+    if media != links.VIDEO and name.endswith((".ogg", ".webm")):
+        return "audio/" + name.rsplit(".", 1)[1]
     if name.endswith(".webm"):
         return "video/webm"
     if name.endswith(".ogg") or name.endswith(".ogv"):
@@ -114,10 +127,10 @@ def _expiry_for(user):
     return min(usual, ends) if ends else usual
 
 
-def _licence_for(user, video, device_id):
+def _licence_for(user, video, device_id, media=links.VIDEO):
     content_type = ContentType.objects.get_for_model(video)
     return OfflineVideoLicense.objects.filter(
-        student=user, content_type=content_type, object_id=video.pk,
+        student=user, content_type=content_type, object_id=video.pk, media=media,
         device__device_identifier=device_id,
     ).select_related("device").first()
 
@@ -144,7 +157,9 @@ def prepare(request):
     if not found or found.get("u") != request.user.pk:
         return JsonResponse({"ok": False, "error": "Open the lesson again and try once more."}, status=400)
     video = links.video_from_ticket(found)
-    if video is None or not getattr(video, "video_file", None):
+    media = links.media_of(found)
+    stored = links.stored_file(video, media)
+    if stored is None:
         return JsonResponse({"ok": False, "error": "That video has gone."}, status=404)
 
     device_id = str(body.get("device") or "").strip()[:255]
@@ -158,11 +173,12 @@ def prepare(request):
                              "devices": _devices(request.user)}, status=409)
 
     content_type = ContentType.objects.get_for_model(video)
-    title = str(body.get("title") or getattr(video, "video_caption", "") or "Lesson video")[:200]
+    title = str(body.get("title") or getattr(video, "video_caption", "")
+                or ("Lesson video" if media == links.VIDEO else "Recording"))[:200]
     try:
         with transaction.atomic():
             licence, _ = OfflineVideoLicense.objects.update_or_create(
-                student=request.user, device=device, content_type=content_type, object_id=video.pk,
+                student=request.user, device=device, content_type=content_type, object_id=video.pk, media=media,
                 defaults={"title": title, "expires_at": _expiry_for(request.user),
                           "revoked_at": None, "is_active": True},
             )
@@ -172,13 +188,13 @@ def prepare(request):
     return JsonResponse({
         "ok": True,
         "id": licence.pk,
-        "url": links.keep_url(video, request.user) + f"?device={device_id}",
-        "size": video.video_file.size,
-        "content_type": _type_of(video),
+        "url": links.keep_url(video, request.user, media) + f"?device={device_id}",
+        "size": stored.size,
+        "content_type": _type_of(stored, media),
         "expires_at": licence.expires_at.isoformat(),
         "days": license_days(),
         "title": licence.title,
-        "watch_url": links.watch_url(video, request.user),
+        "watch_url": links.watch_url(video, request.user, media),
     })
 
 
@@ -238,7 +254,7 @@ def licenses(request):
     for licence in rows:
         renewed.append({
             "id": licence.pk,
-            "video": f"{licence.content_type_id}:{licence.object_id}",
+            "video": f"{licence.content_type_id}:{licence.object_id}" + (f":{links.MARKS[licence.media]}" if licence.media in links.MARKS else ""),
             "title": licence.title,
             "live": licence.is_live,
             "expires_at": licence.expires_at.isoformat(),

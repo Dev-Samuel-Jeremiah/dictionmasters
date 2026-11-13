@@ -7,7 +7,7 @@ from apps.accounts.access import can_see_level
 from apps.billing.access import has_access
 from apps.videos import links
 
-from .catalog import learner_secret, manifest, may_keep_video
+from .catalog import access_info, learner_secret, manifest, may_keep_video
 from .models import LessonPack
 
 
@@ -51,12 +51,15 @@ def offline_manifest(request):
 def learner(request):
     """Who is signed in on this device, for the app's per-learner stores: their
     number, their key, and a fresh security token to send waiting progress
-    with (signing in renews the token, so older progress would be refused)."""
+    with (signing in renews the token, so older progress would be refused).
+    With their access (catalog.access_info), for a page saved on its own
+    ("Save this page for offline"), which keeps the same rules as a download."""
     from django.middleware.csrf import get_token
 
     if not request.user.is_authenticated:
         return JsonResponse({"ok": False}, status=401)
-    response = JsonResponse({"ok": True, **learner_info(request), "token": get_token(request)})
+    response = JsonResponse({"ok": True, **learner_info(request), **access_info(request.user),
+                             "token": get_token(request)})
     response["Cache-Control"] = "private, no-store"
     return response
 

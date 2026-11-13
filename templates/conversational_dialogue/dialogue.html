@@ -76,7 +76,7 @@
         {% endif %}
       </div>
       {% if dialogue.audio_source %}
-      <audio controls src="{{ dialogue.audio_source }}" data-ra-media class="cd-audio"></audio>
+      {% audio_player dialogue css="cd-audio" ra=True preload="metadata" %}
       {% endif %}
       <p class="cd-script__hint" data-role-hint hidden>Your lines are hidden. Say them from memory, then tap a bubble to check.</p>
       <div class="cd-lines" data-ra-text>

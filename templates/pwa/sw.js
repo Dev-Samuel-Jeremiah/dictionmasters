@@ -742,6 +742,7 @@ async function clearLibrary() {
   for (const where of [storesOf(null), ...(await knownLearners()).map((id) => storesOf({ id }))]) {
     await caches.delete(where.library);
     await indexClear(where.index);
+    await keyStore("readwrite", (store) => store.delete(`saved:${where.id || ""}`)).catch(() => {});
   }
   await caches.delete(LIBRARY_MEDIA);
   await caches.delete(LIBRARY_STATIC);
@@ -1078,11 +1079,15 @@ async function newDownload(options) {
     // A page with no version shows the learner's progress: always fetched.
     if (!page.v || !here || here.v !== page.v || here.moved || (state.media && here.pending)) state.todo.push([page.p, page.v]);
   }
+  // Pages saved one by one ("Save this page for offline") that aren't on the
+  // list: brought up to date by a whole sync, and never removed by one.
+  const saved = new Set((await savedPages()).map((page) => page.p));
+  const listed = new Set(wanted.map((page) => page.p));
   if (state.limit) {
     state.todo = state.todo.slice(0, state.limit);       // part of a sync: nothing is removed
   } else {
-    const paths = new Set(wanted.map((page) => page.p));
-    state.stale = [...kept.keys()].filter((path) => !paths.has(path));
+    saved.forEach((path) => { if (!listed.has(path)) state.todo.push([path, ""]); });
+    state.stale = [...kept.keys()].filter((path) => !listed.has(path) && !saved.has(path));
   }
   state.remaining = state.todo.length;
   state.videos = manifest.videos || [];
@@ -1232,6 +1237,82 @@ async function runDownload(options) {
   let state = await newDownload(options);
   while (!state.done) state = await downloadStep(state);
   return state;
+}
+
+// ---------------------------------------------------------- saved pages
+
+// "Save this page for offline" (static/js/offline_save_page.js): one page and
+// every picture and recording on it, kept like a downloaded lesson (sealed,
+// in the learner's own store, closed when their plan ends), whether or not
+// it's on their level's list. The saved ones are listed per learner, so a
+// whole sync keeps them (newDownload) and "My downloads" can show them.
+async function savedPages() {
+  const name = `saved:${(await stores()).id || ""}`;
+  const kept = await keyStore("readonly", (store) => store.get(name)).catch(() => null);
+  return (kept && kept.pages) || [];
+}
+
+async function writeSavedPages(pages) {
+  const name = `saved:${(await stores()).id || ""}`;
+  await keyStore("readwrite", (store) => store.put({ p: name, pages }));
+}
+
+// A page's own address, as it's kept: path and any ?step=.
+function savedPath(address) {
+  const url = new URL(address, self.location.origin);
+  return url.pathname + url.search;
+}
+
+async function newPageSave(path, title) {
+  const state = {
+    media: true, limit: 1, todo: [[path, ""]], stale: [],
+    pages: 0, media_kept: 0, skipped: 0, failed: 0, remaining: 1, done: false, stopped: "",
+    storage: true, files: [], queued: [], saving: { p: path, title: String(title || "").slice(0, 200) },
+  };
+  const stop = (why) => { state.stopped = why; state.done = true; return state; };
+  if (!followable(new URL(path, self.location.origin))) return stop("not-saveable");
+  const learner = await fetchLearner();
+  if (!learner) return stop(navigator.onLine ? "signed-out" : "offline");
+  await useLearner(learner);
+  // The same rules as a download: open for so many days, never past the plan.
+  await grantAccess(learner.access ? (learner.offline_days ?? 90) : 0, learner.access_ends);
+  if (!learner.access) return stop("no-access");
+  state.storage = learner.storage_media !== false;
+  return state;
+}
+
+// After the last step: listed as saved once the page itself is here (its
+// files may still be short, if the connection dropped: saving again fetches
+// only what's missing).
+async function finishPageSave(state) {
+  if (!state.saving || !state.pages) return state;
+  const pages = (await savedPages()).filter((page) => page.p !== state.saving.p);
+  const entry = (await indexAll()).find((found) => found.p === state.saving.p);
+  pages.unshift({ ...state.saving, at: Date.now(), files: (entry && entry.media || []).length });
+  await writeSavedPages(pages);
+  state.saved = true;
+  state.missing = entry && entry.pending ? state.failed : 0;
+  return state;
+}
+
+// Is it saved, and are all its files here?
+async function pageSaveStatus(path) {
+  const page = (await savedPages()).find((found) => found.p === path);
+  if (!page) return { saved: false };
+  const entry = (await indexAll()).find((found) => found.p === path);
+  return { saved: true, at: page.at, complete: Boolean(entry && !entry.pending), open: await accessOpen() };
+}
+
+// Taking a saved page off the device, unless a downloaded level still uses
+// it; files no page uses any more go too (tidyLibrary).
+async function removeSavedPage(path) {
+  await writeSavedPages((await savedPages()).filter((page) => page.p !== path));
+  let listed = false;
+  try {
+    const response = await fetch(await manifestUrl(), { credentials: "include", headers: { Accept: "application/json" } });
+    if (response.ok) listed = ((await response.json()).pages || []).some((page) => page.p === path);
+  } catch (error) { /* offline: it goes; a later sync brings back a listed page */ }
+  await tidyLibrary({ stale: listed ? [] : [path] });
 }
 
 // ------------------------------------------------------------- progress
@@ -1565,6 +1646,35 @@ self.addEventListener("message", (event) => {
       }
     })());
   }
+  // "Save this page for offline": one step at a time, like a download.
+  if (data && data.type === "offline-save-page" && port) {
+    event.waitUntil((async () => {
+      let state = data.state;
+      try {
+        state = state || await newPageSave(savedPath(data.path), data.title);
+        if (!state.done) state = await downloadStep(state);
+        if (state.done && !state.stopped) state = await finishPageSave(state);
+        port.postMessage(state);
+      } catch (error) {
+        port.postMessage({ ...(state || { pages: 0, media_kept: 0 }), stopped: "error", done: true });
+      }
+    })());
+  }
+  if (data && data.type === "offline-page-status" && port) {
+    event.waitUntil((async () => {
+      port.postMessage(await pageSaveStatus(savedPath(data.path)).catch(() => ({ saved: false })));
+    })());
+  }
+  if (data && data.type === "offline-saved-pages" && port) {
+    event.waitUntil((async () => { port.postMessage(await savedPages().catch(() => [])); })());
+  }
+  if (data && data.type === "offline-remove-page" && port) {
+    event.waitUntil((async () => {
+      await removeSavedPage(savedPath(data.path)).catch(() => {});
+      port.postMessage({ removed: true });
+    })());
+  }
+
   if (data && data.type === "offline-clear") {
     event.waitUntil((async () => {
       await caches.delete((await stores()).pages);

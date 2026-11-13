@@ -338,3 +338,7 @@
 }
 .dialogue-line--b .dialogue-line__name { color: var(--maroon); }
 .dialogue-line__text { margin: 0; color: var(--ink); font-size: 0.96rem; }
+/* Each recording with its "Save for offline" strip (templates/videos/_audio.html). */
+.word-card__audio .vid { flex: 1 1 260px; min-width: 0; }
+.word-card__audio { align-items: flex-start; }
+.word-card__audio > .word-card__audio-tag { margin-top: 17px; }

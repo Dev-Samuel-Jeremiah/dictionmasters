@@ -456,6 +456,24 @@ def plan_ends(user):
     return subscription.access_until if subscription else None
 
 
+def access_info(user):
+    """Whether this person's app may open saved lessons, for how long with no
+    internet, and when their plan ends (see manifest). Sent with the list, and
+    with the learner check a single "Save this page" makes (views.learner)."""
+    from apps.billing.access import has_access
+
+    if not has_access(user):
+        return {"access": False, "offline_days": 0}
+    return {
+        "access": True,
+        "offline_days": settings.OFFLINE_ACCESS_DAYS,
+        "access_ends": int(ends.timestamp() * 1000) if (ends := plan_ends(user)) else None,
+        # Files in the storage bucket, and the videos saved from it, wait
+        # until the bucket lets the apps read them (STORAGE_CORS_READY).
+        "storage_media": settings.STORAGE_CORS_READY,
+    }
+
+
 def manifest(user, chosen=()):
     """The list one person's app syncs against: their levels, with `chosen`
     for someone who can open every level (see levels_for).
@@ -471,27 +489,20 @@ def manifest(user, chosen=()):
     working offline because its stylesheets are kept with it. Raise
     OFFLINE_PAGES_VERSION when a change to the pages themselves has to
     reach every device."""
-    from apps.billing.access import has_access
-
     learner = {"id": user.pk, "secret": learner_secret(user)}
-    if not has_access(user):
-        return {"access": False, "offline_days": 0, "learner": learner, "pages": [], "videos": []}
+    access = access_info(user)
+    if not access["access"]:
+        return {**access, "learner": learner, "pages": [], "videos": []}
     tools = _open_tools(user)
     found = catalog(levels_for(user, chosen), tools)
     round_ = settings.OFFLINE_PAGES_VERSION
-    ready = settings.STORAGE_CORS_READY
     return {
-        "access": True,
+        **access,
         "learner": learner,
-        "offline_days": settings.OFFLINE_ACCESS_DAYS,
-        "access_ends": int(ends.timestamp() * 1000) if (ends := plan_ends(user)) else None,
         "need_mb": settings.OFFLINE_MEDIA_NEED_MB,
         "pages": [{"p": page["p"], "v": f"{round_}.{page['v']}" if page["v"] else ""}
                   for page in [*found["pages"], *_library(user, tools)]],
-        # Files in the storage bucket, and the videos saved from it, wait
-        # until the bucket lets the apps read them (STORAGE_CORS_READY).
-        "storage_media": ready,
-        "videos": found["videos"] if ready else [],
+        "videos": found["videos"] if access["storage_media"] else [],
     }
 
 

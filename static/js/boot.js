@@ -31,7 +31,9 @@
   ifPresent('input[type="file"]', "upload");
   ifPresent("[data-scan-open]", "scan");
   ifPresent("audio, video", "media");
-  ifPresent("[data-video][data-ticket], [data-offline-list]", "offline");
+  // [data-offline-later]: players that arrive later, e.g. a recital popup.
+  ifPresent("[data-video][data-ticket], [data-offline-list], [data-offline-later]", "offline");
+  ifPresent("[data-offline-save-page], [data-saved-pages]", "savepage");
   // Arriving from a scanned code (?play=1): the page offers to start the lesson.
   if (document.querySelector("audio, video") && /[?&]play=1(&|$)/.test(location.search)) {
     load(scripts.lesson);

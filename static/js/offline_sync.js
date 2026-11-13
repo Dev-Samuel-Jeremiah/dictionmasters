@@ -349,7 +349,7 @@
     var always = path && onlineOnly.some(function (pattern) { return pattern.test(path.pathname); });
     box.textContent = always || !path
       ? "You're offline: this needs the internet. Your saved lessons still work."
-      : "This isn't saved on this device yet. When you're online, download it from Offline lessons & videos.";
+      : "This isn't saved on this device yet. When you're online, download it from My downloads.";
     box.classList.add("is-on");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { box.classList.remove("is-on"); }, 4000);

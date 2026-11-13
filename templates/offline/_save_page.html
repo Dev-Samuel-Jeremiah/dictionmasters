@@ -1,0 +1,22 @@
+{% comment %}
+  "Save this page for offline": the page and every picture and recording on
+  it, kept on the device (static/js/offline_save_page.js). For pages with
+  many short sounds, where a button beside each would crowd the page.
+  Hidden until the app's worker is ready; only for someone signed in.
+    {% include "offline/_save_page.html" with title="Phonemic chart" %}
+{% endcomment %}
+{% if user.is_authenticated %}
+<div class="save-page" data-offline-save-page data-title="{{ title|default:'' }}" hidden>
+  <div class="save-page__text">
+    <strong class="save-page__title">&#128190; Use this page without the internet</strong>
+    <span class="save-page__state" data-save-page-state aria-live="polite">Saves this page and all its sounds on this device.</span>
+  </div>
+  <div class="vid__progress save-page__progress" data-save-page-progress hidden><span></span><b class="vid__progress__figure">0%</b></div>
+  <div class="save-page__actions">
+    <button type="button" class="vid__btn vid__btn--keep" data-save-page>
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 18.5h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Save this page for offline</button>
+    <button type="button" class="vid__btn save-page__remove" data-save-page-remove hidden>Remove</button>
+  </div>
+</div>
+{% endif %}

@@ -13,8 +13,8 @@ class StudentDeviceAdmin(admin.ModelAdmin):
 
 @admin.register(OfflineVideoLicense)
 class OfflineVideoLicenseAdmin(admin.ModelAdmin):
-    list_display = ["title", "student", "device", "expires_at", "is_active", "revoked_at"]
-    list_filter = ["is_active"]
+    list_display = ["title", "media", "student", "device", "expires_at", "is_active", "revoked_at"]
+    list_filter = ["is_active", "media"]
     search_fields = ["title", "student__email", "device__name"]
     readonly_fields = ["student", "device", "content_type", "object_id", "issued_at"]
 

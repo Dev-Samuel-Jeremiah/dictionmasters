@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load rich_text %}
 {% load static %}
+{% load videos %}
 {% load read_along %}
 
 {% block title %}{{ item.title }} — Diction Library{% endblock %}
@@ -14,8 +15,8 @@
     <div class="ui-hero__inner"><div class="ui-hero__main"><span class="ui-hero__icon" aria-hidden="true">&#128218;</span><div><p class="ui-hero__eyebrow">{{ item.get_kind_display }} &middot; {% if item.school %}{{ item.school.name }}{% else %}Diction Masters{% endif %}</p><h1 class="ui-hero__title">{{ item.title }}</h1>{% if item.summary %}<p class="ui-hero__lede">{{ item.summary }}</p>{% endif %}</div></div></div>
   </div></section>
   <div class="wrap ui-body"><article class="ui-panel">
-    {% if item.kind == "audio" and item.file %}<audio controls preload="metadata" style="width:100%"><source src="{{ item.file.url }}">Your browser does not support audio playback.</audio>{% endif %}
-    {% if item.kind == "video" and item.file %}<video controls preload="metadata" style="width:100%;max-height:70vh"><source src="{{ item.file.url }}">Your browser does not support video playback.</video>{% endif %}
+    {% if item.kind == "audio" and item.file %}{% audio_player item preload="metadata" %}{% endif %}
+    {% if item.kind == "video" and item.file %}<div class="vid-stage">{% video_player item direct=True title=item.title %}</div>{% endif %}
     {% if item.description %}<div class="ui-panel__lede dm-rich-content">{{ item.description|rich_text }}</div>{% endif %}
     {% with kind=item.get_kind_display|lower %}
     {% if listenable %}
@@ -45,7 +46,7 @@
       </div>
       {% for chapter in chapters %}
       <article class="ll__chapter" data-ll-chapter{% read_along_sync chapter %}{% if not forloop.first %} hidden{% endif %}>
-        <audio controls preload="none" src="{{ chapter.audio_source }}" data-ra-media></audio>
+        {% audio_player chapter ra=True %}
         <div class="ll__text" data-ra-text>{% for para in chapter.paragraphs %}{% if forloop.first and para == chapter.title %}<h3 class="ll__title">{{ para }}</h3>{% else %}<p>{{ para }}</p>{% endif %}{% endfor %}</div>
       </article>
       {% endfor %}

@@ -1,0 +1,32 @@
+{% comment %}
+  One recording (a chapter, a dialogue, a model recording, a library
+  item). It plays from its usual address, as before; a signed-in person
+  can also keep a copy for listening without the internet
+  (static/js/offline_video.js, the same as lesson videos).
+{% endcomment %}
+{% if not missing %}
+<div class="vid vid--audio{% if dark %} vid--on-dark{% endif %}" data-video data-kind="audio"{% if ticket %} data-ticket="{{ ticket }}" data-video-id="{{ ref }}" data-title="{{ title }}"{% endif %}>
+  {% if ticket %}<form hidden>{% csrf_token %}</form>{% endif %}
+  <audio class="vid__player{% if css %} {{ css }}{% endif %}" controls preload="{{ preload }}" src="{{ src }}" data-video-el{% if ra %} data-ra-media{% endif %}{% if sync %} data-ra-sync="{{ sync }}"{% endif %}{% if hook %} {{ hook }}{% endif %}{% if label %} aria-label="{{ label }}"{% endif %}></audio>
+  {% if ticket %}
+  <div class="vid__bar" data-offline-bar>
+    <p class="vid__state" data-offline-state hidden></p>
+    <a class="vid__manage-devices" data-manage-devices href="{% url 'videos:offline' %}#devices" hidden>Manage devices</a>
+    <div class="vid__progress" data-offline-progress hidden>
+      <span></span><b class="vid__progress__figure" data-offline-figure>0%</b>
+    </div>
+    <div class="vid__actions">
+      <button type="button" class="vid__btn vid__btn--keep" data-offline-keep>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 18.5h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Save for offline
+      </button>
+      <button type="button" class="vid__btn vid__btn--keep" data-offline-resume hidden>&#10227; Continue download</button>
+      <button type="button" class="vid__btn vid__btn--remove" data-offline-pause hidden>&#10074;&#10074; Pause</button>
+      <button type="button" class="vid__btn vid__btn--remove" data-offline-cancel hidden>Cancel download</button>
+      <button type="button" class="vid__btn vid__btn--watch" data-offline-watch hidden>&#9654; Listen offline</button>
+      <button type="button" class="vid__btn vid__btn--remove" data-offline-remove hidden>Remove offline copy</button>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}

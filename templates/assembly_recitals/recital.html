@@ -72,7 +72,7 @@
         {% endif %}
       </div>
       {% if recital.audio_source %}
-      <audio controls src="{{ recital.audio_source }}" data-ra-media data-recital-audio class="rc-audio"></audio>
+      {% audio_player recital css="rc-audio" ra=True hook="data-recital-audio" preload="metadata" %}
       {% endif %}
       {% if verses %}
       <div class="rc-verses" data-ra-text data-verses>

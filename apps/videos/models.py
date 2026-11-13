@@ -67,6 +67,11 @@ class OfflineVideoLicense(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     video = GenericForeignKey("content_type", "object_id")
+    # The row's video, or its recording (audio), or an EchoSpell card's
+    # quick recording: a recital can have a video and a recording, each
+    # saved on its own (apps/videos/links.py).
+    media = models.CharField(max_length=5, choices=[("video", "Video"), ("audio", "Recording"),
+                                                    ("quick", "Quick recording")], default="video")
     title = models.CharField(max_length=200, blank=True, help_text="What the learner sees in their offline list.")
 
     issued_at = models.DateTimeField(auto_now_add=True)
@@ -77,7 +82,7 @@ class OfflineVideoLicense(models.Model):
     class Meta:
         ordering = ["-issued_at"]
         constraints = [
-            models.UniqueConstraint(fields=["device", "content_type", "object_id"], name="one_copy_per_device"),
+            models.UniqueConstraint(fields=["device", "content_type", "object_id", "media"], name="one_copy_per_device"),
         ]
         verbose_name = "offline copy"
         verbose_name_plural = "offline copies"

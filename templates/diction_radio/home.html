@@ -6,7 +6,7 @@
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/diction_radio.css' %}">{% endblock %}
 
 {% block content %}
-<div class="radio-page" data-radio-player>
+<div class="radio-page" data-radio-player data-offline-later>
   <section class="radio-hero">
     <div class="wrap radio-hero__inner">
       <div class="radio-hero__copy">
@@ -60,7 +60,14 @@
             {% for episode in program.episodes.all %}
             <li><button type="button" class="radio-episode" data-radio-track="{{ episode.queue_index }}">
               <span class="radio-episode__play" aria-hidden="true">&#9654;</span><span class="radio-episode__text"><strong>{{ episode.title }}</strong>{% if episode.description %}<small>{{ episode.description|rich_text_inline }}</small>{% endif %}</span><span class="radio-episode__order">{{ forloop.counter|stringformat:"02d" }}</span>
-            </button></li>
+            </button>
+            {% if episode.offline_ticket %}
+            {# Saving it for listening offline (static/js/diction_radio.js). #}
+            <span class="radio-save" data-radio-offline="{{ episode.queue_index }}" data-ticket="{{ episode.offline_ticket }}" data-ref="{{ episode.offline_ref }}" data-title="{{ episode.title }}" hidden>
+              <button type="button" class="radio-save__keep" data-radio-save aria-label="Save {{ episode.title }} for offline">&#11015; Save</button>
+              <button type="button" class="radio-save__remove" data-radio-unsave hidden aria-label="Remove the offline copy of {{ episode.title }}">Remove</button>
+            </span>
+            {% endif %}</li>
             {% endfor %}
           </ol>
         </article>

@@ -64,3 +64,10 @@
   .rc-verse { font-size: calc(1.25rem * var(--rc-scale)); }
 }
 @media (prefers-reduced-motion: reduce) { .rc-present__slide, .rc-modal[open] { animation: none; } }
+
+/* The popup's video with its "Save for offline" strip (offline_video.js):
+   the strip is made for dark cards, so the video sits on one. */
+.rc-modal__video { background: #0B1A4A; }
+.rc-modal__video .vid { gap: 0; }
+.rc-modal__video .vid__player { border-radius: 0; }
+.rc-modal__video .vid__bar { border: 0; border-radius: 0; }

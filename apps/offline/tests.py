@@ -296,6 +296,15 @@ class LearnerTests(ManifestCase):
         self.assertTrue(found["token"])
         self.assertEqual(manifest(self.pupil)["learner"], {"id": self.pupil.pk, "secret": found["secret"]})
 
+    def test_the_learner_check_carries_their_access_for_a_saved_page(self):
+        """A page saved on its own ("Save this page for offline") follows the
+        same rules as a download: open so many days, never past the plan."""
+        self.client.force_login(self.pupil)
+        found = self.client.get("/offline-sync/learner/").json()
+        listed = manifest(self.pupil)
+        for key in ("access", "offline_days", "access_ends", "storage_media"):
+            self.assertEqual(found.get(key), listed.get(key), key)
+
     def test_each_learner_has_their_own_key_and_it_lasts(self):
         other = person("other@example.com", role="student", level="Level 1")
         self.assertNotEqual(learner_secret(self.pupil), learner_secret(other))
