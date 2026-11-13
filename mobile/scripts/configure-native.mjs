@@ -160,19 +160,49 @@ android {
   // Screenshots and screen recording blocked ("blockScreenCapture"):
   // Android's FLAG_SECURE on the app's one screen. Screenshots fail, and
   // recordings, screen sharing and the recent-apps preview show black.
+  // The app starts blocked; each of our pages then says whether the person
+  // signed in may capture it (website: apps/landing/capture.py, through
+  // static/js/screen_capture.js calling DMScreen.setSecure). Only staff and
+  // admins, while the control room's switch is on, are ever unblocked, and
+  // only a page from appHosts (or devUrl) can unblock.
   const activityPath = findFile(path.join(androidMain, "java"), "MainActivity.java");
   if (activityPath) {
     const START = "    // dm:secure:start", END = "    // dm:secure:end";
+    const IMPORTS = "import android.net.Uri;\nimport android.os.Bundle;\nimport android.view.WindowManager;\nimport android.webkit.JavascriptInterface;\n";
     let java = read(activityPath);
     java = java.replace(new RegExp(`\\n?${START}[\\s\\S]*?${END}\\n?`), "\n");
-    java = java.replace(/import android\.os\.Bundle;\nimport android\.view\.WindowManager;\n/, "");
+    java = java.replace(IMPORTS, "");
+    java = java.replace(/import android\.os\.Bundle;\nimport android\.view\.WindowManager;\n/, "");   // from before the switch
     if (settings.blockScreenCapture !== false) {
-      java = java.replace(/(package [^;]+;\n\n?)/, "$1import android.os.Bundle;\nimport android.view.WindowManager;\n");
+      java = java.replace(/(package [^;]+;\n\n?)/, `$1${IMPORTS}`);
+      const hosts = [...settings.appHosts, ...(devUrl ? [new URL(devUrl).hostname] : [])]
+        .map((host) => `"${host.replace(/["\\]/g, "")}"`).join(", ");
       const block = `${START} — added by scripts/configure-native.mjs (blockScreenCapture)
+    private static final java.util.Set<String> DM_OWN_HOSTS = new java.util.HashSet<>(java.util.Arrays.asList(${hosts}));
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+        if (getBridge() != null) getBridge().getWebView().addJavascriptInterface(new ScreenSwitch(), "DMScreen");
+    }
+
+    /** Called by our pages (static/js/screen_capture.js): block, or allow for staff. */
+    private final class ScreenSwitch {
+        @JavascriptInterface
+        public void setSecure(final boolean block) {
+            runOnUiThread(() -> {
+                if (block) {
+                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                    return;
+                }
+                String address = getBridge() != null ? getBridge().getWebView().getUrl() : null;
+                String host = address != null ? Uri.parse(address).getHost() : null;
+                if (host != null && DM_OWN_HOSTS.contains(host)) {
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                }
+            });
+        }
     }
 ${END}`;
       java = java.replace(/extends BridgeActivity\s*\{\s*\}/, "extends BridgeActivity {\n}");

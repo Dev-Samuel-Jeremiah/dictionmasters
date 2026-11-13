@@ -43,6 +43,7 @@
       <button type="button" class="cr-side__close" aria-label="Close menu">&times;</button>
       <a href="{% url 'manage:home' %}" class="cr-side__home {% if not current_key %}is-on{% endif %}">&#127968; Control room home</a>
       <a href="{% url 'manage:branding' %}" class="cr-side__home {% if current_key == 'branding' %}is-on{% endif %}">&#127912; Logo &amp; favicon</a>
+      <a href="{% url 'manage:screen_protection' %}" class="cr-side__home {% if current_key == 'screen-protection' %}is-on{% endif %}">&#128274; Screen protection</a>
       <a href="{% url 'manage:analytics' %}" class="cr-side__home {% if current_key == 'analytics' %}is-on{% endif %}">&#128200; Analytics</a>
       <a href="{% url 'manage:schools_directory' %}" class="cr-side__home {% if current_key == 'schools-directory' %}is-on{% endif %}">&#127979; Schools &amp; people</a>
       <a href="{% url 'manage:classes_overview' %}" class="cr-side__home {% if current_key == 'classes-overview' or current_key == 'classes' %}is-on{% endif %}">&#128203; Classes &amp; grades</a>
@@ -88,6 +89,7 @@
 
   {% if native_app %}<script src="{% static 'js/native_app.js' %}" defer></script>{% endif %}
   <script src="{% static 'js/history_back.js' %}" defer></script>
+  <script src="{% static 'js/screen_capture.js' %}" data-capture="{{ screen_capture|default:'block' }}" defer></script>
   <script src="{% static 'js/upload_progress.js' %}" defer></script>
   <script src="{% static 'js/rich_text_editor.js' %}" defer></script>
   <script src="{% static 'js/manage_audio_feedback.js' %}" defer></script>

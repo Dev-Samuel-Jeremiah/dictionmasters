@@ -11,6 +11,7 @@ urlpatterns = [
     path("search/", views.search, name="search"),
     path("jobs/<str:job>/", views.run_job, name="job"),
     path("branding/", views.branding, name="branding"),
+    path("screen-protection/", views.screen_protection, name="screen_protection"),
     path("billing-settings/", views.billing_settings, name="billing_settings"),
     path("trial/extend/", views.extend_trial, name="extend_trial"),
     path("analytics/", views.analytics_view, name="analytics"),

@@ -18,7 +18,8 @@
  *     for the Diction Masters site only
  *   - downloads go through the normal "Save as" box
  *   - a "You're offline" screen, and saved lessons offline
- *   - screenshots and screen recording blocked (blockScreenCapture)
+ *   - screenshots and screen recording blocked (blockScreenCapture); staff may
+ *     be allowed from the control room (Screen protection)
  *   - menus and keyboard shortcuts (back, reload, zoom, full screen)
  *   - the app updates ITSELF when you publish a new version (updater.js)
  *
@@ -31,7 +32,7 @@
 const path = require("path");
 const fs = require("fs");
 const {
-  app, BrowserWindow, Menu, shell, session, dialog, systemPreferences, nativeTheme,
+  app, BrowserWindow, Menu, shell, session, dialog, systemPreferences, nativeTheme, ipcMain,
 } = require("electron");
 
 const settings = require("../app.settings.json");
@@ -157,10 +158,24 @@ function webPreferences() {
 //   Mac                        blocked in screenshots and most recorders; some
 //                              tools on macOS 15+ (ScreenCaptureKit) ignore it
 //   Linux                      not possible: the system has no such setting
+//
+// Every window starts blocked. Each of our pages then says whether the
+// person signed in may capture it (website: apps/landing/capture.py, through
+// static/js/screen_capture.js and preload.js): only staff and admins, while
+// the control room's switch is on. Only our own pages can unblock a window.
 function protectFromCapture(win) {
   if (settings.blockScreenCapture === false) return;
   try { win.setContentProtection(true); } catch (error) { /* not supported here */ }
 }
+
+ipcMain.on("dm-capture", (event, block) => {
+  if (settings.blockScreenCapture === false) return;
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  const from = (event.senderFrame && event.senderFrame.url) || event.sender.getURL();
+  if (block === false && !isAppUrl(from)) return;
+  try { win.setContentProtection(block !== false); } catch (error) { /* not supported here */ }
+});
 
 function attachHandlers(win) {
   const wc = win.webContents;

@@ -63,3 +63,38 @@ class SiteBranding(models.Model):
     @classmethod
     def load(cls):
         return cls.objects.filter(pk=1).first() or cls(pk=1)
+
+
+class ScreenProtection(models.Model):
+    """Whether staff may take screenshots and record the screen in the apps.
+
+    The Android app and the computer app block screenshots and screen
+    recording (they show black), so lessons can't be copied that way. Staff
+    sometimes need to record the screen themselves, for a demonstration or a
+    training video: this switch, in the control room, lets them. It only
+    ever reaches staff and admin accounts (is_staff): schools, teachers,
+    students and individual learners stay protected whatever it says
+    (apps/landing/capture.py). iPhones and web browsers can't block
+    screenshots at all, so it changes nothing there."""
+
+    staff_may_capture = models.BooleanField(
+        "Let staff and admins take screenshots and record the screen", default=False,
+        help_text="Tick to record or screenshot the apps yourself. Schools, teachers and students "
+                  "stay protected either way. Untick when you've finished.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "screen protection"
+        verbose_name_plural = "screen protection"
+
+    def __str__(self):
+        return "Screen protection"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        return cls.objects.filter(pk=1).first() or cls(pk=1)
