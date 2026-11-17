@@ -478,10 +478,11 @@ def manifest(user, chosen=()):
     """The list one person's app syncs against: their levels, with `chosen`
     for someone who can open every level (see levels_for).
 
-    "offline_days" is how long the app may keep opening lessons with no
-    internet after this check-in, and "access_ends" (milliseconds, like a
-    browser's clock) is when their plan ends: the app closes its lessons at
-    whichever comes first, connected or not. Once their access has ended,
+    "access_ends" (milliseconds, like a browser's clock) is when their plan
+    ends: the app keeps opening its lessons until then, however long it's
+    offline (the owner's decision, November 2026). "offline_days" counts only
+    for someone with no end date (staff, the paywall off): how long the app
+    may open lessons with no internet after this check-in. Once their access has ended,
     the app is told so and closes them at once (templates/pwa/sw.js, "access").
 
     A site update doesn't change a page's version: every learner fetching

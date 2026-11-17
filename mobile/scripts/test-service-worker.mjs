@@ -387,7 +387,9 @@ manifest = list({ offline_days: 90, access_ends: clock + 365 * day });
 await mod.runDownload({ media: true });
 assert.equal(await mod.accessOpen(), true, "renewed: open again");
 clock += 91 * day;
-assert.equal(await mod.accessOpen(), false, "a long plan still has the 90-day limit");
+assert.equal(await mod.accessOpen(), true, "a long plan stays open offline, past 90 days");
+clock += 280 * day;                                              // 371 days: past the 365-day plan
+assert.equal(await mod.accessOpen(), false, "until the plan ends");
 // no end date (staff, or the paywall off): just the 90 days
 manifest = list({ offline_days: 90, access_ends: null });
 await mod.runDownload({ media: true });

@@ -110,18 +110,18 @@ class LessonVideoTests(TestCase):
         self.assertEqual(b"".join(bytes_back.streaming_content), CLIP)
         self.assertEqual(self.client.get(answer["url"].split("?")[0] + "?device=someone-else").status_code, 404)
 
-    def test_only_so_many_devices(self):
-        self.assertTrue(self.prepare("device-a").json()["ok"])
-        self.assertTrue(self.prepare("device-b").json()["ok"])
-        third = self.prepare("device-c").json()
-        self.assertFalse(third["ok"])
-        self.assertIn("2 devices", third["error"])
-        self.assertEqual(StudentDevice.objects.count(), 2)
+    def test_any_number_of_devices(self):
+        """No limit on devices (the owner's decision, November 2026)."""
+        for n in range(5):
+            self.assertTrue(self.prepare(f"device-{n}").json()["ok"])
+        self.assertEqual(StudentDevice.objects.count(), 5)
 
-        # Removing one frees the place.
-        first = StudentDevice.objects.get(device_identifier="device-a")
+        # A device turned off back when there was a limit is simply used again.
+        first = StudentDevice.objects.get(device_identifier="device-0")
         self.client.post(f"/videos/devices/{first.pk}/deactivate/")
-        self.assertTrue(self.prepare("device-c").json()["ok"])
+        self.assertTrue(self.prepare("device-0").json()["ok"])
+        first.refresh_from_db()
+        self.assertTrue(first.is_active)
 
     def test_copies_are_checked_whenever_the_app_is_online(self):
         self.prepare()
@@ -171,7 +171,7 @@ class LessonVideoTests(TestCase):
         page = self.client.get("/videos/offline/")
         self.assertContains(page, "My downloads")
         self.assertContains(page, "data-saved-pages")            # pages saved one by one
-        self.assertContains(page, "Ada&#x27;s phone")
+        self.assertNotContains(page, "My devices")               # no device list any more
         self.assertContains(self.client.get("/accounts/dashboard/"), "/videos/offline/")
 
     def test_nobody_can_reach_another_learners_devices(self):

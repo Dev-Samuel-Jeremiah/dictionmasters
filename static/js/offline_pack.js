@@ -194,9 +194,7 @@
       }
     }).catch(function (error) {
       bar.hidden = true;
-      var limit = error.code === "device_limit" || error.code === "device_inactive";
-      say((limit ? "The pictures and recordings are loaded, but not the videos: " : "") +
-          (error.message || "The pack couldn't be loaded."));
+      say(error.message || "The pack couldn't be loaded.");
     }).then(function () {
       input.disabled = false;
       input.value = "";

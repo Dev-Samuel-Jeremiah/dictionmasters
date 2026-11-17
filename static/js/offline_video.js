@@ -320,8 +320,9 @@
   // ------------------------------------------------- may it open?
 
   // Saved copies follow the same rule as saved lessons (templates/pwa/sw.js,
-  // "access"): offline, they open until the learner's plan ends or 90 days
-  // after the app last connected, and never past the copy's own date. The
+  // "access"): offline, they open until the learner's plan ends (or, with no
+  // end date, 90 days after the app last connected), and never past the
+  // copy's own date, which is the plan's end too (apps/videos/views.py). The
   // latest time this device has shown counts, so winding its clock back
   // doesn't reopen anything. Online, the copy's date is renewed on every
   // page (refresh, below), so that is all that counts.
@@ -395,12 +396,6 @@
     return match ? match[1] : "";
   }
 
-  function when(iso) {
-    try {
-      return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-    } catch (error) { return ""; }
-  }
-
   // ------------------------------------------------------------ the page
 
   function wire(box) {
@@ -455,10 +450,8 @@
       watchButton.hidden = !kept;
       removeButton.hidden = !kept;
       progress.hidden = mode === "idle";
-      var manageDevices = box.querySelector("[data-manage-devices]");
-      if (manageDevices && mode !== "idle") manageDevices.hidden = true;
       if (mode === "idle") {
-        if (kept) say("✓ Saved on this device · until " + when(record.expires), "good");
+        if (kept) say("✓ Saved on this device", "good");
         else if (!state.classList.contains("vid__state--bad")) say("");
       }
     }
@@ -487,12 +480,10 @@
               " Tap “Continue download” to carry on from there.", error.why === "paused" ? "working" : "bad");
           return;
         }
-        // Not allowed at all (plan, device limit…): nothing to continue.
+        // Not allowed at all (the plan has ended): nothing to continue.
         mode = "idle";
         show();
         say(error.message || "That didn't work. Please try again.", "bad");
-        var manageDevices = box.querySelector("[data-manage-devices]");
-        if (manageDevices) manageDevices.hidden = error.code !== "device_limit";
       });
     }
 
@@ -570,7 +561,7 @@
         video.src = URL.createObjectURL(blob);
         playing = true;
         video.play().catch(function () { /* the learner can press play */ });
-        say("▶ Playing your offline copy · until " + when(record.expires), "good");
+        say("▶ Playing your offline copy", "good");
       }).catch(function (error) {
         say(error.message || "That copy couldn't be opened.", "bad");
       });
@@ -761,7 +752,7 @@
           '<a class="vid__btn vid__btn--lesson" href="">Open the lesson</a>' +
           '<button type="button" class="vid__btn vid__btn--remove">Remove</button></div>';
         row.querySelector(".vid-kept__title").textContent = record.title;
-        row.querySelector(".vid-kept__note").textContent = "Saved on this device · until " + when(record.expires);
+        row.querySelector(".vid-kept__note").textContent = "Saved on this device";
         row.querySelector(".vid__btn--lesson").href = record.page || "/";
         var player = row.querySelector(".vid-kept__player");
         row.querySelector(".vid__btn--watch").addEventListener("click", function () {

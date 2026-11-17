@@ -31,8 +31,7 @@ def license_days():
     return int(getattr(settings, "OFFLINE_VIDEO_LICENSE_DAYS", 90))
 
 
-def device_limit():
-    return int(getattr(settings, "MAX_OFFLINE_DEVICES_PER_STUDENT", 2))
+# There is no limit on devices any more (apps/videos/views.py, _device_for).
 
 
 class StudentDevice(models.Model):

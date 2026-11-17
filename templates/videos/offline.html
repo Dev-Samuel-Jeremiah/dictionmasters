@@ -99,33 +99,6 @@
       </ul>
     </section>
 
-    <section class="ui-panel" id="devices">
-      <header class="ui-section__head">
-        <h2 class="ui-section__title">My devices</h2>
-        <p class="ui-section__aside">{{ limit }} device{{ limit|pluralize }} allowed</p>
-      </header>
-      {% if devices %}
-      <ul class="vid-devices">
-        {% for device in devices %}
-        <li class="vid-device{% if not device.active %} vid-device--off{% endif %}">
-          <div>
-            <p class="vid-device__name">{{ device.name }}</p>
-            <p class="vid-device__note">{{ device.copies }} saved{% if not device.active %} · turned off{% endif %}</p>
-          </div>
-          {% if device.active %}
-          <form method="post" action="{% url 'videos:deactivate_device' device.id %}" data-device-form>
-            {% csrf_token %}
-            <button type="submit" class="vid__btn vid__btn--remove">Remove this device</button>
-          </form>
-          {% endif %}
-        </li>
-        {% endfor %}
-      </ul>
-      <p class="ui-note">Removing a device frees a place and ends the copies it holds, the next time it goes online.</p>
-      {% else %}
-      <p class="ui-empty">No devices yet. Save a video and this one will appear here.</p>
-      {% endif %}
-    </section>
   </div>
 </div>
 {% endblock %}

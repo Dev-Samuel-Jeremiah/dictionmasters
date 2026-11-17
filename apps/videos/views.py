@@ -3,7 +3,7 @@ Playing a lesson video (or recording), and keeping one for later.
 
     /videos/play/<ticket>/     the player reads from here
     /videos/keep/<ticket>/     a copy is fetched from here, once allowed
-    /videos/prepare/           asks to keep a copy: device, limit, expiry
+    /videos/prepare/           asks to keep a copy: device and expiry
     /videos/licenses/          what this device may still play, checked
                                whenever it is online
     /videos/devices/           the learner's own devices
@@ -31,7 +31,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.billing.access import has_access, is_exempt
 
 from . import links, streaming
-from .models import OfflineVideoLicense, StudentDevice, device_limit, license_days
+from .models import OfflineVideoLicense, StudentDevice, license_days
 
 MAX_DEVICE_NAME = 80
 
@@ -118,13 +118,14 @@ def _type_of(stored, media=links.VIDEO):
 
 
 def _expiry_for(user):
-    """How long a saved copy may last: the usual licence, but never past the
-    end of the learner's plan, since the device may not connect again before."""
+    """How long a saved copy may last: until the learner's plan ends (the
+    owner's decision, November 2026: a copy stays as long as the plan does,
+    however long the device is offline). With no end to answer to (staff,
+    or the paywall switched off), the usual licence, renewed whenever the
+    app is online."""
     from apps.offline.catalog import plan_ends
 
-    usual = OfflineVideoLicense.new_expiry()
-    ends = plan_ends(user)
-    return min(usual, ends) if ends else usual
+    return plan_ends(user) or OfflineVideoLicense.new_expiry()
 
 
 def _licence_for(user, video, device_id, media=links.VIDEO):
@@ -142,8 +143,8 @@ def _licence_for(user, video, device_id, media=links.VIDEO):
 @login_required
 @require_POST
 def prepare(request):
-    """May this device keep this video? Registers the device, applies the
-    limit, and answers with where to fetch the copy and how long it lasts.
+    """May this device keep this video? Registers the device, and answers
+    with where to fetch the copy and how long it lasts (until the plan ends).
 
     Nothing secret is sent back: the address is a ticket for this account
     that stops working in a couple of hours, and the copy the browser
@@ -166,11 +167,7 @@ def prepare(request):
     if not device_id:
         return JsonResponse({"ok": False, "error": "This browser couldn't be identified."}, status=400)
 
-    device, problem = _device_for(request.user, device_id, str(body.get("device_name") or "")[:MAX_DEVICE_NAME])
-    if problem:
-        code = "device_limit" if problem.startswith("You can keep lessons") else "device_inactive"
-        return JsonResponse({"ok": False, "code": code, "error": problem,
-                             "devices": _devices(request.user)}, status=409)
+    device = _device_for(request.user, device_id, str(body.get("device_name") or "")[:MAX_DEVICE_NAME])
 
     content_type = ContentType.objects.get_for_model(video)
     title = str(body.get("title") or getattr(video, "video_caption", "")
@@ -199,27 +196,19 @@ def prepare(request):
 
 
 def _device_for(user, device_id, name):
-    """This device, registering it if it is new — within the limit."""
-    device = StudentDevice.objects.filter(student=user, device_identifier=device_id).first()
-    if device is not None:
-        if not device.is_active:
-            return None, "This device has been turned off for offline copies."
-        if name and device.name != name:
-            device.name = name
-        device.save(update_fields=["name", "last_seen_at"])
-        return device, None
+    """This device, registering it if it is new.
 
-    limit = device_limit()
-    # Only devices with a current offline copy use a place. Empty records can
-    # remain after a learner removes their last video or a download is interrupted.
-    holding = StudentDevice.objects.filter(
-        student=user, is_active=True, licenses__is_active=True,
-        licenses__revoked_at__isnull=True, licenses__expires_at__gt=timezone.now(),
-    ).distinct().count()
-    if holding >= limit:
-        return None, (f"You can keep lessons on {limit} device{'s' if limit != 1 else ''}. "
-                      "Remove one in My devices to use this one.")
-    return StudentDevice.objects.create(student=user, device_identifier=device_id, name=name), None
+    There is no limit on how many devices a learner keeps lessons on (the
+    owner's decision, November 2026: "My devices" confused people). A device
+    that was turned off, when there was a limit, is simply used again."""
+    device, made = StudentDevice.objects.get_or_create(
+        student=user, device_identifier=device_id, defaults={"name": name})
+    if not made:
+        device.is_active = True
+        if name:
+            device.name = name
+        device.save(update_fields=["is_active", "name", "last_seen_at"])
+    return device
 
 
 def _body(request):
@@ -286,7 +275,7 @@ def _devices(user):
 @login_required
 @require_GET
 def devices(request):
-    return JsonResponse({"ok": True, "devices": _devices(request.user), "limit": device_limit()})
+    return JsonResponse({"ok": True, "devices": _devices(request.user)})
 
 
 @login_required
@@ -315,7 +304,4 @@ def offline_page(request):
         "level_choices": choices,
         "worked_in": worked_in(request.user) if choices else [],
         "max_levels": MAX_CHOSEN_LEVELS,
-        "days": license_days(),
-        "limit": device_limit(),
-        "devices": _devices(request.user),
     })

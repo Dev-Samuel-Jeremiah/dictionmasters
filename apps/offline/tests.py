@@ -262,10 +262,11 @@ class VideoTests(ManifestCase):
         licence.refresh_from_db()
         self.assertAlmostEqual(licence.expires_at, ends, delta=timedelta(seconds=1))
         self.assertEqual(answer["licenses"][0]["expires_at"], licence.expires_at.isoformat())
-        Subscription.objects.filter(user=self.pupil).update(trial_ends_at=timezone.now() + timedelta(days=400))
+        later = timezone.now() + timedelta(days=400)
+        Subscription.objects.filter(user=self.pupil).update(trial_ends_at=later)
         self.client.post("/videos/licenses/", data={"device": "d1"}, content_type="application/json")
-        licence.refresh_from_db()                                       # a long plan: the usual 90 days
-        self.assertAlmostEqual(licence.expires_at, timezone.now() + timedelta(days=90), delta=timedelta(minutes=1))
+        licence.refresh_from_db()                                       # a long plan: until it ends
+        self.assertAlmostEqual(licence.expires_at, later, delta=timedelta(seconds=1))
 
     def test_checking_many_saved_videos_takes_no_more_queries_than_one(self):
         device = StudentDevice.objects.create(student=self.pupil, device_identifier="d1")

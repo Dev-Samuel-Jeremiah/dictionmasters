@@ -548,8 +548,10 @@ STORAGE_CORS_READY = os.environ.get("STORAGE_CORS_READY", "").strip().lower() in
 # by, and only after the visitor accepts (apps/landing/meta_pixel.py). Empty
 # switches it off, as in development and tests.
 META_PIXEL_ID = os.environ.get("META_PIXEL_ID", "").strip()
-# How long the apps keep opening lessons with no internet: the days since they
-# last checked in. Saved videos last as long.
+# How long the apps keep opening lessons with no internet, for someone whose
+# access has no end date (staff, the paywall off): the days since they last
+# checked in. Anyone with a plan keeps their saved lessons, videos and
+# recordings until the plan ends, however long they're offline.
 OFFLINE_ACCESS_DAYS = int(os.environ.get("OFFLINE_ACCESS_DAYS", 90))
 OFFLINE_VIDEO_LICENSE_DAYS = int(os.environ.get("OFFLINE_VIDEO_LICENSE_DAYS", OFFLINE_ACCESS_DAYS))
 
@@ -569,7 +571,6 @@ DESKTOP_INSTALLERS_URL = os.environ.get(
     "DESKTOP_INSTALLERS_URL",
     "https://github.com/Dev-Samuel-Jeremiah/dictionmasters-desktop/releases/download/offline",
 ).rstrip("/")
-MAX_OFFLINE_DEVICES_PER_STUDENT = int(os.environ.get("MAX_OFFLINE_DEVICES_PER_STUDENT", 2))
 # A playing link is short-lived; the one that fetches a copy lasts longer,
 # because a whole video has to come down over it.
 VIDEO_LINK_SECONDS = int(os.environ.get("VIDEO_LINK_SECONDS", 15 * 60))

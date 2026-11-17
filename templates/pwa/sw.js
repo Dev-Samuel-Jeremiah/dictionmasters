@@ -657,12 +657,13 @@ async function writeAccess(record) {
   await keyStore("readwrite", (store) => store.put(record)).catch(() => {});
 }
 
-// After every check-in: open for that many days from now, but never past
-// the end of their plan; or closed.
+// After every check-in: open until their plan ends, however long the device
+// is offline (the owner's decision, November 2026); with no end date (staff,
+// the paywall off), for that many days from now; or closed.
 async function grantAccess(days, planEnds) {
   const now = Date.now();
   let until = days > 0 ? now + days * 86400000 : 0;
-  if (until && typeof planEnds === "number") until = Math.min(until, planEnds);
+  if (until && typeof planEnds === "number") until = planEnds;
   await writeAccess({ p: (await stores()).access, until, seen: now });
 }
 
