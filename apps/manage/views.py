@@ -517,8 +517,8 @@ def record_form(request, key, pk=None):
 
     FormClass = build_form(model, screen.get("form"), exclude_parent=parent_field if not pk else None)
     form = FormClass(request.POST or None, request.FILES or None, instance=obj)
-    if _is_user_model(model) and not request.user.is_superuser:
-        # Only a superuser gives control room access (November 2026).
+    if _is_user_model(model):
+        # Control room access is never given from here (November 2026).
         form.fields.pop("is_staff", None)
         form.fields.pop("is_superuser", None)
     for name, (label, help_text) in screen.get("labels", {}).items():

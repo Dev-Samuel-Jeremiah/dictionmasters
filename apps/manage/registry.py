@@ -430,8 +430,10 @@ SECTIONS = [
             {"key": "users", "model": "accounts.User",
              "columns": ["login_name", "get_full_name", "role", "level_display", "school", "is_active"],
              "search": ["email", "username", "first_name", "last_name"],
+             # No "Staff" box (November 2026): control room access is never
+             # given from the website; see apps/accounts/admin.py.
              "form": ["first_name", "last_name", "username", "email", "role", "level", "school", "qualification",
-                      "is_active", "is_staff"],
+                      "is_active"],
              "plan_field": "user", "levels_field": True, "password_field": True},
             # Learners without an email who asked for a new password. Their
             # school admin answers most; ones with no school wait here: open

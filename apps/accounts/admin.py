@@ -19,7 +19,11 @@ class UserAdmin(DjangoUserAdmin):
             "description": "A teacher or student sees only their level's work. "
                            "Leave the level blank to open every level to them.",
         }),
-        ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
+        # No "Staff" or "Superuser" box (November 2026: teachers were given
+        # control room access by mistake). Control room access is only ever
+        # given on the server: `manage.py createsuperuser`, by the technical
+        # team. Shown here, never editable.
+        ("Account", {"fields": ("is_active", "is_staff", "is_superuser")}),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
     add_fieldsets = (
@@ -28,20 +32,14 @@ class UserAdmin(DjangoUserAdmin):
             "fields": ("email", "first_name", "last_name", "role", "school", "password1", "password2"),
         }),
     )
-    readonly_fields = ["date_joined"]
+    readonly_fields = ["date_joined", "is_staff", "is_superuser"]
 
     @admin.display(description="Level", ordering="level")
     def level_display(self, obj):
         return obj.level or "Every level"
 
-    # Only a superuser gives control room access or changes a staff account
-    # (November 2026; the control room's own screens do the same).
-    def get_readonly_fields(self, request, obj=None):
-        fields = list(super().get_readonly_fields(request, obj))
-        if not request.user.is_superuser:
-            fields += ["is_staff", "is_superuser", "groups", "user_permissions"]
-        return fields
-
+    # Only a superuser changes a staff account (November 2026; the control
+    # room's own screens do the same). Nobody gives control room access here.
     def _guards_staff(self, request, obj):
         return (obj is not None and (obj.is_staff or obj.is_superuser) and obj.pk != request.user.pk
                 and not request.user.is_superuser)

@@ -1,7 +1,8 @@
 """Control room access is for Diction Masters staff only (November 2026:
 ten teachers had been given it by mistake, and one used it). A school
-account can never be staff; only a superuser gives control room access or
-changes a staff account; and the change history says which fields changed."""
+account can never be staff; there's no "Staff" box anywhere on the website
+(access is only given on the server); only a superuser changes a staff
+account; and the change history says which fields changed."""
 
 from django.contrib.admin.models import LogEntry
 from django.contrib.admin.sites import site
@@ -45,34 +46,25 @@ class StaffGuardTests(TestCase):
         self.teacher.refresh_from_db()
         self.assertFalse(self.teacher.is_superuser)
 
-    def test_ticking_staff_on_a_teacher_in_the_control_room_is_refused(self):
-        self.client.force_login(self.boss)
-        page = self.client.post(f"/manage/users/{self.teacher.pk}/", self.user_form(self.teacher, is_staff="on"))
-        self.assertContains(page, "can&#x27;t have control room access")
-        self.teacher.refresh_from_db()
-        self.assertFalse(self.teacher.is_staff)
-        # The box says what it's for.
-        self.assertContains(self.client.get(f"/manage/users/{self.teacher.pk}/"), "Control room access (staff)")
+    def test_there_is_no_staff_box_and_sending_one_does_nothing(self):
+        self.client.force_login(self.boss)                                     # even a superuser
+        for person in (self.teacher, User.objects.create_user("o@example.com", "pw-12345678", first_name="Other")):
+            form = self.client.get(f"/manage/users/{person.pk}/")
+            self.assertNotContains(form, 'name="is_staff"')
+            self.assertNotContains(form, 'name="is_superuser"')
+            self.client.post(f"/manage/users/{person.pk}/", self.user_form(person, is_staff="on", is_superuser="on"))
+            person.refresh_from_db()
+            self.assertFalse(person.is_staff or person.is_superuser)
+        self.assertNotContains(self.client.get("/manage/users/new/"), 'name="is_staff"')
 
-    def test_only_a_superuser_gives_staff_or_changes_a_staff_account(self):
+    def test_only_a_superuser_changes_a_staff_account(self):
         self.client.force_login(self.helper)
-        form = self.client.get(f"/manage/users/{self.teacher.pk}/")
-        self.assertNotContains(form, 'name="is_staff"')                       # no box to tick
-        other = User.objects.create_user("o@example.com", "pw-12345678", first_name="Other")
-        self.client.post(f"/manage/users/{other.pk}/", self.user_form(other, is_staff="on"))
-        other.refresh_from_db()
-        self.assertFalse(other.is_staff)                                      # ignored: not a superuser
         refused = self.client.get(f"/manage/users/{self.boss.pk}/", follow=True)
         self.assertContains(refused, "Only a superuser can change or remove another staff account")
         self.client.post(f"/manage/users/{self.boss.pk}/delete/")
         self.assertTrue(User.objects.filter(pk=self.boss.pk).exists())
         self.client.post("/manage/users/delete-selected/", {"pk": [self.boss.pk], "confirm": "1"})
         self.assertTrue(User.objects.filter(pk=self.boss.pk).exists())
-        # A superuser can.
-        self.client.force_login(self.boss)
-        self.client.post(f"/manage/users/{other.pk}/", self.user_form(other, is_staff="on"))
-        other.refresh_from_db()
-        self.assertTrue(other.is_staff)
 
     def test_the_history_says_which_fields_changed(self):
         self.client.force_login(self.boss)
@@ -83,11 +75,16 @@ class StaffGuardTests(TestCase):
         self.assertIn("Levels", entry.change_message)
         self.assertNotIn("Tolani", entry.change_message)                     # names, never values
 
-    def test_the_admin_site_guards_staff_accounts_too(self):
+    def test_the_admin_site_has_no_staff_box_either(self):
         admin = site._registry[User]
         request = RequestFactory().get("/admin/")
+        request.user = self.boss                                               # even a superuser
+        readonly = admin.get_readonly_fields(request, self.teacher)
+        self.assertIn("is_staff", readonly)
+        self.assertIn("is_superuser", readonly)
+        self.client.force_login(self.boss)
+        page = self.client.get(f"/admin/accounts/user/{self.teacher.pk}/change/")
+        self.assertNotContains(page, 'name="is_staff"')
+        self.assertNotContains(page, 'name="user_permissions"')
         request.user = self.helper
-        self.assertIn("is_staff", admin.get_readonly_fields(request, self.teacher))
         self.assertFalse(admin.has_change_permission(request, self.boss))
-        request.user = self.boss
-        self.assertNotIn("is_staff", admin.get_readonly_fields(request, self.teacher))
