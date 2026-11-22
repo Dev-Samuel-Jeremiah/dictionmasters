@@ -157,16 +157,27 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.get_full_name()} <{self.email}>"
 
+    # What a teacher's classes follow (apps/schools/classes.py, follow_levels).
+    CLASS_FIELDS = {"level", "additional_levels", "school", "school_id", "role"}
+
     def save(self, *args, **kwargs):
-        # A school student's class follows their level (apps/schools/classes.py).
-        from apps.schools.classes import join_level_classes, place
+        # A school student's class follows their level, and a teacher's
+        # classes follow the levels they're given (apps/schools/classes.py).
+        from apps.schools.classes import follow_levels, join_level_classes, place
 
         new = self._state.adding
         if place(self) and kwargs.get("update_fields") is not None:
             kwargs["update_fields"] = {*kwargs["update_fields"], "school_class"}
+        fields = kwargs.get("update_fields")
+        before = None
+        if not new and self.role == self.Role.TEACHER and (fields is None or self.CLASS_FIELDS & set(fields)):
+            before = type(self).objects.filter(pk=self.pk).values_list(
+                "level", "additional_levels", "school_id", "role").first()
         super().save(*args, **kwargs)
         if new and self.role == self.Role.TEACHER:
             join_level_classes(self)              # a new teacher starts in their level's classes
+        elif before is not None and before != (self.level, self.additional_levels, self.school_id, self.role):
+            follow_levels(self)                   # given or taken a level: their classes follow
 
     def set_password(self, raw_password):
         super().set_password(raw_password)

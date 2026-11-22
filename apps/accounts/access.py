@@ -190,9 +190,10 @@ def can_use_tool(user, tool, kept=None):
         return True
     kept = tool_levels() if kept is None else kept
     levels = kept.get(tool)
-    if not levels or not user.level:
+    mine = user.all_levels
+    if not levels or not mine:
         return True
-    return user.level in levels
+    return any(level in levels for level in mine)       # any of their levels will do
 
 
 BANDS = [

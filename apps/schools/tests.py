@@ -57,11 +57,17 @@ class LevelToolsTests(TestCase):
         self.assertEqual(teacher.level, "Level 4")                      # still their main level
         self.assertEqual(teacher.all_levels, ["Level 2", "Level 4", "Level 7"])
 
-    def test_a_student_has_one_level(self):
+    def test_a_student_can_have_several_levels(self):
+        """Several levels for a student too (November 2026): they open every one,
+        and their class follows the first."""
         student = self.person("stu", "Level 4")
         self.client.post(f"/school/members/{student.pk}/level/", {"levels": ["Level 6", "Level 8"]})
         student.refresh_from_db()
-        self.assertEqual((student.level, student.additional_levels), ("Level 6", ""))
+        self.assertEqual((student.level, student.additional_levels), ("Level 6", ",Level 8,"))
+        self.assertEqual(student.school_class.level, "Level 6")
+        from apps.accounts.access import can_see_level
+
+        self.assertTrue(can_see_level(student, "Level 8"))
 
     def test_teachers_are_not_promoted_and_other_schools_are_untouched(self):
         other_school = School.objects.create(name="Elsewhere", email="else@example.com")

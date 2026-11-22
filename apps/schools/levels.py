@@ -1,10 +1,10 @@
 """
 A school admin moving their teachers and students between levels.
 
-    move(admin, members, level)       everyone to `level` (a teacher keeps any
-                                      other levels they also teach)
-    set_levels(admin, member, levels) one person's exact levels: one for a
-                                      student, one or more for a teacher
+    move(admin, members, level)       everyone to `level` (keeping any other
+                                      levels they were also given)
+    set_levels(admin, member, levels) one person's exact levels: one or more,
+                                      for a teacher or a student
     promote(admin, students)          each student up one level: Pre-Level to
                                       Level 1, Level 3 to Level 4 ...; anyone
                                       already at the top level, or with no
@@ -84,7 +84,7 @@ def move(admin, members, level):
         raise ValueError("Choose a level.")
     outcome = _new_outcome()
     for member in members:
-        extra = [lvl for lvl in member.additional_levels_list if lvl != level] if member.role == User.Role.TEACHER else []
+        extra = [lvl for lvl in member.additional_levels_list if lvl != level]
         _apply(admin, outcome, "move", member, level, _pack(_sorted(extra)))
     return outcome
 
@@ -95,10 +95,10 @@ def set_levels(admin, member, levels):
     if not levels:
         raise ValueError("Choose at least one level.")
     levels = _sorted(levels)
-    if member.role != User.Role.TEACHER:
-        levels = levels[:1]           # a student is in one level
     outcome = _new_outcome()
-    # A teacher's main level stays their main one if they still teach it.
+    # Their main level (a student's class follows it) stays the main one if
+    # it's still among them. A student can be given several, like a teacher
+    # (November 2026): they can open every one.
     main = member.level if member.level in levels else levels[0]
     _apply(admin, outcome, "move", member, main, _pack([lvl for lvl in levels if lvl != main]))
     return outcome
@@ -115,7 +115,8 @@ def promote(admin, students):
         if after is None:
             outcome.at_top.append(student)
             continue
-        _apply(admin, outcome, "promote", student, after, "")
+        extra = [lvl for lvl in student.additional_levels_list if lvl != after]
+        _apply(admin, outcome, "promote", student, after, _pack(_sorted(extra)))
     return outcome
 
 

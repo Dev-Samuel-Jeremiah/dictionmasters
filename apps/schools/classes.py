@@ -9,6 +9,17 @@ they are placed in a class of the matching grade at their school
 on that level is used when there is one, else one is made (e.g. "Grade 3"),
 which the school can rename or split later.
 
+A teacher's levels and classes are kept in step both ways. Levels given to
+them (the control room, the admin site, the school admin's "Change grade")
+bring their classes along: follow_levels puts them in the classes of every
+level they now have and takes them out of the classes of levels taken away,
+so a teacher given Level 3 and Level 4 teaches (and sees the students of)
+both. Classes changed on the school's Classes page bring their levels along
+(sync_teachers). Before November 2026 only the second way existed, so a
+teacher given a second level in the control room got no class for it: their
+dashboard showed no students for it, and the next class change cut the level
+off again (repair_teacher_classes puts that right).
+
 A school's year is the newest school year it has classes in (or the
 calendar's newest, before it has any). It moves on only when the school
 moves its classes up (promote, below), not the moment the next year is
@@ -20,6 +31,7 @@ added to the calendar.
     this_year(school)        its classes in that year, Creche first
     move(admin, students, c) students into class c (their level follows)
     pupils_of_teacher(t)     the students in the classes a teacher teaches
+    follow_levels(teacher)   a teacher's classes from the levels they're given
     sync_teachers(ids)       teachers' levels from their classes
     promote(admin, school, students)   the end of the year: see below
     undo(admin, batch)       puts a move or promotion back exactly
@@ -203,13 +215,22 @@ def _log(admin, school, batch, kind, student, to_class):
     LevelChange.objects.create(
         school=school, member=student, changed_by=admin, batch=batch, kind=kind,
         old_level=student.level, old_additional=student.additional_levels,
-        new_level=to_class.level if to_class else student.level, new_additional="",
+        new_level=to_class.level if to_class else student.level,
+        new_additional=_extras(student, to_class.level) if to_class else student.additional_levels,
         old_class_id=student.school_class_id, new_class=to_class,
     )
 
 
+def _extras(student, level):
+    """The student's other levels, kept through a class move: any they were
+    given besides their class's, but not the new class's own."""
+    extra = [lvl for lvl in student.additional_levels_list if lvl != level]
+    return f",{','.join(extra)}," if extra else ""
+
+
 def _put(student, to_class):
-    student.school_class, student.level, student.additional_levels = to_class, to_class.level, ""
+    student.school_class, student.level = to_class, to_class.level
+    student.additional_levels = _extras(student, to_class.level)
     student.save(update_fields=["school_class", "level", "additional_levels"])
 
 
@@ -379,27 +400,56 @@ def join_level_classes(teacher):
     """A new teacher starts in the classes of the level(s) they chose (a
     class is made for a level that has none), like the teachers already
     there when classes began. The school admin changes it on Classes."""
+    follow_levels(teacher, remove=False)
+
+
+def follow_levels(teacher, remove=True):
+    """Put a teacher's classes in step with the levels they've been given:
+    into every class of each level they have no class of yet (made if the
+    school has none), and, with `remove`, out of this year's classes of
+    levels they no longer have. A level they already have a class of is
+    left as the school arranged it (Grade 4 Gold but not Grade 4 Blue,
+    say). Levels no grade follows have no classes and are left alone; so is
+    a teacher with no level (every level). Writes the class lists directly,
+    so sync_teachers isn't set off half-way. Changed: True."""
     from .models import SchoolClass
 
-    if not (teacher.role == "teacher" and teacher.school_id):
-        return
+    if not (teacher.role == "teacher" and teacher.school_id and teacher.pk):
+        return False
+    levels = [lvl for lvl in teacher.all_levels if grades.grade_for_level(lvl)]
+    if not levels:
+        return False
+    through = SchoolClass.teachers.through
     session = school_year(teacher.school_id)
-    for level in teacher.all_levels:
-        if not grades.grade_for_level(level):
+    mine = list(SchoolClass.objects.filter(teachers=teacher, school_id=teacher.school_id, session=session))
+    covered = {c.level for c in mine}
+    changed = False
+    for level in levels:
+        if level in covered:
             continue
-        keys = grades.grades_on(level)
-        found = list(SchoolClass.objects.filter(school_id=teacher.school_id, session=session, grade__in=keys))
+        found = list(SchoolClass.objects.filter(school_id=teacher.school_id, session=session,
+                                                grade__in=grades.grades_on(level)))
         if not found:
             found = [SchoolClass.objects.create(school_id=teacher.school_id, session=session,
                                                 grade=grades.grade_for_level(level))]
-        for school_class in found:
-            school_class.teachers.add(teacher)
+        through.objects.bulk_create([through(schoolclass_id=c.pk, user_id=teacher.pk) for c in found],
+                                    ignore_conflicts=True)
+        changed = True
+    if remove:
+        gone = [c for c in mine if c.level and grades.grade_for_level(c.level) and c.level not in levels]
+        if gone:
+            through.objects.filter(user_id=teacher.pk, schoolclass_id__in=[c.pk for c in gone]).delete()
+            SchoolClass.objects.filter(pk__in=[c.pk for c in gone], class_teacher=teacher).update(class_teacher=None)
+            changed = True
+    return changed
 
 
 def sync_teachers(teacher_ids):
     """Each teacher's levels from the classes they teach this year (main
     level the youngest class's, the rest as extra levels), so what they can
-    open matches their classes. A teacher with no class keeps their levels."""
+    open matches their classes. A teacher with no class keeps their levels.
+    Every level has a grade, so levels given to a teacher always have
+    classes to match (follow_levels) and aren't lost here."""
     from apps.accounts.models import User
 
     from .models import SchoolClass

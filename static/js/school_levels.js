@@ -5,8 +5,8 @@
    everyone shown. With people ticked, a bar offers "Promote to next level"
    (students) and "Move to…". A promotion is previewed first — who goes
    from which level to which — before anything changes. "Change" beside a
-   person opens a small dialog with their levels: one for a student, any
-   number for a teacher. */
+   person opens a small dialog with their levels: any number, for a student
+   or a teacher. */
 (function () {
   "use strict";
 
@@ -184,7 +184,6 @@
   var dialogForm = dialog.querySelector("[data-sl-dialog-form]");
   var boxes = dialog.querySelectorAll("[data-sl-dialog-levels] input");
   var lede = dialog.querySelector("[data-sl-dialog-lede]");
-  var single = false;
 
   document.addEventListener("click", function (event) {
     var button = event.target.closest("[data-sl-change]");
@@ -192,14 +191,15 @@
     var row = button.closest("[data-sl-row]");
     var role = button.closest("[data-sl]").dataset.role;
     var levels = row.dataset.levels ? row.dataset.levels.split(",") : [];
-    single = role === "student";
     dialogForm.action = button.dataset.url;
     dialog.querySelector(".sl-dialog__title").textContent = "Change level · " + button.dataset.name;
-    lede.textContent = single
-      ? "Choose the level this student is in. They'll see that level's work from their next page."
-      : "Tick every level this teacher teaches. The first one they already had stays their main level.";
+    // Several levels for anyone (November 2026): a student given two opens both.
+    lede.textContent = role === "student"
+      ? "Tick every level this student may open. The first one they already had stays their main level, and their class follows it."
+      : "Tick every level this teacher teaches. They'll be put in those levels' classes and see their students. " +
+        "The first one they already had stays their main level.";
     boxes.forEach(function (box) {
-      box.type = single ? "radio" : "checkbox";
+      box.type = "checkbox";
       box.checked = levels.indexOf(box.value) > -1;
     });
     openDialog(dialog);
