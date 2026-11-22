@@ -1567,6 +1567,57 @@ def school_people(request, pk):
     return render(request, "manage/school_people.html", _base_context(request, "schools-directory", **result))
 
 
+class ExtraTeachersForm(forms.Form):
+    teachers = forms.IntegerField(label="Extra teachers", min_value=1, max_value=1000,
+                                  widget=forms.NumberInput(attrs={"class": "cr-input", "inputmode": "numeric"}))
+    reason = forms.CharField(label="Reason", max_length=200, widget=forms.TextInput(attrs={
+        "class": "cr-input", "placeholder": "e.g. Sent 5 more teacher names after setup"}))
+    ends_on = forms.DateField(label="Ends on (optional)", required=False,
+                              widget=forms.DateInput(attrs={"type": "date", "class": "cr-input"}),
+                              help_text="Leave empty and it lasts until you take it back, through renewals.")
+
+    def clean_ends_on(self):
+        ends_on = self.cleaned_data.get("ends_on")
+        if ends_on and ends_on < timezone.localdate():
+            raise forms.ValidationError("Choose today or a later date.")
+        return ends_on
+
+
+@staff_only
+def teacher_places(request, pk):
+    """A school's teacher places: what its plan allows, extra teachers'
+    access given by an admin, and the total (the teacher-count request of
+    18 November 2026, Option A). Giving or taking back extra places never
+    touches the school's subscription, term dates or payments; each change
+    is kept (ExtraTeacherAccess) and logged."""
+    from apps.schools.models import ExtraTeacherAccess, School
+
+    school = get_object_or_404(School, pk=pk)
+    form = ExtraTeachersForm(request.POST if request.POST.get("action") == "give" else None)
+    if request.method == "POST":
+        if request.POST.get("action") == "give" and form.is_valid():
+            d = form.cleaned_data
+            grant = ExtraTeacherAccess.objects.create(school=school, teachers=d["teachers"], reason=d["reason"],
+                                                      ends_on=d["ends_on"], granted_by=request.user)
+            until = f" until {d['ends_on']:%d %b %Y}" if d["ends_on"] else ""
+            _record(request, school, CHANGE, f"Extra teachers' access: +{grant.teachers}{until} ({grant.reason})")
+            messages.success(request, f"{school.name} can now have {school.teacher_limit} teachers.")
+            return redirect("manage:teacher_places", pk=school.pk)
+        if request.POST.get("action") == "end":
+            grant = get_object_or_404(ExtraTeacherAccess, pk=request.POST.get("grant"), school=school,
+                                      ended_at__isnull=True)
+            grant.ended_at, grant.ended_by = timezone.now(), request.user
+            grant.save(update_fields=["ended_at", "ended_by"])
+            _record(request, school, CHANGE, f"Extra teachers' access taken back: -{grant.teachers} ({grant.reason})")
+            messages.success(request, f"Taken back. {school.name} can now have {school.teacher_limit} teachers.")
+            return redirect("manage:teacher_places", pk=school.pk)
+    grants = list(school.extra_teacher_grants.select_related("granted_by", "ended_by"))
+    return render(request, "manage/teacher_places.html", _base_context(
+        request, "schools-directory", school=school, form=form, grants=grants,
+        plan_teachers=school.subscription_teacher_limit, extra_teachers=school.extra_teachers,
+        teacher_limit=school.teacher_limit, joined=school.teachers.count(), plan=school.chosen_plan()))
+
+
 @staff_only
 @require_POST
 def school_login_sheet(request, pk):

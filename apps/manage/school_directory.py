@@ -57,7 +57,7 @@ def directory(request):
     query = request.GET.get("q", "").strip()
     active = Q(members__is_active=True)
     schools = (
-        School.objects.select_related("subscription__plan")
+        School.objects.select_related("subscription__plan").prefetch_related("extra_teacher_grants")
         .annotate(
             teacher_n=Count("members", filter=active & Q(members__role="teacher"), distinct=True),
             student_n=Count("members", filter=active & Q(members__role="student"), distinct=True),
@@ -172,6 +172,7 @@ def people(request, pk):
         label, tone = _plan_state(school)
         subscription = getattr(school, "subscription", None)
         context.update(plan=label, tone=tone, teacher_limit=school.teacher_limit,
+                       plan_teachers=school.subscription_teacher_limit, extra_teachers=school.extra_teachers,
                        school_trial={"target": f"school:{school.pk}", "name": school.name, "expired": tone == "bad",
                                      "ends": subscription.trial_ends_at if subscription else None})
     return context

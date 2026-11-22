@@ -1,0 +1,94 @@
+{% extends "manage/base.html" %}
+{% comment %}
+  A school's teacher places (apps/manage/views.py, teacher_places): what its
+  plan allows, extra teachers' access given by an admin, and the total. Giving
+  or taking back extra places never touches the subscription, term dates or
+  payments (apps/schools/models.py, ExtraTeacherAccess).
+{% endcomment %}
+
+{% block title %}Teacher places · {{ school.name }} — Control room{% endblock %}
+
+{% block content %}
+<header class="cr-pagehead">
+  <div>
+    <p class="cr-pagehead__eyebrow"><a href="{% url 'manage:school_people' school.pk %}">&larr; {{ school.name }}</a></p>
+    <h1 class="cr-pagehead__title">Teacher places</h1>
+  </div>
+</header>
+
+<section class="cr-card tp-numbers" aria-label="Teacher places">
+  <div class="tp-number">
+    <span>Plan teachers</span>
+    <strong>{% if plan_teachers is None %}No limit{% else %}{{ plan_teachers }}{% endif %}</strong>
+    <small>{% if plan %}{{ plan.name }}{% if plan.band_label %} · {{ plan.band_label }}{% endif %}{% elif school.max_teachers is not None %}“Teachers allowed” on the school{% else %}the smallest school plan{% endif %}</small>
+  </div>
+  <div class="tp-sign" aria-hidden="true">+</div>
+  <div class="tp-number tp-number--extra">
+    <span>Extra teachers' access</span>
+    <strong>{{ extra_teachers }}</strong>
+    <small>given by an admin</small>
+  </div>
+  <div class="tp-sign" aria-hidden="true">=</div>
+  <div class="tp-number tp-number--total">
+    <span>Total teachers allowed</span>
+    <strong>{% if teacher_limit is None %}No limit{% else %}{{ teacher_limit }}{% endif %}</strong>
+    <small>{{ joined }} joined so far</small>
+  </div>
+</section>
+
+{% if plan_teachers is not None %}
+<form method="post" class="cr-card cr-form" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="action" value="give">
+  <h2 class="cr-card__title">Give extra teachers' access</h2>
+  <p class="cr-help">For a school that needs more teachers than its plan allows. The school's plan, term dates and payments stay exactly as they are.</p>
+  {% for field in form %}
+  <div class="cr-field {% if field.errors %}has-error{% endif %}">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<p class="cr-help">{{ field.help_text }}</p>{% endif %}
+    {% if field.errors %}<ul class="cr-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endfor %}
+  <div class="cr-formactions">
+    <button type="submit" class="cr-btn cr-btn--gold">Give access</button>
+  </div>
+</form>
+{% else %}
+<p class="cr-card cr-help">This school has no teacher limit at the moment, so there's nothing to add to.</p>
+{% endif %}
+
+<section class="cr-card">
+  <h2 class="cr-card__title">Extra teachers' access given</h2>
+  {% if grants %}
+  <ul class="tp-grants">
+    {% for grant in grants %}
+    <li class="tp-grant{% if not grant.is_current %} tp-grant--past{% endif %}">
+      <div>
+        <p class="tp-grant__what"><strong>+{{ grant.teachers }} teacher{{ grant.teachers|pluralize }}</strong> · {{ grant.reason }}</p>
+        <p class="cr-help">
+          Given {{ grant.created_at|date:"j M Y" }} by {{ grant.granted_by.get_full_name|default:grant.granted_by|default:"someone" }}
+          {% if grant.ended_at %} · taken back {{ grant.ended_at|date:"j M Y" }} by {{ grant.ended_by.get_full_name|default:grant.ended_by|default:"someone" }}
+          {% elif grant.ends_on %} · {% if grant.is_current %}until{% else %}ended{% endif %} {{ grant.ends_on|date:"j M Y" }}
+          {% else %} · no end date{% endif %}
+        </p>
+      </div>
+      {% if grant.is_current %}
+      <form method="post" onsubmit="return confirm('Take back {{ grant.teachers }} extra teacher place{{ grant.teachers|pluralize }}? Teachers already joined keep their accounts.');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="end">
+        <input type="hidden" name="grant" value="{{ grant.pk }}">
+        <button type="submit" class="cr-btn">Take back</button>
+      </form>
+      {% else %}
+      <span class="tp-grant__ended">Ended</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="cr-help">To give fewer, take one back and give the smaller number. Every change is kept here and in the change history.</p>
+  {% else %}
+  <p class="cr-help">None yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

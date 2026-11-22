@@ -545,3 +545,19 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .cr-capture__form { margin-top: 16px; }
 .cr-capture__form .cr-btn { min-height: 48px; }
 .cr-capture__where { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+
+/* Teacher places (templates/manage/teacher_places.html): plan + extra = total. */
+.tp-numbers { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; }
+.tp-number { flex: 1 1 150px; display: grid; gap: 4px; padding: 14px 16px; border-radius: 14px; background: var(--cr-soft, #f3f6fd); }
+.tp-number span { font-size: 0.82rem; font-weight: 700; color: var(--cr-muted, #5b6785); }
+.tp-number strong { font-size: 1.9rem; line-height: 1.1; }
+.tp-number small { color: var(--cr-muted, #5b6785); }
+.tp-number--extra { background: #FFF6DA; }
+.tp-number--total { background: #E6F4EC; }
+.tp-sign { align-self: center; font-size: 1.6rem; font-weight: 800; color: var(--cr-muted, #5b6785); }
+.tp-grants { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.tp-grant { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--cr-line, #dfe5f2); border-radius: 12px; }
+.tp-grant--past { opacity: 0.65; }
+.tp-grant__what { margin: 0 0 2px; }
+.tp-grant__ended { font-weight: 700; color: var(--cr-muted, #5b6785); }
+@media (max-width: 560px) { .tp-sign { display: none; } }

@@ -19,6 +19,7 @@ urlpatterns = [
     path("schools-directory/bulk-register/", views.bulk_schools, name="bulk_schools"),
     path("schools-directory/<int:pk>/", views.school_people, name="school_people"),
     path("schools-directory/<int:pk>/logins/", views.school_login_sheet, name="school_login_sheet"),
+    path("schools-directory/<int:pk>/teachers/", views.teacher_places, name="teacher_places"),
     path("bulk-students/", views.bulk_students, name="bulk_students"),
     path("bulk-teachers/", views.bulk_teachers, name="bulk_teachers"),
     path("read-along/", views.read_along, name="read_along"),

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AccessCode, School, SchoolClass
+from .models import AccessCode, ExtraTeacherAccess, School, SchoolClass
 
 
 class AccessCodeInline(admin.TabularInline):
@@ -32,3 +32,20 @@ class SchoolClassAdmin(admin.ModelAdmin):
     list_filter = ["grade", "session"]
     search_fields = ["name", "school__name"]
     filter_horizontal = ["teachers"]
+
+
+@admin.register(ExtraTeacherAccess)
+class ExtraTeacherAccessAdmin(admin.ModelAdmin):
+    """A record of extra teachers' access. Given and taken back in the control
+    room (Schools & people > a school > Teacher places), so every change is
+    logged there; here it's only read."""
+    list_display = ["school", "teachers", "reason", "ends_on", "granted_by", "created_at", "ended_at"]
+    list_filter = ["ended_at"]
+    search_fields = ["school__name", "reason"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+

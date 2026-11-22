@@ -102,12 +102,31 @@ class School(models.Model):
         return entry.max_units if entry else None
 
     @property
-    def teacher_limit(self):
-        """The teachers this school may register: its plan's allowance, or
-        the number set in the control room if that's lower. None only when
-        there are no school plans at all."""
+    def subscription_teacher_limit(self):
+        """The teachers its plan allows: the plan's allowance, or the number
+        set in the control room ("Teachers allowed") if that's lower, or that
+        number alone for a school with no plan. None only when there are no
+        school plans at all."""
         limits = [n for n in (self.max_teachers, self.plan_teacher_limit) if n is not None]
         return min(limits) if limits else None
+
+    @property
+    def extra_teachers(self):
+        """Teachers' places an admin has given on top of the plan, still
+        running (ExtraTeacherAccess)."""
+        if not self.pk:
+            return 0
+        return sum(grant.teachers for grant in self.extra_teacher_grants.all() if grant.is_current)
+
+    @property
+    def teacher_limit(self):
+        """The teachers this school may register: what its plan allows, plus
+        any extra teachers' access an admin has given (the teacher-count
+        request of 18 November 2026: more teachers without a new
+        subscription or payment record). None only when there are no school
+        plans at all, and then there's no limit to add to."""
+        base = self.subscription_teacher_limit
+        return None if base is None else base + self.extra_teachers
 
     @property
     def teacher_places_left(self):
@@ -309,3 +328,38 @@ class GradeSetting(models.Model):
         result = super().delete(*args, **kwargs)
         grades.forget()
         return result
+
+
+class ExtraTeacherAccess(models.Model):
+    """Teachers' places an admin gives a school on top of its plan: more
+    teachers without a new subscription, so the school's term, dates and
+    payment records stay as they were (Option A of the request of 18
+    November 2026). Each grant is a row of its own, with the reason, who gave
+    it and when, and an optional end date; taking one back keeps the row,
+    marked ended, so every change can be traced. A grant carries on through
+    renewals until its end date or until it's taken back."""
+
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="extra_teacher_grants")
+    teachers = models.PositiveIntegerField("Extra teachers", help_text="How many more teachers the school may have.")
+    reason = models.CharField(max_length=200, help_text='Why, e.g. "Sent 5 more teacher names after setup".')
+    ends_on = models.DateField("Ends on", null=True, blank=True,
+                               help_text="Optional. Leave empty and it lasts until it's taken back.")
+    granted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                   blank=True, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    ended_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                 blank=True, related_name="+")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "extra teachers' access"
+        verbose_name_plural = "extra teachers' access"
+
+    def __str__(self):
+        return f"{self.school}: {self.teachers} extra teacher{'s' if self.teachers != 1 else ''}"
+
+    @property
+    def is_current(self):
+        return self.ended_at is None and (self.ends_on is None or self.ends_on >= timezone.localdate())
+
