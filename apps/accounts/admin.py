@@ -33,3 +33,21 @@ class UserAdmin(DjangoUserAdmin):
     @admin.display(description="Level", ordering="level")
     def level_display(self, obj):
         return obj.level or "Every level"
+
+    # Only a superuser gives control room access or changes a staff account
+    # (November 2026; the control room's own screens do the same).
+    def get_readonly_fields(self, request, obj=None):
+        fields = list(super().get_readonly_fields(request, obj))
+        if not request.user.is_superuser:
+            fields += ["is_staff", "is_superuser", "groups", "user_permissions"]
+        return fields
+
+    def _guards_staff(self, request, obj):
+        return (obj is not None and (obj.is_staff or obj.is_superuser) and obj.pk != request.user.pk
+                and not request.user.is_superuser)
+
+    def has_change_permission(self, request, obj=None):
+        return super().has_change_permission(request, obj) and not self._guards_staff(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return super().has_delete_permission(request, obj) and not self._guards_staff(request, obj)

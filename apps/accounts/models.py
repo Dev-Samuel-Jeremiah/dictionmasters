@@ -12,6 +12,7 @@ receive generated credentials.
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.contrib.auth.hashers import is_password_usable
+from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from django.db import models
 
@@ -141,8 +142,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(
-        default=False,
-        help_text="Grants access to the Django admin. Platform staff only.",
+        "Control room access (staff)", default=False,
+        help_text="Lets this person into the control room with full powers over every school and account. "
+                  "Only for Diction Masters staff: never for a teacher, student or school admin, and not needed "
+                  "to give a teacher more classes (use Levels for that).",
     )
     date_joined = models.DateTimeField(auto_now_add=True)
 
@@ -160,12 +163,33 @@ class User(AbstractBaseUser, PermissionsMixin):
     # What a teacher's classes follow (apps/schools/classes.py, follow_levels).
     CLASS_FIELDS = {"level", "additional_levels", "school", "school_id", "role"}
 
+    # Accounts that belong to a school, which can never have control room
+    # access (November 2026: ten teachers had been given it by mistake).
+    SCHOOL_ROLES = {"school_admin", "teacher", "student"}
+    STAFF_REFUSED = ("Teachers, students and school admins can't have control room access. "
+                     "To give a teacher more classes, tick more Levels instead.")
+
+    def clean(self):
+        super().clean()
+        if (self.is_staff or self.is_superuser) and self.role in self.SCHOOL_ROLES:
+            raise ValidationError(self.STAFF_REFUSED)
+
     def save(self, *args, **kwargs):
         # A school student's class follows their level, and a teacher's
         # classes follow the levels they're given (apps/schools/classes.py).
         from apps.schools.classes import follow_levels, join_level_classes, place
 
         new = self._state.adding
+        # Never saved as staff while belonging to a school, however it was
+        # set (clean() above says so on a form; this catches everything else).
+        if (self.is_staff or self.is_superuser) and self.role in self.SCHOOL_ROLES:
+            import logging
+
+            logging.getLogger("apps.accounts.staff").warning(
+                "Refused control room access for %s account %s", self.role, self.pk or "(new)")
+            self.is_staff = self.is_superuser = False
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = {*kwargs["update_fields"], "is_staff", "is_superuser"}
         if place(self) and kwargs.get("update_fields") is not None:
             kwargs["update_fields"] = {*kwargs["update_fields"], "school_class"}
         fields = kwargs.get("update_fields")

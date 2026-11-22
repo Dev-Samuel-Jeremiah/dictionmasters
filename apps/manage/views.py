@@ -452,6 +452,42 @@ def record_list(request, key):
     ))
 
 
+def _is_user_model(model):
+    from apps.accounts.models import User
+
+    return model is User
+
+
+def _staff_guard(request, model, obj, deleting=False):
+    """Why this person may not change (or delete) this account, or "".
+    Staff accounts are changed by superusers only, so nobody given control
+    room access by mistake can lock the real admins out (November 2026);
+    a superuser, or your own account, is never deleted from here."""
+    if obj is None or not _is_user_model(model):
+        return ""
+    if deleting and (obj.is_superuser or obj.pk == request.user.pk):
+        return "Superuser accounts, and your own, can't be deleted from the control room."
+    if (obj.is_staff or obj.is_superuser) and obj.pk != request.user.pk and not request.user.is_superuser:
+        return "Only a superuser can change or remove another staff account."
+    return ""
+
+
+def _what_changed(form, password_set=False):
+    """"Changed in the control room: Levels, Control room access (staff)"
+    — which fields, never their values (a password, say)."""
+    names = []
+    for name in form.changed_data:
+        field = form.fields.get(name)
+        label = str(field.label) if field is not None and field.label else name.replace("_", " ").capitalize()
+        if "password" in name:
+            label = "password"
+        names.append(label)
+    if password_set and "password" not in names:
+        names.append("password")
+    names = list(dict.fromkeys(names))
+    return f"Changed in the control room: {', '.join(names)}"[:2000] if names else "Changed in the control room (nothing changed)"
+
+
 @staff_only
 def record_form(request, key, pk=None):
     screen = _screen_or_404(key)
@@ -464,6 +500,10 @@ def record_form(request, key, pk=None):
         return redirect("manage:list", key=key)
 
     obj = get_object_or_404(_rows_for(screen), pk=pk) if pk else None
+    refused = _staff_guard(request, model, obj)
+    if refused:
+        messages.error(request, refused)
+        return redirect("manage:list", key=key)
 
     # Adding something inside its parent: the link is set for you.
     parent_field = parent_obj = None
@@ -477,6 +517,10 @@ def record_form(request, key, pk=None):
 
     FormClass = build_form(model, screen.get("form"), exclude_parent=parent_field if not pk else None)
     form = FormClass(request.POST or None, request.FILES or None, instance=obj)
+    if _is_user_model(model) and not request.user.is_superuser:
+        # Only a superuser gives control room access (November 2026).
+        form.fields.pop("is_staff", None)
+        form.fields.pop("is_superuser", None)
     for name, (label, help_text) in screen.get("labels", {}).items():
         if name in form.fields:
             form.fields[name].label, form.fields[name].help_text = label, help_text
@@ -524,7 +568,8 @@ def record_form(request, key, pk=None):
             recordings_note = save_recordings(form, saved) if screen.get("recordings_field") else (0, 0)
             password_set = save_password(form, saved, by=request.user) if screen.get("password_field") else False
             login_note = save_login(saved, form) if login_fields else ""
-        _record(request, saved, CHANGE if pk else ADDITION, "Changed in the control room" if pk else "Added in the control room")
+        _record(request, saved, CHANGE if pk else ADDITION,
+                _what_changed(form, password_set) if pk else "Added in the control room")
         messages.success(request, f"{_singular(screen).capitalize()} “{saved}” {'updated' if pk else 'added'}.")
         if login_note:
             messages.success(request, login_note)
@@ -672,6 +717,10 @@ def record_delete(request, key, pk):
     if screen.get("readonly") or screen.get("no_delete"):
         messages.info(request, f"{_title(screen)} cannot be deleted.")
         return redirect("manage:list", key=key)
+    refused = _staff_guard(request, model, obj, deleting=True)
+    if refused:
+        messages.error(request, refused)
+        return redirect("manage:list", key=key)
 
     if request.method == "POST":
         label = str(obj)
@@ -719,10 +768,13 @@ def record_delete_many(request, key):
 
     chosen = _rows_for(screen).filter(pk__in=request.POST.getlist("pk"))
     if model is User:
-        # Never your own account, and never a superuser, from here.
-        kept = chosen.filter(Q(pk=request.user.pk) | Q(is_superuser=True))
+        # Never your own account, and never a superuser, from here; staff
+        # accounts only by a superuser (_staff_guard).
+        kept = chosen.filter(Q(pk=request.user.pk) | Q(is_superuser=True)
+                             | (Q(is_staff=True) if not request.user.is_superuser else Q(pk__in=[])))
         if kept.exists():
-            messages.warning(request, "Your own account and superuser accounts were left out: they can't be deleted from a list.")
+            messages.warning(request, "Your own account, superuser accounts and (unless you're a superuser) staff "
+                                      "accounts were left out: they can't be deleted from a list.")
         chosen = chosen.exclude(pk__in=kept.values("pk"))
     objs = list(chosen)
     if not objs:
