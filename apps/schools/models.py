@@ -29,7 +29,8 @@ class School(models.Model):
     # Set in the control room. Blank means no limit.
     max_teachers = models.PositiveIntegerField(
         "Teachers allowed", null=True, blank=True,
-        help_text="How many teachers this school may register. Leave blank for no limit.",
+        help_text="How many teachers this school may register. Leave blank to use its plan's number. "
+                  "A number here replaces the plan's, higher or lower; the plan and payments stay the same.",
     )
     max_students = models.PositiveIntegerField(
         "Students allowed", null=True, blank=True,
@@ -103,12 +104,15 @@ class School(models.Model):
 
     @property
     def subscription_teacher_limit(self):
-        """The teachers its plan allows: the plan's allowance, or the number
-        set in the control room ("Teachers allowed") if that's lower, or that
-        number alone for a school with no plan. None only when there are no
-        school plans at all."""
-        limits = [n for n in (self.max_teachers, self.plan_teacher_limit) if n is not None]
-        return min(limits) if limits else None
+        """The teachers it may have before any extra teachers' access: the
+        number set in the control room ("Teachers allowed") when there is
+        one, higher or lower than the plan's (the owner's decision, November
+        2026: a number typed there used to be ignored when it was higher),
+        else its plan's allowance. None only when there are no school plans
+        at all and no number set."""
+        if self.max_teachers is not None:
+            return self.max_teachers
+        return self.plan_teacher_limit
 
     @property
     def extra_teachers(self):

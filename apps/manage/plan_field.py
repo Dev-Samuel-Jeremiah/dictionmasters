@@ -71,10 +71,10 @@ def add_plan_field(form, obj, kind="user"):
         if plan and plan.max_units:
             band = f" ({plan.name} · {plan.band_label})" if plan.band_label else f" ({plan.name})"
             form.fields["max_teachers"].help_text = (
-                f"Their plan{band} allows up to {plan.max_units} teachers, and that limit already applies. "
-                f"{obj.teachers.count()} have joined. Leave blank to use the plan's limit, or set a lower number. "
-                "To allow more teachers than the plan, use the school's Teacher places page "
-                "(Give extra teachers' access): the plan and payments stay as they are."
+                f"Their plan{band} allows {plan.max_units} teachers. {obj.teachers.count()} have joined. "
+                "Leave blank to use the plan's number, or type the number this school may have, higher or lower: "
+                "it replaces the plan's, and the plan, term dates and payments stay the same. "
+                "Extra places given on the school's Teacher places page are added on top."
             )
     form.fields[FIELD].label_from_instance = _label
 

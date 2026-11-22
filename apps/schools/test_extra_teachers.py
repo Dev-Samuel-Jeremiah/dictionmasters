@@ -94,6 +94,27 @@ class ExtraTeachersTests(TestCase):
         ExtraTeacherAccess.objects.update(ends_on=timezone.localdate() - timedelta(days=1))
         self.assertEqual(School.objects.get(pk=self.school.pk).teacher_limit, 20)
 
+    def test_teachers_allowed_on_the_school_replaces_the_plans_number(self):
+        """Typed on the school's own form, higher or lower (the Sunflower case:
+        a 46-50 plan, 60 typed in, still showed 50)."""
+        self.assertEqual(self.school.teacher_limit, 20)
+        School.objects.filter(pk=self.school.pk).update(max_teachers=60)
+        school = School.objects.get(pk=self.school.pk)
+        self.assertEqual(school.max_teachers, 60)
+        self.assertEqual(school.teacher_limit, 60)                         # higher: it now counts
+        subscription = Subscription.objects.get(school=school)
+        self.assertEqual((subscription.plan, subscription.paid_until), (self.plan, self.paid_until))
+        School.objects.filter(pk=school.pk).update(max_teachers=15)
+        self.assertEqual(School.objects.get(pk=school.pk).teacher_limit, 15)   # lower, as before
+        School.objects.filter(pk=school.pk).update(max_teachers=None)
+        self.assertEqual(School.objects.get(pk=school.pk).teacher_limit, 20)   # blank: the plan's
+        School.objects.filter(pk=school.pk).update(max_teachers=60)
+        self.give(5)
+        self.assertEqual(School.objects.get(pk=school.pk).teacher_limit, 65)   # extra places on top
+        page = self.client.get(self.url)
+        self.assertContains(page, "set on the school")
+        self.assertContains(page, "(the plan has 20)")
+
     def test_it_works_for_free_and_custom_access_schools(self):
         free = School.objects.create(name="Free school", email="f@example.com", max_teachers=10)
         ExtraTeacherAccess.objects.create(school=free, teachers=4, reason="Pilot", granted_by=self.staff)

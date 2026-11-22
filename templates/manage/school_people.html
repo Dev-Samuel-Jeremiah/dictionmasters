@@ -37,7 +37,7 @@
       <div><dt>Contact person</dt><dd>{{ school.contact_person|default:"—" }}</dd></div>
       <div><dt>Status</dt><dd>{{ school.relationship_status|title|default:"—" }}</dd></div>
       <div><dt>Joined</dt><dd>{{ school.created_at|date:"j M Y" }}</dd></div>
-      <div><dt>Teacher places</dt><dd>{{ by_role.teacher }}{% if teacher_limit is not None %} of {{ teacher_limit }}{% if extra_teachers %} ({{ plan_teachers }} on the plan + {{ extra_teachers }} extra){% endif %}{% else %} (no limit){% endif %} · <a href="{% url 'manage:teacher_places' school.pk %}">Change</a></dd></div>
+      <div><dt>Teacher places</dt><dd>{{ by_role.teacher }}{% if teacher_limit is not None %} of {{ teacher_limit }}{% if extra_teachers %} ({{ plan_teachers }} + {{ extra_teachers }} extra){% endif %}{% else %} (no limit){% endif %} · <a href="{% url 'manage:teacher_places' school.pk %}">Change</a></dd></div>
       <div><dt>Student places</dt><dd>{{ by_role.student }}{% if school.max_students is not None %} of {{ school.max_students }}{% else %} (no limit){% endif %}</dd></div>
       {% if school.trial_reason %}<div><dt>Trial reason</dt><dd>{{ school.trial_reason }}</dd></div>{% endif %}
     </dl>

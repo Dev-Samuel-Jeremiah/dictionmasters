@@ -18,9 +18,9 @@
 
 <section class="cr-card tp-numbers" aria-label="Teacher places">
   <div class="tp-number">
-    <span>Plan teachers</span>
+    <span>{% if school.max_teachers is not None %}Teachers allowed{% else %}Plan teachers{% endif %}</span>
     <strong>{% if plan_teachers is None %}No limit{% else %}{{ plan_teachers }}{% endif %}</strong>
-    <small>{% if plan %}{{ plan.name }}{% if plan.band_label %} · {{ plan.band_label }}{% endif %}{% elif school.max_teachers is not None %}“Teachers allowed” on the school{% else %}the smallest school plan{% endif %}</small>
+    <small>{% if school.max_teachers is not None %}set on the school{% if plan and plan.max_units %} (the plan has {{ plan.max_units }}){% endif %}{% elif plan %}{{ plan.name }}{% if plan.band_label %} · {{ plan.band_label }}{% endif %}{% else %}the smallest school plan{% endif %}</small>
   </div>
   <div class="tp-sign" aria-hidden="true">+</div>
   <div class="tp-number tp-number--extra">
