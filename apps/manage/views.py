@@ -10,6 +10,7 @@ learned one has learned them all.
 Staff accounts only, with the control room's own sign-in page.
 """
 
+import datetime
 import json
 from datetime import timedelta
 from functools import wraps
@@ -170,8 +171,14 @@ def _cell(obj, column):
         return {"kind": "bool", "on": value}
     if value is None or value == "":
         return {"kind": "blank"}
-    if hasattr(value, "isoformat"):
+    if isinstance(value, datetime.datetime):
         return {"kind": "when", "text": value}
+    if isinstance(value, datetime.date):
+        # A plain date (a term's first day, say) has no time to show: the
+        # date-and-time format would make the whole list fail.
+        return {"kind": "day", "text": value}
+    if hasattr(value, "isoformat"):
+        return {"kind": "text", "text": str(value)}
     return {"kind": "text", "text": str(value)}
 
 

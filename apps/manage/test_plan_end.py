@@ -71,3 +71,18 @@ class PlanEndTests(TestCase):
         Subscription.objects.filter(school=self.school).update(plan=None)
         answer = self.post(plan_ends_on="2028-05-31")
         self.assertContains(answer, "no plan yet")
+
+
+class ListDatesTests(TestCase):
+    """A list with a plain date column (School year > Terms) used to fail:
+    dates were shown with a time, which a date hasn't got."""
+
+    def test_the_terms_list_opens_with_its_dates(self):
+        from apps.scheme.models import Session, Term
+
+        year = Session.objects.create(name="2026/2027")
+        Term.objects.create(session=year, number=1, starts=date(2026, 9, 14), ends=date(2026, 12, 11))
+        self.client.force_login(User.objects.create_superuser("boss2@example.com", "pw-12345678", first_name="Boss"))
+        page = self.client.get("/manage/terms/")
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "14 Sep 2026")

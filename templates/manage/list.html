@@ -58,6 +58,7 @@
             {% if cell.kind == "bool" %}<span class="cr-bool {% if cell.on %}is-yes{% else %}is-no{% endif %}">{% if cell.on %}Yes{% else %}No{% endif %}</span>
             {% elif cell.kind == "file" %}<a href="{{ cell.url }}" target="_blank" rel="noopener" class="cr-fileline">{{ cell.text }}</a>
             {% elif cell.kind == "when" %}{{ cell.text|date:"j M Y, H:i" }}
+            {% elif cell.kind == "day" %}{{ cell.text|date:"j M Y" }}
             {% elif cell.kind == "blank" %}<span class="cr-blank">—</span>
             {% else %}{{ cell.text }}{% endif %}
           </td>
