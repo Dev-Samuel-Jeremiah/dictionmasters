@@ -54,7 +54,7 @@ from . import analytics
 from .level_field import add_content_levels_field, add_levels_field, save_content_levels, save_levels
 from .recordings_field import add_recordings_field, save_recordings
 from .password_field import add_password_field, save_password
-from .plan_field import FIELD as PLAN_FIELD, add_plan_field, check_plan
+from .plan_field import FIELD as PLAN_FIELD, add_plan_field, check_plan, save_plan_end
 from .school_login import add_login_fields, check_login, save_login
 from .bulk_questions import question_formset
 from . import results
@@ -580,6 +580,13 @@ def record_form(request, key, pk=None):
             parts = ([f"{added} recording{'s' if added != 1 else ''} added"] if added else []) + \
                     ([f"{removed} removed"] if removed else [])
             messages.success(request, f"{' and '.join(parts).capitalize()}. The chapters are being put in order and matched to the text.")
+        changed_end = save_plan_end(form, saved) if plan_kind == "school" else None
+        if changed_end:
+            before, after = changed_end
+            was = f" (was {timezone.localtime(before):%d %b %Y})" if before else ""
+            _record(request, saved, CHANGE, f"Plan end date set to {timezone.localtime(after):%d %b %Y}{was}")
+            messages.success(request, f"{saved.name}'s access now ends on {timezone.localtime(after):%d %B %Y}{was}. "
+                                      "Its plan and payments are unchanged.")
         plan = form.cleaned_data.get(PLAN_FIELD) if plan_kind else None
         if plan is not None:
             try:

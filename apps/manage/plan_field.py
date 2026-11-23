@@ -9,6 +9,7 @@ from apps.billing.access import audience_for, is_exempt, subscription_for
 from apps.billing.models import Plan
 
 FIELD = "grant_plan"
+END_FIELD = "plan_ends_on"        # a school's end date set directly (November 2026)
 
 
 def _label(plan):
@@ -37,6 +38,13 @@ def _current_access(user):
     return f"{now} A plan chosen here is added on top. Leave blank to change nothing."
 
 
+def _ends_now(school):
+    subscription = getattr(school, "subscription", None) if school is not None and school.pk else None
+    if subscription is None or not subscription.plan_id or subscription.paid_until is None:
+        return None
+    return timezone.localtime(subscription.paid_until)
+
+
 def _school_access(school):
     subscription = getattr(school, "subscription", None) if school is not None and school.pk else None
     if subscription is None or subscription.access_until is None:
@@ -51,7 +59,8 @@ def _school_access(school):
         now = f"Free trial until {until}."
     else:
         now = "Access has ended."
-    return f"{now} A plan chosen here is added on top. Leave blank to change nothing."
+    return (f"{now} A plan chosen here is added on top of that, from its end. Leave blank to change nothing. "
+            "To correct the end date instead, use “Plan ends on” below.")
 
 
 def add_plan_field(form, obj, kind="user"):
@@ -77,13 +86,24 @@ def add_plan_field(form, obj, kind="user"):
                 "Extra places given on the school's Teacher places page are added on top."
             )
     form.fields[FIELD].label_from_instance = _label
+    if kind == "school":
+        ends = _ends_now(obj)
+        form.fields[END_FIELD] = forms.DateField(
+            label="Plan ends on", required=False,
+            widget=forms.DateInput(attrs={"type": "date", "class": "cr-input"}),
+            help_text=(f"Now: {ends:%d %B %Y}. " if ends else "") +
+                      "Set the day this school's access ends, to correct it: it ends at the end of that day. "
+                      "Its plan and payment records stay as they are. Leave empty to keep the date as it is.",
+        )
 
 
 def check_plan(form, user, kind="user"):
     """After form.is_valid(): make sure the chosen plan suits the account
     being saved. Adds an error to the field and returns False if not."""
     plan = form.cleaned_data.get(FIELD)
-    if plan is None or kind == "school":
+    if kind == "school":
+        return _check_end(form, user, plan)
+    if plan is None:
         return True
     from apps.accounts.models import User
 
@@ -101,3 +121,41 @@ def check_plan(form, user, kind="user"):
         form.add_error(FIELD, f"This account needs a plan for “{names[wanted]}”, not “{names[plan.audience]}”.")
         return False
     return True
+
+
+def _check_end(form, school, plan):
+    """A school's "Plan ends on": not with a new plan in the same save (one
+    or the other), only for a school on a plan, and not in the past."""
+    ends_on = form.cleaned_data.get(END_FIELD)
+    if ends_on is None:
+        return True
+    if plan is not None:
+        form.add_error(END_FIELD, "Give a plan or set the end date, not both at once: save one, then the other.")
+        return False
+    if _ends_now(school) is None:
+        form.add_error(END_FIELD, "This school has no plan yet, so there's no end date to set: give it a plan first.")
+        return False
+    if ends_on < timezone.localdate():
+        form.add_error(END_FIELD, "Choose today or a later day.")
+        return False
+    return True
+
+
+def save_plan_end(form, school):
+    """After the school is saved: its access ends at the end of the chosen
+    day (the site's time zone), set straight on its subscription; the plan
+    and every payment record stay as they were. (old, new) end, or None."""
+    from datetime import datetime, time
+
+    from apps.billing.models import Subscription
+
+    ends_on = form.cleaned_data.get(END_FIELD)
+    if ends_on is None:
+        return None
+    subscription = Subscription.objects.get(school=school)
+    before = subscription.paid_until
+    subscription.paid_until = timezone.make_aware(datetime.combine(ends_on, time(23, 59, 59)),
+                                                  timezone.get_current_timezone())
+    subscription.save(update_fields=["paid_until", "updated_at"])
+    return before, subscription.paid_until
+
