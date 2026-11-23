@@ -484,7 +484,7 @@ PAYSTACK_PUBLIC_KEY = os.environ.get("PAYSTACK_PUBLIC_KEY", "")
 NATIVE_APP_HIDE_PAYMENTS = env_list("NATIVE_APP_HIDE_PAYMENTS", "ios,android")
 
 # So website links (WhatsApp, email) open straight in the app.
-NATIVE_APP_ANDROID_PACKAGE = os.environ.get("NATIVE_APP_ANDROID_PACKAGE", "app.dictionmasters.mobile")
+NATIVE_APP_ANDROID_PACKAGE = os.environ.get("NATIVE_APP_ANDROID_PACKAGE", "com.diction.masters.app")   # the app on Google Play
 # Google Play Console > your app > Test and release > App integrity > App signing:
 # "SHA-256 certificate fingerprint". Several allowed, comma-separated.
 NATIVE_APP_ANDROID_SHA256 = env_list("NATIVE_APP_ANDROID_SHA256")

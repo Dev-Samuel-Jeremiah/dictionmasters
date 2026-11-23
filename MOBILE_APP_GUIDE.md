@@ -231,7 +231,7 @@ runners), or ask someone with a Mac to do these steps once.
 4. To publish: run `npm run release` first. Then in Xcode choose
    **Product → Archive** → **Distribute App → App Store Connect**.
 5. In https://appstoreconnect.apple.com: create the app with the same Bundle
-   ID (`app.dictionmasters.mobile`). Send the build to **TestFlight** to
+   ID (`com.diction.masters.app`). Send the build to **TestFlight** to
    test, then **Submit for Review** with:
    - Privacy policy URL: `https://www.dictionmasters.app/privacy/`
    - **A demo account** (email + password) with an active plan, in *App Review Information*.
@@ -510,7 +510,7 @@ That address always points to the **newest** release, so you never need to
 change it again. Later, when the apps are in the stores, add:
 
 ```
-NATIVE_APP_ANDROID_STORE_URL=https://play.google.com/store/apps/details?id=app.dictionmasters.mobile
+NATIVE_APP_ANDROID_STORE_URL=https://play.google.com/store/apps/details?id=com.diction.masters.app
 NATIVE_APP_IOS_STORE_URL=https://apps.apple.com/app/idXXXXXXXXXX
 ```
 

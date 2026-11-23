@@ -27,7 +27,7 @@ module uses that to:
 Settings (config/settings.py, set from the environment):
 
   NATIVE_APP_HIDE_PAYMENTS      platforms that hide buying, e.g. ["ios", "android"]
-  NATIVE_APP_ANDROID_PACKAGE    the app id, e.g. "app.dictionmasters.mobile"
+  NATIVE_APP_ANDROID_PACKAGE    the app id, e.g. "com.diction.masters.app"
   NATIVE_APP_ANDROID_SHA256     signing-key fingerprint(s) from Google Play
   NATIVE_APP_IOS_TEAM_ID        your Apple Developer team id (10 characters)
   NATIVE_APP_DESKTOP_DOWNLOAD_URL  where the computer installers are published
