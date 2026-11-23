@@ -4,9 +4,9 @@
   "appName": "Diction Masters",
   "appId": "com.diction.masters.app",
 
-  "_version_readme": "Raise 'build' by 1 every time you upload a new app to Google Play / App Store. 'version' is what people see. Website changes do NOT need a new version. appId must stay com.diction.masters.app: it is the app already on Google Play (Nov 2026), and build was raised to 100 to stay above that app's earlier version codes.",
-  "version": "1.0.2",
-  "build": 100,
+  "_version_readme": "Raise 'build' by 1 every time you upload a new app to Google Play / App Store. 'version' is what people see. Website changes do NOT need a new version. appId must stay com.diction.masters.app: it is the app already on Google Play (Nov 2026), carrying on from its version 1.54 (version code 20) on Play.",
+  "version": "1.55",
+  "build": 101,
 
   "_releaseNotes_readme": "One short sentence shown in the app's 'Update available' message. Change it with each app release.",
   "releaseNotes": "Improvements to how your lessons are protected in the app.",
